@@ -7,10 +7,13 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"strings"
 	"time"
 
 	"ultimate-game-server/internal/auth"
 	"ultimate-game-server/internal/runtime"
+	"ultimate-game-server/internal/storage"
+	"ultimate-game-server/internal/api/storagepb"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
@@ -91,6 +94,7 @@ func (s *Server) Start(ctx context.Context) error {
 
 	// 2. Setup gRPC Server
 	s.gRPCServer = grpc.NewServer()
+	storagepb.RegisterStorageServiceServer(s.gRPCServer, NewStorageServer(s.dbPool, s.tokenMgr))
 
 	// 3. Listen HTTP
 	httpListener, err := net.Listen("tcp", s.cfg.HTTPAddr)
@@ -164,6 +168,10 @@ func (s *Server) registerRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /v2/account/authenticate/email", s.handleAuthenticateEmail)
 	mux.HandleFunc("POST /v2/account/authenticate/custom", s.handleAuthenticateCustom)
 	mux.HandleFunc("POST /v2/account/session/refresh", s.handleSessionRefresh)
+	mux.HandleFunc("POST /v2/storage", s.handleWriteStorageObjects)
+	mux.HandleFunc("POST /v2/storage/read", s.handleReadStorageObjects)
+	mux.HandleFunc("POST /v2/storage/delete", s.handleDeleteStorageObjects)
+	mux.HandleFunc("GET /v2/storage/{collection}", s.handleListStorageObjects)
 }
 
 func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
@@ -315,3 +323,220 @@ func (s *Server) handleSessionRefresh(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(resp)
 }
+
+func (s *Server) authenticateREST(r *http.Request) (string, error) {
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
+		return "", errors.New("missing or invalid authorization header")
+	}
+	tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
+	claims, err := s.tokenMgr.VerifyToken(tokenStr)
+	if err != nil {
+		return "", fmt.Errorf("invalid token: %w", err)
+	}
+	return claims.UserID, nil
+}
+
+func (s *Server) handleWriteStorageObjects(w http.ResponseWriter, r *http.Request) {
+	userID, err := s.authenticateREST(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+	var req struct {
+		Objects []struct {
+			Collection      string      `json:"collection"`
+			Key             string      `json:"key"`
+			Value           interface{} `json:"value"`
+			Version         string      `json:"version"`
+			PermissionRead  int16       `json:"permission_read"`
+			PermissionWrite int16       `json:"permission_write"`
+		} `json:"objects"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "bad request", http.StatusBadRequest)
+		return
+	}
+
+	objs := make([]*storage.StorageObject, len(req.Objects))
+	for i, obj := range req.Objects {
+		valBytes, err := json.Marshal(obj.Value)
+		if err != nil {
+			http.Error(w, "invalid json value", http.StatusBadRequest)
+			return
+		}
+		objs[i] = &storage.StorageObject{
+			Collection: obj.Collection,
+			Key:        obj.Key,
+			UserID:     userID,
+			Value:      string(valBytes),
+			Version:    obj.Version,
+			Read:       obj.PermissionRead,
+			Write:      obj.PermissionWrite,
+		}
+	}
+
+	err = storage.WriteStorageObjects(r.Context(), s.dbPool, objs)
+	if err != nil {
+		if errors.Is(err, storage.ErrOCCConflict) {
+			http.Error(w, err.Error(), http.StatusConflict)
+			return
+		}
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	acks := make([]map[string]interface{}, len(objs))
+	for i, o := range objs {
+		acks[i] = map[string]interface{}{
+			"collection":  o.Collection,
+			"key":         o.Key,
+			"user_id":     o.UserID,
+			"version":     o.Version,
+			"create_time": time.Now().Format(time.RFC3339),
+			"update_time": time.Now().Format(time.RFC3339),
+		}
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{"acks": acks})
+}
+
+func (s *Server) handleReadStorageObjects(w http.ResponseWriter, r *http.Request) {
+	if _, err := s.authenticateREST(r); err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+	var req struct {
+		ObjectIDs []struct {
+			Collection string `json:"collection"`
+			Key        string `json:"key"`
+			UserID     string `json:"user_id"`
+		} `json:"object_ids"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "bad request", http.StatusBadRequest)
+		return
+	}
+
+	reqs := make([]storage.ReadRequest, len(req.ObjectIDs))
+	for i, obj := range req.ObjectIDs {
+		reqs[i] = storage.ReadRequest{
+			Collection: obj.Collection,
+			Key:        obj.Key,
+			UserID:     obj.UserID,
+		}
+	}
+
+	objs, err := storage.ReadStorageObjects(r.Context(), s.dbPool, reqs)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	res := make([]map[string]interface{}, len(objs))
+	for i, o := range objs {
+		var valRaw interface{}
+		_ = json.Unmarshal([]byte(o.Value), &valRaw)
+		res[i] = map[string]interface{}{
+			"collection":       o.Collection,
+			"key":              o.Key,
+			"user_id":          o.UserID,
+			"value":            valRaw,
+			"version":          o.Version,
+			"permission_read":  o.Read,
+			"permission_write": o.Write,
+			"create_time":      time.Now().Format(time.RFC3339),
+			"update_time":      time.Now().Format(time.RFC3339),
+		}
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{"objects": res})
+}
+
+func (s *Server) handleDeleteStorageObjects(w http.ResponseWriter, r *http.Request) {
+	userID, err := s.authenticateREST(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+	var req struct {
+		ObjectIDs []struct {
+			Collection string `json:"collection"`
+			Key        string `json:"key"`
+			Version    string `json:"version"`
+		} `json:"object_ids"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "bad request", http.StatusBadRequest)
+		return
+	}
+
+	reqs := make([]storage.DeleteRequest, len(req.ObjectIDs))
+	for i, obj := range req.ObjectIDs {
+		reqs[i] = storage.DeleteRequest{
+			Collection: obj.Collection,
+			Key:        obj.Key,
+			UserID:     userID,
+			Version:    obj.Version,
+		}
+	}
+
+	err = storage.DeleteStorageObjects(r.Context(), s.dbPool, reqs)
+	if err != nil {
+		if errors.Is(err, storage.ErrOCCConflict) {
+			http.Error(w, err.Error(), http.StatusConflict)
+			return
+		}
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+}
+
+func (s *Server) handleListStorageObjects(w http.ResponseWriter, r *http.Request) {
+	if _, err := s.authenticateREST(r); err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+	collection := r.PathValue("collection")
+	userID := r.URL.Query().Get("user_id")
+	limitStr := r.URL.Query().Get("limit")
+	cursor := r.URL.Query().Get("cursor")
+
+	limit := 20
+	if limitStr != "" {
+		var l int
+		if _, err := fmt.Sscanf(limitStr, "%d", &l); err == nil && l > 0 {
+			limit = l
+		}
+	}
+
+	objs, nextCursor, err := storage.ListStorageObjects(r.Context(), s.dbPool, userID, collection, limit, cursor)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	res := make([]map[string]interface{}, len(objs))
+	for i, o := range objs {
+		var valRaw interface{}
+		_ = json.Unmarshal([]byte(o.Value), &valRaw)
+		res[i] = map[string]interface{}{
+			"collection":       o.Collection,
+			"key":              o.Key,
+			"user_id":          o.UserID,
+			"value":            valRaw,
+			"version":          o.Version,
+			"permission_read":  o.Read,
+			"permission_write": o.Write,
+			"create_time":      time.Now().Format(time.RFC3339),
+			"update_time":      time.Now().Format(time.RFC3339),
+		}
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"objects":     res,
+		"next_cursor": nextCursor,
+	})
+}
+

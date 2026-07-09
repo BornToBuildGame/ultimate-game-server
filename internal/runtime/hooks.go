@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"sync"
+	"time"
 )
 
 // Logger provides structured logging for runtime modules.
@@ -39,15 +40,52 @@ type RuntimeModule interface {
 	MatchCreate(ctx context.Context, module string, params map[string]interface{}) (string, error)
 }
 
-// Placeholder types for RuntimeModule interface.
-// These will be replaced with full implementations in their respective packages.
+type StorageRead struct {
+	Collection string `json:"collection"`
+	Key        string `json:"key"`
+	UserID     string `json:"user_id"`
+}
+
+type StorageWrite struct {
+	Collection      string `json:"collection"`
+	Key             string `json:"key"`
+	UserID          string `json:"user_id"`
+	Value           string `json:"value"`
+	Version         string `json:"version"`
+	PermissionRead  int32  `json:"permission_read"`
+	PermissionWrite int32  `json:"permission_write"`
+}
+
+type StorageDelete struct {
+	Collection string `json:"collection"`
+	Key        string `json:"key"`
+	UserID     string `json:"user_id"`
+	Version    string `json:"version"`
+}
+
+type StorageObject struct {
+	Collection      string    `json:"collection"`
+	Key             string    `json:"key"`
+	UserID          string    `json:"user_id"`
+	Value           string    `json:"value"`
+	Version         string    `json:"version"`
+	PermissionRead  int32     `json:"permission_read"`
+	PermissionWrite int32     `json:"permission_write"`
+	CreateTime      time.Time `json:"create_time"`
+	UpdateTime      time.Time `json:"update_time"`
+}
+
+type StorageObjectAck struct {
+	Collection string    `json:"collection"`
+	Key        string    `json:"key"`
+	UserID     string    `json:"user_id"`
+	Version    string    `json:"version"`
+	CreateTime time.Time `json:"create_time"`
+	UpdateTime time.Time `json:"update_time"`
+}
+
 type (
-	StorageRead      struct{}
-	StorageWrite     struct{}
-	StorageDelete    struct{}
-	StorageObject    struct{}
-	StorageObjectAck struct{}
-	Account          struct{}
+	Account           struct{}
 	LeaderboardRecord struct{}
 )
 

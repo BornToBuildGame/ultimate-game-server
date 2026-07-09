@@ -1,0 +1,86 @@
+syntax = "proto3";
+
+package ultimate.server.api;
+
+option go_package = "ultimate-game-server/internal/api/storagepb";
+
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+
+service StorageService {
+  rpc ReadStorageObjects(ReadStorageObjectsRequest) returns (StorageObjects);
+  rpc WriteStorageObjects(WriteStorageObjectsRequest) returns (StorageObjectAcks);
+  rpc DeleteStorageObjects(DeleteStorageObjectsRequest) returns (google.protobuf.Empty);
+  rpc ListStorageObjects(ListStorageObjectsRequest) returns (StorageObjectList);
+}
+
+message ReadStorageObjectsRequest {
+  message ReadOp {
+    string collection = 1;
+    string key = 2;
+    string user_id = 3;
+  }
+  repeated ReadOp object_ids = 1;
+}
+
+message StorageObject {
+  string collection = 1;
+  string key = 2;
+  string user_id = 3;
+  string value = 4; // JSON string format
+  string version = 5;
+  int32 permission_read = 6;
+  int32 permission_write = 7;
+  google.protobuf.Timestamp create_time = 8;
+  google.protobuf.Timestamp update_time = 9;
+}
+
+message StorageObjects {
+  repeated StorageObject objects = 1;
+}
+
+message WriteStorageObjectsRequest {
+  message WriteOp {
+    string collection = 1;
+    string key = 2;
+    string value = 3; // JSON string format
+    string version = 4;
+    int32 permission_read = 5;
+    int32 permission_write = 6;
+  }
+  repeated WriteOp objects = 1;
+}
+
+message StorageObjectAck {
+  string collection = 1;
+  string key = 2;
+  string user_id = 3;
+  string version = 4;
+  google.protobuf.Timestamp create_time = 5;
+  google.protobuf.Timestamp update_time = 6;
+}
+
+message StorageObjectAcks {
+  repeated StorageObjectAck acks = 1;
+}
+
+message DeleteStorageObjectsRequest {
+  message DeleteOp {
+    string collection = 1;
+    string key = 2;
+    string version = 3;
+  }
+  repeated DeleteOp object_ids = 1;
+}
+
+message ListStorageObjectsRequest {
+  string collection = 1;
+  string user_id = 2;
+  int32 limit = 3;
+  string cursor = 4;
+}
+
+message StorageObjectList {
+  repeated StorageObject objects = 1;
+  string next_cursor = 2;
+}
