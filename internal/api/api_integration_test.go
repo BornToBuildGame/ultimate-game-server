@@ -5,14 +5,17 @@ package api
 import (
 	"bytes"
 	"context"
+	"database/sql"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"testing"
 	"time"
 
 	"ultimate-game-server/internal/auth"
 	"ultimate-game-server/internal/database"
+	"ultimate-game-server/internal/runtime"
 
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 	"go.uber.org/zap"
@@ -167,3 +170,155 @@ func TestAPI_Integration(t *testing.T) {
 		t.Errorf("expected response body to contain user ID %q, got %q", expectedUserID, rrB.Body.String())
 	}
 }
+
+// testLogger implements Logger for testing purposes
+type testLogger struct {
+	t *testing.T
+}
+
+func (l *testLogger) Debug(format string, args ...interface{}) { l.t.Logf("[DEBUG] "+format, args...) }
+func (l *testLogger) Info(format string, args ...interface{})  { l.t.Logf("[INFO] "+format, args...) }
+func (l *testLogger) Warn(format string, args ...interface{})  { l.t.Logf("[WARN] "+format, args...) }
+func (l *testLogger) Error(format string, args ...interface{}) { l.t.Logf("[ERROR] "+format, args...) }
+
+func TestAPI_RuntimeHooks_Integration(t *testing.T) {
+	ctx := context.Background()
+
+	// 1. Spin up PostgreSQL container
+	postgresContainer, err := postgres.Run(ctx, "postgres:16-alpine",
+		postgres.WithDatabase("ultimate_game_db"),
+		postgres.WithUsername("game_admin"),
+		postgres.WithPassword("game_password"),
+	)
+	if err != nil {
+		t.Fatalf("failed to start postgres container: %v", err)
+	}
+	defer func() {
+		if err := postgresContainer.Terminate(ctx); err != nil {
+			t.Errorf("failed to terminate postgres container: %v", err)
+		}
+	}()
+
+	dsn, err := postgresContainer.ConnectionString(ctx, "sslmode=disable")
+	if err != nil {
+		t.Fatalf("failed to get container DSN: %v", err)
+	}
+
+	logger := zap.NewNop()
+	dbCfg := database.Config{
+		DSN:             dsn,
+		MaxOpenConns:    10,
+		MaxRetries:      10,
+		RetryDelay:      500 * time.Millisecond,
+	}
+
+	pool, err := database.ConnectWithBackoff(ctx, logger, dbCfg)
+	if err != nil {
+		t.Fatalf("failed to connect to database: %v", err)
+	}
+	defer pool.Close()
+
+	// Run migrations
+	err = database.RunMigrations(ctx, logger, pool)
+	if err != nil {
+		t.Fatalf("failed to run database migrations: %v", err)
+	}
+
+	// 2. Start API Server on local test ports
+	serverCfg := Config{
+		HTTPAddr:        "127.0.0.1:18350",
+		GRPCAddr:        "127.0.0.1:18349",
+		JWTSecret:       []byte("super_secret_signing_key_at_least_32_bytes_long_1234567"),
+		JWTExpiry:       10 * time.Minute,
+		RateLimitMax:    5,
+		RateLimitRefill: 1,
+	}
+
+	srv, err := NewServer(logger, serverCfg, pool)
+	if err != nil {
+		t.Fatalf("failed to create server: %v", err)
+	}
+
+	// Setup runtime manager with mock hook registrations
+	rm := runtime.NewGoRuntimeManager(&testLogger{t: t}, nil, nil)
+
+	// Register before hook that mutates the username
+	rm.Registry().RegisterBefore("AuthenticateEmail", func(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.RuntimeModule, in interface{}) (interface{}, error) {
+		req := in.(*authEmailRequest)
+		req.Username = "intercepted_user"
+		return req, nil
+	})
+
+	// Register after hook that flags completion
+	var afterCalled bool
+	var afterMu sync.Mutex
+	afterCond := sync.NewCond(&afterMu)
+
+	rm.Registry().RegisterAfter("AuthenticateEmail", func(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.RuntimeModule, out interface{}, in interface{}) error {
+		afterMu.Lock()
+		afterCalled = true
+		afterCond.Signal()
+		afterMu.Unlock()
+		return nil
+	})
+
+	srv.SetRuntimeManager(rm)
+
+	err = srv.Start(ctx)
+	if err != nil {
+		t.Fatalf("failed to start server: %v", err)
+	}
+	defer func() {
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+		srv.Stop(shutdownCtx)
+	}()
+
+	time.Sleep(100 * time.Millisecond)
+
+	// 3. Post Authenticate Request
+	payload := []byte(`{
+		"email": "hook@test.com",
+		"password": "Password123!",
+		"username": "original_user",
+		"display_name": "Original User",
+		"register": true
+	}`)
+
+	resp, err := http.Post("http://127.0.0.1:18350/v2/account/authenticate/email", "application/json", bytes.NewReader(payload))
+	if err != nil {
+		t.Fatalf("auth request failed: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		buf := new(bytes.Buffer)
+		buf.ReadFrom(resp.Body)
+		t.Fatalf("expected status 200 OK, got: %d. Body: %s", resp.StatusCode, buf.String())
+	}
+
+	// 4. Verify username in database was intercepted and changed to "intercepted_user"
+	var dbUsername string
+	err = pool.QueryRow(ctx, "SELECT username FROM users WHERE email = $1", "hook@test.com").Scan(&dbUsername)
+	if err != nil {
+		t.Fatalf("failed to query user from DB: %v", err)
+	}
+
+	if dbUsername != "intercepted_user" {
+		t.Errorf("expected username in database to be 'intercepted_user', got: %s", dbUsername)
+	}
+
+	// 5. Verify after hook was asynchronously called
+	afterMu.Lock()
+	if !afterCalled {
+		// Wait brief moment
+		afterCond.Wait()
+	}
+	isAfterCalled := afterCalled
+	afterMu.Unlock()
+
+	if !isAfterCalled {
+		t.Error("expected after hook to be invoked asynchronously, but it was not")
+	}
+}
+

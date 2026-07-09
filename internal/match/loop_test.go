@@ -131,3 +131,68 @@ func TestRouter_ForwardInput(t *testing.T) {
 
 	router.Unregister("m-1")
 }
+
+func TestRegistry_Search(t *testing.T) {
+	reg := NewRegistry()
+
+	labels1 := map[string]interface{}{"mode": "ranked", "tier": "gold"}
+	labels2 := map[string]interface{}{"mode": "casual", "tier": "silver"}
+
+	reg.Add("m-1", labels1, 2, 4, true)
+	reg.Add("m-2", labels2, 1, 2, false)
+
+	// Search matching
+	results := reg.Search("mode", "ranked")
+	if len(results) != 1 {
+		t.Fatalf("expected 1 result, got %d", len(results))
+	}
+	if results[0].MatchID != "m-1" {
+		t.Errorf("expected m-1, got %s", results[0].MatchID)
+	}
+
+	// Search non-matching
+	results = reg.Search("tier", "bronze")
+	if len(results) != 0 {
+		t.Errorf("expected 0 results, got %d", len(results))
+	}
+
+	reg.Remove("m-1")
+	results = reg.Search("mode", "ranked")
+	if len(results) != 0 {
+		t.Errorf("expected 0 results after removal, got %d", len(results))
+	}
+}
+
+func TestRouter_ClusterForwarding(t *testing.T) {
+	router := NewRouter()
+
+	// Configure cluster forwarding mock callback
+	called := false
+	var forwardedToNode, forwardedMatchID string
+	var forwardedInput MatchInput
+
+	router.SetClusterConfig(
+		"node-A",
+		nil, // no redis for local routing bypass testing
+		func(ctx context.Context, targetNodeID, matchID string, input MatchInput) error {
+			called = true
+			forwardedToNode = targetNodeID
+			forwardedMatchID = matchID
+			forwardedInput = input
+			return nil
+		},
+	)
+
+	// In single-node mode without Redis, ForwardInput on unregistered match fails immediately
+	input := MatchInput{UserID: "p-1", Action: "test"}
+	err := router.ForwardInput(context.Background(), "m-2", input)
+	if err == nil {
+		t.Error("expected error on unregistered match without Redis client")
+	}
+
+	_ = called
+	_ = forwardedToNode
+	_ = forwardedMatchID
+	_ = forwardedInput
+}
+

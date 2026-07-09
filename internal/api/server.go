@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"ultimate-game-server/internal/auth"
+	"ultimate-game-server/internal/runtime"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
@@ -37,6 +38,13 @@ type Server struct {
 
 	httpServer *http.Server
 	gRPCServer *grpc.Server
+
+	RuntimeManager *runtime.GoRuntimeManager
+}
+
+// SetRuntimeManager configures the runtime manager for hook interceptors.
+func (s *Server) SetRuntimeManager(rm *runtime.GoRuntimeManager) {
+	s.RuntimeManager = rm
 }
 
 // NewServer creates a new API Server instance.
@@ -170,6 +178,18 @@ func (s *Server) handleAuthenticateEmail(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	// Execute Before Hook if registered
+	if s.RuntimeManager != nil && s.RuntimeManager.HasBeforeHook("AuthenticateEmail") {
+		res, err := s.RuntimeManager.InvokeBeforeHook(r.Context(), "AuthenticateEmail", &req)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		if casted, ok := res.(*authEmailRequest); ok {
+			req = *casted
+		}
+	}
+
 	var user *auth.User
 	var err error
 
@@ -201,6 +221,16 @@ func (s *Server) handleAuthenticateEmail(w http.ResponseWriter, r *http.Request)
 		RefreshToken: refreshToken,
 		UserID:       user.ID.String(),
 		Username:     user.Username,
+	}
+
+	// Execute After Hook if registered
+	if s.RuntimeManager != nil && s.RuntimeManager.HasAfterHook("AuthenticateEmail") {
+		go func() {
+			hookErr := s.RuntimeManager.InvokeAfterHook(context.Background(), "AuthenticateEmail", &resp, &req)
+			if hookErr != nil {
+				s.logger.Error("After hook failed", zap.Error(hookErr))
+			}
+		}()
 	}
 
 	w.Header().Set("Content-Type", "application/json")
