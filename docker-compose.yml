@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: ultimate-game-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: ultimate_game_db
+      POSTGRES_USER: game_admin
+      POSTGRES_PASSWORD: game_password
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    container_name: ultimate-game-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+
+volumes:
+  pgdata:
+  redisdata:
