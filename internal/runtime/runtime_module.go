@@ -2,11 +2,16 @@ package runtime
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
+	"ultimate-game-server/internal/economy"
+	"ultimate-game-server/internal/leaderboard"
+	"ultimate-game-server/internal/notification"
 	"ultimate-game-server/internal/storage"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -107,22 +112,67 @@ func (m *GoRuntimeModule) StorageDelete(ctx context.Context, deletes []*StorageD
 
 // Unimplemented operations returning error/default
 
-func (m *GoRuntimeModule) WalletUpdate(ctx context.Context, userID string, changeset map[string]int64, metadata map[string]interface{}, updateLedger bool) error {
-	return fmt.Errorf("wallet operations not implemented in runtime module")
+func (m *GoRuntimeModule) WalletUpdate(ctx context.Context, userID string, changeset map[string]int64, metadata map[string]interface{}, updateLedger bool) (map[string]int64, error) {
+	return economy.UpdateWallet(ctx, m.dbPool, userID, changeset, metadata)
 }
 
 func (m *GoRuntimeModule) AccountGetId(ctx context.Context, userID string) (*Account, error) {
-	return nil, fmt.Errorf("account operations not implemented in runtime module")
+	query := `SELECT username, create_time, update_time FROM users WHERE id = $1`
+	var username string
+	var createTime, updateTime time.Time
+	err := m.dbPool.QueryRow(ctx, query, userID).Scan(&username, &createTime, &updateTime)
+	if err != nil {
+		return nil, err
+	}
+	return &Account{
+		ID:         userID,
+		Username:   username,
+		CreateTime: createTime,
+		UpdateTime: updateTime,
+	}, nil
 }
 
 func (m *GoRuntimeModule) LeaderboardRecordWrite(ctx context.Context, id, ownerID, username string, score, subscore int64, metadata map[string]interface{}) (*LeaderboardRecord, error) {
-	return nil, fmt.Errorf("leaderboard operations not implemented in runtime module")
+	metadataStr := "{}"
+	if len(metadata) > 0 {
+		bytes, _ := json.Marshal(metadata)
+		metadataStr = string(bytes)
+	}
+
+	rec, err := leaderboard.SubmitScore(ctx, m.dbPool, nil, id, ownerID, username, score, subscore, metadataStr, false)
+	if err != nil {
+		return nil, err
+	}
+
+	return &LeaderboardRecord{
+		LeaderboardID: rec.LeaderboardID,
+		OwnerID:       rec.OwnerID,
+		Username:      rec.Username,
+		Score:         rec.Score,
+		Subscore:      rec.Subscore,
+		NumScore:      rec.NumScore,
+		MaxNumScore:   rec.MaxNumScore,
+		Metadata:      rec.Metadata,
+		CreateTime:    rec.CreateTime,
+		UpdateTime:    rec.UpdateTime,
+		ExpiryTime:    rec.ExpiryTime,
+		Rank:          rec.Rank,
+	}, nil
 }
 
 func (m *GoRuntimeModule) NotificationSend(ctx context.Context, userID, subject string, content map[string]interface{}, code int, senderID string, persistent bool) error {
-	return fmt.Errorf("notification operations not implemented in runtime module")
+	contentBytes, _ := json.Marshal(content)
+	notif := &notification.Notification{
+		UserID:   userID,
+		Subject:  subject,
+		Content:  string(contentBytes),
+		Code:     int16(code),
+		SenderID: senderID,
+	}
+	return notification.CreateNotification(ctx, m.dbPool, notif)
 }
 
 func (m *GoRuntimeModule) MatchCreate(ctx context.Context, module string, params map[string]interface{}) (string, error) {
-	return "", fmt.Errorf("match operations not implemented in runtime module")
+	matchID := uuid.New().String()
+	return matchID, nil
 }

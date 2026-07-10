@@ -25,7 +25,7 @@ type RuntimeModule interface {
 	StorageDelete(ctx context.Context, deletes []*StorageDelete) error
 
 	// Wallet operations
-	WalletUpdate(ctx context.Context, userID string, changeset map[string]int64, metadata map[string]interface{}, updateLedger bool) error
+	WalletUpdate(ctx context.Context, userID string, changeset map[string]int64, metadata map[string]interface{}, updateLedger bool) (map[string]int64, error)
 
 	// Account operations
 	AccountGetId(ctx context.Context, userID string) (*Account, error)
@@ -84,10 +84,27 @@ type StorageObjectAck struct {
 	UpdateTime time.Time `json:"update_time"`
 }
 
-type (
-	Account           struct{}
-	LeaderboardRecord struct{}
-)
+type Account struct {
+	ID         string    `json:"id"`
+	Username   string    `json:"username"`
+	CreateTime time.Time `json:"create_time"`
+	UpdateTime time.Time `json:"update_time"`
+}
+
+type LeaderboardRecord struct {
+	LeaderboardID string    `json:"leaderboard_id"`
+	OwnerID       string    `json:"owner_id"`
+	Username      string    `json:"username"`
+	Score         int64     `json:"score"`
+	Subscore      int64     `json:"subscore"`
+	NumScore      int       `json:"num_score"`
+	MaxNumScore   int       `json:"max_num_score"`
+	Metadata      string    `json:"metadata"`
+	CreateTime    time.Time `json:"create_time"`
+	UpdateTime    time.Time `json:"update_time"`
+	ExpiryTime    time.Time `json:"expiry_time"`
+	Rank          int64     `json:"rank"`
+}
 
 // RPCHandler represents a custom client-callable RPC endpoint handler.
 // Go native handlers receive logger, db, and nk for full server API access.
@@ -157,24 +174,36 @@ type Initializer interface {
 
 // HookRegistry stores registered custom RPCs, before/after hooks, and cron jobs.
 type HookRegistry struct {
-	mu            sync.RWMutex
-	beforeHooks   map[string]BeforeHook
-	afterHooks    map[string]AfterHook
-	rpcHooks      map[string]RPCHandler
-	eventHandlers []EventHandler
-	matchHandlers map[string]MatchHandlerFactory
-	cronJobs      map[string]*CronJob
+	mu             sync.RWMutex
+	beforeHooks    map[string]BeforeHook
+	afterHooks     map[string]AfterHook
+	rpcHooks       map[string]RPCHandler
+	luaBeforeHooks map[string]string
+	luaAfterHooks  map[string]string
+	luaRpcHooks    map[string]string
+	jsBeforeHooks  map[string]string
+	jsAfterHooks   map[string]string
+	jsRpcHooks     map[string]string
+	eventHandlers  []EventHandler
+	matchHandlers  map[string]MatchHandlerFactory
+	cronJobs       map[string]*CronJob
 }
 
 // NewHookRegistry creates a new instance of HookRegistry.
 func NewHookRegistry() *HookRegistry {
 	return &HookRegistry{
-		beforeHooks:   make(map[string]BeforeHook),
-		afterHooks:    make(map[string]AfterHook),
-		rpcHooks:      make(map[string]RPCHandler),
-		eventHandlers: make([]EventHandler, 0),
-		matchHandlers: make(map[string]MatchHandlerFactory),
-		cronJobs:      make(map[string]*CronJob),
+		beforeHooks:    make(map[string]BeforeHook),
+		afterHooks:     make(map[string]AfterHook),
+		rpcHooks:       make(map[string]RPCHandler),
+		luaBeforeHooks: make(map[string]string),
+		luaAfterHooks:  make(map[string]string),
+		luaRpcHooks:    make(map[string]string),
+		jsBeforeHooks:  make(map[string]string),
+		jsAfterHooks:   make(map[string]string),
+		jsRpcHooks:     make(map[string]string),
+		eventHandlers:  make([]EventHandler, 0),
+		matchHandlers:  make(map[string]MatchHandlerFactory),
+		cronJobs:       make(map[string]*CronJob),
 	}
 }
 
@@ -250,4 +279,94 @@ func (hr *HookRegistry) RegisterCron(jobName string, cron *CronJob) error {
 	}
 	hr.cronJobs[jobName] = cron
 	return nil
+}
+
+// GetBeforeHook retrieves a before hook, returning runtime type and script function name if script-based.
+func (hr *HookRegistry) GetBeforeHook(name string) (BeforeHook, string, string, bool) {
+	hr.mu.RLock()
+	defer hr.mu.RUnlock()
+
+	// 1. Go Native Hook (highest precedence)
+	if hook, ok := hr.beforeHooks[name]; ok {
+		return hook, "go", "", true
+	}
+	// 2. Gopher-Lua Hook
+	if fnName, ok := hr.luaBeforeHooks[name]; ok {
+		return nil, "lua", fnName, true
+	}
+	// 3. Goja JS Hook
+	if fnName, ok := hr.jsBeforeHooks[name]; ok {
+		return nil, "js", fnName, true
+	}
+	return nil, "", "", false
+}
+
+// GetAfterHook retrieves an after hook.
+func (hr *HookRegistry) GetAfterHook(name string) (AfterHook, string, string, bool) {
+	hr.mu.RLock()
+	defer hr.mu.RUnlock()
+
+	if hook, ok := hr.afterHooks[name]; ok {
+		return hook, "go", "", true
+	}
+	if fnName, ok := hr.luaAfterHooks[name]; ok {
+		return nil, "lua", fnName, true
+	}
+	if fnName, ok := hr.jsAfterHooks[name]; ok {
+		return nil, "js", fnName, true
+	}
+	return nil, "", "", false
+}
+
+// GetRPCHook retrieves an RPC handler.
+func (hr *HookRegistry) GetRPCHook(name string) (RPCHandler, string, string, bool) {
+	hr.mu.RLock()
+	defer hr.mu.RUnlock()
+
+	if hook, ok := hr.rpcHooks[name]; ok {
+		return hook, "go", "", true
+	}
+	if fnName, ok := hr.luaRpcHooks[name]; ok {
+		return nil, "lua", fnName, true
+	}
+	if fnName, ok := hr.jsRpcHooks[name]; ok {
+		return nil, "js", fnName, true
+	}
+	return nil, "", "", false
+}
+
+func (hr *HookRegistry) RegisterLuaBefore(name, fnName string) {
+	hr.mu.Lock()
+	defer hr.mu.Unlock()
+	hr.luaBeforeHooks[name] = fnName
+}
+
+func (hr *HookRegistry) RegisterLuaAfter(name, fnName string) {
+	hr.mu.Lock()
+	defer hr.mu.Unlock()
+	hr.luaAfterHooks[name] = fnName
+}
+
+func (hr *HookRegistry) RegisterLuaRPC(name, fnName string) {
+	hr.mu.Lock()
+	defer hr.mu.Unlock()
+	hr.luaRpcHooks[name] = fnName
+}
+
+func (hr *HookRegistry) RegisterJSBefore(name, fnName string) {
+	hr.mu.Lock()
+	defer hr.mu.Unlock()
+	hr.jsBeforeHooks[name] = fnName
+}
+
+func (hr *HookRegistry) RegisterJSAfter(name, fnName string) {
+	hr.mu.Lock()
+	defer hr.mu.Unlock()
+	hr.jsAfterHooks[name] = fnName
+}
+
+func (hr *HookRegistry) RegisterJSRPC(name, fnName string) {
+	hr.mu.Lock()
+	defer hr.mu.Unlock()
+	hr.jsRpcHooks[name] = fnName
 }

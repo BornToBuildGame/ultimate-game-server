@@ -18,6 +18,8 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
+	"github.com/dop251/goja"
+	"github.com/yuin/gopher-lua"
 )
 
 // Config defines the configuration options for the API server.
@@ -43,11 +45,19 @@ type Server struct {
 	gRPCServer *grpc.Server
 
 	RuntimeManager *runtime.GoRuntimeManager
+	LuaVM          *lua.LState
+	JSVM           *goja.Runtime
 }
 
 // SetRuntimeManager configures the runtime manager for hook interceptors.
 func (s *Server) SetRuntimeManager(rm *runtime.GoRuntimeManager) {
 	s.RuntimeManager = rm
+}
+
+// SetVMs configures the Lua and JavaScript VM instances.
+func (s *Server) SetVMs(luaVM *lua.LState, jsVM *goja.Runtime) {
+	s.LuaVM = luaVM
+	s.JSVM = jsVM
 }
 
 // NewServer creates a new API Server instance.
@@ -87,13 +97,23 @@ func (s *Server) Start(ctx context.Context) error {
 	handler = CORSMiddleware(handler)
 	handler = SecurityHeadersMiddleware(handler)
 
+	if s.RuntimeManager != nil {
+		handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			HTTPHookMiddleware(s.RuntimeManager.Registry(), s.LuaVM, s.JSVM, mux.ServeHTTP)(w, r)
+		})
+	}
+
 	s.httpServer = &http.Server{
 		Addr:    s.cfg.HTTPAddr,
 		Handler: handler,
 	}
 
 	// 2. Setup gRPC Server
-	s.gRPCServer = grpc.NewServer()
+	var opts []grpc.ServerOption
+	if s.RuntimeManager != nil {
+		opts = append(opts, grpc.UnaryInterceptor(GRPCHookUnaryInterceptor(s.RuntimeManager.Registry(), s.LuaVM, s.JSVM)))
+	}
+	s.gRPCServer = grpc.NewServer(opts...)
 	storagepb.RegisterStorageServiceServer(s.gRPCServer, NewStorageServer(s.dbPool, s.tokenMgr))
 
 	// 3. Listen HTTP

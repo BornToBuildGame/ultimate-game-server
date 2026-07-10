@@ -242,22 +242,19 @@ func (m *GoRuntimeManager) HasAfterHook(name string) bool {
 	return exists
 }
 
-// Registry returns the underlying HookRegistry for direct access.
-func (m *GoRuntimeManager) Registry() *HookRegistry {
-	return m.registry
-}
-
-// safeCall wraps a function invocation with panic recovery to prevent
-// Go module panics from crashing the server process.
 func (m *GoRuntimeManager) safeCall(fn func() error) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			stack := debug.Stack()
-			m.logger.Error("Go runtime panic recovered: %v\n%s", r, string(stack))
-			err = fmt.Errorf("runtime panic recovered: %v", r)
+			err = fmt.Errorf("runtime panic recovered: %v\n%s", r, debug.Stack())
+			m.logger.Error("Go runtime panic: %v", r)
 		}
 	}()
 	return fn()
+}
+
+// Registry returns the hook registry.
+func (m *GoRuntimeManager) Registry() *HookRegistry {
+	return m.registry
 }
 
 // goInitializer implements the Initializer interface for Go modules.
