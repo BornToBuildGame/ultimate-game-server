@@ -214,3 +214,29 @@ func (ts *TournamentScheduler) tryAcquireRewardLock(ctx context.Context, key str
 	ts.localRewarded[key] = true
 	return true
 }
+
+// JoinTournament registers a player's intent to participate in a tournament.
+// It inserts an idempotent placeholder record with score=0, subscore=0, and num_score=0.
+func JoinTournament(ctx context.Context, pool *pgxpool.Pool, tournamentID, ownerID, username string) error {
+	var joinRequired bool
+	var endTime time.Time
+	query := `SELECT join_required, end_time FROM leaderboard WHERE id = $1`
+	err := pool.QueryRow(ctx, query, tournamentID).Scan(&joinRequired, &endTime)
+	if err != nil {
+		return err
+	}
+
+	if !endTime.IsZero() && endTime.Unix() > 0 && time.Now().After(endTime) {
+		return fmt.Errorf("tournament has already ended")
+	}
+
+	insertQuery := `
+		INSERT INTO leaderboard_record (
+			leaderboard_id, owner_id, username, score, subscore, num_score, max_num_score, metadata, create_time, update_time, expiry_time
+		) VALUES ($1, $2, $3, 0, 0, 0, 1000000, '{}', now(), now(), $4)
+		ON CONFLICT (owner_id, leaderboard_id, expiry_time) DO NOTHING
+	`
+	expiryTime := time.Unix(0, 0).UTC()
+	_, err = pool.Exec(ctx, insertQuery, tournamentID, ownerID, username, expiryTime)
+	return err
+}

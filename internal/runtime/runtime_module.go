@@ -10,6 +10,7 @@ import (
 	"ultimate-game-server/internal/leaderboard"
 	"ultimate-game-server/internal/notification"
 	"ultimate-game-server/internal/storage"
+	"ultimate-game-server/internal/tournament"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -175,4 +176,61 @@ func (m *GoRuntimeModule) NotificationSend(ctx context.Context, userID, subject 
 func (m *GoRuntimeModule) MatchCreate(ctx context.Context, module string, params map[string]interface{}) (string, error) {
 	matchID := uuid.New().String()
 	return matchID, nil
+}
+
+func (m *GoRuntimeModule) LeaderboardCreate(ctx context.Context, id string, authoritative bool, sortOrder int, operator int, resetSchedule string, metadata map[string]interface{}, enableRanks bool) error {
+	metadataStr := "{}"
+	if len(metadata) > 0 {
+		bytes, _ := json.Marshal(metadata)
+		metadataStr = string(bytes)
+	}
+	lb := &leaderboard.Leaderboard{
+		ID:            id,
+		Authoritative: authoritative,
+		SortOrder:     sortOrder,
+		Operator:      operator,
+		ResetSchedule: resetSchedule,
+		Metadata:      metadataStr,
+		EnableRanks:   enableRanks,
+	}
+	return leaderboard.CreateLeaderboard(ctx, m.dbPool, lb)
+}
+
+func (m *GoRuntimeModule) LeaderboardDelete(ctx context.Context, id string) error {
+	return leaderboard.DeleteLeaderboard(ctx, m.dbPool, id)
+}
+
+func (m *GoRuntimeModule) TournamentCreate(ctx context.Context, id string, authoritative bool, sortOrder, operator int, resetSchedule string, metadata map[string]interface{}, title, description string, category int, startTime, endTime int64, duration, maxSize, maxNumScore int, joinRequired, enableRanks bool) error {
+	metadataStr := "{}"
+	if len(metadata) > 0 {
+		bytes, _ := json.Marshal(metadata)
+		metadataStr = string(bytes)
+	}
+	lb := &leaderboard.Leaderboard{
+		ID:            id,
+		Authoritative: authoritative,
+		SortOrder:     sortOrder,
+		Operator:      operator,
+		ResetSchedule: resetSchedule,
+		Metadata:      metadataStr,
+		Title:         title,
+		Description:   description,
+		Category:      category,
+		StartTime:     time.Unix(startTime, 0).UTC(),
+		EndTime:       time.Unix(endTime, 0).UTC(),
+		Duration:      duration,
+		MaxSize:       maxSize,
+		MaxNumScore:   maxNumScore,
+		JoinRequired:  joinRequired,
+		EnableRanks:   enableRanks,
+	}
+	return leaderboard.CreateLeaderboard(ctx, m.dbPool, lb)
+}
+
+func (m *GoRuntimeModule) TournamentDelete(ctx context.Context, id string) error {
+	return leaderboard.DeleteLeaderboard(ctx, m.dbPool, id)
+}
+
+func (m *GoRuntimeModule) TournamentJoin(ctx context.Context, id, ownerID, username string) error {
+	return tournament.JoinTournament(ctx, m.dbPool, id, ownerID, username)
 }

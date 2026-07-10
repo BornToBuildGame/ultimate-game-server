@@ -20,6 +20,7 @@ var (
 	ErrAuthoritative       = errors.New("leaderboard is authoritative and rejects client submissions")
 	ErrMaxAttemptsReached  = errors.New("max score submission attempts reached")
 	ErrInvalidOperator     = errors.New("invalid score operator")
+	ErrJoinRequired        = errors.New("join required before submitting score")
 )
 
 const (
@@ -168,11 +169,12 @@ func SubmitScore(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Client, lea
 	defer tx.Rollback(ctx)
 
 	// 1. Lock and check leaderboard config
-	lbQuery := `SELECT authoritative, sort_order, operator, max_num_score, duration, start_time FROM leaderboard WHERE id = $1 FOR SHARE`
+	lbQuery := `SELECT authoritative, sort_order, operator, max_num_score, duration, start_time, join_required FROM leaderboard WHERE id = $1 FOR SHARE`
 	var authoritative bool
 	var sortOrder, operator, maxNumScore, duration int
 	var startTime time.Time
-	err = tx.QueryRow(ctx, lbQuery, leaderboardID).Scan(&authoritative, &sortOrder, &operator, &maxNumScore, &duration, &startTime)
+	var joinRequired bool
+	err = tx.QueryRow(ctx, lbQuery, leaderboardID).Scan(&authoritative, &sortOrder, &operator, &maxNumScore, &duration, &startTime, &joinRequired)
 	if err == pgx.ErrNoRows {
 		return nil, ErrLeaderboardNotFound
 	} else if err != nil {
@@ -190,6 +192,18 @@ func SubmitScore(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Client, lea
 		elapsed := now.Sub(startTime)
 		occIdx := int(elapsed.Seconds() / float64(duration))
 		expiryTime = startTime.Add(time.Duration(occIdx+1) * time.Duration(duration) * time.Second)
+	}
+
+	if joinRequired {
+		var existsCheck bool
+		checkQuery := `SELECT EXISTS(SELECT 1 FROM leaderboard_record WHERE owner_id = $1 AND leaderboard_id = $2 AND expiry_time = $3)`
+		err = tx.QueryRow(ctx, checkQuery, ownerID, leaderboardID, expiryTime).Scan(&existsCheck)
+		if err != nil {
+			return nil, err
+		}
+		if !existsCheck {
+			return nil, ErrJoinRequired
+		}
 	}
 
 	if metadata == "" {
@@ -491,4 +505,25 @@ func getOrBuildRankCache(ctx context.Context, pool *pgxpool.Pool, leaderboardID 
 
 	localCache.cache[key] = records
 	return records, nil
+}
+
+// DeleteLeaderboard deletes a leaderboard configuration and all its records.
+func DeleteLeaderboard(ctx context.Context, pool *pgxpool.Pool, id string) error {
+	tx, err := pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	_, err = tx.Exec(ctx, "DELETE FROM leaderboard_record WHERE leaderboard_id = $1", id)
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.Exec(ctx, "DELETE FROM leaderboard WHERE id = $1", id)
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit(ctx)
 }

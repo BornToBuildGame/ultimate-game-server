@@ -31,7 +31,14 @@ type RuntimeModule interface {
 	AccountGetId(ctx context.Context, userID string) (*Account, error)
 
 	// Leaderboard operations
+	LeaderboardCreate(ctx context.Context, id string, authoritative bool, sortOrder int, operator int, resetSchedule string, metadata map[string]interface{}, enableRanks bool) error
+	LeaderboardDelete(ctx context.Context, id string) error
 	LeaderboardRecordWrite(ctx context.Context, id, ownerID, username string, score, subscore int64, metadata map[string]interface{}) (*LeaderboardRecord, error)
+
+	// Tournament operations
+	TournamentCreate(ctx context.Context, id string, authoritative bool, sortOrder, operator int, resetSchedule string, metadata map[string]interface{}, title, description string, category int, startTime, endTime int64, duration, maxSize, maxNumScore int, joinRequired, enableRanks bool) error
+	TournamentDelete(ctx context.Context, id string) error
+	TournamentJoin(ctx context.Context, id, ownerID, username string) error
 
 	// Notification operations
 	NotificationSend(ctx context.Context, userID, subject string, content map[string]interface{}, code int, senderID string, persistent bool) error

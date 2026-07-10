@@ -224,6 +224,100 @@ func MapLuaNK(L *lua.LState, nk RuntimeModule) {
 		return 1
 	}))
 
+	// 8. Leaderboard Create
+	L.SetField(nkTable, "leaderboard_create", L.NewFunction(func(L *lua.LState) int {
+		id := L.CheckString(1)
+		authoritative := L.CheckBool(2)
+		sortOrder := L.CheckInt(3)
+		operator := L.CheckInt(4)
+		resetSchedule := L.OptString(5, "")
+		metadataTbl := L.OptTable(6, nil)
+		enableRanks := L.OptBool(7, true)
+
+		var metadata map[string]interface{}
+		if metadataTbl != nil {
+			if m, ok := ToGoValue(metadataTbl).(map[string]interface{}); ok {
+				metadata = m
+			}
+		}
+
+		err := nk.LeaderboardCreate(L.Context(), id, authoritative, sortOrder, operator, resetSchedule, metadata, enableRanks)
+		if err != nil {
+			L.RaiseError("leaderboard_create failed: %v", err)
+			return 0
+		}
+		return 0
+	}))
+
+	// 9. Leaderboard Delete
+	L.SetField(nkTable, "leaderboard_delete", L.NewFunction(func(L *lua.LState) int {
+		id := L.CheckString(1)
+		err := nk.LeaderboardDelete(L.Context(), id)
+		if err != nil {
+			L.RaiseError("leaderboard_delete failed: %v", err)
+			return 0
+		}
+		return 0
+	}))
+
+	// 10. Tournament Create
+	L.SetField(nkTable, "tournament_create", L.NewFunction(func(L *lua.LState) int {
+		id := L.CheckString(1)
+		authoritative := L.CheckBool(2)
+		sortOrder := L.CheckInt(3)
+		operator := L.CheckInt(4)
+		resetSchedule := L.OptString(5, "")
+		metadataTbl := L.OptTable(6, nil)
+		title := L.OptString(7, "")
+		description := L.OptString(8, "")
+		category := L.OptInt(9, 0)
+		startTime := L.OptInt64(10, 0)
+		endTime := L.OptInt64(11, 0)
+		duration := L.OptInt(12, 0)
+		maxSize := L.OptInt(13, 0)
+		maxNumScore := L.OptInt(14, 0)
+		joinRequired := L.OptBool(15, false)
+		enableRanks := L.OptBool(16, true)
+
+		var metadata map[string]interface{}
+		if metadataTbl != nil {
+			if m, ok := ToGoValue(metadataTbl).(map[string]interface{}); ok {
+				metadata = m
+			}
+		}
+
+		err := nk.TournamentCreate(L.Context(), id, authoritative, sortOrder, operator, resetSchedule, metadata, title, description, category, startTime, endTime, duration, maxSize, maxNumScore, joinRequired, enableRanks)
+		if err != nil {
+			L.RaiseError("tournament_create failed: %v", err)
+			return 0
+		}
+		return 0
+	}))
+
+	// 11. Tournament Delete
+	L.SetField(nkTable, "tournament_delete", L.NewFunction(func(L *lua.LState) int {
+		id := L.CheckString(1)
+		err := nk.TournamentDelete(L.Context(), id)
+		if err != nil {
+			L.RaiseError("tournament_delete failed: %v", err)
+			return 0
+		}
+		return 0
+	}))
+
+	// 12. Tournament Join
+	L.SetField(nkTable, "tournament_join", L.NewFunction(func(L *lua.LState) int {
+		id := L.CheckString(1)
+		ownerID := L.CheckString(2)
+		username := L.CheckString(3)
+		err := nk.TournamentJoin(L.Context(), id, ownerID, username)
+		if err != nil {
+			L.RaiseError("tournament_join failed: %v", err)
+			return 0
+		}
+		return 0
+	}))
+
 	L.SetGlobal("nk", nkTable)
 }
 

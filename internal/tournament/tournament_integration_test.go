@@ -149,3 +149,88 @@ func TestTournamentScheduler_StartStop(t *testing.T) {
 	time.Sleep(50 * time.Millisecond)
 	ts.Stop()
 }
+
+func TestTournamentJoin_Integration(t *testing.T) {
+	ctx := context.Background()
+
+	postgresContainer, err := postgres.Run(ctx, "postgres:16-alpine",
+		postgres.WithDatabase("ultimate_game_db"),
+		postgres.WithUsername("game_admin"),
+		postgres.WithPassword("game_password"),
+	)
+	if err != nil {
+		t.Fatalf("failed to start postgres container: %v", err)
+	}
+	defer func() {
+		if err := postgresContainer.Terminate(ctx); err != nil {
+			t.Errorf("failed to terminate postgres container: %v", err)
+		}
+	}()
+
+	dsn, err := postgresContainer.ConnectionString(ctx, "sslmode=disable")
+	if err != nil {
+		t.Fatalf("failed to get container DSN: %v", err)
+	}
+
+	logger := zap.NewNop()
+	dbCfg := database.Config{
+		DSN:          dsn,
+		MaxOpenConns: 10,
+		MaxRetries:   10,
+		RetryDelay:   500 * time.Millisecond,
+	}
+
+	pool, err := database.ConnectWithBackoff(ctx, logger, dbCfg)
+	if err != nil {
+		t.Fatalf("failed to connect to db: %v", err)
+	}
+	defer pool.Close()
+
+	err = database.RunMigrations(ctx, logger, pool)
+	if err != nil {
+		t.Fatalf("migrations failed: %v", err)
+	}
+
+	// Create tournament with join_required = true
+	startTime := time.Now().Add(-1 * time.Hour)
+	tourneyID := "join_required_cup"
+	lb := &leaderboard.Leaderboard{
+		ID:            tourneyID,
+		Authoritative: false,
+		SortOrder:     leaderboard.SortOrderDescending,
+		Operator:      leaderboard.OperatorBest,
+		ResetSchedule: "",
+		JoinRequired:  true,
+		StartTime:     startTime,
+	}
+
+	err = leaderboard.CreateLeaderboard(ctx, pool, lb)
+	if err != nil {
+		t.Fatalf("failed to create leaderboard: %v", err)
+	}
+
+	userID := uuid.New().String()
+	username := "player_test"
+
+	// 1. Submit score without joining -> should fail with ErrJoinRequired
+	_, err = leaderboard.SubmitScore(ctx, pool, nil, tourneyID, userID, username, 100, 0, "{}", false)
+	if err != leaderboard.ErrJoinRequired {
+		t.Fatalf("expected ErrJoinRequired, got: %v", err)
+	}
+
+	// 2. Join the tournament -> should succeed
+	err = JoinTournament(ctx, pool, tourneyID, userID, username)
+	if err != nil {
+		t.Fatalf("failed to join tournament: %v", err)
+	}
+
+	// 3. Submit score after joining -> should succeed
+	rec, err := leaderboard.SubmitScore(ctx, pool, nil, tourneyID, userID, username, 100, 0, "{}", false)
+	if err != nil {
+		t.Fatalf("failed to submit score after joining: %v", err)
+	}
+
+	if rec.Score != 100 {
+		t.Errorf("expected score 100, got: %d", rec.Score)
+	}
+}

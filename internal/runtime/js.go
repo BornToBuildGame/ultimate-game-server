@@ -214,6 +214,106 @@ func MapJSNK(vm *goja.Runtime, nk RuntimeModule, timeout time.Duration) {
 		return vm.ToValue(matchID)
 	})
 
+	// 8. Leaderboard Create
+	_ = nkObj.Set("leaderboard_create", func(call goja.FunctionCall) goja.Value {
+		id := call.Argument(0).String()
+		authoritative := call.Argument(1).ToBoolean()
+		sortOrder := call.Argument(2).ToInteger()
+		operator := call.Argument(3).ToInteger()
+		resetSchedule := call.Argument(4).String()
+		
+		var metadata map[string]interface{}
+		if metadataVal := call.Argument(5).Export(); metadataVal != nil {
+			if m, ok := metadataVal.(map[string]interface{}); ok {
+				metadata = m
+			}
+		}
+
+		enableRanks := true
+		if call.Argument(6).Export() != nil {
+			enableRanks = call.Argument(6).ToBoolean()
+		}
+
+		err := nk.LeaderboardCreate(context.Background(), id, authoritative, int(sortOrder), int(operator), resetSchedule, metadata, enableRanks)
+		if err != nil {
+			panic(vm.NewGoError(err))
+		}
+		return goja.Undefined()
+	})
+
+	// 9. Leaderboard Delete
+	_ = nkObj.Set("leaderboard_delete", func(call goja.FunctionCall) goja.Value {
+		id := call.Argument(0).String()
+		err := nk.LeaderboardDelete(context.Background(), id)
+		if err != nil {
+			panic(vm.NewGoError(err))
+		}
+		return goja.Undefined()
+	})
+
+	// 10. Tournament Create
+	_ = nkObj.Set("tournament_create", func(call goja.FunctionCall) goja.Value {
+		id := call.Argument(0).String()
+		authoritative := call.Argument(1).ToBoolean()
+		sortOrder := call.Argument(2).ToInteger()
+		operator := call.Argument(3).ToInteger()
+		resetSchedule := call.Argument(4).String()
+
+		var metadata map[string]interface{}
+		if metadataVal := call.Argument(5).Export(); metadataVal != nil {
+			if m, ok := metadataVal.(map[string]interface{}); ok {
+				metadata = m
+			}
+		}
+
+		title := call.Argument(6).String()
+		description := call.Argument(7).String()
+		category := call.Argument(8).ToInteger()
+		startTime := call.Argument(9).ToInteger()
+		endTime := call.Argument(10).ToInteger()
+		duration := call.Argument(11).ToInteger()
+		maxSize := call.Argument(12).ToInteger()
+		maxNumScore := call.Argument(13).ToInteger()
+
+		joinRequired := false
+		if call.Argument(14).Export() != nil {
+			joinRequired = call.Argument(14).ToBoolean()
+		}
+
+		enableRanks := true
+		if call.Argument(15).Export() != nil {
+			enableRanks = call.Argument(15).ToBoolean()
+		}
+
+		err := nk.TournamentCreate(context.Background(), id, authoritative, int(sortOrder), int(operator), resetSchedule, metadata, title, description, int(category), startTime, endTime, int(duration), int(maxSize), int(maxNumScore), joinRequired, enableRanks)
+		if err != nil {
+			panic(vm.NewGoError(err))
+		}
+		return goja.Undefined()
+	})
+
+	// 11. Tournament Delete
+	_ = nkObj.Set("tournament_delete", func(call goja.FunctionCall) goja.Value {
+		id := call.Argument(0).String()
+		err := nk.TournamentDelete(context.Background(), id)
+		if err != nil {
+			panic(vm.NewGoError(err))
+		}
+		return goja.Undefined()
+	})
+
+	// 12. Tournament Join
+	_ = nkObj.Set("tournament_join", func(call goja.FunctionCall) goja.Value {
+		id := call.Argument(0).String()
+		ownerID := call.Argument(1).String()
+		username := call.Argument(2).String()
+		err := nk.TournamentJoin(context.Background(), id, ownerID, username)
+		if err != nil {
+			panic(vm.NewGoError(err))
+		}
+		return goja.Undefined()
+	})
+
 	_ = vm.Set("nk", nkObj)
 }
 

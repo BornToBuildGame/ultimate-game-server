@@ -113,6 +113,26 @@ func (m *mockRuntimeModule) MatchCreate(ctx context.Context, module string, para
 	return "match_12345", nil
 }
 
+func (m *mockRuntimeModule) LeaderboardCreate(ctx context.Context, id string, authoritative bool, sortOrder int, operator int, resetSchedule string, metadata map[string]interface{}, enableRanks bool) error {
+	return nil
+}
+
+func (m *mockRuntimeModule) LeaderboardDelete(ctx context.Context, id string) error {
+	return nil
+}
+
+func (m *mockRuntimeModule) TournamentCreate(ctx context.Context, id string, authoritative bool, sortOrder, operator int, resetSchedule string, metadata map[string]interface{}, title, description string, category int, startTime, endTime int64, duration, maxSize, maxNumScore int, joinRequired, enableRanks bool) error {
+	return nil
+}
+
+func (m *mockRuntimeModule) TournamentDelete(ctx context.Context, id string) error {
+	return nil
+}
+
+func (m *mockRuntimeModule) TournamentJoin(ctx context.Context, id, ownerID, username string) error {
+	return nil
+}
+
 // Test Gopher-Lua bindings and execution
 func TestLuaVM_NK_Bindings(t *testing.T) {
 	nk := newMockRuntimeModule()
@@ -165,6 +185,15 @@ func TestLuaVM_NK_Bindings(t *testing.T) {
 		-- Test match create
 		local match_id = nk.match_create("battle", {map = "desert"})
 		assert(match_id == "match_12345")
+
+		-- Test leaderboard create/delete
+		nk.leaderboard_create("lb_temp", true, 1, 0, "", {}, true)
+		nk.leaderboard_delete("lb_temp")
+
+		-- Test tournament create/join/delete
+		nk.tournament_create("tour_temp", true, 1, 0, "", {}, "Title", "Desc", 1, 0, 0, 3600, 100, 3, true, true)
+		nk.tournament_join("tour_temp", "user1", "gamer1")
+		nk.tournament_delete("tour_temp")
 	`
 
 	err := L.DoString(script)
@@ -228,6 +257,15 @@ func TestGojaVM_NK_Bindings(t *testing.T) {
 		if (match_id !== "match_12345") {
 			throw new Error("match_create failed");
 		}
+
+		// Test leaderboard create/delete
+		nk.leaderboard_create("lb_temp", true, 1, 0, "", {}, true);
+		nk.leaderboard_delete("lb_temp");
+
+		// Test tournament create/join/delete
+		nk.tournament_create("tour_temp", true, 1, 0, "", {}, "Title", "Desc", 1, 0, 0, 3600, 100, 3, true, true);
+		nk.tournament_join("tour_temp", "user1", "gamer1");
+		nk.tournament_delete("tour_temp");
 	`
 
 	_, err := vm.RunString(script)
