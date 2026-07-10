@@ -2,6 +2,7 @@ package chat
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -115,11 +116,73 @@ func ListMessages(
 		messages = append(messages, m)
 	}
 
+	// Reverse to ascending chronological order
+	for i, j := 0, len(messages)-1; i < j; i, j = i+1, j-1 {
+		messages[i], messages[j] = messages[j], messages[i]
+	}
+
 	return messages, nil
 }
 
-// StreamRegistry routes real-time chat messages to active subscribers in Single-Node mode.
+// StreamRegistry manages real-time chat subscriptions and routing.
 type StreamRegistry struct {
-	// Mutex and routing map of stream key to active channels of subscribers
-	// (emulated broadcast loop using Go channels).
+	mu      sync.RWMutex
+	streams map[string]map[string]func(payload []byte) // streamKey -> sessionID -> sendCallback
+}
+
+// NewStreamRegistry creates a new StreamRegistry.
+func NewStreamRegistry() *StreamRegistry {
+	return &StreamRegistry{
+		streams: make(map[string]map[string]func(payload []byte)),
+	}
+}
+
+// Subscribe adds a session callback to a stream.
+func (sr *StreamRegistry) Subscribe(streamKey, sessionID string, sendFn func(payload []byte)) {
+	sr.mu.Lock()
+	defer sr.mu.Unlock()
+
+	if sr.streams == nil {
+		sr.streams = make(map[string]map[string]func(payload []byte))
+	}
+
+	sessionMap, exists := sr.streams[streamKey]
+	if !exists {
+		sessionMap = make(map[string]func(payload []byte))
+		sr.streams[streamKey] = sessionMap
+	}
+	sessionMap[sessionID] = sendFn
+}
+
+// Unsubscribe removes a session from a stream.
+func (sr *StreamRegistry) Unsubscribe(streamKey, sessionID string) {
+	sr.mu.Lock()
+	defer sr.mu.Unlock()
+
+	if sr.streams == nil {
+		return
+	}
+
+	if sessionMap, exists := sr.streams[streamKey]; exists {
+		delete(sessionMap, sessionID)
+		if len(sessionMap) == 0 {
+			delete(sr.streams, streamKey)
+		}
+	}
+}
+
+// Broadcast sends a message to all active subscribers on the stream.
+func (sr *StreamRegistry) Broadcast(streamKey string, payload []byte) {
+	sr.mu.RLock()
+	defer sr.mu.RUnlock()
+
+	if sr.streams == nil {
+		return
+	}
+
+	if sessionMap, exists := sr.streams[streamKey]; exists {
+		for _, sendFn := range sessionMap {
+			sendFn(payload)
+		}
+	}
 }

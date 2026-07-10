@@ -7,6 +7,9 @@ import (
 	"testing"
 	"time"
 
+	"ultimate-game-server/internal/runtime"
+
+	lua "github.com/yuin/gopher-lua"
 	"go.uber.org/zap"
 )
 
@@ -194,5 +197,123 @@ func TestRouter_ClusterForwarding(t *testing.T) {
 	_ = forwardedToNode
 	_ = forwardedMatchID
 	_ = forwardedInput
+}
+
+func TestMatchLoop_LuaAuthoritative(t *testing.T) {
+	L := lua.NewState()
+	defer L.Close()
+
+	script := `
+		function match_init(ctx, params)
+			return { tick = 0, score = {}, positions = {}, is_finished = false }
+		end
+
+		function match_join_attempt(ctx, dispatcher, tick, state, presence, metadata)
+			return state, true
+		end
+
+		function match_loop(ctx, dispatcher, tick, state, messages)
+			for i, msg in ipairs(messages) do
+				if msg.action == "move" then
+					state.positions[msg.user_id] = msg.payload
+				elseif msg.action == "score" then
+					state.score[msg.user_id] = (state.score[msg.user_id] or 0) + 1
+					if state.score[msg.user_id] >= 3 then
+						state.is_finished = true
+					end
+				end
+			end
+			return state
+		end
+	`
+	err := L.DoString(script)
+	if err != nil {
+		t.Fatalf("failed to run script: %v", err)
+	}
+
+	// Create match loop
+	playerIDs := []string{"p-1"}
+	logger := zap.NewNop()
+
+	var mu sync.Mutex
+	var broadcastStates [][]byte
+	var terminated bool
+	var finalState MatchState
+
+	onBroadcast := func(matchID string, stateJson []byte) {
+		mu.Lock()
+		broadcastStates = append(broadcastStates, stateJson)
+		mu.Unlock()
+	}
+
+	onEnd := func(matchID string, state MatchState) {
+		mu.Lock()
+		terminated = true
+		finalState = state
+		mu.Unlock()
+	}
+
+	ml := NewMatchLoop("match-lua-1", playerIDs, 100, logger, onBroadcast, onEnd)
+
+	// Create and inject custom Gopher-Lua sandbox
+	sb := runtime.NewSandbox(64*1024*1024, 5*time.Second)
+	defer sb.Close()
+	_ = sb.L.DoString(script) // Load script functions in sandbox VM
+	ml.SetSandbox(sb)
+
+	// Test JoinAttempt hook
+	accept, err := ml.JoinAttempt("p-1", "gamer_1", map[string]string{"version": "1.0"})
+	if err != nil {
+		t.Fatalf("JoinAttempt failed: %v", err)
+	}
+	if !accept {
+		t.Error("expected JoinAttempt to accept player")
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	go ml.Start(ctx)
+
+	time.Sleep(50 * time.Millisecond)
+
+	// Submit move input
+	ml.SubmitInput(MatchInput{
+		UserID:  "p-1",
+		Action:  "move",
+		Payload: "50,60",
+	})
+
+	time.Sleep(30 * time.Millisecond)
+
+	mu.Lock()
+	if len(broadcastStates) == 0 {
+		t.Fatal("expected broadcast state delta")
+	}
+	var st MatchState
+	_ = json.Unmarshal(broadcastStates[len(broadcastStates)-1], &st)
+	if st.Positions["p-1"] != "50,60" {
+		t.Errorf("expected p-1 position to be '50,60', got: %v", st.Positions["p-1"])
+	}
+	mu.Unlock()
+
+	// Submit scoring inputs to trigger termination via Lua hook limit (score >= 3)
+	for i := 0; i < 3; i++ {
+		ml.SubmitInput(MatchInput{
+			UserID: "p-1",
+			Action: "score",
+		})
+	}
+
+	time.Sleep(100 * time.Millisecond)
+
+	mu.Lock()
+	if !terminated {
+		t.Fatal("expected match to terminate via Lua hook score limit")
+	}
+	if finalState.Score["p-1"] < 3 {
+		t.Errorf("expected final score to be >= 3, got: %d", finalState.Score["p-1"])
+	}
+	mu.Unlock()
 }
 

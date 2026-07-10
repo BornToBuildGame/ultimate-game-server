@@ -12,6 +12,7 @@ import (
 
 	"ultimate-game-server/internal/auth"
 	"ultimate-game-server/internal/runtime"
+	"ultimate-game-server/internal/socket"
 	"ultimate-game-server/internal/storage"
 	"ultimate-game-server/internal/api/storagepb"
 
@@ -34,12 +35,14 @@ type Config struct {
 
 // Server handles HTTP and gRPC network interfaces.
 type Server struct {
-	logger      *zap.Logger
-	cfg         Config
-	dbPool      *pgxpool.Pool
-	tokenMgr    *auth.TokenManager
-	sessReg     *auth.SessionRegistry
-	rateLimiter *IPTokenBucketRateLimiter
+	logger         *zap.Logger
+	cfg            Config
+	dbPool         *pgxpool.Pool
+	tokenMgr       *auth.TokenManager
+	sessReg        *auth.SessionRegistry
+	rateLimiter    *IPTokenBucketRateLimiter
+	SocketRegistry *socket.ConnectionRegistry
+	SocketGateway  *socket.GatewayHandler
 
 	httpServer *http.Server
 	gRPCServer *grpc.Server
@@ -74,13 +77,18 @@ func NewServer(logger *zap.Logger, cfg Config, dbPool *pgxpool.Pool) (*Server, e
 		cfg.RateLimitRefill = 10
 	}
 
+	sockRegistry := socket.NewConnectionRegistry()
+	sockGateway := socket.NewGatewayHandler(logger, tm, sockRegistry, nil, nil)
+
 	return &Server{
-		logger:      logger,
-		cfg:         cfg,
-		dbPool:      dbPool,
-		tokenMgr:    tm,
-		sessReg:     auth.NewSessionRegistry(),
-		rateLimiter: NewIPRateLimiter(cfg.RateLimitMax, cfg.RateLimitRefill),
+		logger:         logger,
+		cfg:            cfg,
+		dbPool:         dbPool,
+		tokenMgr:       tm,
+		sessReg:        auth.NewSessionRegistry(),
+		rateLimiter:    NewIPRateLimiter(cfg.RateLimitMax, cfg.RateLimitRefill),
+		SocketRegistry: sockRegistry,
+		SocketGateway:  sockGateway,
 	}, nil
 }
 
@@ -172,6 +180,14 @@ type authCustomRequest struct {
 	CustomID string `json:"custom_id"`
 }
 
+type authSocialRequest struct {
+	Account struct {
+		Token string `json:"token"`
+	} `json:"account"`
+	Username string `json:"username"`
+	Create   *bool  `json:"create"`
+}
+
 type refreshRequest struct {
 	RefreshToken string `json:"refresh_token"`
 }
@@ -192,6 +208,10 @@ func (s *Server) registerRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /v2/storage/read", s.handleReadStorageObjects)
 	mux.HandleFunc("POST /v2/storage/delete", s.handleDeleteStorageObjects)
 	mux.HandleFunc("GET /v2/storage/{collection}", s.handleListStorageObjects)
+	mux.HandleFunc("GET /ws", s.SocketGateway.Upgrade)
+	mux.HandleFunc("POST /v2/account/authenticate/apple", s.handleAuthenticateApple)
+	mux.HandleFunc("POST /v2/account/authenticate/google", s.handleAuthenticateGoogle)
+	mux.HandleFunc("POST /v2/account/authenticate/facebook", s.handleAuthenticateFacebook)
 }
 
 func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
@@ -273,6 +293,120 @@ func (s *Server) handleAuthenticateCustom(w http.ResponseWriter, r *http.Request
 	}
 
 	user, err := auth.AuthenticateCustom(r.Context(), s.dbPool, req.CustomID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+
+	accessToken, refreshToken, err := s.tokenMgr.GenerateSession(user.ID.String(), user.Username)
+	if err != nil {
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	s.sessReg.RegisterSession(user.ID.String(), refreshToken, "")
+
+	resp := authResponse{
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+		UserID:       user.ID.String(),
+		Username:     user.Username,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(resp)
+}
+
+func (s *Server) handleAuthenticateApple(w http.ResponseWriter, r *http.Request) {
+	var req authSocialRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "bad request", http.StatusBadRequest)
+		return
+	}
+
+	providerID, err := auth.VerifyAppleToken(r.Context(), req.Account.Token)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+
+	user, err := auth.AuthenticateSocial(r.Context(), s.dbPool, "apple", providerID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+
+	accessToken, refreshToken, err := s.tokenMgr.GenerateSession(user.ID.String(), user.Username)
+	if err != nil {
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	s.sessReg.RegisterSession(user.ID.String(), refreshToken, "")
+
+	resp := authResponse{
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+		UserID:       user.ID.String(),
+		Username:     user.Username,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(resp)
+}
+
+func (s *Server) handleAuthenticateGoogle(w http.ResponseWriter, r *http.Request) {
+	var req authSocialRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "bad request", http.StatusBadRequest)
+		return
+	}
+
+	providerID, err := auth.VerifyGoogleToken(r.Context(), req.Account.Token)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+
+	user, err := auth.AuthenticateSocial(r.Context(), s.dbPool, "google", providerID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+
+	accessToken, refreshToken, err := s.tokenMgr.GenerateSession(user.ID.String(), user.Username)
+	if err != nil {
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	s.sessReg.RegisterSession(user.ID.String(), refreshToken, "")
+
+	resp := authResponse{
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+		UserID:       user.ID.String(),
+		Username:     user.Username,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(resp)
+}
+
+func (s *Server) handleAuthenticateFacebook(w http.ResponseWriter, r *http.Request) {
+	var req authSocialRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "bad request", http.StatusBadRequest)
+		return
+	}
+
+	providerID, err := auth.VerifyFacebookToken(r.Context(), req.Account.Token)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+
+	user, err := auth.AuthenticateSocial(r.Context(), s.dbPool, "facebook", providerID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return

@@ -123,3 +123,96 @@ func TestWallet_Integration(t *testing.T) {
 		t.Errorf("expected 10 ledger entries, got: %d", ledgerCount)
 	}
 }
+
+func TestIAP_Integration(t *testing.T) {
+	ctx := context.Background()
+
+	postgresContainer, err := postgres.Run(ctx, "postgres:16-alpine",
+		postgres.WithDatabase("ultimate_game_db"),
+		postgres.WithUsername("game_admin"),
+		postgres.WithPassword("game_password"),
+	)
+	if err != nil {
+		t.Fatalf("failed to start postgres container: %v", err)
+	}
+	defer func() {
+		if err := postgresContainer.Terminate(ctx); err != nil {
+			t.Errorf("failed to terminate postgres container: %v", err)
+		}
+	}()
+
+	dsn, err := postgresContainer.ConnectionString(ctx, "sslmode=disable")
+	if err != nil {
+		t.Fatalf("failed to get container DSN: %v", err)
+	}
+
+	logger := zap.NewNop()
+	dbCfg := database.Config{
+		DSN:          dsn,
+		MaxOpenConns: 5,
+		MaxRetries:   5,
+		RetryDelay:   500 * time.Millisecond,
+	}
+
+	pool, err := database.ConnectWithBackoff(ctx, logger, dbCfg)
+	if err != nil {
+		t.Fatalf("failed to connect: %v", err)
+	}
+	defer pool.Close()
+
+	err = database.RunMigrations(ctx, logger, pool)
+	if err != nil {
+		t.Fatalf("migrations failed: %v", err)
+	}
+
+	// Create user
+	userID := uuid.New().String()
+	_, err = pool.Exec(ctx, "INSERT INTO users (id, username, password, display_name) VALUES ($1, 'iap_user', 'pass', 'IAP')", userID)
+	if err != nil {
+		t.Fatalf("failed to insert user: %v", err)
+	}
+
+	p := StorePurchase{
+		TransactionID: "tx_apple_123",
+		ProductID:     "gems_pack_100",
+		PurchaseTime:  time.Now(),
+		Environment:   1, // Sandbox
+	}
+
+	// 1. Process Apple IAP -> should succeed
+	err = ProcessAppleValidationTx(ctx, pool, userID, p, `{"status": 0}`)
+	if err != nil {
+		t.Fatalf("failed to process Apple IAP: %v", err)
+	}
+
+	// 2. Re-process Apple IAP -> should fail (duplicate check)
+	err = ProcessAppleValidationTx(ctx, pool, userID, p, `{"status": 0}`)
+	if err != ErrTransactionSeenBefore {
+		t.Fatalf("expected ErrTransactionSeenBefore, got: %v", err)
+	}
+
+	// 3. Process Google IAP -> should succeed
+	p2 := StorePurchase{
+		TransactionID: "tx_google_456",
+		ProductID:     "gems_pack_100",
+		PurchaseTime:  time.Now(),
+		Environment:   1, // Sandbox
+	}
+	err = ProcessGoogleValidationTx(ctx, pool, userID, p2, `{"purchaseState": 0}`)
+	if err != nil {
+		t.Fatalf("failed to process Google IAP: %v", err)
+	}
+
+	// 4. Verify wallet balance
+	var walletBytes []byte
+	err = pool.QueryRow(ctx, "SELECT wallet FROM users WHERE id = $1", userID).Scan(&walletBytes)
+	if err != nil {
+		t.Fatalf("failed to query user wallet: %v", err)
+	}
+
+	var w map[string]int64
+	_ = json.Unmarshal(walletBytes, &w)
+	if w["gems"] != 200 {
+		t.Errorf("expected 200 gems, got: %d", w["gems"])
+	}
+}

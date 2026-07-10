@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -168,6 +169,45 @@ func TestAPI_Integration(t *testing.T) {
 	}
 	if rrB.Body.String() != expectedUserID {
 		t.Errorf("expected response body to contain user ID %q, got %q", expectedUserID, rrB.Body.String())
+	}
+
+	// 7. Verify Social Authenticate Endpoints
+	socialProviders := []string{"apple", "google", "facebook"}
+	for _, provider := range socialProviders {
+		urlStr := fmt.Sprintf("http://127.0.0.1:17350/v2/account/authenticate/%s", provider)
+		payload := []byte(fmt.Sprintf(`{"account":{"token":"mock_%s_user_999"}}`, provider))
+		
+		req, err := http.NewRequest("POST", urlStr, bytes.NewBuffer(payload))
+		if err != nil {
+			t.Fatalf("failed to create social request for %s: %v", provider, err)
+		}
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-Forwarded-For", "9.9.9.9")
+
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatalf("social authenticate request failed for %s: %v", provider, err)
+		}
+		
+		if resp.StatusCode != http.StatusOK {
+			t.Errorf("expected 200 OK for %s authenticate, got: %d", provider, resp.StatusCode)
+		}
+		
+		var authResp struct {
+			AccessToken  string `json:"access_token"`
+			RefreshToken string `json:"refresh_token"`
+			UserID       string `json:"user_id"`
+			Username     string `json:"username"`
+		}
+		err = json.NewDecoder(resp.Body).Decode(&authResp)
+		resp.Body.Close()
+		if err != nil {
+			t.Fatalf("failed to decode social authenticate response for %s: %v", provider, err)
+		}
+		
+		if authResp.AccessToken == "" || authResp.UserID == "" {
+			t.Errorf("expected non-empty tokens and user ID in social authenticate response for %s", provider)
+		}
 	}
 }
 

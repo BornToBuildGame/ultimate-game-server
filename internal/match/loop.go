@@ -8,6 +8,7 @@ import (
 
 	"ultimate-game-server/internal/runtime"
 
+	lua "github.com/yuin/gopher-lua"
 	"go.uber.org/zap"
 )
 
@@ -36,7 +37,14 @@ type MatchLoop struct {
 	state        MatchState
 	logger       *zap.Logger
 
-	sandbox     *runtime.Sandbox
+	sandbox             *runtime.Sandbox
+	luaMatchInit        *lua.LFunction
+	luaMatchJoinAttempt *lua.LFunction
+	luaMatchJoin        *lua.LFunction
+	luaMatchLeave       *lua.LFunction
+	luaMatchLoop        *lua.LFunction
+	luaMatchTerminate   *lua.LFunction
+
 	onBroadcast func(matchID string, stateJson []byte)
 	onEnd       func(matchID string, finalState MatchState)
 }
@@ -87,6 +95,26 @@ func (ml *MatchLoop) SetSandbox(sb *runtime.Sandbox) {
 	ml.mu.Lock()
 	defer ml.mu.Unlock()
 	ml.sandbox = sb
+	if sb != nil && sb.L != nil {
+		if fn := sb.L.GetGlobal("match_init"); fn.Type() == lua.LTFunction {
+			ml.luaMatchInit = fn.(*lua.LFunction)
+		}
+		if fn := sb.L.GetGlobal("match_join_attempt"); fn.Type() == lua.LTFunction {
+			ml.luaMatchJoinAttempt = fn.(*lua.LFunction)
+		}
+		if fn := sb.L.GetGlobal("match_join"); fn.Type() == lua.LTFunction {
+			ml.luaMatchJoin = fn.(*lua.LFunction)
+		}
+		if fn := sb.L.GetGlobal("match_leave"); fn.Type() == lua.LTFunction {
+			ml.luaMatchLeave = fn.(*lua.LFunction)
+		}
+		if fn := sb.L.GetGlobal("match_loop"); fn.Type() == lua.LTFunction {
+			ml.luaMatchLoop = fn.(*lua.LFunction)
+		}
+		if fn := sb.L.GetGlobal("match_terminate"); fn.Type() == lua.LTFunction {
+			ml.luaMatchTerminate = fn.(*lua.LFunction)
+		}
+	}
 }
 
 // SubmitInput queues an input action from a player.
@@ -137,14 +165,56 @@ func (ml *MatchLoop) tick() bool {
 	}
 
 	// 2. Process inputs
-	for _, in := range inputs {
-		switch in.Action {
-		case "move":
-			ml.state.Positions[in.UserID] = in.Payload
-		case "score":
-			ml.state.Score[in.UserID] += 1
-			if ml.state.Score[in.UserID] >= 10 { // End match when someone scores 10 points
+	if ml.luaMatchLoop != nil && ml.sandbox != nil {
+		L := ml.sandbox.L
+		msgsTbl := L.NewTable()
+		for _, in := range inputs {
+			msgObj := L.NewTable()
+			L.SetField(msgObj, "user_id", lua.LString(in.UserID))
+			L.SetField(msgObj, "action", lua.LString(in.Action))
+			L.SetField(msgObj, "payload", lua.LString(in.Payload))
+			msgsTbl.Append(msgObj)
+		}
+
+		stateBytes, _ := json.Marshal(ml.state)
+		var stateRaw interface{}
+		_ = json.Unmarshal(stateBytes, &stateRaw)
+		luaState := runtime.ToLuaValue(L, stateRaw)
+
+		ctxTbl := L.NewTable()
+		L.SetField(ctxTbl, "match_id", lua.LString(ml.MatchID))
+
+		err := L.CallByParam(lua.P{
+			Fn:      ml.luaMatchLoop,
+			NRet:    1,
+			Protect: true,
+		}, ctxTbl, lua.LNil, lua.LNumber(ml.state.Tick), luaState, msgsTbl)
+
+		if err != nil {
+			ml.logger.Error("Lua match_loop execution failed", zap.Error(err))
+		} else {
+			retState := L.Get(-1)
+			L.Pop(1)
+
+			if retState == lua.LNil {
 				ml.state.IsFinished = true
+			} else if tbl, ok := retState.(*lua.LTable); ok {
+				goStateVal := runtime.ToGoValue(tbl)
+				if bytes, err := json.Marshal(goStateVal); err == nil {
+					_ = json.Unmarshal(bytes, &ml.state)
+				}
+			}
+		}
+	} else {
+		for _, in := range inputs {
+			switch in.Action {
+			case "move":
+				ml.state.Positions[in.UserID] = in.Payload
+			case "score":
+				ml.state.Score[in.UserID] += 1
+				if ml.state.Score[in.UserID] >= 10 { // End match when someone scores 10 points
+					ml.state.IsFinished = true
+				}
 			}
 		}
 	}
@@ -168,4 +238,55 @@ func (ml *MatchLoop) terminate() {
 	if ml.onEnd != nil {
 		ml.onEnd(ml.MatchID, ml.state)
 	}
+}
+
+// JoinAttempt executes the match_join_attempt Lua hook if present.
+func (ml *MatchLoop) JoinAttempt(userID, username string, metadata map[string]string) (bool, error) {
+	ml.mu.Lock()
+	defer ml.mu.Unlock()
+
+	if ml.luaMatchJoinAttempt == nil || ml.sandbox == nil {
+		return true, nil
+	}
+
+	L := ml.sandbox.L
+	ctxTbl := L.NewTable()
+	L.SetField(ctxTbl, "match_id", lua.LString(ml.MatchID))
+
+	presence := L.NewTable()
+	L.SetField(presence, "user_id", lua.LString(userID))
+	L.SetField(presence, "username", lua.LString(username))
+
+	metaTbl := L.NewTable()
+	for k, v := range metadata {
+		L.SetField(metaTbl, k, lua.LString(v))
+	}
+
+	stateBytes, _ := json.Marshal(ml.state)
+	var stateRaw interface{}
+	_ = json.Unmarshal(stateBytes, &stateRaw)
+	luaState := runtime.ToLuaValue(L, stateRaw)
+
+	err := L.CallByParam(lua.P{
+		Fn:      ml.luaMatchJoinAttempt,
+		NRet:    2,
+		Protect: true,
+	}, ctxTbl, lua.LNil, lua.LNumber(ml.state.Tick), luaState, presence, metaTbl)
+
+	if err != nil {
+		return false, err
+	}
+
+	retState := L.Get(-2)
+	retAccept := L.Get(-1)
+	L.Pop(2)
+
+	if tbl, ok := retState.(*lua.LTable); ok {
+		goStateVal := runtime.ToGoValue(tbl)
+		if bytes, err := json.Marshal(goStateVal); err == nil {
+			_ = json.Unmarshal(bytes, &ml.state)
+		}
+	}
+
+	return lua.LVAsBool(retAccept), nil
 }

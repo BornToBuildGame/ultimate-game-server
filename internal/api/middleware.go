@@ -56,10 +56,17 @@ func BodyLimitMiddleware(maxBytes int64) func(http.Handler) http.Handler {
 func RateLimitMiddleware(limiter *IPTokenBucketRateLimiter) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			// Basic IP extraction
-			ip := r.RemoteAddr
-			if idx := strings.LastIndex(ip, ":"); idx != -1 {
-				ip = ip[:idx]
+			// Resolve IP checking X-Forwarded-For proxy header first
+			ip := r.Header.Get("X-Forwarded-For")
+			if ip == "" {
+				ip = r.RemoteAddr
+				if idx := strings.LastIndex(ip, ":"); idx != -1 {
+					ip = ip[:idx]
+				}
+			} else {
+				if idx := strings.Index(ip, ","); idx != -1 {
+					ip = strings.TrimSpace(ip[:idx])
+				}
 			}
 
 			if !limiter.Allow(ip) {
