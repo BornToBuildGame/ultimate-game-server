@@ -1,0 +1,361 @@
+syntax = "proto3";
+
+package ultimate.server.api;
+
+option go_package = "ultimate-game-server/internal/api/apipb";
+
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+
+message User {
+  string id = 1;
+  string username = 2;
+  string display_name = 3;
+  string avatar_url = 4;
+  string lang_tag = 5;
+  string location = 6;
+  string timezone = 7;
+}
+
+// --- Leaderboard ---
+
+service LeaderboardService {
+  rpc CreateLeaderboard(CreateLeaderboardRequest) returns (google.protobuf.Empty);
+  rpc DeleteLeaderboard(DeleteLeaderboardRequest) returns (google.protobuf.Empty);
+  rpc WriteLeaderboardRecord(WriteLeaderboardRecordRequest) returns (LeaderboardRecord);
+  rpc ListLeaderboardRecords(ListLeaderboardRecordsRequest) returns (LeaderboardRecordList);
+  rpc ListLeaderboardRecordsAroundOwner(ListLeaderboardRecordsAroundOwnerRequest) returns (LeaderboardRecordList);
+  rpc DeleteLeaderboardRecord(DeleteLeaderboardRecordRequest) returns (google.protobuf.Empty);
+}
+
+message CreateLeaderboardRequest {
+  string id = 1;
+  string sort_order = 2; // "ascending" or "descending"
+  string operator = 3;   // "best", "set", "increment", "decrement"
+  string reset_schedule = 4; // Cron format
+  string metadata = 5; // JSON string format
+  bool authoritative = 6;
+}
+
+message DeleteLeaderboardRequest {
+  string id = 1;
+}
+
+message WriteLeaderboardRecordRequest {
+  string leaderboard_id = 1;
+  int64 score = 2;
+  int64 subscore = 3;
+  string metadata = 4; // JSON string format
+}
+
+message LeaderboardRecord {
+  string leaderboard_id = 1;
+  string owner_id = 2;
+  string username = 3;
+  int64 score = 4;
+  int64 subscore = 5;
+  string metadata = 6; // JSON string format
+  int64 rank = 7;
+  google.protobuf.Timestamp create_time = 8;
+  google.protobuf.Timestamp update_time = 9;
+  google.protobuf.Timestamp expiry_time = 10;
+  int32 num_score = 11;
+  int32 max_num_score = 12;
+}
+
+message ListLeaderboardRecordsRequest {
+  string leaderboard_id = 1;
+  int32 limit = 2;
+  string cursor = 3;
+  repeated string owner_ids = 4;
+}
+
+message ListLeaderboardRecordsAroundOwnerRequest {
+  string leaderboard_id = 1;
+  string owner_id = 2;
+  int32 limit = 3;
+}
+
+message LeaderboardRecordList {
+  repeated LeaderboardRecord records = 1;
+  string next_cursor = 2;
+  string prev_cursor = 3;
+}
+
+message DeleteLeaderboardRecordRequest {
+  string leaderboard_id = 1;
+}
+
+// --- Tournament ---
+
+service TournamentService {
+  rpc CreateTournament(CreateTournamentRequest) returns (google.protobuf.Empty);
+  rpc DeleteTournament(DeleteTournamentRequest) returns (google.protobuf.Empty);
+  rpc JoinTournament(JoinTournamentRequest) returns (google.protobuf.Empty);
+  rpc ListTournaments(ListTournamentsRequest) returns (TournamentList);
+  rpc WriteTournamentRecord(WriteTournamentRecordRequest) returns (LeaderboardRecord);
+  rpc ListTournamentRecords(ListTournamentRecordsRequest) returns (LeaderboardRecordList);
+}
+
+message CreateTournamentRequest {
+  string id = 1;
+  string sort_order = 2;
+  string operator = 3;
+  string reset_schedule = 4;
+  string metadata = 5;
+  bool authoritative = 6;
+  int32 category = 7;
+  string description = 8;
+  int32 duration = 9;
+  google.protobuf.Timestamp end_time = 10;
+  bool join_required = 11;
+  int32 max_size = 12;
+  int32 max_num_score = 13;
+  string title = 14;
+  google.protobuf.Timestamp start_time = 15;
+}
+
+message DeleteTournamentRequest {
+  string id = 1;
+}
+
+message JoinTournamentRequest {
+  string id = 1;
+}
+
+message ListTournamentsRequest {
+  int32 category_start = 1;
+  int32 category_end = 2;
+  google.protobuf.Timestamp start_time = 3;
+  google.protobuf.Timestamp end_time = 4;
+  int32 limit = 5;
+  string cursor = 6;
+}
+
+message Tournament {
+  string id = 1;
+  string sort_order = 2;
+  string operator = 3;
+  string reset_schedule = 4;
+  string metadata = 5;
+  bool authoritative = 6;
+  int32 category = 7;
+  string description = 8;
+  int32 duration = 9;
+  google.protobuf.Timestamp end_time = 10;
+  bool join_required = 11;
+  int32 max_size = 12;
+  int32 max_num_score = 13;
+  string title = 14;
+  google.protobuf.Timestamp start_time = 15;
+  int32 size = 16;
+}
+
+message TournamentList {
+  repeated Tournament tournaments = 1;
+  string next_cursor = 2;
+}
+
+message WriteTournamentRecordRequest {
+  string tournament_id = 1;
+  int64 score = 2;
+  int64 subscore = 3;
+  string metadata = 4;
+}
+
+message ListTournamentRecordsRequest {
+  string tournament_id = 1;
+  int32 limit = 2;
+  string cursor = 3;
+  repeated string owner_ids = 4;
+}
+
+// --- Friends ---
+
+service FriendsService {
+  rpc AddFriends(AddFriendsRequest) returns (google.protobuf.Empty);
+  rpc ListFriends(ListFriendsRequest) returns (FriendList);
+  rpc DeleteFriends(DeleteFriendsRequest) returns (google.protobuf.Empty);
+  rpc BlockFriends(BlockFriendsRequest) returns (google.protobuf.Empty);
+  rpc ImportFacebookFriends(ImportFacebookFriendsRequest) returns (google.protobuf.Empty);
+  rpc ImportSteamFriends(ImportSteamFriendsRequest) returns (google.protobuf.Empty);
+}
+
+message AddFriendsRequest {
+  repeated string ids = 1;
+  repeated string usernames = 2;
+}
+
+message ListFriendsRequest {
+  int32 limit = 1;
+  int32 state = 2; // 0=friends, 1=sent request, 2=received request, 3=blocked
+  string cursor = 3;
+}
+
+message Friend {
+  User user = 1;
+  int32 state = 2;
+  google.protobuf.Timestamp update_time = 3;
+}
+
+message FriendList {
+  repeated Friend friends = 1;
+  string next_cursor = 2;
+}
+
+message DeleteFriendsRequest {
+  repeated string ids = 1;
+  repeated string usernames = 2;
+}
+
+message BlockFriendsRequest {
+  repeated string ids = 1;
+  repeated string usernames = 2;
+}
+
+message ImportFacebookFriendsRequest {
+  string token = 1;
+  bool reset = 2;
+}
+
+message ImportSteamFriendsRequest {
+  string steam_token = 1;
+  bool reset = 2;
+}
+
+// --- Groups ---
+
+service GroupService {
+  rpc CreateGroup(CreateGroupRequest) returns (Group);
+  rpc UpdateGroup(UpdateGroupRequest) returns (google.protobuf.Empty);
+  rpc DeleteGroup(DeleteGroupRequest) returns (google.protobuf.Empty);
+  rpc ListGroups(ListGroupsRequest) returns (GroupList);
+  rpc JoinGroup(JoinGroupRequest) returns (google.protobuf.Empty);
+  rpc LeaveGroup(LeaveGroupRequest) returns (google.protobuf.Empty);
+  
+  rpc AddGroupUsers(AddGroupUsersRequest) returns (google.protobuf.Empty);
+  rpc KickGroupUsers(KickGroupUsersRequest) returns (google.protobuf.Empty);
+  rpc PromoteGroupUsers(PromoteGroupUsersRequest) returns (google.protobuf.Empty);
+  rpc DemoteGroupUsers(DemoteGroupUsersRequest) returns (google.protobuf.Empty);
+  rpc BanGroupUsers(BanGroupUsersRequest) returns (google.protobuf.Empty);
+  
+  rpc ListGroupUsers(ListGroupUsersRequest) returns (GroupUserList);
+  rpc ListUserGroups(ListUserGroupsRequest) returns (UserGroupList);
+}
+
+message CreateGroupRequest {
+  string name = 1;
+  string description = 2;
+  string avatar_url = 3;
+  string lang_tag = 4;
+  bool open = 5;
+  int32 max_count = 6;
+  string metadata = 7;
+}
+
+message Group {
+  string id = 1;
+  string creator_id = 2;
+  string name = 3;
+  string description = 4;
+  string avatar_url = 5;
+  string lang_tag = 6;
+  bool open = 7;
+  int32 edge_count = 8;
+  int32 max_count = 9;
+  string metadata = 10;
+  google.protobuf.Timestamp create_time = 11;
+  google.protobuf.Timestamp update_time = 12;
+}
+
+message UpdateGroupRequest {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  string avatar_url = 4;
+  string lang_tag = 5;
+  bool open = 6;
+  string metadata = 7;
+}
+
+message DeleteGroupRequest {
+  string id = 1;
+}
+
+message ListGroupsRequest {
+  string name = 1;
+  string lang_tag = 2;
+  bool open = 3;
+  int32 limit = 4;
+  string cursor = 5;
+}
+
+message GroupList {
+  repeated Group groups = 1;
+  string next_cursor = 2;
+}
+
+message JoinGroupRequest {
+  string id = 1;
+}
+
+message LeaveGroupRequest {
+  string id = 1;
+}
+
+message AddGroupUsersRequest {
+  string group_id = 1;
+  repeated string user_ids = 2;
+}
+
+message KickGroupUsersRequest {
+  string group_id = 1;
+  repeated string user_ids = 2;
+}
+
+message PromoteGroupUsersRequest {
+  string group_id = 1;
+  repeated string user_ids = 2;
+}
+
+message DemoteGroupUsersRequest {
+  string group_id = 1;
+  repeated string user_ids = 2;
+}
+
+message BanGroupUsersRequest {
+  string group_id = 1;
+  repeated string user_ids = 2;
+}
+
+message GroupUser {
+  User user = 1;
+  int32 state = 2; // 0=superadmin, 1=admin, 2=member, 3=join_request
+}
+
+message GroupUserList {
+  repeated GroupUser group_users = 1;
+  string next_cursor = 2;
+}
+
+message UserGroup {
+  Group group = 1;
+  int32 state = 2;
+}
+
+message UserGroupList {
+  repeated UserGroup user_groups = 1;
+  string next_cursor = 2;
+}
+
+message ListGroupUsersRequest {
+  string group_id = 1;
+  int32 limit = 2;
+  string cursor = 3;
+}
+
+message ListUserGroupsRequest {
+  string user_id = 1;
+  int32 limit = 2;
+  string cursor = 3;
+}

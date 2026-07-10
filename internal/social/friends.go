@@ -3,6 +3,7 @@ package social
 import (
 	"context"
 	"errors"
+	"strconv"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -140,3 +141,73 @@ func GetFriends(ctx context.Context, pool *pgxpool.Pool, userID string) ([]Frien
 
 	return friends, nil
 }
+
+// DeleteFriend deletes friend relationships or rejects incoming invites.
+func DeleteFriend(ctx context.Context, pool *pgxpool.Pool, sourceID, destinationID string) error {
+	query := `DELETE FROM user_edge WHERE (source_id = $1 AND destination_id = $2) OR (source_id = $2 AND destination_id = $1 AND state <> $3)`
+	_, err := pool.Exec(ctx, query, sourceID, destinationID, StateBlocked)
+	return err
+}
+
+// ListFriends returns friend records filterable by state, with pagination.
+func ListFriends(ctx context.Context, pool *pgxpool.Pool, userID string, filterState int, limit int, cursor string) ([]Friend, string, error) {
+	if limit <= 0 {
+		limit = 10
+	}
+	if limit > 100 {
+		limit = 100
+	}
+
+	query := `SELECT u.id, u.username, e.state, e.position
+	          FROM user_edge e
+	          JOIN users u ON e.destination_id = u.id
+	          WHERE e.source_id = $1 AND e.state = $2
+	          ORDER BY e.position DESC`
+
+	rows, err := pool.Query(ctx, query, userID, filterState)
+	if err != nil {
+		return nil, "", err
+	}
+	defer rows.Close()
+
+	var friends []Friend
+	var positions []int64
+	for rows.Next() {
+		var f Friend
+		var pos int64
+		if err := rows.Scan(&f.UserID, &f.Username, &f.State, &pos); err != nil {
+			return nil, "", err
+		}
+		friends = append(friends, f)
+		positions = append(positions, pos)
+	}
+
+	startIdx := 0
+	if cursor != "" {
+		if parsed, err := strconv.ParseInt(cursor, 10, 64); err == nil {
+			for i, pos := range positions {
+				if pos < parsed {
+					startIdx = i
+					break
+				}
+			}
+		}
+	}
+
+	if startIdx >= len(friends) {
+		return []Friend{}, "", nil
+	}
+
+	endIdx := startIdx + limit
+	if endIdx > len(friends) {
+		endIdx = len(friends)
+	}
+
+	nextCursor := ""
+	if endIdx < len(friends) {
+		nextCursor = strconv.FormatInt(positions[endIdx], 10)
+	}
+
+	return friends[startIdx:endIdx], nextCursor, nil
+}
+

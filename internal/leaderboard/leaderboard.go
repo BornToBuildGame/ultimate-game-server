@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"sort"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -527,3 +528,24 @@ func DeleteLeaderboard(ctx context.Context, pool *pgxpool.Pool, id string) error
 
 	return tx.Commit(ctx)
 }
+
+// DeleteRecord deletes a specific leaderboard record for a user.
+func DeleteRecord(ctx context.Context, pool *pgxpool.Pool, leaderboardID, ownerID string) error {
+	query := `DELETE FROM leaderboard_record WHERE leaderboard_id = $1 AND owner_id = $2`
+	_, err := pool.Exec(ctx, query, leaderboardID, ownerID)
+	if err != nil {
+		return err
+	}
+
+	// Evict all local rank caches for this leaderboard
+	localCache.mu.Lock()
+	for k := range localCache.cache {
+		if strings.HasPrefix(k, leaderboardID+":") {
+			delete(localCache.cache, k)
+		}
+	}
+	localCache.mu.Unlock()
+
+	return nil
+}
+

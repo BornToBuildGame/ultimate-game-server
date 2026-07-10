@@ -219,9 +219,10 @@ func (ts *TournamentScheduler) tryAcquireRewardLock(ctx context.Context, key str
 // It inserts an idempotent placeholder record with score=0, subscore=0, and num_score=0.
 func JoinTournament(ctx context.Context, pool *pgxpool.Pool, tournamentID, ownerID, username string) error {
 	var joinRequired bool
-	var endTime time.Time
-	query := `SELECT join_required, end_time FROM leaderboard WHERE id = $1`
-	err := pool.QueryRow(ctx, query, tournamentID).Scan(&joinRequired, &endTime)
+	var endTime, startTime time.Time
+	var duration int
+	query := `SELECT join_required, end_time, start_time, duration FROM leaderboard WHERE id = $1`
+	err := pool.QueryRow(ctx, query, tournamentID).Scan(&joinRequired, &endTime, &startTime, &duration)
 	if err != nil {
 		return err
 	}
@@ -230,13 +231,110 @@ func JoinTournament(ctx context.Context, pool *pgxpool.Pool, tournamentID, owner
 		return fmt.Errorf("tournament has already ended")
 	}
 
+	// Calculate correct expiry time for the score partition (default Epoch if no duration)
+	expiryTime := time.Unix(0, 0).UTC()
+	if duration > 0 {
+		now := time.Now()
+		elapsed := now.Sub(startTime)
+		occIdx := int(elapsed.Seconds() / float64(duration))
+		expiryTime = startTime.Add(time.Duration(occIdx+1) * time.Duration(duration) * time.Second)
+	}
+
 	insertQuery := `
 		INSERT INTO leaderboard_record (
 			leaderboard_id, owner_id, username, score, subscore, num_score, max_num_score, metadata, create_time, update_time, expiry_time
 		) VALUES ($1, $2, $3, 0, 0, 0, 1000000, '{}', now(), now(), $4)
 		ON CONFLICT (owner_id, leaderboard_id, expiry_time) DO NOTHING
 	`
-	expiryTime := time.Unix(0, 0).UTC()
 	_, err = pool.Exec(ctx, insertQuery, tournamentID, ownerID, username, expiryTime)
 	return err
 }
+
+// ListTournaments retrieves a list of tournaments filterable by category and time boundaries.
+func ListTournaments(
+	ctx context.Context,
+	pool *pgxpool.Pool,
+	categoryStart, categoryEnd int,
+	startTime, endTime time.Time,
+	limit int,
+	cursor string,
+) ([]*leaderboard.Leaderboard, string, error) {
+	if limit <= 0 {
+		limit = 10
+	}
+	if limit > 100 {
+		limit = 100
+	}
+
+	query := `
+		SELECT id, authoritative, sort_order, operator, reset_schedule, metadata, create_time,
+		       category, description, duration, end_time, join_required, max_size, max_num_score,
+		       title, size, start_time, enable_ranks
+		FROM leaderboard
+		WHERE duration > 0 AND category >= $1 AND category <= $2
+	`
+	args := []interface{}{categoryStart, categoryEnd}
+	argIdx := 3
+
+	if !startTime.IsZero() {
+		query += fmt.Sprintf(" AND start_time >= $%d", argIdx)
+		args = append(args, startTime)
+		argIdx++
+	}
+	if !endTime.IsZero() {
+		query += fmt.Sprintf(" AND end_time <= $%d", argIdx)
+		args = append(args, endTime)
+		argIdx++
+	}
+
+	// Simple pagination by ID ordering
+	query += " ORDER BY id ASC"
+	
+	rows, err := pool.Query(ctx, query, args...)
+	if err != nil {
+		return nil, "", err
+	}
+	defer rows.Close()
+
+	var tList []*leaderboard.Leaderboard
+	for rows.Next() {
+		lb := &leaderboard.Leaderboard{}
+		err = rows.Scan(
+			&lb.ID, &lb.Authoritative, &lb.SortOrder, &lb.Operator, &lb.ResetSchedule, &lb.Metadata, &lb.CreateTime,
+			&lb.Category, &lb.Description, &lb.Duration, &lb.EndTime, &lb.JoinRequired, &lb.MaxSize, &lb.MaxNumScore,
+			&lb.Title, &lb.Size, &lb.StartTime, &lb.EnableRanks,
+		)
+		if err != nil {
+			return nil, "", err
+		}
+		tList = append(tList, lb)
+	}
+
+	startIdx := 0
+	if cursor != "" {
+		for i, lb := range tList {
+			if lb.ID == cursor {
+				startIdx = i + 1
+				break
+			}
+		}
+	}
+
+	if startIdx >= len(tList) {
+		return []*leaderboard.Leaderboard{}, "", nil
+	}
+
+	endIdx := startIdx + limit
+	if endIdx > len(tList) {
+		endIdx = len(tList)
+	}
+
+	nextCursor := ""
+	if endIdx < len(tList) {
+		nextCursor = tList[endIdx-1].ID
+	}
+
+	out := tList[startIdx:endIdx]
+	return out, nextCursor, nil
+}
+

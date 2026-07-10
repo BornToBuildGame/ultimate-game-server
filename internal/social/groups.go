@@ -3,6 +3,8 @@ package social
 import (
 	"context"
 	"errors"
+	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/google/uuid"
@@ -207,3 +209,374 @@ func KickMember(ctx context.Context, pool *pgxpool.Pool, kickerID, userID, group
 
 	return tx.Commit(ctx)
 }
+
+// UpdateGroup updates group metadata and details.
+func UpdateGroup(ctx context.Context, pool *pgxpool.Pool, id, name, description, avatarURL, langTag string, open bool, metadata string) error {
+	state := GroupStateOpen
+	if !open {
+		state = GroupStateClosed
+	}
+	query := `UPDATE groups SET name = $1, description = $2, avatar_url = $3, lang_tag = $4, state = $5, metadata = $6, update_time = now() WHERE id = $7`
+	_, err := pool.Exec(ctx, query, name, description, avatarURL, langTag, state, metadata, id)
+	return err
+}
+
+// DeleteGroup deletes a group and all its edges.
+func DeleteGroup(ctx context.Context, pool *pgxpool.Pool, kickerID, id string) error {
+	// Kicker must be SuperAdmin
+	var role int
+	err := pool.QueryRow(ctx, "SELECT state FROM group_edge WHERE source_id = $1 AND destination_id = $2", id, kickerID).Scan(&role)
+	if err != nil {
+		return errors.New("kicker is not a member of the group")
+	}
+	if role != RoleSuperAdmin {
+		return errors.New("only SuperAdmin can delete group")
+	}
+
+	tx, err := pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	_, err = tx.Exec(ctx, "DELETE FROM group_edge WHERE source_id = $1 OR destination_id = $1", id)
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.Exec(ctx, "DELETE FROM groups WHERE id = $1", id)
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit(ctx)
+}
+
+// ListGroups searches groups with filters and pagination.
+func ListGroups(ctx context.Context, pool *pgxpool.Pool, name, langTag string, open *bool, limit int, cursor string) ([]*Group, string, error) {
+	if limit <= 0 {
+		limit = 10
+	}
+	if limit > 100 {
+		limit = 100
+	}
+
+	query := `SELECT id, creator_id, name, description, avatar_url, lang_tag, state, edge_count, max_count FROM groups WHERE 1=1`
+	args := []interface{}{}
+	argIdx := 1
+
+	if name != "" {
+		query += fmt.Sprintf(" AND name ILIKE $%d", argIdx)
+		args = append(args, "%"+name+"%")
+		argIdx++
+	}
+	if langTag != "" {
+		query += fmt.Sprintf(" AND lang_tag = $%d", argIdx)
+		args = append(args, langTag)
+		argIdx++
+	}
+	if open != nil {
+		stateVal := GroupStateOpen
+		if !*open {
+			stateVal = GroupStateClosed
+		}
+		query += fmt.Sprintf(" AND state = $%d", argIdx)
+		args = append(args, stateVal)
+		argIdx++
+	}
+
+	query += " ORDER BY id ASC"
+
+	rows, err := pool.Query(ctx, query, args...)
+	if err != nil {
+		return nil, "", err
+	}
+	defer rows.Close()
+
+	var list []*Group
+	for rows.Next() {
+		g := &Group{}
+		err = rows.Scan(&g.ID, &g.CreatorID, &g.Name, &g.Description, &g.AvatarURL, &g.LangTag, &g.State, &g.EdgeCount, &g.MaxCount)
+		if err != nil {
+			return nil, "", err
+		}
+		list = append(list, g)
+	}
+
+	startIdx := 0
+	if cursor != "" {
+		for i, g := range list {
+			if g.ID == cursor {
+				startIdx = i + 1
+				break
+			}
+		}
+	}
+
+	if startIdx >= len(list) {
+		return []*Group{}, "", nil
+	}
+
+	endIdx := startIdx + limit
+	if endIdx > len(list) {
+		endIdx = len(list)
+	}
+
+	nextCursor := ""
+	if endIdx < len(list) {
+		nextCursor = list[endIdx-1].ID
+	}
+
+	return list[startIdx:endIdx], nextCursor, nil
+}
+
+// LeaveGroup removes a member from a group.
+func LeaveGroup(ctx context.Context, pool *pgxpool.Pool, userID, groupID string) error {
+	tx, err := pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	// Fetch role
+	var role int
+	err = tx.QueryRow(ctx, "SELECT state FROM group_edge WHERE source_id = $1 AND destination_id = $2", groupID, userID).Scan(&role)
+	if err != nil {
+		return errors.New("user is not a member of the group")
+	}
+
+	if role == RoleSuperAdmin {
+		var nextAdmin string
+		errAdmin := tx.QueryRow(ctx, "SELECT destination_id FROM group_edge WHERE source_id = $1 AND destination_id <> $2 AND state = $3 LIMIT 1", groupID, userID, RoleAdmin).Scan(&nextAdmin)
+		if errAdmin != nil {
+			errAdmin = tx.QueryRow(ctx, "SELECT destination_id FROM group_edge WHERE source_id = $1 AND destination_id <> $2 AND state = $3 LIMIT 1", groupID, userID, RoleMember).Scan(&nextAdmin)
+		}
+		if errAdmin == nil {
+			_, err = tx.Exec(ctx, "UPDATE group_edge SET state = $1 WHERE (source_id = $2 AND destination_id = $3) OR (source_id = $3 AND destination_id = $2)", RoleSuperAdmin, groupID, nextAdmin)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	_, err = tx.Exec(ctx, "DELETE FROM group_edge WHERE (source_id = $1 AND destination_id = $2) OR (source_id = $2 AND destination_id = $1)", groupID, userID)
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.Exec(ctx, "UPDATE groups SET edge_count = edge_count - 1 WHERE id = $1", groupID)
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit(ctx)
+}
+
+// PromoteMember raises a user's role in the group.
+func PromoteMember(ctx context.Context, pool *pgxpool.Pool, kickerID, userID, groupID string) error {
+	tx, err := pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	var kickerRole, targetRole int
+	err = tx.QueryRow(ctx, "SELECT state FROM group_edge WHERE source_id = $1 AND destination_id = $2", groupID, kickerID).Scan(&kickerRole)
+	if err != nil {
+		return errors.New("kicker is not a member")
+	}
+	if kickerRole > RoleAdmin {
+		return errors.New("insufficient permissions to promote")
+	}
+
+	err = tx.QueryRow(ctx, "SELECT state FROM group_edge WHERE source_id = $1 AND destination_id = $2", groupID, userID).Scan(&targetRole)
+	if err != nil {
+		return errors.New("target is not a member")
+	}
+
+	if targetRole <= RoleAdmin {
+		return errors.New("target is already admin or superadmin")
+	}
+
+	_, err = tx.Exec(ctx, "UPDATE group_edge SET state = $1 WHERE (source_id = $2 AND destination_id = $3) OR (source_id = $3 AND destination_id = $2)", RoleAdmin, groupID, userID)
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit(ctx)
+}
+
+// DemoteMember lowers a user's role in the group.
+func DemoteMember(ctx context.Context, pool *pgxpool.Pool, kickerID, userID, groupID string) error {
+	tx, err := pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	var kickerRole, targetRole int
+	err = tx.QueryRow(ctx, "SELECT state FROM group_edge WHERE source_id = $1 AND destination_id = $2", groupID, kickerID).Scan(&kickerRole)
+	if err != nil {
+		return errors.New("kicker is not a member")
+	}
+	if kickerRole != RoleSuperAdmin {
+		return errors.New("only SuperAdmin can demote admins")
+	}
+
+	err = tx.QueryRow(ctx, "SELECT state FROM group_edge WHERE source_id = $1 AND destination_id = $2", groupID, userID).Scan(&targetRole)
+	if err != nil {
+		return errors.New("target is not a member")
+	}
+
+	if targetRole != RoleAdmin {
+		return errors.New("target is not an admin")
+	}
+
+	_, err = tx.Exec(ctx, "UPDATE group_edge SET state = $1 WHERE (source_id = $2 AND destination_id = $3) OR (source_id = $3 AND destination_id = $2)", RoleMember, groupID, userID)
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit(ctx)
+}
+
+type GroupMember struct {
+	UserID   string
+	Username string
+	Role     int
+}
+
+// ListGroupMembers lists all users belonging to a group.
+func ListGroupMembers(ctx context.Context, pool *pgxpool.Pool, groupID string, limit int, cursor string) ([]GroupMember, string, error) {
+	if limit <= 0 {
+		limit = 10
+	}
+	if limit > 100 {
+		limit = 100
+	}
+
+	query := `SELECT u.id, u.username, e.state, e.position
+	          FROM group_edge e
+	          JOIN users u ON e.destination_id = u.id
+	          WHERE e.source_id = $1 AND e.state <= $2
+	          ORDER BY e.position DESC`
+
+	rows, err := pool.Query(ctx, query, groupID, RoleMember)
+	if err != nil {
+		return nil, "", err
+	}
+	defer rows.Close()
+
+	var members []GroupMember
+	var positions []int64
+	for rows.Next() {
+		var m GroupMember
+		var pos int64
+		if err := rows.Scan(&m.UserID, &m.Username, &m.Role, &pos); err != nil {
+			return nil, "", err
+		}
+		members = append(members, m)
+		positions = append(positions, pos)
+	}
+
+	startIdx := 0
+	if cursor != "" {
+		if parsed, err := strconv.ParseInt(cursor, 10, 64); err == nil {
+			for i, pos := range positions {
+				if pos < parsed {
+					startIdx = i
+					break
+				}
+			}
+		}
+	}
+
+	if startIdx >= len(members) {
+		return []GroupMember{}, "", nil
+	}
+
+	endIdx := startIdx + limit
+	if endIdx > len(members) {
+		endIdx = len(members)
+	}
+
+	nextCursor := ""
+	if endIdx < len(members) {
+		nextCursor = strconv.FormatInt(positions[endIdx], 10)
+	}
+
+	return members[startIdx:endIdx], nextCursor, nil
+}
+
+type UserGroupRelation struct {
+	Group *Group
+	Role  int
+}
+
+// ListUserGroups lists all groups a user belongs to.
+func ListUserGroups(ctx context.Context, pool *pgxpool.Pool, userID string, limit int, cursor string) ([]UserGroupRelation, string, error) {
+	if limit <= 0 {
+		limit = 10
+	}
+	if limit > 100 {
+		limit = 100
+	}
+
+	query := `SELECT g.id, g.creator_id, g.name, g.description, g.avatar_url, g.lang_tag, g.state, g.edge_count, g.max_count, e.state, e.position
+	          FROM group_edge e
+	          JOIN groups g ON e.destination_id = g.id
+	          WHERE e.source_id = $1 AND e.state <= $2
+	          ORDER BY e.position DESC`
+
+	rows, err := pool.Query(ctx, query, userID, RoleMember)
+	if err != nil {
+		return nil, "", err
+	}
+	defer rows.Close()
+
+	var rels []UserGroupRelation
+	var positions []int64
+	for rows.Next() {
+		var r UserGroupRelation
+		r.Group = &Group{}
+		var pos int64
+		err = rows.Scan(
+			&r.Group.ID, &r.Group.CreatorID, &r.Group.Name, &r.Group.Description, &r.Group.AvatarURL, &r.Group.LangTag, &r.Group.State, &r.Group.EdgeCount, &r.Group.MaxCount,
+			&r.Role, &pos,
+		)
+		if err != nil {
+			return nil, "", err
+		}
+		rels = append(rels, r)
+		positions = append(positions, pos)
+	}
+
+	startIdx := 0
+	if cursor != "" {
+		if parsed, err := strconv.ParseInt(cursor, 10, 64); err == nil {
+			for i, pos := range positions {
+				if pos < parsed {
+					startIdx = i
+					break
+				}
+			}
+		}
+	}
+
+	if startIdx >= len(rels) {
+		return []UserGroupRelation{}, "", nil
+	}
+
+	endIdx := startIdx + limit
+	if endIdx > len(rels) {
+		endIdx = len(rels)
+	}
+
+	nextCursor := ""
+	if endIdx < len(rels) {
+		nextCursor = strconv.FormatInt(positions[endIdx], 10)
+	}
+
+	return rels[startIdx:endIdx], nextCursor, nil
+}
+

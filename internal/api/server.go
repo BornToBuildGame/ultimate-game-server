@@ -14,6 +14,7 @@ import (
 	"ultimate-game-server/internal/runtime"
 	"ultimate-game-server/internal/socket"
 	"ultimate-game-server/internal/storage"
+	"ultimate-game-server/internal/api/apipb"
 	"ultimate-game-server/internal/api/storagepb"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -123,6 +124,10 @@ func (s *Server) Start(ctx context.Context) error {
 	}
 	s.gRPCServer = grpc.NewServer(opts...)
 	storagepb.RegisterStorageServiceServer(s.gRPCServer, NewStorageServer(s.dbPool, s.tokenMgr))
+	apipb.RegisterLeaderboardServiceServer(s.gRPCServer, NewLeaderboardServer(s.dbPool, nil, s.tokenMgr))
+	apipb.RegisterTournamentServiceServer(s.gRPCServer, NewTournamentServer(s.dbPool, nil, s.tokenMgr))
+	apipb.RegisterFriendsServiceServer(s.gRPCServer, NewFriendsServer(s.dbPool, s.tokenMgr))
+	apipb.RegisterGroupServiceServer(s.gRPCServer, NewGroupServer(s.dbPool, s.tokenMgr))
 
 	// 3. Listen HTTP
 	httpListener, err := net.Listen("tcp", s.cfg.HTTPAddr)
@@ -212,6 +217,39 @@ func (s *Server) registerRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /v2/account/authenticate/apple", s.handleAuthenticateApple)
 	mux.HandleFunc("POST /v2/account/authenticate/google", s.handleAuthenticateGoogle)
 	mux.HandleFunc("POST /v2/account/authenticate/facebook", s.handleAuthenticateFacebook)
+
+	// Leaderboard Routes
+	mux.HandleFunc("POST /v2/leaderboard", s.handleCreateLeaderboard)
+	mux.HandleFunc("DELETE /v2/leaderboard/{id}", s.handleDeleteLeaderboard)
+	mux.HandleFunc("POST /v2/leaderboard/{id}", s.handleSubmitScore)
+	mux.HandleFunc("GET /v2/leaderboard/{id}", s.handleListLeaderboardRecords)
+	mux.HandleFunc("GET /v2/leaderboard/{id}/owner/{owner_id}", s.handleGetOwnerRecord)
+	mux.HandleFunc("GET /v2/leaderboard/{id}/around/{owner_id}", s.handleAroundPlayerLookup)
+	mux.HandleFunc("DELETE /v2/leaderboard/{id}/owner/{owner_id}", s.handleDeleteRecord)
+
+	// Tournament Routes
+	mux.HandleFunc("POST /v2/tournament", s.handleCreateTournament)
+	mux.HandleFunc("DELETE /v2/tournament/{id}", s.handleDeleteTournament)
+	mux.HandleFunc("POST /v2/tournament/{id}/join", s.handleJoinTournament)
+	mux.HandleFunc("GET /v2/tournament", s.handleListTournaments)
+
+	// Friends Routes
+	mux.HandleFunc("POST /v2/friend", s.handleAddFriends)
+	mux.HandleFunc("GET /v2/friend", s.handleListFriends)
+	mux.HandleFunc("DELETE /v2/friend", s.handleDeleteFriends)
+	mux.HandleFunc("POST /v2/friend/block/{user_id}", s.handleBlockFriend)
+
+	// Group Routes
+	mux.HandleFunc("POST /v2/group", s.handleCreateGroup)
+	mux.HandleFunc("PUT /v2/group/{id}", s.handleUpdateGroup)
+	mux.HandleFunc("DELETE /v2/group/{id}", s.handleDeleteGroup)
+	mux.HandleFunc("GET /v2/group", s.handleListGroups)
+	mux.HandleFunc("POST /v2/group/{id}/join", s.handleJoinGroup)
+	mux.HandleFunc("POST /v2/group/{id}/leave", s.handleLeaveGroup)
+	mux.HandleFunc("POST /v2/group/{id}/kick", s.handleKickGroupUsers)
+	mux.HandleFunc("POST /v2/group/{id}/promote", s.handlePromoteGroupUsers)
+	mux.HandleFunc("POST /v2/group/{id}/demote", s.handleDemoteGroupUsers)
+	mux.HandleFunc("GET /v2/group/{id}/user", s.handleListGroupMembers)
 }
 
 func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
@@ -490,6 +528,20 @@ func (s *Server) authenticateREST(r *http.Request) (string, error) {
 	}
 	return claims.UserID, nil
 }
+
+func (s *Server) authenticateRESTWithUsername(r *http.Request) (string, string, error) {
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
+		return "", "", errors.New("missing or invalid authorization header")
+	}
+	tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
+	claims, err := s.tokenMgr.VerifyToken(tokenStr)
+	if err != nil {
+		return "", "", fmt.Errorf("invalid token: %w", err)
+	}
+	return claims.UserID, claims.Username, nil
+}
+
 
 func (s *Server) handleWriteStorageObjects(w http.ResponseWriter, r *http.Request) {
 	userID, err := s.authenticateREST(r)
