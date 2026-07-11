@@ -54,6 +54,7 @@ func TestSocket_Integration(t *testing.T) {
 			mu.Unlock()
 			disconnectWg.Done()
 		},
+		nil,
 	)
 
 	server := httptest.NewServer(http.HandlerFunc(handler.Upgrade))

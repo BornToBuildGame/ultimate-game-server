@@ -2,6 +2,7 @@ package match
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"sync"
 	"time"
@@ -44,6 +45,12 @@ type MatchLoop struct {
 	luaMatchLeave       *lua.LFunction
 	luaMatchLoop        *lua.LFunction
 	luaMatchTerminate   *lua.LFunction
+
+	goMatch             runtime.Match
+	goState             interface{}
+	goLogger            runtime.Logger
+	goDB                *sql.DB
+	goNK                runtime.RuntimeModule
 
 	onBroadcast func(matchID string, stateJson []byte)
 	onEnd       func(matchID string, finalState MatchState)
@@ -117,6 +124,17 @@ func (ml *MatchLoop) SetSandbox(sb *runtime.Sandbox) {
 	}
 }
 
+// SetGoMatch configures the loop to run a Go native match instead of a Lua one.
+func (ml *MatchLoop) SetGoMatch(goMatch runtime.Match, initialGoState interface{}, logger runtime.Logger, db *sql.DB, nk runtime.RuntimeModule) {
+	ml.mu.Lock()
+	defer ml.mu.Unlock()
+	ml.goMatch = goMatch
+	ml.goState = initialGoState
+	ml.goLogger = logger
+	ml.goDB = db
+	ml.goNK = nk
+}
+
 // SubmitInput queues an input action from a player.
 func (ml *MatchLoop) SubmitInput(input MatchInput) {
 	select {
@@ -165,7 +183,25 @@ func (ml *MatchLoop) tick() bool {
 	}
 
 	// 2. Process inputs
-	if ml.luaMatchLoop != nil && ml.sandbox != nil {
+	if ml.goMatch != nil {
+		msgs := make([]interface{}, len(inputs))
+		for i, in := range inputs {
+			msgs[i] = map[string]interface{}{
+				"user_id": in.UserID,
+				"action":  in.Action,
+				"payload": in.Payload,
+			}
+		}
+		resState := ml.goMatch.MatchLoop(context.Background(), ml.goLogger, ml.goDB, ml.goNK, nil, ml.state.Tick, ml.goState, msgs)
+		if resState == nil {
+			ml.state.IsFinished = true
+		} else {
+			ml.goState = resState
+			if bytes, err := json.Marshal(resState); err == nil {
+				_ = json.Unmarshal(bytes, &ml.state)
+			}
+		}
+	} else if ml.luaMatchLoop != nil && ml.sandbox != nil {
 		L := ml.sandbox.L
 		msgsTbl := L.NewTable()
 		for _, in := range inputs {

@@ -113,6 +113,38 @@ type LeaderboardRecord struct {
 	Rank          int64     `json:"rank"`
 }
 
+type AuthenticateEmailRequest struct {
+	Email       string `json:"email"`
+	Password    string `json:"password"`
+	Username    string `json:"username"`
+	DisplayName string `json:"display_name"`
+	Register    bool   `json:"register"`
+}
+
+type WriteStorageObjectsRequest struct {
+	Objects []*StorageWrite `json:"objects"`
+}
+
+type AddFriendsRequest struct {
+	IDs       []string `json:"ids"`
+	Usernames []string `json:"usernames"`
+}
+
+type JoinGroupRequest struct {
+	GroupID string `json:"group_id"`
+}
+
+type Session struct {
+	AccessToken  string `json:"access_token"`
+	RefreshToken string `json:"refresh_token"`
+	UserID       string `json:"user_id"`
+	Username     string `json:"username"`
+}
+
+type StorageObjectAcks struct {
+	Acks []*StorageObjectAck `json:"acks"`
+}
+
 // RPCHandler represents a custom client-callable RPC endpoint handler.
 // Go native handlers receive logger, db, and nk for full server API access.
 type RPCHandler func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, payload string) (string, error)
@@ -177,23 +209,39 @@ type Initializer interface {
 	RegisterTournamentEnd(fn TournamentEndHandler) error
 	RegisterTournamentReset(fn TournamentResetHandler) error
 	RegisterEvent(fn EventHandler) error
+
+	// Specific type-safe before hooks
+	RegisterBeforeAuthenticateEmail(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *AuthenticateEmailRequest) (*AuthenticateEmailRequest, error)) error
+	RegisterBeforeWriteStorageObjects(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *WriteStorageObjectsRequest) (*WriteStorageObjectsRequest, error)) error
+	RegisterBeforeAddFriends(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *AddFriendsRequest) (*AddFriendsRequest, error)) error
+	RegisterBeforeJoinGroup(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *JoinGroupRequest) (*JoinGroupRequest, error)) error
+
+	// Specific type-safe after hooks
+	RegisterAfterAuthenticateEmail(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, out *Session, in *AuthenticateEmailRequest) error) error
+	RegisterAfterWriteStorageObjects(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, out *StorageObjectAcks, in *WriteStorageObjectsRequest) error) error
+	RegisterAfterAddFriends(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *AddFriendsRequest) error) error
+	RegisterAfterJoinGroup(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *JoinGroupRequest) error) error
 }
 
 // HookRegistry stores registered custom RPCs, before/after hooks, and cron jobs.
 type HookRegistry struct {
-	mu             sync.RWMutex
-	beforeHooks    map[string]BeforeHook
-	afterHooks     map[string]AfterHook
-	rpcHooks       map[string]RPCHandler
-	luaBeforeHooks map[string]string
-	luaAfterHooks  map[string]string
-	luaRpcHooks    map[string]string
-	jsBeforeHooks  map[string]string
-	jsAfterHooks   map[string]string
-	jsRpcHooks     map[string]string
-	eventHandlers  []EventHandler
-	matchHandlers  map[string]MatchHandlerFactory
-	cronJobs       map[string]*CronJob
+	mu                       sync.RWMutex
+	beforeHooks              map[string]BeforeHook
+	afterHooks               map[string]AfterHook
+	rpcHooks                 map[string]RPCHandler
+	luaBeforeHooks           map[string]string
+	luaAfterHooks            map[string]string
+	luaRpcHooks              map[string]string
+	jsBeforeHooks            map[string]string
+	jsAfterHooks             map[string]string
+	jsRpcHooks               map[string]string
+	eventHandlers            []EventHandler
+	matchHandlers            map[string]MatchHandlerFactory
+	cronJobs                 map[string]*CronJob
+	matchmakerMatchedHandler MatchmakerMatchedHandler
+	leaderboardResetHandler  LeaderboardResetHandler
+	tournamentEndHandler     TournamentEndHandler
+	tournamentResetHandler   TournamentResetHandler
 }
 
 // NewHookRegistry creates a new instance of HookRegistry.
@@ -275,6 +323,14 @@ func (hr *HookRegistry) RegisterMatch(name string, factory MatchHandlerFactory) 
 	}
 	hr.matchHandlers[name] = factory
 	return nil
+}
+
+// GetMatch retrieves a registered match handler factory.
+func (hr *HookRegistry) GetMatch(name string) (MatchHandlerFactory, bool) {
+	hr.mu.RLock()
+	defer hr.mu.RUnlock()
+	factory, ok := hr.matchHandlers[name]
+	return factory, ok
 }
 
 // RegisterCron registers a scheduled background cron job.
@@ -376,4 +432,52 @@ func (hr *HookRegistry) RegisterJSRPC(name, fnName string) {
 	hr.mu.Lock()
 	defer hr.mu.Unlock()
 	hr.jsRpcHooks[name] = fnName
+}
+
+func (hr *HookRegistry) RegisterMatchmakerMatched(fn MatchmakerMatchedHandler) {
+	hr.mu.Lock()
+	defer hr.mu.Unlock()
+	hr.matchmakerMatchedHandler = fn
+}
+
+func (hr *HookRegistry) GetMatchmakerMatched() MatchmakerMatchedHandler {
+	hr.mu.RLock()
+	defer hr.mu.RUnlock()
+	return hr.matchmakerMatchedHandler
+}
+
+func (hr *HookRegistry) RegisterLeaderboardReset(fn LeaderboardResetHandler) {
+	hr.mu.Lock()
+	defer hr.mu.Unlock()
+	hr.leaderboardResetHandler = fn
+}
+
+func (hr *HookRegistry) GetLeaderboardReset() LeaderboardResetHandler {
+	hr.mu.RLock()
+	defer hr.mu.RUnlock()
+	return hr.leaderboardResetHandler
+}
+
+func (hr *HookRegistry) RegisterTournamentEnd(fn TournamentEndHandler) {
+	hr.mu.Lock()
+	defer hr.mu.Unlock()
+	hr.tournamentEndHandler = fn
+}
+
+func (hr *HookRegistry) GetTournamentEnd() TournamentEndHandler {
+	hr.mu.RLock()
+	defer hr.mu.RUnlock()
+	return hr.tournamentEndHandler
+}
+
+func (hr *HookRegistry) RegisterTournamentReset(fn TournamentResetHandler) {
+	hr.mu.Lock()
+	defer hr.mu.Unlock()
+	hr.tournamentResetHandler = fn
+}
+
+func (hr *HookRegistry) GetTournamentReset() TournamentResetHandler {
+	hr.mu.RLock()
+	defer hr.mu.RUnlock()
+	return hr.tournamentResetHandler
 }

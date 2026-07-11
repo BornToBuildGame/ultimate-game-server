@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"sync"
 
 	"ultimate-game-server/internal/runtime"
 
@@ -15,8 +16,13 @@ import (
 	"google.golang.org/grpc"
 )
 
+var (
+	luaVMMutex sync.Mutex
+	jsVMMutex  sync.Mutex
+)
+
 // HTTPHookMiddleware wraps a REST handler to intercept requests and responses with before/after hooks.
-func HTTPHookMiddleware(registry *runtime.HookRegistry, luaVM *lua.LState, jsVM *goja.Runtime, next http.HandlerFunc) http.HandlerFunc {
+func HTTPHookMiddleware(rm *runtime.GoRuntimeManager, luaVM *lua.LState, jsVM *goja.Runtime, next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		endpoint := r.URL.Path
 
@@ -36,7 +42,7 @@ func HTTPHookMiddleware(registry *runtime.HookRegistry, luaVM *lua.LState, jsVM 
 		}
 
 		// Retrieve Before Hook from registry
-		gHook, runtimeType, fnName, found := registry.GetBeforeHook(hookID)
+		gHook, runtimeType, fnName, found := rm.Registry().GetBeforeHook(hookID)
 		if found {
 			bodyBytes, err := io.ReadAll(r.Body)
 			if err != nil {
@@ -50,7 +56,7 @@ func HTTPHookMiddleware(registry *runtime.HookRegistry, luaVM *lua.LState, jsVM 
 
 			switch runtimeType {
 			case "go":
-				res, err := gHook(r.Context(), nil, nil, nil, reqVal)
+				res, err := gHook(r.Context(), rm.Logger(), rm.DB(), rm.NK(), &reqVal)
 				if err != nil {
 					http.Error(w, err.Error(), http.StatusBadRequest)
 					return
@@ -58,7 +64,9 @@ func HTTPHookMiddleware(registry *runtime.HookRegistry, luaVM *lua.LState, jsVM 
 				bodyBytes, _ = json.Marshal(res)
 			case "lua":
 				if luaVM != nil {
+					luaVMMutex.Lock()
 					res, err := runtime.ExecuteLuaBeforeHook(luaVM, fnName, r.Context(), &reqVal)
+					luaVMMutex.Unlock()
 					if err != nil {
 						http.Error(w, err.Error(), http.StatusBadRequest)
 						return
@@ -67,7 +75,9 @@ func HTTPHookMiddleware(registry *runtime.HookRegistry, luaVM *lua.LState, jsVM 
 				}
 			case "js":
 				if jsVM != nil {
+					jsVMMutex.Lock()
 					res, err := runtime.ExecuteJSBeforeHook(jsVM, fnName, r.Context(), &reqVal)
+					jsVMMutex.Unlock()
 					if err != nil {
 						http.Error(w, err.Error(), http.StatusBadRequest)
 						return
@@ -83,7 +93,7 @@ func HTTPHookMiddleware(registry *runtime.HookRegistry, luaVM *lua.LState, jsVM 
 		next(rec, r)
 
 		// Retrieve After Hook from registry
-		aHook, aRuntimeType, aFnName, aFound := registry.GetAfterHook(hookID)
+		aHook, aRuntimeType, aFnName, aFound := rm.Registry().GetAfterHook(hookID)
 		if aFound {
 			var respVal interface{}
 			_ = json.Unmarshal(rec.body.Bytes(), &respVal)
@@ -96,14 +106,18 @@ func HTTPHookMiddleware(registry *runtime.HookRegistry, luaVM *lua.LState, jsVM 
 
 			switch aRuntimeType {
 			case "go":
-				_ = aHook(r.Context(), nil, nil, nil, respVal, reqVal)
+				_ = aHook(r.Context(), rm.Logger(), rm.DB(), rm.NK(), &respVal, &reqVal)
 			case "lua":
 				if luaVM != nil {
+					luaVMMutex.Lock()
 					_ = runtime.ExecuteLuaAfterHook(luaVM, aFnName, r.Context(), respVal, reqVal)
+					luaVMMutex.Unlock()
 				}
 			case "js":
 				if jsVM != nil {
+					jsVMMutex.Lock()
 					_ = runtime.ExecuteJSAfterHook(jsVM, aFnName, r.Context(), respVal, reqVal)
+					jsVMMutex.Unlock()
 				}
 			}
 		}
@@ -130,7 +144,7 @@ func (r *responseRecorder) Write(b []byte) (int, error) {
 }
 
 // GRPCHookUnaryInterceptor returns a unary interceptor executing before/after hooks.
-func GRPCHookUnaryInterceptor(registry *runtime.HookRegistry, luaVM *lua.LState, jsVM *goja.Runtime) grpc.UnaryServerInterceptor {
+func GRPCHookUnaryInterceptor(rm *runtime.GoRuntimeManager, luaVM *lua.LState, jsVM *goja.Runtime) grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
 		method := info.FullMethod
 		parts := strings.Split(method, "/")
@@ -139,27 +153,31 @@ func GRPCHookUnaryInterceptor(registry *runtime.HookRegistry, luaVM *lua.LState,
 			hookID = parts[len(parts)-1]
 		}
 
-		gHook, runtimeType, fnName, found := registry.GetBeforeHook(hookID)
+		gHook, runtimeType, fnName, found := rm.Registry().GetBeforeHook(hookID)
 		if found {
 			switch runtimeType {
 			case "go":
 				var err error
-				req, err = gHook(ctx, nil, nil, nil, req)
+				req, err = gHook(ctx, rm.Logger(), rm.DB(), rm.NK(), req)
 				if err != nil {
 					return nil, err
 				}
 			case "lua":
 				if luaVM != nil {
+					luaVMMutex.Lock()
 					var err error
 					req, err = runtime.ExecuteLuaBeforeHook(luaVM, fnName, ctx, req)
+					luaVMMutex.Unlock()
 					if err != nil {
 						return nil, err
 					}
 				}
 			case "js":
 				if jsVM != nil {
+					jsVMMutex.Lock()
 					var err error
 					req, err = runtime.ExecuteJSBeforeHook(jsVM, fnName, ctx, req)
+					jsVMMutex.Unlock()
 					if err != nil {
 						return nil, err
 					}
@@ -172,18 +190,22 @@ func GRPCHookUnaryInterceptor(registry *runtime.HookRegistry, luaVM *lua.LState,
 			return nil, err
 		}
 
-		aHook, aRuntimeType, aFnName, aFound := registry.GetAfterHook(hookID)
+		aHook, aRuntimeType, aFnName, aFound := rm.Registry().GetAfterHook(hookID)
 		if aFound {
 			switch aRuntimeType {
 			case "go":
-				_ = aHook(ctx, nil, nil, nil, resp, req)
+				_ = aHook(ctx, rm.Logger(), rm.DB(), rm.NK(), resp, req)
 			case "lua":
 				if luaVM != nil {
+					luaVMMutex.Lock()
 					_ = runtime.ExecuteLuaAfterHook(luaVM, aFnName, ctx, resp, req)
+					luaVMMutex.Unlock()
 				}
 			case "js":
 				if jsVM != nil {
+					jsVMMutex.Lock()
 					_ = runtime.ExecuteJSAfterHook(jsVM, aFnName, ctx, resp, req)
+					jsVMMutex.Unlock()
 				}
 			}
 		}

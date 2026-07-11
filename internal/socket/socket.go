@@ -1,11 +1,15 @@
 package socket
 
 import (
+	"context"
+	"encoding/json"
+	"fmt"
 	"net/http"
 	"sync"
 	"time"
 
 	"ultimate-game-server/internal/auth"
+	"ultimate-game-server/internal/match"
 
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
@@ -125,11 +129,12 @@ func (cr *ConnectionRegistry) GetBySession(sessionID string) (*Session, bool) {
 
 // GatewayHandler upgrades connections and starts connection lifecycle loops.
 type GatewayHandler struct {
-	logger      *zap.Logger
-	tokenMgr    *auth.TokenManager
-	registry    *ConnectionRegistry
-	onConnect   func(s *Session)
+	logger       *zap.Logger
+	tokenMgr     *auth.TokenManager
+	registry     *ConnectionRegistry
+	onConnect    func(s *Session)
 	onDisconnect func(sessionID string)
+	Router       *match.Router
 }
 
 // NewGatewayHandler creates a new GatewayHandler.
@@ -139,6 +144,7 @@ func NewGatewayHandler(
 	reg *ConnectionRegistry,
 	onConnect func(s *Session),
 	onDisconnect func(sessionID string),
+	router *match.Router,
 ) *GatewayHandler {
 	return &GatewayHandler{
 		logger:       logger,
@@ -146,6 +152,7 @@ func NewGatewayHandler(
 		registry:     reg,
 		onConnect:    onConnect,
 		onDisconnect: onDisconnect,
+		Router:       router,
 	}
 }
 
@@ -214,7 +221,7 @@ func (gh *GatewayHandler) readPump(s *Session) {
 	})
 
 	for {
-		_, _, err := s.Conn.ReadMessage()
+		msgType, payload, err := s.Conn.ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 				gh.logger.Warn("WebSocket closed unexpectedly", zap.String("session_id", s.ID), zap.Error(err))
@@ -223,6 +230,10 @@ func (gh *GatewayHandler) readPump(s *Session) {
 		}
 		// Reset deadline on successful message read
 		s.Conn.SetReadDeadline(time.Now().Add(30 * time.Second))
+
+		if msgType == websocket.TextMessage {
+			gh.RouteMessage(s, payload)
+		}
 	}
 }
 
@@ -265,4 +276,105 @@ func (gh *GatewayHandler) handleDisconnect(s *Session) {
 			gh.onDisconnect(s.ID)
 		}
 	})
+}
+
+// Envelope defines client-to-server and server-to-client WS structures.
+type Envelope struct {
+	Cid           string                `json:"cid,omitempty"`
+	MatchCreate   *MatchCreatePayload   `json:"match_create,omitempty"`
+	MatchJoin     *MatchJoinPayload     `json:"match_join,omitempty"`
+	MatchLeave    *MatchLeavePayload    `json:"match_leave,omitempty"`
+	MatchDataSend *MatchDataSendPayload `json:"match_data_send,omitempty"`
+}
+
+type MatchCreatePayload struct{}
+
+type MatchJoinPayload struct {
+	MatchID  string            `json:"match_id"`
+	Token    string            `json:"token,omitempty"`
+	Metadata map[string]string `json:"metadata,omitempty"`
+}
+
+type MatchLeavePayload struct {
+	MatchID string `json:"match_id"`
+}
+
+type MatchDataSendPayload struct {
+	MatchID  string `json:"match_id"`
+	OpCode   int64  `json:"op_code"`
+	Data     string `json:"data"` // Base64 or raw action payload
+	Reliable bool   `json:"reliable"`
+}
+
+func (gh *GatewayHandler) RouteMessage(s *Session, payload []byte) {
+	var env Envelope
+	if err := json.Unmarshal(payload, &env); err != nil {
+		gh.logger.Warn("Failed to unmarshal websocket envelope", zap.Error(err))
+		return
+	}
+
+	if env.MatchCreate != nil {
+		matchID := uuid.New().String()
+		res := map[string]interface{}{
+			"cid": env.Cid,
+			"match_create": map[string]interface{}{
+				"match_id": matchID,
+			},
+		}
+		resBytes, _ := json.Marshal(res)
+		s.Send <- resBytes
+
+	} else if env.MatchJoin != nil {
+		if gh.Router != nil {
+			loop, ok := gh.Router.GetMatchLoop(env.MatchJoin.MatchID)
+			if ok {
+				accept, err := loop.JoinAttempt(s.UserID, s.Username, env.MatchJoin.Metadata)
+				if err != nil || !accept {
+					res := map[string]interface{}{
+						"cid":   env.Cid,
+						"error": "Match join rejected",
+					}
+					resBytes, _ := json.Marshal(res)
+					s.Send <- resBytes
+					return
+				}
+			}
+		}
+
+		res := map[string]interface{}{
+			"cid": env.Cid,
+			"match_join": map[string]interface{}{
+				"match_id": env.MatchJoin.MatchID,
+				"presences": []interface{}{
+					map[string]interface{}{
+						"user_id":    s.UserID,
+						"username":   s.Username,
+						"session_id": s.ID,
+					},
+				},
+			},
+		}
+		resBytes, _ := json.Marshal(res)
+		s.Send <- resBytes
+
+	} else if env.MatchLeave != nil {
+		res := map[string]interface{}{
+			"cid": env.Cid,
+			"match_leave": map[string]interface{}{
+				"match_id": env.MatchLeave.MatchID,
+			},
+		}
+		resBytes, _ := json.Marshal(res)
+		s.Send <- resBytes
+
+	} else if env.MatchDataSend != nil {
+		if gh.Router != nil {
+			input := match.MatchInput{
+				UserID:  s.UserID,
+				Action:  fmt.Sprintf("%d", env.MatchDataSend.OpCode),
+				Payload: env.MatchDataSend.Data,
+			}
+			_ = gh.Router.ForwardInput(context.Background(), env.MatchDataSend.MatchID, input)
+		}
+	}
 }

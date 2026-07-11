@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"plugin"
+	"reflect"
 	"runtime/debug"
 	"sync"
 )
@@ -252,6 +253,21 @@ func (m *GoRuntimeManager) safeCall(fn func() error) (err error) {
 	return fn()
 }
 
+// Logger returns the logger.
+func (m *GoRuntimeManager) Logger() Logger {
+	return m.logger
+}
+
+// DB returns the database connection.
+func (m *GoRuntimeManager) DB() *sql.DB {
+	return m.db
+}
+
+// NK returns the runtime module.
+func (m *GoRuntimeManager) NK() RuntimeModule {
+	return m.nk
+}
+
 // Registry returns the hook registry.
 func (m *GoRuntimeManager) Registry() *HookRegistry {
 	return m.registry
@@ -292,22 +308,171 @@ func (i *goInitializer) RegisterMatch(name string, fn MatchHandlerFactory) error
 }
 
 func (i *goInitializer) RegisterMatchmakerMatched(fn MatchmakerMatchedHandler) error {
-	// TODO: Store matchmaker matched handler in registry
+	i.registry.RegisterMatchmakerMatched(fn)
 	return nil
 }
 
 func (i *goInitializer) RegisterLeaderboardReset(fn LeaderboardResetHandler) error {
-	// TODO: Store leaderboard reset handler in registry
+	i.registry.RegisterLeaderboardReset(fn)
 	return nil
 }
 
 func (i *goInitializer) RegisterTournamentEnd(fn TournamentEndHandler) error {
-	// TODO: Store tournament end handler in registry
+	i.registry.RegisterTournamentEnd(fn)
 	return nil
 }
 
 func (i *goInitializer) RegisterTournamentReset(fn TournamentResetHandler) error {
-	// TODO: Store tournament reset handler in registry
+	i.registry.RegisterTournamentReset(fn)
+	return nil
+}// Helper to adapt hook parameters dynamically
+func convertHookParam(src interface{}, dst interface{}) error {
+	bytes, err := json.Marshal(src)
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(bytes, dst)
+}
+
+func convertHookParamBack(src interface{}, orig interface{}) (interface{}, error) {
+	bytes, err := json.Marshal(src)
+	if err != nil {
+		return nil, err
+	}
+	origType := reflect.TypeOf(orig)
+	if origType.Kind() == reflect.Ptr {
+		newVal := reflect.New(origType.Elem()).Interface()
+		if err := json.Unmarshal(bytes, newVal); err != nil {
+			return nil, err
+		}
+		return newVal, nil
+	}
+	newVal := reflect.New(origType).Interface()
+	if err := json.Unmarshal(bytes, newVal); err != nil {
+		return nil, err
+	}
+	return reflect.ValueOf(newVal).Elem().Interface(), nil
+}
+
+// Specific type-safe before hooks
+func (i *goInitializer) RegisterBeforeAuthenticateEmail(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *AuthenticateEmailRequest) (*AuthenticateEmailRequest, error)) error {
+	wrapped := func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in interface{}) (interface{}, error) {
+		var req AuthenticateEmailRequest
+		if err := convertHookParam(in, &req); err != nil {
+			return nil, err
+		}
+		res, err := fn(ctx, logger, db, nk, &req)
+		if err != nil {
+			return nil, err
+		}
+		return convertHookParamBack(res, in)
+	}
+	i.registry.RegisterBefore("AuthenticateEmail", wrapped)
+	return nil
+}
+
+func (i *goInitializer) RegisterBeforeWriteStorageObjects(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *WriteStorageObjectsRequest) (*WriteStorageObjectsRequest, error)) error {
+	wrapped := func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in interface{}) (interface{}, error) {
+		var req WriteStorageObjectsRequest
+		if err := convertHookParam(in, &req); err != nil {
+			return nil, err
+		}
+		res, err := fn(ctx, logger, db, nk, &req)
+		if err != nil {
+			return nil, err
+		}
+		return convertHookParamBack(res, in)
+	}
+	i.registry.RegisterBefore("WriteStorageObjects", wrapped)
+	return nil
+}
+
+func (i *goInitializer) RegisterBeforeAddFriends(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *AddFriendsRequest) (*AddFriendsRequest, error)) error {
+	wrapped := func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in interface{}) (interface{}, error) {
+		var req AddFriendsRequest
+		if err := convertHookParam(in, &req); err != nil {
+			return nil, err
+		}
+		res, err := fn(ctx, logger, db, nk, &req)
+		if err != nil {
+			return nil, err
+		}
+		return convertHookParamBack(res, in)
+	}
+	i.registry.RegisterBefore("AddFriends", wrapped)
+	return nil
+}
+
+func (i *goInitializer) RegisterBeforeJoinGroup(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *JoinGroupRequest) (*JoinGroupRequest, error)) error {
+	wrapped := func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in interface{}) (interface{}, error) {
+		var req JoinGroupRequest
+		if err := convertHookParam(in, &req); err != nil {
+			return nil, err
+		}
+		res, err := fn(ctx, logger, db, nk, &req)
+		if err != nil {
+			return nil, err
+		}
+		return convertHookParamBack(res, in)
+	}
+	i.registry.RegisterBefore("JoinGroup", wrapped)
+	return nil
+}
+
+// Specific type-safe after hooks
+func (i *goInitializer) RegisterAfterAuthenticateEmail(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, out *Session, in *AuthenticateEmailRequest) error) error {
+	wrapped := func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, out interface{}, in interface{}) error {
+		var outStruct Session
+		var inStruct AuthenticateEmailRequest
+		if err := convertHookParam(out, &outStruct); err != nil {
+			return err
+		}
+		if err := convertHookParam(in, &inStruct); err != nil {
+			return err
+		}
+		return fn(ctx, logger, db, nk, &outStruct, &inStruct)
+	}
+	i.registry.RegisterAfter("AuthenticateEmail", wrapped)
+	return nil
+}
+
+func (i *goInitializer) RegisterAfterWriteStorageObjects(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, out *StorageObjectAcks, in *WriteStorageObjectsRequest) error) error {
+	wrapped := func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, out interface{}, in interface{}) error {
+		var outStruct StorageObjectAcks
+		var inStruct WriteStorageObjectsRequest
+		if err := convertHookParam(out, &outStruct); err != nil {
+			return err
+		}
+		if err := convertHookParam(in, &inStruct); err != nil {
+			return err
+		}
+		return fn(ctx, logger, db, nk, &outStruct, &inStruct)
+	}
+	i.registry.RegisterAfter("WriteStorageObjects", wrapped)
+	return nil
+}
+
+func (i *goInitializer) RegisterAfterAddFriends(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *AddFriendsRequest) error) error {
+	wrapped := func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, out interface{}, in interface{}) error {
+		var inStruct AddFriendsRequest
+		if err := convertHookParam(in, &inStruct); err != nil {
+			return err
+		}
+		return fn(ctx, logger, db, nk, &inStruct)
+	}
+	i.registry.RegisterAfter("AddFriends", wrapped)
+	return nil
+}
+
+func (i *goInitializer) RegisterAfterJoinGroup(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *JoinGroupRequest) error) error {
+	wrapped := func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, out interface{}, in interface{}) error {
+		var inStruct JoinGroupRequest
+		if err := convertHookParam(in, &inStruct); err != nil {
+			return err
+		}
+		return fn(ctx, logger, db, nk, &inStruct)
+	}
+	i.registry.RegisterAfter("JoinGroup", wrapped)
 	return nil
 }
 

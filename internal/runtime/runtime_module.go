@@ -16,9 +16,14 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+type MatchRegistry interface {
+	CreateAndRegisterMatch(ctx context.Context, matchID string, module string, params map[string]interface{}) error
+}
+
 type GoRuntimeModule struct {
-	dbPool *pgxpool.Pool
-	logger Logger
+	dbPool   *pgxpool.Pool
+	logger   Logger
+	registry MatchRegistry
 }
 
 func NewGoRuntimeModule(dbPool *pgxpool.Pool, logger Logger) *GoRuntimeModule {
@@ -26,6 +31,10 @@ func NewGoRuntimeModule(dbPool *pgxpool.Pool, logger Logger) *GoRuntimeModule {
 		dbPool: dbPool,
 		logger: logger,
 	}
+}
+
+func (m *GoRuntimeModule) SetMatchRegistry(reg MatchRegistry) {
+	m.registry = reg
 }
 
 func (m *GoRuntimeModule) StorageRead(ctx context.Context, reads []*StorageRead) ([]*StorageObject, error) {
@@ -175,6 +184,12 @@ func (m *GoRuntimeModule) NotificationSend(ctx context.Context, userID, subject 
 
 func (m *GoRuntimeModule) MatchCreate(ctx context.Context, module string, params map[string]interface{}) (string, error) {
 	matchID := uuid.New().String()
+	if m.registry != nil {
+		err := m.registry.CreateAndRegisterMatch(ctx, matchID, module, params)
+		if err != nil {
+			return "", fmt.Errorf("failed to create and register match: %w", err)
+		}
+	}
 	return matchID, nil
 }
 

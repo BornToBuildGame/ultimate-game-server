@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"ultimate-game-server/internal/auth"
+	"ultimate-game-server/internal/match"
 	"ultimate-game-server/internal/runtime"
 	"ultimate-game-server/internal/socket"
 	"ultimate-game-server/internal/storage"
@@ -44,6 +45,7 @@ type Server struct {
 	rateLimiter    *IPTokenBucketRateLimiter
 	SocketRegistry *socket.ConnectionRegistry
 	SocketGateway  *socket.GatewayHandler
+	MatchRouter    *match.Router
 
 	httpServer *http.Server
 	gRPCServer *grpc.Server
@@ -56,6 +58,14 @@ type Server struct {
 // SetRuntimeManager configures the runtime manager for hook interceptors.
 func (s *Server) SetRuntimeManager(rm *runtime.GoRuntimeManager) {
 	s.RuntimeManager = rm
+	if rm != nil {
+		if s.MatchRouter != nil {
+			s.MatchRouter.SetDependencies(rm.Registry(), rm.Logger(), s.logger, rm.DB(), rm.NK())
+		}
+		if grm, ok := rm.NK().(*runtime.GoRuntimeModule); ok && s.MatchRouter != nil {
+			grm.SetMatchRegistry(s.MatchRouter)
+		}
+	}
 }
 
 // SetVMs configures the Lua and JavaScript VM instances.
@@ -78,8 +88,9 @@ func NewServer(logger *zap.Logger, cfg Config, dbPool *pgxpool.Pool) (*Server, e
 		cfg.RateLimitRefill = 10
 	}
 
+	matchRouter := match.NewRouter()
 	sockRegistry := socket.NewConnectionRegistry()
-	sockGateway := socket.NewGatewayHandler(logger, tm, sockRegistry, nil, nil)
+	sockGateway := socket.NewGatewayHandler(logger, tm, sockRegistry, nil, nil, matchRouter)
 
 	return &Server{
 		logger:         logger,
@@ -90,6 +101,7 @@ func NewServer(logger *zap.Logger, cfg Config, dbPool *pgxpool.Pool) (*Server, e
 		rateLimiter:    NewIPRateLimiter(cfg.RateLimitMax, cfg.RateLimitRefill),
 		SocketRegistry: sockRegistry,
 		SocketGateway:  sockGateway,
+		MatchRouter:    matchRouter,
 	}, nil
 }
 
@@ -108,7 +120,7 @@ func (s *Server) Start(ctx context.Context) error {
 
 	if s.RuntimeManager != nil {
 		handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			HTTPHookMiddleware(s.RuntimeManager.Registry(), s.LuaVM, s.JSVM, mux.ServeHTTP)(w, r)
+			HTTPHookMiddleware(s.RuntimeManager, s.LuaVM, s.JSVM, mux.ServeHTTP)(w, r)
 		})
 	}
 
@@ -120,7 +132,7 @@ func (s *Server) Start(ctx context.Context) error {
 	// 2. Setup gRPC Server
 	var opts []grpc.ServerOption
 	if s.RuntimeManager != nil {
-		opts = append(opts, grpc.UnaryInterceptor(GRPCHookUnaryInterceptor(s.RuntimeManager.Registry(), s.LuaVM, s.JSVM)))
+		opts = append(opts, grpc.UnaryInterceptor(GRPCHookUnaryInterceptor(s.RuntimeManager, s.LuaVM, s.JSVM)))
 	}
 	s.gRPCServer = grpc.NewServer(opts...)
 	storagepb.RegisterStorageServiceServer(s.gRPCServer, NewStorageServer(s.dbPool, s.tokenMgr))
