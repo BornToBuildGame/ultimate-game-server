@@ -1452,3 +1452,219 @@ var GroupService_ServiceDesc = grpc.ServiceDesc{
 	Streams:  []grpc.StreamDesc{},
 	Metadata: "api/api.proto",
 }
+
+const (
+	MatchmakerService_AddMatchmaker_FullMethodName       = "/ultimate.server.api.MatchmakerService/AddMatchmaker"
+	MatchmakerService_RemoveMatchmaker_FullMethodName    = "/ultimate.server.api.MatchmakerService/RemoveMatchmaker"
+	MatchmakerService_GetMatchmakerTicket_FullMethodName = "/ultimate.server.api.MatchmakerService/GetMatchmakerTicket"
+	MatchmakerService_GetQueueStats_FullMethodName       = "/ultimate.server.api.MatchmakerService/GetQueueStats"
+)
+
+// MatchmakerServiceClient is the client API for MatchmakerService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type MatchmakerServiceClient interface {
+	AddMatchmaker(ctx context.Context, in *AddMatchmakerRequest, opts ...grpc.CallOption) (*MatchmakerTicket, error)
+	RemoveMatchmaker(ctx context.Context, in *RemoveMatchmakerRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	GetMatchmakerTicket(ctx context.Context, in *GetMatchmakerTicketRequest, opts ...grpc.CallOption) (*MatchmakerTicket, error)
+	GetQueueStats(ctx context.Context, in *GetQueueStatsRequest, opts ...grpc.CallOption) (*QueueStats, error)
+}
+
+type matchmakerServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewMatchmakerServiceClient(cc grpc.ClientConnInterface) MatchmakerServiceClient {
+	return &matchmakerServiceClient{cc}
+}
+
+func (c *matchmakerServiceClient) AddMatchmaker(ctx context.Context, in *AddMatchmakerRequest, opts ...grpc.CallOption) (*MatchmakerTicket, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(MatchmakerTicket)
+	err := c.cc.Invoke(ctx, MatchmakerService_AddMatchmaker_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *matchmakerServiceClient) RemoveMatchmaker(ctx context.Context, in *RemoveMatchmakerRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, MatchmakerService_RemoveMatchmaker_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *matchmakerServiceClient) GetMatchmakerTicket(ctx context.Context, in *GetMatchmakerTicketRequest, opts ...grpc.CallOption) (*MatchmakerTicket, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(MatchmakerTicket)
+	err := c.cc.Invoke(ctx, MatchmakerService_GetMatchmakerTicket_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *matchmakerServiceClient) GetQueueStats(ctx context.Context, in *GetQueueStatsRequest, opts ...grpc.CallOption) (*QueueStats, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueueStats)
+	err := c.cc.Invoke(ctx, MatchmakerService_GetQueueStats_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// MatchmakerServiceServer is the server API for MatchmakerService service.
+// All implementations must embed UnimplementedMatchmakerServiceServer
+// for forward compatibility.
+type MatchmakerServiceServer interface {
+	AddMatchmaker(context.Context, *AddMatchmakerRequest) (*MatchmakerTicket, error)
+	RemoveMatchmaker(context.Context, *RemoveMatchmakerRequest) (*emptypb.Empty, error)
+	GetMatchmakerTicket(context.Context, *GetMatchmakerTicketRequest) (*MatchmakerTicket, error)
+	GetQueueStats(context.Context, *GetQueueStatsRequest) (*QueueStats, error)
+	mustEmbedUnimplementedMatchmakerServiceServer()
+}
+
+// UnimplementedMatchmakerServiceServer must be embedded to have
+// forward compatible implementations.
+//
+// NOTE: this should be embedded by value instead of pointer to avoid a nil
+// pointer dereference when methods are called.
+type UnimplementedMatchmakerServiceServer struct{}
+
+func (UnimplementedMatchmakerServiceServer) AddMatchmaker(context.Context, *AddMatchmakerRequest) (*MatchmakerTicket, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AddMatchmaker not implemented")
+}
+func (UnimplementedMatchmakerServiceServer) RemoveMatchmaker(context.Context, *RemoveMatchmakerRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RemoveMatchmaker not implemented")
+}
+func (UnimplementedMatchmakerServiceServer) GetMatchmakerTicket(context.Context, *GetMatchmakerTicketRequest) (*MatchmakerTicket, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetMatchmakerTicket not implemented")
+}
+func (UnimplementedMatchmakerServiceServer) GetQueueStats(context.Context, *GetQueueStatsRequest) (*QueueStats, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetQueueStats not implemented")
+}
+func (UnimplementedMatchmakerServiceServer) mustEmbedUnimplementedMatchmakerServiceServer() {}
+func (UnimplementedMatchmakerServiceServer) testEmbeddedByValue()                           {}
+
+// UnsafeMatchmakerServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to MatchmakerServiceServer will
+// result in compilation errors.
+type UnsafeMatchmakerServiceServer interface {
+	mustEmbedUnimplementedMatchmakerServiceServer()
+}
+
+func RegisterMatchmakerServiceServer(s grpc.ServiceRegistrar, srv MatchmakerServiceServer) {
+	// If the following call pancis, it indicates UnimplementedMatchmakerServiceServer was
+	// embedded by pointer and is nil.  This will cause panics if an
+	// unimplemented method is ever invoked, so we test this at initialization
+	// time to prevent it from happening at runtime later due to I/O.
+	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
+		t.testEmbeddedByValue()
+	}
+	s.RegisterService(&MatchmakerService_ServiceDesc, srv)
+}
+
+func _MatchmakerService_AddMatchmaker_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AddMatchmakerRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MatchmakerServiceServer).AddMatchmaker(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MatchmakerService_AddMatchmaker_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MatchmakerServiceServer).AddMatchmaker(ctx, req.(*AddMatchmakerRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _MatchmakerService_RemoveMatchmaker_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RemoveMatchmakerRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MatchmakerServiceServer).RemoveMatchmaker(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MatchmakerService_RemoveMatchmaker_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MatchmakerServiceServer).RemoveMatchmaker(ctx, req.(*RemoveMatchmakerRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _MatchmakerService_GetMatchmakerTicket_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetMatchmakerTicketRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MatchmakerServiceServer).GetMatchmakerTicket(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MatchmakerService_GetMatchmakerTicket_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MatchmakerServiceServer).GetMatchmakerTicket(ctx, req.(*GetMatchmakerTicketRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _MatchmakerService_GetQueueStats_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetQueueStatsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MatchmakerServiceServer).GetQueueStats(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MatchmakerService_GetQueueStats_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MatchmakerServiceServer).GetQueueStats(ctx, req.(*GetQueueStatsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// MatchmakerService_ServiceDesc is the grpc.ServiceDesc for MatchmakerService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var MatchmakerService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "ultimate.server.api.MatchmakerService",
+	HandlerType: (*MatchmakerServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "AddMatchmaker",
+			Handler:    _MatchmakerService_AddMatchmaker_Handler,
+		},
+		{
+			MethodName: "RemoveMatchmaker",
+			Handler:    _MatchmakerService_RemoveMatchmaker_Handler,
+		},
+		{
+			MethodName: "GetMatchmakerTicket",
+			Handler:    _MatchmakerService_GetMatchmakerTicket_Handler,
+		},
+		{
+			MethodName: "GetQueueStats",
+			Handler:    _MatchmakerService_GetQueueStats_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "api/api.proto",
+}

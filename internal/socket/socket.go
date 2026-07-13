@@ -10,6 +10,7 @@ import (
 
 	"ultimate-game-server/internal/auth"
 	"ultimate-game-server/internal/match"
+	"ultimate-game-server/internal/matchmaker"
 
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
@@ -127,6 +128,44 @@ func (cr *ConnectionRegistry) GetBySession(sessionID string) (*Session, bool) {
 	return s, ok
 }
 
+// GetUserSessionIDs retrieves active session IDs for a user.
+func (cr *ConnectionRegistry) GetUserSessionIDs(userID string) []string {
+	cr.mu.RLock()
+	defer cr.mu.RUnlock()
+
+	userMap, exists := cr.userSessions[userID]
+	if !exists {
+		return nil
+	}
+	var sessionIDs []string
+	for _, sess := range userMap {
+		if sess.IsActive {
+			sessionIDs = append(sessionIDs, sess.ID)
+		}
+	}
+	return sessionIDs
+}
+
+// SendToUser sends a message to all active sessions of a user.
+func (cr *ConnectionRegistry) SendToUser(userID string, payload []byte) {
+	cr.mu.RLock()
+	defer cr.mu.RUnlock()
+
+	userMap, exists := cr.userSessions[userID]
+	if !exists {
+		return
+	}
+	for _, sess := range userMap {
+		if sess.IsActive {
+			select {
+			case sess.Send <- payload:
+			default:
+				// Channel full, skip
+			}
+		}
+	}
+}
+
 // GatewayHandler upgrades connections and starts connection lifecycle loops.
 type GatewayHandler struct {
 	logger       *zap.Logger
@@ -135,6 +174,12 @@ type GatewayHandler struct {
 	onConnect    func(s *Session)
 	onDisconnect func(sessionID string)
 	Router       *match.Router
+	Matchmaker   *matchmaker.Matchmaker
+}
+
+// SetMatchmaker configures the Matchmaker instance for ticket routing.
+func (gh *GatewayHandler) SetMatchmaker(mm *matchmaker.Matchmaker) {
+	gh.Matchmaker = mm
 }
 
 // NewGatewayHandler creates a new GatewayHandler.
@@ -280,11 +325,13 @@ func (gh *GatewayHandler) handleDisconnect(s *Session) {
 
 // Envelope defines client-to-server and server-to-client WS structures.
 type Envelope struct {
-	Cid           string                `json:"cid,omitempty"`
-	MatchCreate   *MatchCreatePayload   `json:"match_create,omitempty"`
-	MatchJoin     *MatchJoinPayload     `json:"match_join,omitempty"`
-	MatchLeave    *MatchLeavePayload    `json:"match_leave,omitempty"`
-	MatchDataSend *MatchDataSendPayload `json:"match_data_send,omitempty"`
+	Cid              string                   `json:"cid,omitempty"`
+	MatchCreate      *MatchCreatePayload      `json:"match_create,omitempty"`
+	MatchJoin        *MatchJoinPayload        `json:"match_join,omitempty"`
+	MatchLeave       *MatchLeavePayload       `json:"match_leave,omitempty"`
+	MatchDataSend    *MatchDataSendPayload    `json:"match_data_send,omitempty"`
+	MatchmakerAdd    *MatchmakerAddPayload    `json:"matchmaker_add,omitempty"`
+	MatchmakerRemove *MatchmakerRemovePayload `json:"matchmaker_remove,omitempty"`
 }
 
 type MatchCreatePayload struct{}
@@ -304,6 +351,21 @@ type MatchDataSendPayload struct {
 	OpCode   int64  `json:"op_code"`
 	Data     string `json:"data"` // Base64 or raw action payload
 	Reliable bool   `json:"reliable"`
+}
+
+type MatchmakerAddPayload struct {
+	QueueName         string             `json:"queue_name"`
+	MinCount          int                `json:"min_count"`
+	MaxCount          int                `json:"max_count"`
+	StringProperties  map[string]string  `json:"string_properties"`
+	NumericProperties map[string]float64 `json:"numeric_properties"`
+	CountMultiple     int                `json:"count_multiple"`
+	ReversePrecision  bool               `json:"reverse_precision"`
+	Query             string             `json:"query"`
+}
+
+type MatchmakerRemovePayload struct {
+	TicketID string `json:"ticket_id"`
 }
 
 func (gh *GatewayHandler) RouteMessage(s *Session, payload []byte) {
@@ -376,5 +438,89 @@ func (gh *GatewayHandler) RouteMessage(s *Session, payload []byte) {
 			}
 			_ = gh.Router.ForwardInput(context.Background(), env.MatchDataSend.MatchID, input)
 		}
+
+	} else if env.MatchmakerAdd != nil {
+		if gh.Matchmaker == nil {
+			gh.logger.Warn("Matchmaker not configured in WebSocket gateway")
+			return
+		}
+
+		queueName := env.MatchmakerAdd.QueueName
+		if queueName == "" {
+			queueName = "default"
+		}
+
+		t := &matchmaker.Ticket{
+			ID:                uuid.New().String(),
+			UserID:            s.UserID,
+			Username:          s.Username,
+			Region:            env.MatchmakerAdd.StringProperties["region"],
+			CreatedAt:         time.Now(),
+			Query:             env.MatchmakerAdd.Query,
+			MinCount:          env.MatchmakerAdd.MinCount,
+			MaxCount:          env.MatchmakerAdd.MaxCount,
+			StringProperties:  env.MatchmakerAdd.StringProperties,
+			NumericProperties: env.MatchmakerAdd.NumericProperties,
+			CountMultiple:     env.MatchmakerAdd.CountMultiple,
+			ReversePrecision:  env.MatchmakerAdd.ReversePrecision,
+			QueueName:         queueName,
+		}
+
+		if skillVal, ok := env.MatchmakerAdd.NumericProperties["skill"]; ok {
+			t.SkillRating = int(skillVal)
+		} else {
+			t.SkillRating = 1000 // default fallback
+		}
+
+		err := gh.Matchmaker.Submit(context.Background(), t)
+		if err != nil {
+			gh.logger.Error("Failed to submit ticket via WebSocket", zap.Error(err))
+			res := map[string]interface{}{
+				"cid":   env.Cid,
+				"error": "Failed to submit ticket: " + err.Error(),
+			}
+			resBytes, _ := json.Marshal(res)
+			s.Send <- resBytes
+			return
+		}
+
+		// Notify client of successful ticket submission
+		res := map[string]interface{}{
+			"cid": env.Cid,
+			"matchmaker_ticket": map[string]interface{}{
+				"ticket_id":  t.ID,
+				"queue_name": t.QueueName,
+				"status":     "queued",
+			},
+		}
+		resBytes, _ := json.Marshal(res)
+		s.Send <- resBytes
+
+	} else if env.MatchmakerRemove != nil {
+		if gh.Matchmaker == nil {
+			gh.logger.Warn("Matchmaker not configured in WebSocket gateway")
+			return
+		}
+
+		err := gh.Matchmaker.Cancel(context.Background(), env.MatchmakerRemove.TicketID)
+		if err != nil {
+			gh.logger.Error("Failed to cancel ticket via WebSocket", zap.Error(err))
+			res := map[string]interface{}{
+				"cid":   env.Cid,
+				"error": "Failed to cancel ticket: " + err.Error(),
+			}
+			resBytes, _ := json.Marshal(res)
+			s.Send <- resBytes
+			return
+		}
+
+		res := map[string]interface{}{
+			"cid": env.Cid,
+			"matchmaker_remove": map[string]interface{}{
+				"ticket_id": env.MatchmakerRemove.TicketID,
+			},
+		}
+		resBytes, _ := json.Marshal(res)
+		s.Send <- resBytes
 	}
 }

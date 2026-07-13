@@ -359,3 +359,51 @@ message ListUserGroupsRequest {
   int32 limit = 2;
   string cursor = 3;
 }
+
+// --- Matchmaking ---
+
+service MatchmakerService {
+  rpc AddMatchmaker(AddMatchmakerRequest) returns (MatchmakerTicket);
+  rpc RemoveMatchmaker(RemoveMatchmakerRequest) returns (google.protobuf.Empty);
+  rpc GetMatchmakerTicket(GetMatchmakerTicketRequest) returns (MatchmakerTicket);
+  rpc GetQueueStats(GetQueueStatsRequest) returns (QueueStats);
+}
+
+message AddMatchmakerRequest {
+  string queue_name = 1;
+  int32 min_count = 2;
+  int32 max_count = 3;
+  map<string, string> string_properties = 4;
+  map<string, double> numeric_properties = 5;
+  int32 count_multiple = 6;
+  bool reverse_precision = 7;
+  string query = 8;
+}
+
+message MatchmakerTicket {
+  string ticket_id = 1;
+  string queue_name = 2;
+  string status = 3; // "queued", "matched", "cancelled", "expired"
+  string match_id = 4; // empty if not matched yet
+  string match_token = 5; // empty if not matched yet
+}
+
+message RemoveMatchmakerRequest {
+  string ticket_id = 1;
+}
+
+message GetMatchmakerTicketRequest {
+  string ticket_id = 1;
+}
+
+message GetQueueStatsRequest {
+  string queue_name = 1;
+}
+
+message QueueStats {
+  string queue_name = 2;
+  int32 ticket_count = 3;
+  int32 average_wait_sec = 4;
+  int32 active_matches = 5;
+}
+

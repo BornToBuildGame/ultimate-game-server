@@ -7,22 +7,26 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
+	"ultimate-game-server/internal/api/apipb"
+	"ultimate-game-server/internal/api/storagepb"
 	"ultimate-game-server/internal/auth"
 	"ultimate-game-server/internal/match"
+	"ultimate-game-server/internal/matchmaker"
 	"ultimate-game-server/internal/runtime"
 	"ultimate-game-server/internal/socket"
 	"ultimate-game-server/internal/storage"
-	"ultimate-game-server/internal/api/apipb"
-	"ultimate-game-server/internal/api/storagepb"
 
+	"github.com/dop251/goja"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/redis/go-redis/v9"
+	"github.com/yuin/gopher-lua"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
-	"github.com/dop251/goja"
-	"github.com/yuin/gopher-lua"
 )
 
 // Config defines the configuration options for the API server.
@@ -46,6 +50,7 @@ type Server struct {
 	SocketRegistry *socket.ConnectionRegistry
 	SocketGateway  *socket.GatewayHandler
 	MatchRouter    *match.Router
+	Matchmaker     *matchmaker.Matchmaker
 
 	httpServer *http.Server
 	gRPCServer *grpc.Server
@@ -64,6 +69,9 @@ func (s *Server) SetRuntimeManager(rm *runtime.GoRuntimeManager) {
 		}
 		if grm, ok := rm.NK().(*runtime.GoRuntimeModule); ok && s.MatchRouter != nil {
 			grm.SetMatchRegistry(s.MatchRouter)
+		}
+		if s.Matchmaker != nil {
+			s.Matchmaker.SetDependencies(rm.DB(), rm.NK(), rm.Registry())
 		}
 	}
 }
@@ -92,7 +100,25 @@ func NewServer(logger *zap.Logger, cfg Config, dbPool *pgxpool.Pool) (*Server, e
 	sockRegistry := socket.NewConnectionRegistry()
 	sockGateway := socket.NewGatewayHandler(logger, tm, sockRegistry, nil, nil, matchRouter)
 
-	return &Server{
+	// Initialize Redis connection for Matchmaker
+	var rdb *redis.Client
+	redisAddr := os.Getenv("REDIS_ADDR")
+	if redisAddr == "" {
+		redisAddr = "localhost:6379"
+	}
+	rdb = redis.NewClient(&redis.Options{
+		Addr: redisAddr,
+	})
+	pingCtx, pingCancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
+	if err := rdb.Ping(pingCtx).Err(); err != nil {
+		logger.Warn("Redis is not available, falling back to local in-memory matchmaking", zap.Error(err))
+		rdb = nil
+	} else {
+		logger.Info("Connected to Redis successfully, enabling distributed matchmaking", zap.String("addr", redisAddr))
+	}
+	pingCancel()
+
+	s := &Server{
 		logger:         logger,
 		cfg:            cfg,
 		dbPool:         dbPool,
@@ -102,7 +128,57 @@ func NewServer(logger *zap.Logger, cfg Config, dbPool *pgxpool.Pool) (*Server, e
 		SocketRegistry: sockRegistry,
 		SocketGateway:  sockGateway,
 		MatchRouter:    matchRouter,
-	}, nil
+	}
+
+	// Matchmaker callbacks (notifying matched players over WebSockets)
+	onMatched := func(result matchmaker.MatchResult) {
+		type WSPresence struct {
+			UserID    string `json:"user_id"`
+			Username  string `json:"username"`
+			SessionID string `json:"session_id"`
+		}
+
+		presences := make([]WSPresence, len(result.PlayerIDs))
+		for idx, pid := range result.PlayerIDs {
+			sessIDs := s.SocketRegistry.GetUserSessionIDs(pid)
+			sessID := ""
+			if len(sessIDs) > 0 {
+				sessID = sessIDs[0]
+			}
+			presences[idx] = WSPresence{
+				UserID:    pid,
+				Username:  result.Usernames[idx],
+				SessionID: sessID,
+			}
+		}
+
+		for idx, pid := range result.PlayerIDs {
+			selfPresence := WSPresence{
+				UserID:    pid,
+				Username:  result.Usernames[idx],
+				SessionID: presences[idx].SessionID,
+			}
+
+			notification := map[string]interface{}{
+				"cid": "",
+				"matchmaker_matched": map[string]interface{}{
+					"ticket_id":   "",
+					"match_id":    result.MatchID,
+					"match_token": result.MatchToken,
+					"presences":   presences,
+					"self":        selfPresence,
+				},
+			}
+
+			msgBytes, _ := json.Marshal(notification)
+			s.SocketRegistry.SendToUser(pid, msgBytes)
+		}
+	}
+
+	s.Matchmaker = matchmaker.NewMatchmaker(logger, rdb, nil, nil, nil, onMatched)
+	s.SocketGateway.SetMatchmaker(s.Matchmaker)
+
+	return s, nil
 }
 
 // Start boots the HTTP and gRPC listeners.
@@ -140,6 +216,10 @@ func (s *Server) Start(ctx context.Context) error {
 	apipb.RegisterTournamentServiceServer(s.gRPCServer, NewTournamentServer(s.dbPool, nil, s.tokenMgr))
 	apipb.RegisterFriendsServiceServer(s.gRPCServer, NewFriendsServer(s.dbPool, s.tokenMgr))
 	apipb.RegisterGroupServiceServer(s.gRPCServer, NewGroupServer(s.dbPool, s.tokenMgr))
+	apipb.RegisterMatchmakerServiceServer(s.gRPCServer, NewMatchmakerServer(s.Matchmaker, s.tokenMgr))
+
+	// Start Matchmaker Tick Loop (Ticks every 1 second)
+	s.Matchmaker.Start(ctx, 1000*time.Millisecond)
 
 	// 3. Listen HTTP
 	httpListener, err := net.Listen("tcp", s.cfg.HTTPAddr)
@@ -174,6 +254,7 @@ func (s *Server) Start(ctx context.Context) error {
 func (s *Server) Stop(ctx context.Context) error {
 	s.logger.Info("Shutting down API servers...")
 
+	s.Matchmaker.Stop()
 	s.gRPCServer.GracefulStop()
 
 	if s.httpServer != nil {
@@ -262,6 +343,12 @@ func (s *Server) registerRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /v2/group/{id}/promote", s.handlePromoteGroupUsers)
 	mux.HandleFunc("POST /v2/group/{id}/demote", s.handleDemoteGroupUsers)
 	mux.HandleFunc("GET /v2/group/{id}/user", s.handleListGroupMembers)
+
+	// Matchmaker Routes
+	mux.HandleFunc("POST /v2/matchmaker/ticket", s.handleSubmitMatchmakerTicket)
+	mux.HandleFunc("DELETE /v2/matchmaker/ticket/{ticket_id}", s.handleCancelMatchmakerTicket)
+	mux.HandleFunc("GET /v2/matchmaker/ticket/{ticket_id}", s.handleGetMatchmakerTicket)
+	mux.HandleFunc("GET /v2/matchmaker/stats/{queue_name}", s.handleGetQueueStats)
 }
 
 func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
@@ -755,6 +842,149 @@ func (s *Server) handleListStorageObjects(w http.ResponseWriter, r *http.Request
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"objects":     res,
 		"next_cursor": nextCursor,
+	})
+}
+
+func (s *Server) handleSubmitMatchmakerTicket(w http.ResponseWriter, r *http.Request) {
+	userID, username, err := s.authenticateRESTWithUsername(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+
+	var req struct {
+		QueueName         string             `json:"queue_name"`
+		MinCount          int                `json:"min_count"`
+		MaxCount          int                `json:"max_count"`
+		StringProperties  map[string]string  `json:"string_properties"`
+		NumericProperties map[string]float64 `json:"numeric_properties"`
+		CountMultiple     int                `json:"count_multiple"`
+		ReversePrecision  bool               `json:"reverse_precision"`
+		Query             string             `json:"query"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "bad request", http.StatusBadRequest)
+		return
+	}
+
+	queueName := req.QueueName
+	if queueName == "" {
+		queueName = "default"
+	}
+
+	t := &matchmaker.Ticket{
+		ID:                uuid.New().String(),
+		UserID:            userID,
+		Username:          username,
+		Region:            req.StringProperties["region"],
+		CreatedAt:         time.Now(),
+		Query:             req.Query,
+		MinCount:          req.MinCount,
+		MaxCount:          req.MaxCount,
+		StringProperties:  req.StringProperties,
+		NumericProperties: req.NumericProperties,
+		CountMultiple:     req.CountMultiple,
+		ReversePrecision:  req.ReversePrecision,
+		QueueName:         queueName,
+	}
+
+	if skillVal, ok := req.NumericProperties["skill"]; ok {
+		t.SkillRating = int(skillVal)
+	} else {
+		t.SkillRating = 1000 // default fallback
+	}
+
+	err = s.Matchmaker.Submit(r.Context(), t)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"ticket_id":  t.ID,
+		"queue_name": t.QueueName,
+		"created_at": t.CreatedAt.Format(time.RFC3339),
+	})
+}
+
+func (s *Server) handleCancelMatchmakerTicket(w http.ResponseWriter, r *http.Request) {
+	_, err := s.authenticateREST(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+
+	ticketID := r.PathValue("ticket_id")
+	if ticketID == "" {
+		http.Error(w, "missing ticket_id", http.StatusBadRequest)
+		return
+	}
+
+	err = s.Matchmaker.Cancel(r.Context(), ticketID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
+func (s *Server) handleGetMatchmakerTicket(w http.ResponseWriter, r *http.Request) {
+	_, err := s.authenticateREST(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+
+	ticketID := r.PathValue("ticket_id")
+	if ticketID == "" {
+		http.Error(w, "missing ticket_id", http.StatusBadRequest)
+		return
+	}
+
+	t, err := s.Matchmaker.GetTicket(r.Context(), ticketID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"ticket_id":   t.ID,
+		"queue_name":  t.QueueName,
+		"status":      t.Status,
+		"created_at":  t.CreatedAt.Format(time.RFC3339),
+		"match_id":    t.MatchID,
+		"match_token": t.MatchToken,
+	})
+}
+
+func (s *Server) handleGetQueueStats(w http.ResponseWriter, r *http.Request) {
+	_, err := s.authenticateREST(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+
+	queueName := r.PathValue("queue_name")
+	if queueName == "" {
+		queueName = "default"
+	}
+
+	count, _, err := s.Matchmaker.GetQueueStats(r.Context(), queueName)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"queue_name":       queueName,
+		"ticket_count":     count,
+		"average_wait_sec": 0,
+		"active_matches":   0,
 	})
 }
 
