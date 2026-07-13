@@ -14,6 +14,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
+	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 )
 
@@ -27,6 +28,7 @@ var upgrader = websocket.Upgrader{
 
 // Session wraps a live WebSocket client connection.
 type Session struct {
+	mu        sync.RWMutex
 	ID        string
 	UserID    string
 	Username  string
@@ -34,6 +36,7 @@ type Session struct {
 	Send      chan []byte
 	CloseOnce sync.Once
 	IsActive  bool
+	matchIDs  map[string]bool // key: matchID
 }
 
 // ConnectionRegistry maintains active and recovering user WebSocket sessions.
@@ -146,6 +149,20 @@ func (cr *ConnectionRegistry) GetUserSessionIDs(userID string) []string {
 	return sessionIDs
 }
 
+// SendToSession sends a message to a specific active session.
+func (cr *ConnectionRegistry) SendToSession(sessionID string, payload []byte) {
+	cr.mu.RLock()
+	s, exists := cr.sessions[sessionID]
+	cr.mu.RUnlock()
+	if exists && s.IsActive {
+		select {
+		case s.Send <- payload:
+		default:
+			// dropped packet
+		}
+	}
+}
+
 // SendToUser sends a message to all active sessions of a user.
 func (cr *ConnectionRegistry) SendToUser(userID string, payload []byte) {
 	cr.mu.RLock()
@@ -166,20 +183,37 @@ func (cr *ConnectionRegistry) SendToUser(userID string, payload []byte) {
 	}
 }
 
+// RelayedMatch represents a client-relayed room session.
+type RelayedMatch struct {
+	mu       sync.RWMutex
+	MatchID  string
+	Sessions map[string]*Session
+}
+
 // GatewayHandler upgrades connections and starts connection lifecycle loops.
 type GatewayHandler struct {
-	logger       *zap.Logger
-	tokenMgr     *auth.TokenManager
-	registry     *ConnectionRegistry
-	onConnect    func(s *Session)
-	onDisconnect func(sessionID string)
-	Router       *match.Router
-	Matchmaker   *matchmaker.Matchmaker
+	mu             sync.RWMutex
+	logger         *zap.Logger
+	tokenMgr       *auth.TokenManager
+	registry       *ConnectionRegistry
+	onConnect      func(s *Session)
+	onDisconnect   func(sessionID string)
+	Router         *match.Router
+	Matchmaker     *matchmaker.Matchmaker
+	relayedMatches map[string]*RelayedMatch
+	rdb            *redis.Client
 }
 
 // SetMatchmaker configures the Matchmaker instance for ticket routing.
 func (gh *GatewayHandler) SetMatchmaker(mm *matchmaker.Matchmaker) {
 	gh.Matchmaker = mm
+}
+
+// SetRedisClient configures the Redis client instance.
+func (gh *GatewayHandler) SetRedisClient(rdb *redis.Client) {
+	gh.mu.Lock()
+	defer gh.mu.Unlock()
+	gh.rdb = rdb
 }
 
 // NewGatewayHandler creates a new GatewayHandler.
@@ -192,12 +226,33 @@ func NewGatewayHandler(
 	router *match.Router,
 ) *GatewayHandler {
 	return &GatewayHandler{
-		logger:       logger,
-		tokenMgr:     tm,
-		registry:     reg,
-		onConnect:    onConnect,
-		onDisconnect: onDisconnect,
-		Router:       router,
+		logger:         logger,
+		tokenMgr:       tm,
+		registry:       reg,
+		onConnect:      onConnect,
+		onDisconnect:   onDisconnect,
+		Router:         router,
+		relayedMatches: make(map[string]*RelayedMatch),
+	}
+}
+
+// CleanupRelayedMatch deletes the relayed match state.
+func (gh *GatewayHandler) CleanupRelayedMatch(matchID string) {
+	gh.mu.Lock()
+	delete(gh.relayedMatches, matchID)
+	gh.mu.Unlock()
+
+	gh.mu.RLock()
+	rdb := gh.rdb
+	gh.mu.RUnlock()
+
+	if rdb != nil {
+		ctx := context.Background()
+		pipe := rdb.Pipeline()
+		pipe.Del(ctx, "match:node:"+matchID)
+		pipe.SRem(ctx, "match:ids", matchID)
+		pipe.Del(ctx, "match:metadata:"+matchID)
+		_, _ = pipe.Exec(ctx)
 	}
 }
 
@@ -241,6 +296,7 @@ func (gh *GatewayHandler) Upgrade(w http.ResponseWriter, r *http.Request) {
 		Conn:      conn,
 		Send:      make(chan []byte, 256),
 		IsActive:  true,
+		matchIDs:  make(map[string]bool),
 	}
 
 	gh.registry.Add(session)
@@ -320,6 +376,72 @@ func (gh *GatewayHandler) handleDisconnect(s *Session) {
 		if gh.onDisconnect != nil {
 			gh.onDisconnect(s.ID)
 		}
+
+		s.mu.RLock()
+		joinedMatches := make([]string, 0, len(s.matchIDs))
+		for mID := range s.matchIDs {
+			joinedMatches = append(joinedMatches, mID)
+		}
+		s.mu.RUnlock()
+
+		for _, matchID := range joinedMatches {
+			authoritative := false
+			if gh.Router != nil {
+				if loop, ok := gh.Router.GetMatchLoop(matchID); ok {
+					authoritative = true
+					loop.SubmitLeave(s.UserID, s.ID)
+				}
+			}
+
+			if !authoritative {
+				gh.mu.Lock()
+				if rm, ok := gh.relayedMatches[matchID]; ok {
+					rm.mu.Lock()
+					delete(rm.Sessions, s.ID)
+					sessionCount := len(rm.Sessions)
+					rm.mu.Unlock()
+
+					rdb := gh.rdb
+
+					if sessionCount == 0 {
+						gh.mu.Unlock()
+						gh.CleanupRelayedMatch(matchID)
+					} else {
+						if rdb != nil {
+							rdb.HSet(context.Background(), "match:metadata:"+matchID, "size", sessionCount)
+						}
+
+						// Broadcast leave presence notification
+						notification := map[string]interface{}{
+							"match_presence_event": map[string]interface{}{
+								"match_id": matchID,
+								"joins":    []interface{}{},
+								"leaves": []map[string]interface{}{
+									{
+										"user_id":    s.UserID,
+										"username":   s.Username,
+										"session_id": s.ID,
+									},
+								},
+							},
+						}
+						notificationBytes, _ := json.Marshal(notification)
+
+						rm.mu.RLock()
+						for _, sess := range rm.Sessions {
+							select {
+							case sess.Send <- notificationBytes:
+							default:
+							}
+						}
+						rm.mu.RUnlock()
+						gh.mu.Unlock()
+					}
+				} else {
+					gh.mu.Unlock()
+				}
+			}
+		}
 	})
 }
 
@@ -377,6 +499,34 @@ func (gh *GatewayHandler) RouteMessage(s *Session, payload []byte) {
 
 	if env.MatchCreate != nil {
 		matchID := uuid.New().String()
+		gh.mu.Lock()
+		gh.relayedMatches[matchID] = &RelayedMatch{
+			MatchID:  matchID,
+			Sessions: make(map[string]*Session),
+		}
+		gh.mu.Unlock()
+
+		gh.mu.RLock()
+		rdb := gh.rdb
+		gh.mu.RUnlock()
+
+		if rdb != nil {
+			ctx := context.Background()
+			pipe := rdb.Pipeline()
+			pipe.Set(ctx, "match:node:"+matchID, "node-local", 0)
+			pipe.SAdd(ctx, "match:ids", matchID)
+			metadata := map[string]interface{}{
+				"match_id":      matchID,
+				"authoritative": "false",
+				"label":         "{}",
+				"size":          0,
+				"max_size":      100,
+				"node":          "node-local",
+			}
+			pipe.HMSet(ctx, "match:metadata:"+matchID, metadata)
+			_, _ = pipe.Exec(ctx)
+		}
+
 		res := map[string]interface{}{
 			"cid": env.Cid,
 			"match_create": map[string]interface{}{
@@ -387,10 +537,14 @@ func (gh *GatewayHandler) RouteMessage(s *Session, payload []byte) {
 		s.Send <- resBytes
 
 	} else if env.MatchJoin != nil {
+		matchID := env.MatchJoin.MatchID
+		var authoritative bool = false
+
 		if gh.Router != nil {
-			loop, ok := gh.Router.GetMatchLoop(env.MatchJoin.MatchID)
+			loop, ok := gh.Router.GetMatchLoop(matchID)
 			if ok {
-				accept, err := loop.JoinAttempt(s.UserID, s.Username, env.MatchJoin.Metadata)
+				authoritative = true
+				accept, err := loop.JoinAttempt(s.UserID, s.Username, s.ID, env.MatchJoin.Metadata)
 				if err != nil || !accept {
 					res := map[string]interface{}{
 						"cid":   env.Cid,
@@ -400,43 +554,226 @@ func (gh *GatewayHandler) RouteMessage(s *Session, payload []byte) {
 					s.Send <- resBytes
 					return
 				}
+				s.mu.Lock()
+				s.matchIDs[matchID] = true
+				s.mu.Unlock()
 			}
+		}
+
+		if !authoritative {
+			gh.mu.Lock()
+			rm, ok := gh.relayedMatches[matchID]
+			if !ok {
+				rm = &RelayedMatch{
+					MatchID:  matchID,
+					Sessions: make(map[string]*Session),
+				}
+				gh.relayedMatches[matchID] = rm
+			}
+			rm.mu.Lock()
+			rm.Sessions[s.ID] = s
+			sessionCount := len(rm.Sessions)
+			rm.mu.Unlock()
+
+			rdb := gh.rdb
+
+			gh.mu.Unlock()
+
+			s.mu.Lock()
+			s.matchIDs[matchID] = true
+			s.mu.Unlock()
+
+			if rdb != nil {
+				rdb.HSet(context.Background(), "match:metadata:"+matchID, "size", sessionCount)
+			}
+		}
+
+		var presences []map[string]interface{}
+		if authoritative {
+			if loop, ok := gh.Router.GetMatchLoop(matchID); ok {
+				for _, p := range loop.GetPresences() {
+					presences = append(presences, map[string]interface{}{
+						"user_id":    p.UserID,
+						"username":   p.Username,
+						"session_id": p.SessionID,
+					})
+				}
+			}
+		} else {
+			gh.mu.Lock()
+			if rm, ok := gh.relayedMatches[matchID]; ok {
+				rm.mu.RLock()
+				for _, sess := range rm.Sessions {
+					presences = append(presences, map[string]interface{}{
+						"user_id":    sess.UserID,
+						"username":   sess.Username,
+						"session_id": sess.ID,
+					})
+				}
+				rm.mu.RUnlock()
+			}
+			gh.mu.Unlock()
 		}
 
 		res := map[string]interface{}{
 			"cid": env.Cid,
 			"match_join": map[string]interface{}{
-				"match_id": env.MatchJoin.MatchID,
-				"presences": []interface{}{
-					map[string]interface{}{
-						"user_id":    s.UserID,
-						"username":   s.Username,
-						"session_id": s.ID,
-					},
-				},
+				"match_id":  matchID,
+				"presences": presences,
 			},
 		}
 		resBytes, _ := json.Marshal(res)
 		s.Send <- resBytes
 
+		if !authoritative {
+			notification := map[string]interface{}{
+				"match_presence_event": map[string]interface{}{
+					"match_id": matchID,
+					"joins": []map[string]interface{}{
+						{
+							"user_id":    s.UserID,
+							"username":   s.Username,
+							"session_id": s.ID,
+						},
+					},
+					"leaves": []interface{}{},
+				},
+			}
+			notificationBytes, _ := json.Marshal(notification)
+			gh.mu.Lock()
+			if rm, ok := gh.relayedMatches[matchID]; ok {
+				rm.mu.RLock()
+				for _, sess := range rm.Sessions {
+					if sess.ID != s.ID {
+						select {
+						case sess.Send <- notificationBytes:
+						default:
+						}
+					}
+				}
+				rm.mu.RUnlock()
+			}
+			gh.mu.Unlock()
+		}
+
 	} else if env.MatchLeave != nil {
+		matchID := env.MatchLeave.MatchID
+		authoritative := false
+
+		if gh.Router != nil {
+			if loop, ok := gh.Router.GetMatchLoop(matchID); ok {
+				authoritative = true
+				loop.SubmitLeave(s.UserID, s.ID)
+			}
+		}
+
+		s.mu.Lock()
+		delete(s.matchIDs, matchID)
+		s.mu.Unlock()
+
+		if !authoritative {
+			gh.mu.Lock()
+			if rm, ok := gh.relayedMatches[matchID]; ok {
+				rm.mu.Lock()
+				delete(rm.Sessions, s.ID)
+				sessionCount := len(rm.Sessions)
+				rm.mu.Unlock()
+
+				rdb := gh.rdb
+
+				if sessionCount == 0 {
+					gh.mu.Unlock()
+					gh.CleanupRelayedMatch(matchID)
+				} else {
+					if rdb != nil {
+						rdb.HSet(context.Background(), "match:metadata:"+matchID, "size", sessionCount)
+					}
+
+					notification := map[string]interface{}{
+						"match_presence_event": map[string]interface{}{
+							"match_id": matchID,
+							"joins":    []interface{}{},
+							"leaves": []map[string]interface{}{
+								{
+									"user_id":    s.UserID,
+									"username":   s.Username,
+									"session_id": s.ID,
+								},
+							},
+						},
+					}
+					notificationBytes, _ := json.Marshal(notification)
+					
+					rm.mu.RLock()
+					for _, sess := range rm.Sessions {
+						select {
+						case sess.Send <- notificationBytes:
+						default:
+						}
+					}
+					rm.mu.RUnlock()
+					gh.mu.Unlock()
+				}
+			} else {
+				gh.mu.Unlock()
+			}
+		}
+
 		res := map[string]interface{}{
 			"cid": env.Cid,
 			"match_leave": map[string]interface{}{
-				"match_id": env.MatchLeave.MatchID,
+				"match_id": matchID,
 			},
 		}
 		resBytes, _ := json.Marshal(res)
 		s.Send <- resBytes
 
 	} else if env.MatchDataSend != nil {
+		matchID := env.MatchDataSend.MatchID
+		authoritative := false
+
 		if gh.Router != nil {
-			input := match.MatchInput{
-				UserID:  s.UserID,
-				Action:  fmt.Sprintf("%d", env.MatchDataSend.OpCode),
-				Payload: env.MatchDataSend.Data,
+			if _, ok := gh.Router.GetMatchLoop(matchID); ok {
+				authoritative = true
+				input := match.MatchInput{
+					UserID:  s.UserID,
+					Action:  fmt.Sprintf("%d", env.MatchDataSend.OpCode),
+					Payload: env.MatchDataSend.Data,
+				}
+				_ = gh.Router.ForwardInput(context.Background(), matchID, input)
 			}
-			_ = gh.Router.ForwardInput(context.Background(), env.MatchDataSend.MatchID, input)
+		}
+
+		if !authoritative {
+			gh.mu.Lock()
+			rm, ok := gh.relayedMatches[matchID]
+			if ok {
+				rm.mu.RLock()
+				payload := map[string]interface{}{
+					"cid": "",
+					"match_data": map[string]interface{}{
+						"match_id": matchID,
+						"presence": map[string]interface{}{
+							"user_id":    s.UserID,
+							"username":   s.Username,
+							"session_id": s.ID,
+						},
+						"op_code": env.MatchDataSend.OpCode,
+						"data":     env.MatchDataSend.Data,
+					},
+				}
+				payloadBytes, _ := json.Marshal(payload)
+				for _, sess := range rm.Sessions {
+					if sess.ID != s.ID {
+						select {
+						case sess.Send <- payloadBytes:
+						default:
+						}
+					}
+				}
+				rm.mu.RUnlock()
+			}
+			gh.mu.Unlock()
 		}
 
 	} else if env.MatchmakerAdd != nil {
@@ -469,7 +806,7 @@ func (gh *GatewayHandler) RouteMessage(s *Session, payload []byte) {
 		if skillVal, ok := env.MatchmakerAdd.NumericProperties["skill"]; ok {
 			t.SkillRating = int(skillVal)
 		} else {
-			t.SkillRating = 1000 // default fallback
+			t.SkillRating = 1000
 		}
 
 		err := gh.Matchmaker.Submit(context.Background(), t)
@@ -484,7 +821,6 @@ func (gh *GatewayHandler) RouteMessage(s *Session, payload []byte) {
 			return
 		}
 
-		// Notify client of successful ticket submission
 		res := map[string]interface{}{
 			"cid": env.Cid,
 			"matchmaker_ticket": map[string]interface{}{

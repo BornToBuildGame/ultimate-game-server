@@ -1668,3 +1668,219 @@ var MatchmakerService_ServiceDesc = grpc.ServiceDesc{
 	Streams:  []grpc.StreamDesc{},
 	Metadata: "api/api.proto",
 }
+
+const (
+	RealtimeService_CreateMatch_FullMethodName = "/ultimate.server.api.RealtimeService/CreateMatch"
+	RealtimeService_ListMatches_FullMethodName = "/ultimate.server.api.RealtimeService/ListMatches"
+	RealtimeService_GetMatch_FullMethodName    = "/ultimate.server.api.RealtimeService/GetMatch"
+	RealtimeService_MatchSignal_FullMethodName = "/ultimate.server.api.RealtimeService/MatchSignal"
+)
+
+// RealtimeServiceClient is the client API for RealtimeService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type RealtimeServiceClient interface {
+	CreateMatch(ctx context.Context, in *CreateMatchRequest, opts ...grpc.CallOption) (*Match, error)
+	ListMatches(ctx context.Context, in *ListMatchesRequest, opts ...grpc.CallOption) (*MatchList, error)
+	GetMatch(ctx context.Context, in *GetMatchRequest, opts ...grpc.CallOption) (*Match, error)
+	MatchSignal(ctx context.Context, in *MatchSignalRequest, opts ...grpc.CallOption) (*MatchSignalResponse, error)
+}
+
+type realtimeServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewRealtimeServiceClient(cc grpc.ClientConnInterface) RealtimeServiceClient {
+	return &realtimeServiceClient{cc}
+}
+
+func (c *realtimeServiceClient) CreateMatch(ctx context.Context, in *CreateMatchRequest, opts ...grpc.CallOption) (*Match, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Match)
+	err := c.cc.Invoke(ctx, RealtimeService_CreateMatch_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *realtimeServiceClient) ListMatches(ctx context.Context, in *ListMatchesRequest, opts ...grpc.CallOption) (*MatchList, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(MatchList)
+	err := c.cc.Invoke(ctx, RealtimeService_ListMatches_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *realtimeServiceClient) GetMatch(ctx context.Context, in *GetMatchRequest, opts ...grpc.CallOption) (*Match, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Match)
+	err := c.cc.Invoke(ctx, RealtimeService_GetMatch_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *realtimeServiceClient) MatchSignal(ctx context.Context, in *MatchSignalRequest, opts ...grpc.CallOption) (*MatchSignalResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(MatchSignalResponse)
+	err := c.cc.Invoke(ctx, RealtimeService_MatchSignal_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// RealtimeServiceServer is the server API for RealtimeService service.
+// All implementations must embed UnimplementedRealtimeServiceServer
+// for forward compatibility.
+type RealtimeServiceServer interface {
+	CreateMatch(context.Context, *CreateMatchRequest) (*Match, error)
+	ListMatches(context.Context, *ListMatchesRequest) (*MatchList, error)
+	GetMatch(context.Context, *GetMatchRequest) (*Match, error)
+	MatchSignal(context.Context, *MatchSignalRequest) (*MatchSignalResponse, error)
+	mustEmbedUnimplementedRealtimeServiceServer()
+}
+
+// UnimplementedRealtimeServiceServer must be embedded to have
+// forward compatible implementations.
+//
+// NOTE: this should be embedded by value instead of pointer to avoid a nil
+// pointer dereference when methods are called.
+type UnimplementedRealtimeServiceServer struct{}
+
+func (UnimplementedRealtimeServiceServer) CreateMatch(context.Context, *CreateMatchRequest) (*Match, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateMatch not implemented")
+}
+func (UnimplementedRealtimeServiceServer) ListMatches(context.Context, *ListMatchesRequest) (*MatchList, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListMatches not implemented")
+}
+func (UnimplementedRealtimeServiceServer) GetMatch(context.Context, *GetMatchRequest) (*Match, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetMatch not implemented")
+}
+func (UnimplementedRealtimeServiceServer) MatchSignal(context.Context, *MatchSignalRequest) (*MatchSignalResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method MatchSignal not implemented")
+}
+func (UnimplementedRealtimeServiceServer) mustEmbedUnimplementedRealtimeServiceServer() {}
+func (UnimplementedRealtimeServiceServer) testEmbeddedByValue()                         {}
+
+// UnsafeRealtimeServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to RealtimeServiceServer will
+// result in compilation errors.
+type UnsafeRealtimeServiceServer interface {
+	mustEmbedUnimplementedRealtimeServiceServer()
+}
+
+func RegisterRealtimeServiceServer(s grpc.ServiceRegistrar, srv RealtimeServiceServer) {
+	// If the following call pancis, it indicates UnimplementedRealtimeServiceServer was
+	// embedded by pointer and is nil.  This will cause panics if an
+	// unimplemented method is ever invoked, so we test this at initialization
+	// time to prevent it from happening at runtime later due to I/O.
+	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
+		t.testEmbeddedByValue()
+	}
+	s.RegisterService(&RealtimeService_ServiceDesc, srv)
+}
+
+func _RealtimeService_CreateMatch_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateMatchRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RealtimeServiceServer).CreateMatch(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: RealtimeService_CreateMatch_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RealtimeServiceServer).CreateMatch(ctx, req.(*CreateMatchRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _RealtimeService_ListMatches_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListMatchesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RealtimeServiceServer).ListMatches(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: RealtimeService_ListMatches_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RealtimeServiceServer).ListMatches(ctx, req.(*ListMatchesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _RealtimeService_GetMatch_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetMatchRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RealtimeServiceServer).GetMatch(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: RealtimeService_GetMatch_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RealtimeServiceServer).GetMatch(ctx, req.(*GetMatchRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _RealtimeService_MatchSignal_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MatchSignalRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RealtimeServiceServer).MatchSignal(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: RealtimeService_MatchSignal_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RealtimeServiceServer).MatchSignal(ctx, req.(*MatchSignalRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// RealtimeService_ServiceDesc is the grpc.ServiceDesc for RealtimeService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var RealtimeService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "ultimate.server.api.RealtimeService",
+	HandlerType: (*RealtimeServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "CreateMatch",
+			Handler:    _RealtimeService_CreateMatch_Handler,
+		},
+		{
+			MethodName: "ListMatches",
+			Handler:    _RealtimeService_ListMatches_Handler,
+		},
+		{
+			MethodName: "GetMatch",
+			Handler:    _RealtimeService_GetMatch_Handler,
+		},
+		{
+			MethodName: "MatchSignal",
+			Handler:    _RealtimeService_MatchSignal_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "api/api.proto",
+}

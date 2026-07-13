@@ -51,6 +51,7 @@ type Server struct {
 	SocketGateway  *socket.GatewayHandler
 	MatchRouter    *match.Router
 	Matchmaker     *matchmaker.Matchmaker
+	rdb            *redis.Client
 
 	httpServer *http.Server
 	gRPCServer *grpc.Server
@@ -118,6 +119,12 @@ func NewServer(logger *zap.Logger, cfg Config, dbPool *pgxpool.Pool) (*Server, e
 	}
 	pingCancel()
 
+	matchRouter.SetSessionRegistry(sockRegistry)
+	if rdb != nil {
+		matchRouter.SetClusterConfig("node-local", rdb, nil)
+		sockGateway.SetRedisClient(rdb)
+	}
+
 	s := &Server{
 		logger:         logger,
 		cfg:            cfg,
@@ -128,6 +135,7 @@ func NewServer(logger *zap.Logger, cfg Config, dbPool *pgxpool.Pool) (*Server, e
 		SocketRegistry: sockRegistry,
 		SocketGateway:  sockGateway,
 		MatchRouter:    matchRouter,
+		rdb:            rdb,
 	}
 
 	// Matchmaker callbacks (notifying matched players over WebSockets)
@@ -217,6 +225,7 @@ func (s *Server) Start(ctx context.Context) error {
 	apipb.RegisterFriendsServiceServer(s.gRPCServer, NewFriendsServer(s.dbPool, s.tokenMgr))
 	apipb.RegisterGroupServiceServer(s.gRPCServer, NewGroupServer(s.dbPool, s.tokenMgr))
 	apipb.RegisterMatchmakerServiceServer(s.gRPCServer, NewMatchmakerServer(s.Matchmaker, s.tokenMgr))
+	apipb.RegisterRealtimeServiceServer(s.gRPCServer, NewRealtimeServer(s.logger, s.MatchRouter, s.rdb, s.tokenMgr))
 
 	// Start Matchmaker Tick Loop (Ticks every 1 second)
 	s.Matchmaker.Start(ctx, 1000*time.Millisecond)
@@ -343,6 +352,12 @@ func (s *Server) registerRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /v2/group/{id}/promote", s.handlePromoteGroupUsers)
 	mux.HandleFunc("POST /v2/group/{id}/demote", s.handleDemoteGroupUsers)
 	mux.HandleFunc("GET /v2/group/{id}/user", s.handleListGroupMembers)
+
+	// Realtime / Match Routes
+	mux.HandleFunc("POST /v2/match", s.handleCreateMatch)
+	mux.HandleFunc("GET /v2/match", s.handleListMatches)
+	mux.HandleFunc("GET /v2/match/{match_id}", s.handleGetMatch)
+	mux.HandleFunc("POST /v2/match/{match_id}/signal", s.handleMatchSignal)
 
 	// Matchmaker Routes
 	mux.HandleFunc("POST /v2/matchmaker/ticket", s.handleSubmitMatchmakerTicket)

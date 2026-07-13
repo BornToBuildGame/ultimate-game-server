@@ -2,6 +2,7 @@ package match
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"sync"
 	"testing"
@@ -13,20 +14,36 @@ import (
 	"go.uber.org/zap"
 )
 
+type mockSessionRegistry struct {
+	mu         sync.Mutex
+	broadcasts [][]byte
+}
+
+func (m *mockSessionRegistry) SendToSession(sessionID string, payload []byte) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	var env struct {
+		MatchData struct {
+			Data string `json:"data"`
+		} `json:"match_data"`
+	}
+	if err := json.Unmarshal(payload, &env); err == nil {
+		if decoded, err := base64.StdEncoding.DecodeString(env.MatchData.Data); err == nil {
+			m.broadcasts = append(m.broadcasts, decoded)
+		}
+	}
+}
+
 func TestMatchLoop_Execution(t *testing.T) {
 	playerIDs := []string{"p-1", "p-2"}
 	logger := zap.NewNop()
 
 	var mu sync.Mutex
-	var broadcastStates [][]byte
 	var terminated bool
 	var finalState MatchState
 
-	onBroadcast := func(matchID string, stateJson []byte) {
-		mu.Lock()
-		broadcastStates = append(broadcastStates, stateJson)
-		mu.Unlock()
-	}
+	mockReg := &mockSessionRegistry{}
 
 	onEnd := func(matchID string, state MatchState) {
 		mu.Lock()
@@ -36,16 +53,27 @@ func TestMatchLoop_Execution(t *testing.T) {
 	}
 
 	// Create match loop with high tick rate (e.g. 100 TPS) for fast test execution
-	ml := NewMatchLoop("match-1", playerIDs, 100, logger, onBroadcast, onEnd)
+	ml := NewMatchLoop("match-1", playerIDs, 100, logger, mockReg)
+	ml.onEnd = onEnd
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// Start match loop in background
+	// Start match loop in background first
 	go ml.Start(ctx)
 
-	// Wait for loop to boot and run a few ticks
+	// Wait for loop to boot
 	time.Sleep(50 * time.Millisecond)
+
+	// Join players so they are registered in the presences list
+	_, err := ml.JoinAttempt("p-1", "player1", "session-1", nil)
+	if err != nil {
+		t.Fatalf("failed to join p-1: %v", err)
+	}
+	_, err = ml.JoinAttempt("p-2", "player2", "session-2", nil)
+	if err != nil {
+		t.Fatalf("failed to join p-2: %v", err)
+	}
 
 	// 1. Submit movement input
 	ml.SubmitInput(MatchInput{
@@ -54,23 +82,23 @@ func TestMatchLoop_Execution(t *testing.T) {
 		Payload: "10,20",
 	})
 
-	time.Sleep(30 * time.Millisecond)
+	time.Sleep(50 * time.Millisecond)
 
-	mu.Lock()
-	if len(broadcastStates) == 0 {
+	mockReg.mu.Lock()
+	if len(mockReg.broadcasts) == 0 {
 		t.Fatal("expected match state broadcasts to be emitted")
 	}
 
 	// Verify player 1's position is updated in latest state broadcast
 	var lastState MatchState
-	err := json.Unmarshal(broadcastStates[len(broadcastStates)-1], &lastState)
+	err = json.Unmarshal(mockReg.broadcasts[len(mockReg.broadcasts)-1], &lastState)
 	if err != nil {
 		t.Fatalf("failed to unmarshal state: %v", err)
 	}
 	if lastState.Positions["p-1"] != "10,20" {
 		t.Errorf("expected player 1 position '10,20', got: %s", lastState.Positions["p-1"])
 	}
-	mu.Unlock()
+	mockReg.mu.Unlock()
 
 	// 2. Submit scoring inputs to trigger termination
 	// We score 10 times for p-1
@@ -102,7 +130,7 @@ func TestRouter_ForwardInput(t *testing.T) {
 	playerIDs := []string{"p-1"}
 	logger := zap.NewNop()
 
-	ml := NewMatchLoop("m-1", playerIDs, 50, logger, nil, nil)
+	ml := NewMatchLoop("m-1", playerIDs, 50, logger, nil)
 	router.Register("m-1", ml)
 
 	// Forward input to registered match
@@ -236,15 +264,10 @@ func TestMatchLoop_LuaAuthoritative(t *testing.T) {
 	logger := zap.NewNop()
 
 	var mu sync.Mutex
-	var broadcastStates [][]byte
 	var terminated bool
 	var finalState MatchState
 
-	onBroadcast := func(matchID string, stateJson []byte) {
-		mu.Lock()
-		broadcastStates = append(broadcastStates, stateJson)
-		mu.Unlock()
-	}
+	mockReg := &mockSessionRegistry{}
 
 	onEnd := func(matchID string, state MatchState) {
 		mu.Lock()
@@ -253,7 +276,8 @@ func TestMatchLoop_LuaAuthoritative(t *testing.T) {
 		mu.Unlock()
 	}
 
-	ml := NewMatchLoop("match-lua-1", playerIDs, 100, logger, onBroadcast, onEnd)
+	ml := NewMatchLoop("match-lua-1", playerIDs, 100, logger, mockReg)
+	ml.onEnd = onEnd
 
 	// Create and inject custom Gopher-Lua sandbox
 	sb := runtime.NewSandbox(64*1024*1024, 5*time.Second)
@@ -261,8 +285,17 @@ func TestMatchLoop_LuaAuthoritative(t *testing.T) {
 	_ = sb.L.DoString(script) // Load script functions in sandbox VM
 	ml.SetSandbox(sb)
 
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// Start match loop FIRST so it can handle the JoinAttempt request
+	go ml.Start(ctx)
+
+	// Wait for loop to boot
+	time.Sleep(50 * time.Millisecond)
+
 	// Test JoinAttempt hook
-	accept, err := ml.JoinAttempt("p-1", "gamer_1", map[string]string{"version": "1.0"})
+	accept, err := ml.JoinAttempt("p-1", "gamer_1", "session-1", map[string]string{"version": "1.0"})
 	if err != nil {
 		t.Fatalf("JoinAttempt failed: %v", err)
 	}
@@ -270,12 +303,7 @@ func TestMatchLoop_LuaAuthoritative(t *testing.T) {
 		t.Error("expected JoinAttempt to accept player")
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	go ml.Start(ctx)
-
-	time.Sleep(50 * time.Millisecond)
+	time.Sleep(30 * time.Millisecond)
 
 	// Submit move input
 	ml.SubmitInput(MatchInput{
@@ -286,16 +314,16 @@ func TestMatchLoop_LuaAuthoritative(t *testing.T) {
 
 	time.Sleep(30 * time.Millisecond)
 
-	mu.Lock()
-	if len(broadcastStates) == 0 {
+	mockReg.mu.Lock()
+	if len(mockReg.broadcasts) == 0 {
 		t.Fatal("expected broadcast state delta")
 	}
 	var st MatchState
-	_ = json.Unmarshal(broadcastStates[len(broadcastStates)-1], &st)
+	_ = json.Unmarshal(mockReg.broadcasts[len(mockReg.broadcasts)-1], &st)
 	if st.Positions["p-1"] != "50,60" {
 		t.Errorf("expected p-1 position to be '50,60', got: %v", st.Positions["p-1"])
 	}
-	mu.Unlock()
+	mockReg.mu.Unlock()
 
 	// Submit scoring inputs to trigger termination via Lua hook limit (score >= 3)
 	for i := 0; i < 3; i++ {
@@ -316,4 +344,3 @@ func TestMatchLoop_LuaAuthoritative(t *testing.T) {
 	}
 	mu.Unlock()
 }
-

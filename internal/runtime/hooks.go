@@ -170,13 +170,32 @@ type Event struct {
 // MatchHandlerFactory creates a new match handler instance.
 type MatchHandlerFactory func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule) (Match, error)
 
+// Presence represents a client presence within a match.
+type Presence interface {
+	GetUserId() string
+	GetSessionId() string
+	GetNodeId() string
+	GetUsername() string
+}
+
+// MatchData represents match data messages passed into MatchLoop.
+type MatchData interface {
+	Presence
+	GetOpCode() int64
+	GetData() []byte
+	GetReliable() bool
+	GetReceiveTime() int64
+}
+
 // Match represents an authoritative match handler.
 type Match interface {
 	MatchInit(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, params map[string]interface{}) (interface{}, int, string)
-	MatchJoin(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, dispatcher interface{}, tick int64, state interface{}, presences []interface{}) interface{}
-	MatchLeave(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, dispatcher interface{}, tick int64, state interface{}, presences []interface{}) interface{}
-	MatchLoop(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, dispatcher interface{}, tick int64, state interface{}, messages []interface{}) interface{}
+	MatchJoinAttempt(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, dispatcher interface{}, tick int64, state interface{}, presence Presence, metadata map[string]string) (interface{}, bool, string)
+	MatchJoin(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, dispatcher interface{}, tick int64, state interface{}, presences []Presence) interface{}
+	MatchLeave(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, dispatcher interface{}, tick int64, state interface{}, presences []Presence) interface{}
+	MatchLoop(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, dispatcher interface{}, tick int64, state interface{}, messages []MatchData) interface{}
 	MatchTerminate(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, dispatcher interface{}, tick int64, state interface{}, graceSeconds int) interface{}
+	MatchSignal(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, dispatcher interface{}, tick int64, state interface{}, data string) (interface{}, string)
 }
 
 // MatchmakerMatchedHandler handles matchmaker match events.

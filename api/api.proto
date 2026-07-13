@@ -407,3 +407,58 @@ message QueueStats {
   int32 active_matches = 5;
 }
 
+// --- Realtime / Match Service ---
+
+service RealtimeService {
+  rpc CreateMatch(CreateMatchRequest) returns (Match);
+  rpc ListMatches(ListMatchesRequest) returns (MatchList);
+  rpc GetMatch(GetMatchRequest) returns (Match);
+  rpc MatchSignal(MatchSignalRequest) returns (MatchSignalResponse);
+}
+
+message CreateMatchRequest {
+  string module = 1;
+  map<string, string> params = 2;
+}
+
+message ListMatchesRequest {
+  int32 limit = 1;
+  bool authoritative = 2;
+  string label = 3;
+  int32 min_size = 4;
+  int32 max_size = 5;
+}
+
+message GetMatchRequest {
+  string match_id = 1;
+}
+
+message MatchPresence {
+  string user_id = 1;
+  string username = 2;
+  string session_id = 3;
+}
+
+message Match {
+  string match_id = 1;
+  bool authoritative = 2;
+  string label = 3;
+  int32 size = 4;
+  int32 max_size = 5;
+  repeated MatchPresence presences = 6;
+}
+
+message MatchList {
+  repeated Match matches = 1;
+}
+
+message MatchSignalRequest {
+  string match_id = 1;
+  string payload = 2;
+}
+
+message MatchSignalResponse {
+  string response = 1;
+}
+
+

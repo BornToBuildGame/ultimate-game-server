@@ -3327,6 +3327,462 @@ func (x *QueueStats) GetActiveMatches() int32 {
 	return 0
 }
 
+type CreateMatchRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Module        string                 `protobuf:"bytes,1,opt,name=module,proto3" json:"module,omitempty"`
+	Params        map[string]string      `protobuf:"bytes,2,rep,name=params,proto3" json:"params,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateMatchRequest) Reset() {
+	*x = CreateMatchRequest{}
+	mi := &file_api_api_proto_msgTypes[50]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateMatchRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateMatchRequest) ProtoMessage() {}
+
+func (x *CreateMatchRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[50]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateMatchRequest.ProtoReflect.Descriptor instead.
+func (*CreateMatchRequest) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{50}
+}
+
+func (x *CreateMatchRequest) GetModule() string {
+	if x != nil {
+		return x.Module
+	}
+	return ""
+}
+
+func (x *CreateMatchRequest) GetParams() map[string]string {
+	if x != nil {
+		return x.Params
+	}
+	return nil
+}
+
+type ListMatchesRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Limit         int32                  `protobuf:"varint,1,opt,name=limit,proto3" json:"limit,omitempty"`
+	Authoritative bool                   `protobuf:"varint,2,opt,name=authoritative,proto3" json:"authoritative,omitempty"`
+	Label         string                 `protobuf:"bytes,3,opt,name=label,proto3" json:"label,omitempty"`
+	MinSize       int32                  `protobuf:"varint,4,opt,name=min_size,json=minSize,proto3" json:"min_size,omitempty"`
+	MaxSize       int32                  `protobuf:"varint,5,opt,name=max_size,json=maxSize,proto3" json:"max_size,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListMatchesRequest) Reset() {
+	*x = ListMatchesRequest{}
+	mi := &file_api_api_proto_msgTypes[51]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListMatchesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListMatchesRequest) ProtoMessage() {}
+
+func (x *ListMatchesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[51]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListMatchesRequest.ProtoReflect.Descriptor instead.
+func (*ListMatchesRequest) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{51}
+}
+
+func (x *ListMatchesRequest) GetLimit() int32 {
+	if x != nil {
+		return x.Limit
+	}
+	return 0
+}
+
+func (x *ListMatchesRequest) GetAuthoritative() bool {
+	if x != nil {
+		return x.Authoritative
+	}
+	return false
+}
+
+func (x *ListMatchesRequest) GetLabel() string {
+	if x != nil {
+		return x.Label
+	}
+	return ""
+}
+
+func (x *ListMatchesRequest) GetMinSize() int32 {
+	if x != nil {
+		return x.MinSize
+	}
+	return 0
+}
+
+func (x *ListMatchesRequest) GetMaxSize() int32 {
+	if x != nil {
+		return x.MaxSize
+	}
+	return 0
+}
+
+type GetMatchRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	MatchId       string                 `protobuf:"bytes,1,opt,name=match_id,json=matchId,proto3" json:"match_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetMatchRequest) Reset() {
+	*x = GetMatchRequest{}
+	mi := &file_api_api_proto_msgTypes[52]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetMatchRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetMatchRequest) ProtoMessage() {}
+
+func (x *GetMatchRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[52]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetMatchRequest.ProtoReflect.Descriptor instead.
+func (*GetMatchRequest) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{52}
+}
+
+func (x *GetMatchRequest) GetMatchId() string {
+	if x != nil {
+		return x.MatchId
+	}
+	return ""
+}
+
+type MatchPresence struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	Username      string                 `protobuf:"bytes,2,opt,name=username,proto3" json:"username,omitempty"`
+	SessionId     string                 `protobuf:"bytes,3,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MatchPresence) Reset() {
+	*x = MatchPresence{}
+	mi := &file_api_api_proto_msgTypes[53]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MatchPresence) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MatchPresence) ProtoMessage() {}
+
+func (x *MatchPresence) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[53]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MatchPresence.ProtoReflect.Descriptor instead.
+func (*MatchPresence) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{53}
+}
+
+func (x *MatchPresence) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *MatchPresence) GetUsername() string {
+	if x != nil {
+		return x.Username
+	}
+	return ""
+}
+
+func (x *MatchPresence) GetSessionId() string {
+	if x != nil {
+		return x.SessionId
+	}
+	return ""
+}
+
+type Match struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	MatchId       string                 `protobuf:"bytes,1,opt,name=match_id,json=matchId,proto3" json:"match_id,omitempty"`
+	Authoritative bool                   `protobuf:"varint,2,opt,name=authoritative,proto3" json:"authoritative,omitempty"`
+	Label         string                 `protobuf:"bytes,3,opt,name=label,proto3" json:"label,omitempty"`
+	Size          int32                  `protobuf:"varint,4,opt,name=size,proto3" json:"size,omitempty"`
+	MaxSize       int32                  `protobuf:"varint,5,opt,name=max_size,json=maxSize,proto3" json:"max_size,omitempty"`
+	Presences     []*MatchPresence       `protobuf:"bytes,6,rep,name=presences,proto3" json:"presences,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Match) Reset() {
+	*x = Match{}
+	mi := &file_api_api_proto_msgTypes[54]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Match) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Match) ProtoMessage() {}
+
+func (x *Match) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[54]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Match.ProtoReflect.Descriptor instead.
+func (*Match) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{54}
+}
+
+func (x *Match) GetMatchId() string {
+	if x != nil {
+		return x.MatchId
+	}
+	return ""
+}
+
+func (x *Match) GetAuthoritative() bool {
+	if x != nil {
+		return x.Authoritative
+	}
+	return false
+}
+
+func (x *Match) GetLabel() string {
+	if x != nil {
+		return x.Label
+	}
+	return ""
+}
+
+func (x *Match) GetSize() int32 {
+	if x != nil {
+		return x.Size
+	}
+	return 0
+}
+
+func (x *Match) GetMaxSize() int32 {
+	if x != nil {
+		return x.MaxSize
+	}
+	return 0
+}
+
+func (x *Match) GetPresences() []*MatchPresence {
+	if x != nil {
+		return x.Presences
+	}
+	return nil
+}
+
+type MatchList struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Matches       []*Match               `protobuf:"bytes,1,rep,name=matches,proto3" json:"matches,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MatchList) Reset() {
+	*x = MatchList{}
+	mi := &file_api_api_proto_msgTypes[55]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MatchList) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MatchList) ProtoMessage() {}
+
+func (x *MatchList) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[55]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MatchList.ProtoReflect.Descriptor instead.
+func (*MatchList) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{55}
+}
+
+func (x *MatchList) GetMatches() []*Match {
+	if x != nil {
+		return x.Matches
+	}
+	return nil
+}
+
+type MatchSignalRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	MatchId       string                 `protobuf:"bytes,1,opt,name=match_id,json=matchId,proto3" json:"match_id,omitempty"`
+	Payload       string                 `protobuf:"bytes,2,opt,name=payload,proto3" json:"payload,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MatchSignalRequest) Reset() {
+	*x = MatchSignalRequest{}
+	mi := &file_api_api_proto_msgTypes[56]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MatchSignalRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MatchSignalRequest) ProtoMessage() {}
+
+func (x *MatchSignalRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[56]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MatchSignalRequest.ProtoReflect.Descriptor instead.
+func (*MatchSignalRequest) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{56}
+}
+
+func (x *MatchSignalRequest) GetMatchId() string {
+	if x != nil {
+		return x.MatchId
+	}
+	return ""
+}
+
+func (x *MatchSignalRequest) GetPayload() string {
+	if x != nil {
+		return x.Payload
+	}
+	return ""
+}
+
+type MatchSignalResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Response      string                 `protobuf:"bytes,1,opt,name=response,proto3" json:"response,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MatchSignalResponse) Reset() {
+	*x = MatchSignalResponse{}
+	mi := &file_api_api_proto_msgTypes[57]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MatchSignalResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MatchSignalResponse) ProtoMessage() {}
+
+func (x *MatchSignalResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[57]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MatchSignalResponse.ProtoReflect.Descriptor instead.
+func (*MatchSignalResponse) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{57}
+}
+
+func (x *MatchSignalResponse) GetResponse() string {
+	if x != nil {
+		return x.Response
+	}
+	return ""
+}
+
 var File_api_api_proto protoreflect.FileDescriptor
 
 const file_api_api_proto_rawDesc = "" +
@@ -3615,7 +4071,40 @@ const file_api_api_proto_rawDesc = "" +
 	"queue_name\x18\x02 \x01(\tR\tqueueName\x12!\n" +
 	"\fticket_count\x18\x03 \x01(\x05R\vticketCount\x12(\n" +
 	"\x10average_wait_sec\x18\x04 \x01(\x05R\x0eaverageWaitSec\x12%\n" +
-	"\x0eactive_matches\x18\x05 \x01(\x05R\ractiveMatches2\xb5\x05\n" +
+	"\x0eactive_matches\x18\x05 \x01(\x05R\ractiveMatches\"\xb4\x01\n" +
+	"\x12CreateMatchRequest\x12\x16\n" +
+	"\x06module\x18\x01 \x01(\tR\x06module\x12K\n" +
+	"\x06params\x18\x02 \x03(\v23.ultimate.server.api.CreateMatchRequest.ParamsEntryR\x06params\x1a9\n" +
+	"\vParamsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\x9c\x01\n" +
+	"\x12ListMatchesRequest\x12\x14\n" +
+	"\x05limit\x18\x01 \x01(\x05R\x05limit\x12$\n" +
+	"\rauthoritative\x18\x02 \x01(\bR\rauthoritative\x12\x14\n" +
+	"\x05label\x18\x03 \x01(\tR\x05label\x12\x19\n" +
+	"\bmin_size\x18\x04 \x01(\x05R\aminSize\x12\x19\n" +
+	"\bmax_size\x18\x05 \x01(\x05R\amaxSize\",\n" +
+	"\x0fGetMatchRequest\x12\x19\n" +
+	"\bmatch_id\x18\x01 \x01(\tR\amatchId\"c\n" +
+	"\rMatchPresence\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x1a\n" +
+	"\busername\x18\x02 \x01(\tR\busername\x12\x1d\n" +
+	"\n" +
+	"session_id\x18\x03 \x01(\tR\tsessionId\"\xcf\x01\n" +
+	"\x05Match\x12\x19\n" +
+	"\bmatch_id\x18\x01 \x01(\tR\amatchId\x12$\n" +
+	"\rauthoritative\x18\x02 \x01(\bR\rauthoritative\x12\x14\n" +
+	"\x05label\x18\x03 \x01(\tR\x05label\x12\x12\n" +
+	"\x04size\x18\x04 \x01(\x05R\x04size\x12\x19\n" +
+	"\bmax_size\x18\x05 \x01(\x05R\amaxSize\x12@\n" +
+	"\tpresences\x18\x06 \x03(\v2\".ultimate.server.api.MatchPresenceR\tpresences\"A\n" +
+	"\tMatchList\x124\n" +
+	"\amatches\x18\x01 \x03(\v2\x1a.ultimate.server.api.MatchR\amatches\"I\n" +
+	"\x12MatchSignalRequest\x12\x19\n" +
+	"\bmatch_id\x18\x01 \x01(\tR\amatchId\x12\x18\n" +
+	"\apayload\x18\x02 \x01(\tR\apayload\"1\n" +
+	"\x13MatchSignalResponse\x12\x1a\n" +
+	"\bresponse\x18\x01 \x01(\tR\bresponse2\xb5\x05\n" +
 	"\x12LeaderboardService\x12Z\n" +
 	"\x11CreateLeaderboard\x12-.ultimate.server.api.CreateLeaderboardRequest\x1a\x16.google.protobuf.Empty\x12Z\n" +
 	"\x11DeleteLeaderboard\x12-.ultimate.server.api.DeleteLeaderboardRequest\x1a\x16.google.protobuf.Empty\x12t\n" +
@@ -3658,7 +4147,12 @@ const file_api_api_proto_rawDesc = "" +
 	"\rAddMatchmaker\x12).ultimate.server.api.AddMatchmakerRequest\x1a%.ultimate.server.api.MatchmakerTicket\x12X\n" +
 	"\x10RemoveMatchmaker\x12,.ultimate.server.api.RemoveMatchmakerRequest\x1a\x16.google.protobuf.Empty\x12m\n" +
 	"\x13GetMatchmakerTicket\x12/.ultimate.server.api.GetMatchmakerTicketRequest\x1a%.ultimate.server.api.MatchmakerTicket\x12[\n" +
-	"\rGetQueueStats\x12).ultimate.server.api.GetQueueStatsRequest\x1a\x1f.ultimate.server.api.QueueStatsB)Z'ultimate-game-server/internal/api/apipbb\x06proto3"
+	"\rGetQueueStats\x12).ultimate.server.api.GetQueueStatsRequest\x1a\x1f.ultimate.server.api.QueueStats2\xed\x02\n" +
+	"\x0fRealtimeService\x12R\n" +
+	"\vCreateMatch\x12'.ultimate.server.api.CreateMatchRequest\x1a\x1a.ultimate.server.api.Match\x12V\n" +
+	"\vListMatches\x12'.ultimate.server.api.ListMatchesRequest\x1a\x1e.ultimate.server.api.MatchList\x12L\n" +
+	"\bGetMatch\x12$.ultimate.server.api.GetMatchRequest\x1a\x1a.ultimate.server.api.Match\x12`\n" +
+	"\vMatchSignal\x12'.ultimate.server.api.MatchSignalRequest\x1a(.ultimate.server.api.MatchSignalResponseB)Z'ultimate-game-server/internal/api/apipbb\x06proto3"
 
 var (
 	file_api_api_proto_rawDescOnce sync.Once
@@ -3672,7 +4166,7 @@ func file_api_api_proto_rawDescGZIP() []byte {
 	return file_api_api_proto_rawDescData
 }
 
-var file_api_api_proto_msgTypes = make([]protoimpl.MessageInfo, 52)
+var file_api_api_proto_msgTypes = make([]protoimpl.MessageInfo, 61)
 var file_api_api_proto_goTypes = []any{
 	(*User)(nil),                                     // 0: ultimate.server.api.User
 	(*CreateLeaderboardRequest)(nil),                 // 1: ultimate.server.api.CreateLeaderboardRequest
@@ -3724,110 +4218,130 @@ var file_api_api_proto_goTypes = []any{
 	(*GetMatchmakerTicketRequest)(nil),               // 47: ultimate.server.api.GetMatchmakerTicketRequest
 	(*GetQueueStatsRequest)(nil),                     // 48: ultimate.server.api.GetQueueStatsRequest
 	(*QueueStats)(nil),                               // 49: ultimate.server.api.QueueStats
-	nil,                                              // 50: ultimate.server.api.AddMatchmakerRequest.StringPropertiesEntry
-	nil,                                              // 51: ultimate.server.api.AddMatchmakerRequest.NumericPropertiesEntry
-	(*timestamppb.Timestamp)(nil),                    // 52: google.protobuf.Timestamp
-	(*emptypb.Empty)(nil),                            // 53: google.protobuf.Empty
+	(*CreateMatchRequest)(nil),                       // 50: ultimate.server.api.CreateMatchRequest
+	(*ListMatchesRequest)(nil),                       // 51: ultimate.server.api.ListMatchesRequest
+	(*GetMatchRequest)(nil),                          // 52: ultimate.server.api.GetMatchRequest
+	(*MatchPresence)(nil),                            // 53: ultimate.server.api.MatchPresence
+	(*Match)(nil),                                    // 54: ultimate.server.api.Match
+	(*MatchList)(nil),                                // 55: ultimate.server.api.MatchList
+	(*MatchSignalRequest)(nil),                       // 56: ultimate.server.api.MatchSignalRequest
+	(*MatchSignalResponse)(nil),                      // 57: ultimate.server.api.MatchSignalResponse
+	nil,                                              // 58: ultimate.server.api.AddMatchmakerRequest.StringPropertiesEntry
+	nil,                                              // 59: ultimate.server.api.AddMatchmakerRequest.NumericPropertiesEntry
+	nil,                                              // 60: ultimate.server.api.CreateMatchRequest.ParamsEntry
+	(*timestamppb.Timestamp)(nil),                    // 61: google.protobuf.Timestamp
+	(*emptypb.Empty)(nil),                            // 62: google.protobuf.Empty
 }
 var file_api_api_proto_depIdxs = []int32{
-	52, // 0: ultimate.server.api.LeaderboardRecord.create_time:type_name -> google.protobuf.Timestamp
-	52, // 1: ultimate.server.api.LeaderboardRecord.update_time:type_name -> google.protobuf.Timestamp
-	52, // 2: ultimate.server.api.LeaderboardRecord.expiry_time:type_name -> google.protobuf.Timestamp
+	61, // 0: ultimate.server.api.LeaderboardRecord.create_time:type_name -> google.protobuf.Timestamp
+	61, // 1: ultimate.server.api.LeaderboardRecord.update_time:type_name -> google.protobuf.Timestamp
+	61, // 2: ultimate.server.api.LeaderboardRecord.expiry_time:type_name -> google.protobuf.Timestamp
 	4,  // 3: ultimate.server.api.LeaderboardRecordList.records:type_name -> ultimate.server.api.LeaderboardRecord
-	52, // 4: ultimate.server.api.CreateTournamentRequest.end_time:type_name -> google.protobuf.Timestamp
-	52, // 5: ultimate.server.api.CreateTournamentRequest.start_time:type_name -> google.protobuf.Timestamp
-	52, // 6: ultimate.server.api.ListTournamentsRequest.start_time:type_name -> google.protobuf.Timestamp
-	52, // 7: ultimate.server.api.ListTournamentsRequest.end_time:type_name -> google.protobuf.Timestamp
-	52, // 8: ultimate.server.api.Tournament.end_time:type_name -> google.protobuf.Timestamp
-	52, // 9: ultimate.server.api.Tournament.start_time:type_name -> google.protobuf.Timestamp
+	61, // 4: ultimate.server.api.CreateTournamentRequest.end_time:type_name -> google.protobuf.Timestamp
+	61, // 5: ultimate.server.api.CreateTournamentRequest.start_time:type_name -> google.protobuf.Timestamp
+	61, // 6: ultimate.server.api.ListTournamentsRequest.start_time:type_name -> google.protobuf.Timestamp
+	61, // 7: ultimate.server.api.ListTournamentsRequest.end_time:type_name -> google.protobuf.Timestamp
+	61, // 8: ultimate.server.api.Tournament.end_time:type_name -> google.protobuf.Timestamp
+	61, // 9: ultimate.server.api.Tournament.start_time:type_name -> google.protobuf.Timestamp
 	13, // 10: ultimate.server.api.TournamentList.tournaments:type_name -> ultimate.server.api.Tournament
 	0,  // 11: ultimate.server.api.Friend.user:type_name -> ultimate.server.api.User
-	52, // 12: ultimate.server.api.Friend.update_time:type_name -> google.protobuf.Timestamp
+	61, // 12: ultimate.server.api.Friend.update_time:type_name -> google.protobuf.Timestamp
 	19, // 13: ultimate.server.api.FriendList.friends:type_name -> ultimate.server.api.Friend
-	52, // 14: ultimate.server.api.Group.create_time:type_name -> google.protobuf.Timestamp
-	52, // 15: ultimate.server.api.Group.update_time:type_name -> google.protobuf.Timestamp
+	61, // 14: ultimate.server.api.Group.create_time:type_name -> google.protobuf.Timestamp
+	61, // 15: ultimate.server.api.Group.update_time:type_name -> google.protobuf.Timestamp
 	26, // 16: ultimate.server.api.GroupList.groups:type_name -> ultimate.server.api.Group
 	0,  // 17: ultimate.server.api.GroupUser.user:type_name -> ultimate.server.api.User
 	38, // 18: ultimate.server.api.GroupUserList.group_users:type_name -> ultimate.server.api.GroupUser
 	26, // 19: ultimate.server.api.UserGroup.group:type_name -> ultimate.server.api.Group
 	40, // 20: ultimate.server.api.UserGroupList.user_groups:type_name -> ultimate.server.api.UserGroup
-	50, // 21: ultimate.server.api.AddMatchmakerRequest.string_properties:type_name -> ultimate.server.api.AddMatchmakerRequest.StringPropertiesEntry
-	51, // 22: ultimate.server.api.AddMatchmakerRequest.numeric_properties:type_name -> ultimate.server.api.AddMatchmakerRequest.NumericPropertiesEntry
-	1,  // 23: ultimate.server.api.LeaderboardService.CreateLeaderboard:input_type -> ultimate.server.api.CreateLeaderboardRequest
-	2,  // 24: ultimate.server.api.LeaderboardService.DeleteLeaderboard:input_type -> ultimate.server.api.DeleteLeaderboardRequest
-	3,  // 25: ultimate.server.api.LeaderboardService.WriteLeaderboardRecord:input_type -> ultimate.server.api.WriteLeaderboardRecordRequest
-	5,  // 26: ultimate.server.api.LeaderboardService.ListLeaderboardRecords:input_type -> ultimate.server.api.ListLeaderboardRecordsRequest
-	6,  // 27: ultimate.server.api.LeaderboardService.ListLeaderboardRecordsAroundOwner:input_type -> ultimate.server.api.ListLeaderboardRecordsAroundOwnerRequest
-	8,  // 28: ultimate.server.api.LeaderboardService.DeleteLeaderboardRecord:input_type -> ultimate.server.api.DeleteLeaderboardRecordRequest
-	9,  // 29: ultimate.server.api.TournamentService.CreateTournament:input_type -> ultimate.server.api.CreateTournamentRequest
-	10, // 30: ultimate.server.api.TournamentService.DeleteTournament:input_type -> ultimate.server.api.DeleteTournamentRequest
-	11, // 31: ultimate.server.api.TournamentService.JoinTournament:input_type -> ultimate.server.api.JoinTournamentRequest
-	12, // 32: ultimate.server.api.TournamentService.ListTournaments:input_type -> ultimate.server.api.ListTournamentsRequest
-	15, // 33: ultimate.server.api.TournamentService.WriteTournamentRecord:input_type -> ultimate.server.api.WriteTournamentRecordRequest
-	16, // 34: ultimate.server.api.TournamentService.ListTournamentRecords:input_type -> ultimate.server.api.ListTournamentRecordsRequest
-	17, // 35: ultimate.server.api.FriendsService.AddFriends:input_type -> ultimate.server.api.AddFriendsRequest
-	18, // 36: ultimate.server.api.FriendsService.ListFriends:input_type -> ultimate.server.api.ListFriendsRequest
-	21, // 37: ultimate.server.api.FriendsService.DeleteFriends:input_type -> ultimate.server.api.DeleteFriendsRequest
-	22, // 38: ultimate.server.api.FriendsService.BlockFriends:input_type -> ultimate.server.api.BlockFriendsRequest
-	23, // 39: ultimate.server.api.FriendsService.ImportFacebookFriends:input_type -> ultimate.server.api.ImportFacebookFriendsRequest
-	24, // 40: ultimate.server.api.FriendsService.ImportSteamFriends:input_type -> ultimate.server.api.ImportSteamFriendsRequest
-	25, // 41: ultimate.server.api.GroupService.CreateGroup:input_type -> ultimate.server.api.CreateGroupRequest
-	27, // 42: ultimate.server.api.GroupService.UpdateGroup:input_type -> ultimate.server.api.UpdateGroupRequest
-	28, // 43: ultimate.server.api.GroupService.DeleteGroup:input_type -> ultimate.server.api.DeleteGroupRequest
-	29, // 44: ultimate.server.api.GroupService.ListGroups:input_type -> ultimate.server.api.ListGroupsRequest
-	31, // 45: ultimate.server.api.GroupService.JoinGroup:input_type -> ultimate.server.api.JoinGroupRequest
-	32, // 46: ultimate.server.api.GroupService.LeaveGroup:input_type -> ultimate.server.api.LeaveGroupRequest
-	33, // 47: ultimate.server.api.GroupService.AddGroupUsers:input_type -> ultimate.server.api.AddGroupUsersRequest
-	34, // 48: ultimate.server.api.GroupService.KickGroupUsers:input_type -> ultimate.server.api.KickGroupUsersRequest
-	35, // 49: ultimate.server.api.GroupService.PromoteGroupUsers:input_type -> ultimate.server.api.PromoteGroupUsersRequest
-	36, // 50: ultimate.server.api.GroupService.DemoteGroupUsers:input_type -> ultimate.server.api.DemoteGroupUsersRequest
-	37, // 51: ultimate.server.api.GroupService.BanGroupUsers:input_type -> ultimate.server.api.BanGroupUsersRequest
-	42, // 52: ultimate.server.api.GroupService.ListGroupUsers:input_type -> ultimate.server.api.ListGroupUsersRequest
-	43, // 53: ultimate.server.api.GroupService.ListUserGroups:input_type -> ultimate.server.api.ListUserGroupsRequest
-	44, // 54: ultimate.server.api.MatchmakerService.AddMatchmaker:input_type -> ultimate.server.api.AddMatchmakerRequest
-	46, // 55: ultimate.server.api.MatchmakerService.RemoveMatchmaker:input_type -> ultimate.server.api.RemoveMatchmakerRequest
-	47, // 56: ultimate.server.api.MatchmakerService.GetMatchmakerTicket:input_type -> ultimate.server.api.GetMatchmakerTicketRequest
-	48, // 57: ultimate.server.api.MatchmakerService.GetQueueStats:input_type -> ultimate.server.api.GetQueueStatsRequest
-	53, // 58: ultimate.server.api.LeaderboardService.CreateLeaderboard:output_type -> google.protobuf.Empty
-	53, // 59: ultimate.server.api.LeaderboardService.DeleteLeaderboard:output_type -> google.protobuf.Empty
-	4,  // 60: ultimate.server.api.LeaderboardService.WriteLeaderboardRecord:output_type -> ultimate.server.api.LeaderboardRecord
-	7,  // 61: ultimate.server.api.LeaderboardService.ListLeaderboardRecords:output_type -> ultimate.server.api.LeaderboardRecordList
-	7,  // 62: ultimate.server.api.LeaderboardService.ListLeaderboardRecordsAroundOwner:output_type -> ultimate.server.api.LeaderboardRecordList
-	53, // 63: ultimate.server.api.LeaderboardService.DeleteLeaderboardRecord:output_type -> google.protobuf.Empty
-	53, // 64: ultimate.server.api.TournamentService.CreateTournament:output_type -> google.protobuf.Empty
-	53, // 65: ultimate.server.api.TournamentService.DeleteTournament:output_type -> google.protobuf.Empty
-	53, // 66: ultimate.server.api.TournamentService.JoinTournament:output_type -> google.protobuf.Empty
-	14, // 67: ultimate.server.api.TournamentService.ListTournaments:output_type -> ultimate.server.api.TournamentList
-	4,  // 68: ultimate.server.api.TournamentService.WriteTournamentRecord:output_type -> ultimate.server.api.LeaderboardRecord
-	7,  // 69: ultimate.server.api.TournamentService.ListTournamentRecords:output_type -> ultimate.server.api.LeaderboardRecordList
-	53, // 70: ultimate.server.api.FriendsService.AddFriends:output_type -> google.protobuf.Empty
-	20, // 71: ultimate.server.api.FriendsService.ListFriends:output_type -> ultimate.server.api.FriendList
-	53, // 72: ultimate.server.api.FriendsService.DeleteFriends:output_type -> google.protobuf.Empty
-	53, // 73: ultimate.server.api.FriendsService.BlockFriends:output_type -> google.protobuf.Empty
-	53, // 74: ultimate.server.api.FriendsService.ImportFacebookFriends:output_type -> google.protobuf.Empty
-	53, // 75: ultimate.server.api.FriendsService.ImportSteamFriends:output_type -> google.protobuf.Empty
-	26, // 76: ultimate.server.api.GroupService.CreateGroup:output_type -> ultimate.server.api.Group
-	53, // 77: ultimate.server.api.GroupService.UpdateGroup:output_type -> google.protobuf.Empty
-	53, // 78: ultimate.server.api.GroupService.DeleteGroup:output_type -> google.protobuf.Empty
-	30, // 79: ultimate.server.api.GroupService.ListGroups:output_type -> ultimate.server.api.GroupList
-	53, // 80: ultimate.server.api.GroupService.JoinGroup:output_type -> google.protobuf.Empty
-	53, // 81: ultimate.server.api.GroupService.LeaveGroup:output_type -> google.protobuf.Empty
-	53, // 82: ultimate.server.api.GroupService.AddGroupUsers:output_type -> google.protobuf.Empty
-	53, // 83: ultimate.server.api.GroupService.KickGroupUsers:output_type -> google.protobuf.Empty
-	53, // 84: ultimate.server.api.GroupService.PromoteGroupUsers:output_type -> google.protobuf.Empty
-	53, // 85: ultimate.server.api.GroupService.DemoteGroupUsers:output_type -> google.protobuf.Empty
-	53, // 86: ultimate.server.api.GroupService.BanGroupUsers:output_type -> google.protobuf.Empty
-	39, // 87: ultimate.server.api.GroupService.ListGroupUsers:output_type -> ultimate.server.api.GroupUserList
-	41, // 88: ultimate.server.api.GroupService.ListUserGroups:output_type -> ultimate.server.api.UserGroupList
-	45, // 89: ultimate.server.api.MatchmakerService.AddMatchmaker:output_type -> ultimate.server.api.MatchmakerTicket
-	53, // 90: ultimate.server.api.MatchmakerService.RemoveMatchmaker:output_type -> google.protobuf.Empty
-	45, // 91: ultimate.server.api.MatchmakerService.GetMatchmakerTicket:output_type -> ultimate.server.api.MatchmakerTicket
-	49, // 92: ultimate.server.api.MatchmakerService.GetQueueStats:output_type -> ultimate.server.api.QueueStats
-	58, // [58:93] is the sub-list for method output_type
-	23, // [23:58] is the sub-list for method input_type
-	23, // [23:23] is the sub-list for extension type_name
-	23, // [23:23] is the sub-list for extension extendee
-	0,  // [0:23] is the sub-list for field type_name
+	58, // 21: ultimate.server.api.AddMatchmakerRequest.string_properties:type_name -> ultimate.server.api.AddMatchmakerRequest.StringPropertiesEntry
+	59, // 22: ultimate.server.api.AddMatchmakerRequest.numeric_properties:type_name -> ultimate.server.api.AddMatchmakerRequest.NumericPropertiesEntry
+	60, // 23: ultimate.server.api.CreateMatchRequest.params:type_name -> ultimate.server.api.CreateMatchRequest.ParamsEntry
+	53, // 24: ultimate.server.api.Match.presences:type_name -> ultimate.server.api.MatchPresence
+	54, // 25: ultimate.server.api.MatchList.matches:type_name -> ultimate.server.api.Match
+	1,  // 26: ultimate.server.api.LeaderboardService.CreateLeaderboard:input_type -> ultimate.server.api.CreateLeaderboardRequest
+	2,  // 27: ultimate.server.api.LeaderboardService.DeleteLeaderboard:input_type -> ultimate.server.api.DeleteLeaderboardRequest
+	3,  // 28: ultimate.server.api.LeaderboardService.WriteLeaderboardRecord:input_type -> ultimate.server.api.WriteLeaderboardRecordRequest
+	5,  // 29: ultimate.server.api.LeaderboardService.ListLeaderboardRecords:input_type -> ultimate.server.api.ListLeaderboardRecordsRequest
+	6,  // 30: ultimate.server.api.LeaderboardService.ListLeaderboardRecordsAroundOwner:input_type -> ultimate.server.api.ListLeaderboardRecordsAroundOwnerRequest
+	8,  // 31: ultimate.server.api.LeaderboardService.DeleteLeaderboardRecord:input_type -> ultimate.server.api.DeleteLeaderboardRecordRequest
+	9,  // 32: ultimate.server.api.TournamentService.CreateTournament:input_type -> ultimate.server.api.CreateTournamentRequest
+	10, // 33: ultimate.server.api.TournamentService.DeleteTournament:input_type -> ultimate.server.api.DeleteTournamentRequest
+	11, // 34: ultimate.server.api.TournamentService.JoinTournament:input_type -> ultimate.server.api.JoinTournamentRequest
+	12, // 35: ultimate.server.api.TournamentService.ListTournaments:input_type -> ultimate.server.api.ListTournamentsRequest
+	15, // 36: ultimate.server.api.TournamentService.WriteTournamentRecord:input_type -> ultimate.server.api.WriteTournamentRecordRequest
+	16, // 37: ultimate.server.api.TournamentService.ListTournamentRecords:input_type -> ultimate.server.api.ListTournamentRecordsRequest
+	17, // 38: ultimate.server.api.FriendsService.AddFriends:input_type -> ultimate.server.api.AddFriendsRequest
+	18, // 39: ultimate.server.api.FriendsService.ListFriends:input_type -> ultimate.server.api.ListFriendsRequest
+	21, // 40: ultimate.server.api.FriendsService.DeleteFriends:input_type -> ultimate.server.api.DeleteFriendsRequest
+	22, // 41: ultimate.server.api.FriendsService.BlockFriends:input_type -> ultimate.server.api.BlockFriendsRequest
+	23, // 42: ultimate.server.api.FriendsService.ImportFacebookFriends:input_type -> ultimate.server.api.ImportFacebookFriendsRequest
+	24, // 43: ultimate.server.api.FriendsService.ImportSteamFriends:input_type -> ultimate.server.api.ImportSteamFriendsRequest
+	25, // 44: ultimate.server.api.GroupService.CreateGroup:input_type -> ultimate.server.api.CreateGroupRequest
+	27, // 45: ultimate.server.api.GroupService.UpdateGroup:input_type -> ultimate.server.api.UpdateGroupRequest
+	28, // 46: ultimate.server.api.GroupService.DeleteGroup:input_type -> ultimate.server.api.DeleteGroupRequest
+	29, // 47: ultimate.server.api.GroupService.ListGroups:input_type -> ultimate.server.api.ListGroupsRequest
+	31, // 48: ultimate.server.api.GroupService.JoinGroup:input_type -> ultimate.server.api.JoinGroupRequest
+	32, // 49: ultimate.server.api.GroupService.LeaveGroup:input_type -> ultimate.server.api.LeaveGroupRequest
+	33, // 50: ultimate.server.api.GroupService.AddGroupUsers:input_type -> ultimate.server.api.AddGroupUsersRequest
+	34, // 51: ultimate.server.api.GroupService.KickGroupUsers:input_type -> ultimate.server.api.KickGroupUsersRequest
+	35, // 52: ultimate.server.api.GroupService.PromoteGroupUsers:input_type -> ultimate.server.api.PromoteGroupUsersRequest
+	36, // 53: ultimate.server.api.GroupService.DemoteGroupUsers:input_type -> ultimate.server.api.DemoteGroupUsersRequest
+	37, // 54: ultimate.server.api.GroupService.BanGroupUsers:input_type -> ultimate.server.api.BanGroupUsersRequest
+	42, // 55: ultimate.server.api.GroupService.ListGroupUsers:input_type -> ultimate.server.api.ListGroupUsersRequest
+	43, // 56: ultimate.server.api.GroupService.ListUserGroups:input_type -> ultimate.server.api.ListUserGroupsRequest
+	44, // 57: ultimate.server.api.MatchmakerService.AddMatchmaker:input_type -> ultimate.server.api.AddMatchmakerRequest
+	46, // 58: ultimate.server.api.MatchmakerService.RemoveMatchmaker:input_type -> ultimate.server.api.RemoveMatchmakerRequest
+	47, // 59: ultimate.server.api.MatchmakerService.GetMatchmakerTicket:input_type -> ultimate.server.api.GetMatchmakerTicketRequest
+	48, // 60: ultimate.server.api.MatchmakerService.GetQueueStats:input_type -> ultimate.server.api.GetQueueStatsRequest
+	50, // 61: ultimate.server.api.RealtimeService.CreateMatch:input_type -> ultimate.server.api.CreateMatchRequest
+	51, // 62: ultimate.server.api.RealtimeService.ListMatches:input_type -> ultimate.server.api.ListMatchesRequest
+	52, // 63: ultimate.server.api.RealtimeService.GetMatch:input_type -> ultimate.server.api.GetMatchRequest
+	56, // 64: ultimate.server.api.RealtimeService.MatchSignal:input_type -> ultimate.server.api.MatchSignalRequest
+	62, // 65: ultimate.server.api.LeaderboardService.CreateLeaderboard:output_type -> google.protobuf.Empty
+	62, // 66: ultimate.server.api.LeaderboardService.DeleteLeaderboard:output_type -> google.protobuf.Empty
+	4,  // 67: ultimate.server.api.LeaderboardService.WriteLeaderboardRecord:output_type -> ultimate.server.api.LeaderboardRecord
+	7,  // 68: ultimate.server.api.LeaderboardService.ListLeaderboardRecords:output_type -> ultimate.server.api.LeaderboardRecordList
+	7,  // 69: ultimate.server.api.LeaderboardService.ListLeaderboardRecordsAroundOwner:output_type -> ultimate.server.api.LeaderboardRecordList
+	62, // 70: ultimate.server.api.LeaderboardService.DeleteLeaderboardRecord:output_type -> google.protobuf.Empty
+	62, // 71: ultimate.server.api.TournamentService.CreateTournament:output_type -> google.protobuf.Empty
+	62, // 72: ultimate.server.api.TournamentService.DeleteTournament:output_type -> google.protobuf.Empty
+	62, // 73: ultimate.server.api.TournamentService.JoinTournament:output_type -> google.protobuf.Empty
+	14, // 74: ultimate.server.api.TournamentService.ListTournaments:output_type -> ultimate.server.api.TournamentList
+	4,  // 75: ultimate.server.api.TournamentService.WriteTournamentRecord:output_type -> ultimate.server.api.LeaderboardRecord
+	7,  // 76: ultimate.server.api.TournamentService.ListTournamentRecords:output_type -> ultimate.server.api.LeaderboardRecordList
+	62, // 77: ultimate.server.api.FriendsService.AddFriends:output_type -> google.protobuf.Empty
+	20, // 78: ultimate.server.api.FriendsService.ListFriends:output_type -> ultimate.server.api.FriendList
+	62, // 79: ultimate.server.api.FriendsService.DeleteFriends:output_type -> google.protobuf.Empty
+	62, // 80: ultimate.server.api.FriendsService.BlockFriends:output_type -> google.protobuf.Empty
+	62, // 81: ultimate.server.api.FriendsService.ImportFacebookFriends:output_type -> google.protobuf.Empty
+	62, // 82: ultimate.server.api.FriendsService.ImportSteamFriends:output_type -> google.protobuf.Empty
+	26, // 83: ultimate.server.api.GroupService.CreateGroup:output_type -> ultimate.server.api.Group
+	62, // 84: ultimate.server.api.GroupService.UpdateGroup:output_type -> google.protobuf.Empty
+	62, // 85: ultimate.server.api.GroupService.DeleteGroup:output_type -> google.protobuf.Empty
+	30, // 86: ultimate.server.api.GroupService.ListGroups:output_type -> ultimate.server.api.GroupList
+	62, // 87: ultimate.server.api.GroupService.JoinGroup:output_type -> google.protobuf.Empty
+	62, // 88: ultimate.server.api.GroupService.LeaveGroup:output_type -> google.protobuf.Empty
+	62, // 89: ultimate.server.api.GroupService.AddGroupUsers:output_type -> google.protobuf.Empty
+	62, // 90: ultimate.server.api.GroupService.KickGroupUsers:output_type -> google.protobuf.Empty
+	62, // 91: ultimate.server.api.GroupService.PromoteGroupUsers:output_type -> google.protobuf.Empty
+	62, // 92: ultimate.server.api.GroupService.DemoteGroupUsers:output_type -> google.protobuf.Empty
+	62, // 93: ultimate.server.api.GroupService.BanGroupUsers:output_type -> google.protobuf.Empty
+	39, // 94: ultimate.server.api.GroupService.ListGroupUsers:output_type -> ultimate.server.api.GroupUserList
+	41, // 95: ultimate.server.api.GroupService.ListUserGroups:output_type -> ultimate.server.api.UserGroupList
+	45, // 96: ultimate.server.api.MatchmakerService.AddMatchmaker:output_type -> ultimate.server.api.MatchmakerTicket
+	62, // 97: ultimate.server.api.MatchmakerService.RemoveMatchmaker:output_type -> google.protobuf.Empty
+	45, // 98: ultimate.server.api.MatchmakerService.GetMatchmakerTicket:output_type -> ultimate.server.api.MatchmakerTicket
+	49, // 99: ultimate.server.api.MatchmakerService.GetQueueStats:output_type -> ultimate.server.api.QueueStats
+	54, // 100: ultimate.server.api.RealtimeService.CreateMatch:output_type -> ultimate.server.api.Match
+	55, // 101: ultimate.server.api.RealtimeService.ListMatches:output_type -> ultimate.server.api.MatchList
+	54, // 102: ultimate.server.api.RealtimeService.GetMatch:output_type -> ultimate.server.api.Match
+	57, // 103: ultimate.server.api.RealtimeService.MatchSignal:output_type -> ultimate.server.api.MatchSignalResponse
+	65, // [65:104] is the sub-list for method output_type
+	26, // [26:65] is the sub-list for method input_type
+	26, // [26:26] is the sub-list for extension type_name
+	26, // [26:26] is the sub-list for extension extendee
+	0,  // [0:26] is the sub-list for field type_name
 }
 
 func init() { file_api_api_proto_init() }
@@ -3841,9 +4355,9 @@ func file_api_api_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_api_api_proto_rawDesc), len(file_api_api_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   52,
+			NumMessages:   61,
 			NumExtensions: 0,
-			NumServices:   5,
+			NumServices:   6,
 		},
 		GoTypes:           file_api_api_proto_goTypes,
 		DependencyIndexes: file_api_api_proto_depIdxs,

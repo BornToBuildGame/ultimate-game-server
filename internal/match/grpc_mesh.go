@@ -3,6 +3,7 @@ package match
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"sync"
@@ -27,6 +28,7 @@ type Router struct {
 	ZapLogger        *zap.Logger
 	DB               *sql.DB
 	NK               runtime.RuntimeModule
+	Registry         SessionRegistry
 }
 
 // NewRouter creates a new match Router.
@@ -34,6 +36,13 @@ func NewRouter() *Router {
 	return &Router{
 		matches: make(map[string]*MatchLoop),
 	}
+}
+
+// SetSessionRegistry configures the SessionRegistry reference.
+func (r *Router) SetSessionRegistry(reg SessionRegistry) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.Registry = reg
 }
 
 // SetDependencies injects dependencies required to instantiate Go native matches.
@@ -55,6 +64,7 @@ func (r *Router) CreateAndRegisterMatch(ctx context.Context, matchID string, mod
 	zapLogger := r.ZapLogger
 	db := r.DB
 	nk := r.NK
+	registry := r.Registry
 	r.mu.RUnlock()
 
 	if hr == nil {
@@ -73,11 +83,18 @@ func (r *Router) CreateAndRegisterMatch(ctx context.Context, matchID string, mod
 	}
 
 	// Initialize state
-	state, tickRate, _ := goMatch.MatchInit(ctx, logger, db, nk, params)
+	state, tickRate, label := goMatch.MatchInit(ctx, logger, db, nk, params)
 
 	// Create MatchLoop
-	loop := NewMatchLoop(matchID, nil, tickRate, zapLogger, nil, nil)
+	loop := NewMatchLoop(matchID, nil, tickRate, zapLogger, registry)
 	loop.SetGoMatch(goMatch, state, logger, db, nk)
+	loop.label = label
+	loop.onMetadataUpdate = func(matchID string, label string, playerCount int) {
+		r.UpdateMetadata(matchID, label, playerCount)
+	}
+	loop.onEnd = func(matchID string, finalState MatchState) {
+		r.Unregister(matchID)
+	}
 
 	// Register in Router
 	r.Register(matchID, loop)
@@ -106,7 +123,22 @@ func (r *Router) Register(matchID string, loop *MatchLoop) {
 	r.mu.Unlock()
 
 	if rdb != nil && nodeID != "" {
-		err := rdb.Set(context.Background(), "match:node:"+matchID, nodeID, 0).Err()
+		ctx := context.Background()
+		pipe := rdb.Pipeline()
+		pipe.Set(ctx, "match:node:"+matchID, nodeID, 0)
+		pipe.SAdd(ctx, "match:ids", matchID)
+
+		metadata := map[string]interface{}{
+			"match_id":      matchID,
+			"authoritative": "true",
+			"label":         loop.label,
+			"size":          len(loop.presences),
+			"max_size":      100,
+			"node":          nodeID,
+		}
+		pipe.HMSet(ctx, "match:metadata:"+matchID, metadata)
+
+		_, err := pipe.Exec(ctx)
 		if err != nil {
 			if r.ZapLogger != nil {
 				r.ZapLogger.Error("Failed to register match in Redis", zap.String("match_id", matchID), zap.Error(err))
@@ -123,12 +155,31 @@ func (r *Router) Unregister(matchID string) {
 	r.mu.Unlock()
 
 	if rdb != nil {
-		err := rdb.Del(context.Background(), "match:node:"+matchID).Err()
+		ctx := context.Background()
+		pipe := rdb.Pipeline()
+		pipe.Del(ctx, "match:node:"+matchID)
+		pipe.SRem(ctx, "match:ids", matchID)
+		pipe.Del(ctx, "match:metadata:"+matchID)
+
+		_, err := pipe.Exec(ctx)
 		if err != nil {
 			if r.ZapLogger != nil {
 				r.ZapLogger.Error("Failed to delete match from Redis", zap.String("match_id", matchID), zap.Error(err))
 			}
 		}
+	}
+}
+
+// UpdateMetadata updates match metadata in Redis globally.
+func (r *Router) UpdateMetadata(matchID string, label string, playerCount int) {
+	r.mu.RLock()
+	rdb := r.rdb
+	nodeID := r.nodeID
+	r.mu.RUnlock()
+
+	if rdb != nil && nodeID != "" {
+		ctx := context.Background()
+		rdb.HSet(ctx, "match:metadata:"+matchID, "label", label, "size", playerCount)
 	}
 }
 
@@ -170,3 +221,55 @@ func (r *Router) ForwardInput(ctx context.Context, matchID string, input MatchIn
 
 	return errors.New("match not found on this node")
 }
+
+// GetLocalMatches retrieves all active matches hosted on this node.
+func (r *Router) GetLocalMatches() []*ActiveMatch {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	var results []*ActiveMatch
+	for id, loop := range r.matches {
+		loop.mu.RLock()
+		labelMap := make(map[string]interface{})
+		_ = json.Unmarshal([]byte(loop.label), &labelMap)
+		results = append(results, &ActiveMatch{
+			MatchID:       id,
+			Label:         labelMap,
+			PlayerCount:   len(loop.presences),
+			MaxSize:       100,
+			Authoritative: true,
+		})
+		loop.mu.RUnlock()
+	}
+	return results
+}
+
+// GetLocalMatch retrieves details of a specific local match.
+func (r *Router) GetLocalMatch(matchID string) (*ActiveMatch, []PresenceImpl, bool) {
+	r.mu.RLock()
+	loop, exists := r.matches[matchID]
+	r.mu.RUnlock()
+	if !exists {
+		return nil, nil, false
+	}
+
+	loop.mu.RLock()
+	defer loop.mu.RUnlock()
+	labelMap := make(map[string]interface{})
+	_ = json.Unmarshal([]byte(loop.label), &labelMap)
+
+	var presences []PresenceImpl
+	for _, p := range loop.presences {
+		presences = append(presences, *p)
+	}
+
+	match := &ActiveMatch{
+		MatchID:       matchID,
+		Label:         labelMap,
+		PlayerCount:   len(loop.presences),
+		MaxSize:       100,
+		Authoritative: true,
+	}
+	return match, presences, true
+}
+
+
