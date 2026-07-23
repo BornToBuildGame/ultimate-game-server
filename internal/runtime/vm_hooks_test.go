@@ -121,6 +121,18 @@ func (m *mockRuntimeModule) LeaderboardDelete(ctx context.Context, id string) er
 	return nil
 }
 
+func (m *mockRuntimeModule) LeaderboardList(ctx context.Context, limit int, cursor string) ([]*Leaderboard, string, error) {
+	return nil, "", nil
+}
+
+func (m *mockRuntimeModule) LeaderboardsGetId(ctx context.Context, ids []string) ([]*Leaderboard, error) {
+	return nil, nil
+}
+
+func (m *mockRuntimeModule) LeaderboardRanksDisable(ctx context.Context, id string) error {
+	return nil
+}
+
 func (m *mockRuntimeModule) TournamentCreate(ctx context.Context, id string, authoritative bool, sortOrder, operator int, resetSchedule string, metadata map[string]interface{}, title, description string, category int, startTime, endTime int64, duration, maxSize, maxNumScore int, joinRequired, enableRanks bool) error {
 	return nil
 }
@@ -129,7 +141,63 @@ func (m *mockRuntimeModule) TournamentDelete(ctx context.Context, id string) err
 	return nil
 }
 
+func (m *mockRuntimeModule) TournamentList(ctx context.Context, categoryStart, categoryEnd int, startTime, endTime int64, limit int, cursor string, active bool) ([]*TournamentView, string, error) {
+	return nil, "", nil
+}
+
+func (m *mockRuntimeModule) TournamentsGetId(ctx context.Context, ids []string) ([]*Leaderboard, error) {
+	return nil, nil
+}
+
+func (m *mockRuntimeModule) TournamentRanksDisable(ctx context.Context, id string) error {
+	return nil
+}
+
 func (m *mockRuntimeModule) TournamentJoin(ctx context.Context, id, ownerID, username string) error {
+	return nil
+}
+
+func (m *mockRuntimeModule) LeaderboardRecordsList(ctx context.Context, id string, ownerIDs []string, limit int, cursor string, expiry int64) ([]*LeaderboardRecord, string, string, error) {
+	return []*LeaderboardRecord{}, "", "", nil
+}
+
+func (m *mockRuntimeModule) LeaderboardRecordsAroundOwner(ctx context.Context, id, ownerID string, limit int, expiry int64) ([]*LeaderboardRecord, error) {
+	return []*LeaderboardRecord{}, nil
+}
+
+func (m *mockRuntimeModule) LeaderboardRecordDelete(ctx context.Context, id, ownerID string) error {
+	return nil
+}
+
+func (m *mockRuntimeModule) LeaderboardRecordsHaystack(ctx context.Context, id, ownerID string, limit int, cursor string, expiry int64) ([]*LeaderboardRecord, string, string, error) {
+	return nil, "", "", nil
+}
+
+func (m *mockRuntimeModule) LeaderboardRecordsListCursorFromRank(ctx context.Context, leaderboardID string, rank, expiry int64) (string, error) {
+	return "", nil
+}
+
+func (m *mockRuntimeModule) TournamentRecordWrite(ctx context.Context, id, ownerID, username string, score, subscore int64, metadata map[string]interface{}) (*LeaderboardRecord, error) {
+	return m.LeaderboardRecordWrite(ctx, id, ownerID, username, score, subscore, metadata)
+}
+
+func (m *mockRuntimeModule) TournamentRecordsList(ctx context.Context, id string, ownerIDs []string, limit int, cursor string, expiry int64) ([]*LeaderboardRecord, string, string, error) {
+	return m.LeaderboardRecordsList(ctx, id, ownerIDs, limit, cursor, expiry)
+}
+
+func (m *mockRuntimeModule) TournamentRecordsAroundOwner(ctx context.Context, id, ownerID string, limit int, expiry int64) ([]*LeaderboardRecord, error) {
+	return m.LeaderboardRecordsAroundOwner(ctx, id, ownerID, limit, expiry)
+}
+
+func (m *mockRuntimeModule) TournamentRecordsHaystack(ctx context.Context, id, ownerID string, limit int, cursor string, expiry int64) ([]*LeaderboardRecord, string, string, error) {
+	return nil, "", "", nil
+}
+
+func (m *mockRuntimeModule) TournamentRecordDelete(ctx context.Context, id, ownerID string) error {
+	return nil
+}
+
+func (m *mockRuntimeModule) TournamentAddAttempt(ctx context.Context, id, ownerID string, count int) error {
 	return nil
 }
 

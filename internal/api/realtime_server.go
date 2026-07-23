@@ -11,7 +11,6 @@ import (
 	"ultimate-game-server/internal/auth"
 	"ultimate-game-server/internal/match"
 
-	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
@@ -62,7 +61,7 @@ func (s *RealtimeServer) CreateMatch(ctx context.Context, req *apipb.CreateMatch
 		return nil, err
 	}
 
-	matchID := uuid.New().String()
+	matchID := match.NewAuthoritativeMatchID()
 	module := req.GetModule()
 	if module == "" {
 		return nil, status.Error(codes.InvalidArgument, "missing match module")
@@ -253,13 +252,11 @@ func (s *RealtimeServer) MatchSignal(ctx context.Context, req *apipb.MatchSignal
 		return nil, status.Error(codes.InvalidArgument, "missing match ID")
 	}
 
-	loop, ok := s.matchRouter.GetMatchLoop(matchID)
-	if !ok {
-		return nil, status.Error(codes.NotFound, "match loop not found locally")
-	}
-
-	res, err := loop.SubmitSignal(req.GetPayload())
+	res, err := s.matchRouter.ForwardSignal(ctx, matchID, req.GetPayload())
 	if err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			return nil, status.Error(codes.NotFound, err.Error())
+		}
 		return nil, status.Errorf(codes.Internal, "signal execution failed: %v", err)
 	}
 
@@ -284,7 +281,7 @@ func (s *Server) handleCreateMatch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	matchID := uuid.New().String()
+	matchID := match.NewAuthoritativeMatchID()
 	err := s.MatchRouter.CreateAndRegisterMatch(r.Context(), matchID, req.Module, req.Params)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -511,14 +508,12 @@ func (s *Server) handleMatchSignal(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	loop, ok := s.MatchRouter.GetMatchLoop(matchID)
-	if !ok {
-		http.Error(w, "match loop not found", http.StatusNotFound)
-		return
-	}
-
-	res, err := loop.SubmitSignal(req.Payload)
+	res, err := s.MatchRouter.ForwardSignal(r.Context(), matchID, req.Payload)
 	if err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			http.Error(w, err.Error(), http.StatusNotFound)
+			return
+		}
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

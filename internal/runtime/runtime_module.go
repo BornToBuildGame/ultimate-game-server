@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"time"
 
 	"ultimate-game-server/internal/economy"
@@ -183,7 +184,16 @@ func (m *GoRuntimeModule) NotificationSend(ctx context.Context, userID, subject 
 }
 
 func (m *GoRuntimeModule) MatchCreate(ctx context.Context, module string, params map[string]interface{}) (string, error) {
-	matchID := uuid.New().String()
+	// Format matches match.NewAuthoritativeMatchID — cannot import match (cycle via runtime).
+	node := os.Getenv("UGE_NODE_ID")
+	if node == "" {
+		if h, err := os.Hostname(); err == nil && h != "" {
+			node = h
+		} else {
+			node = "node-local"
+		}
+	}
+	matchID := uuid.New().String() + "." + node
 	if m.registry != nil {
 		err := m.registry.CreateAndRegisterMatch(ctx, matchID, module, params)
 		if err != nil {
@@ -213,6 +223,26 @@ func (m *GoRuntimeModule) LeaderboardCreate(ctx context.Context, id string, auth
 
 func (m *GoRuntimeModule) LeaderboardDelete(ctx context.Context, id string) error {
 	return leaderboard.DeleteLeaderboard(ctx, m.dbPool, id)
+}
+
+func (m *GoRuntimeModule) LeaderboardList(ctx context.Context, limit int, cursor string) ([]*Leaderboard, string, error) {
+	list, next, err := leaderboard.ListLeaderboards(ctx, m.dbPool, limit, cursor)
+	if err != nil {
+		return nil, "", err
+	}
+	return toRuntimeLeaderboards(list), next, nil
+}
+
+func (m *GoRuntimeModule) LeaderboardsGetId(ctx context.Context, ids []string) ([]*Leaderboard, error) {
+	list, err := leaderboard.LeaderboardsGetId(ctx, m.dbPool, ids)
+	if err != nil {
+		return nil, err
+	}
+	return toRuntimeLeaderboards(list), nil
+}
+
+func (m *GoRuntimeModule) LeaderboardRanksDisable(ctx context.Context, id string) error {
+	return leaderboard.DisableRanks(ctx, m.dbPool, id, false)
 }
 
 func (m *GoRuntimeModule) TournamentCreate(ctx context.Context, id string, authoritative bool, sortOrder, operator int, resetSchedule string, metadata map[string]interface{}, title, description string, category int, startTime, endTime int64, duration, maxSize, maxNumScore int, joinRequired, enableRanks bool) error {
@@ -246,6 +276,150 @@ func (m *GoRuntimeModule) TournamentDelete(ctx context.Context, id string) error
 	return leaderboard.DeleteLeaderboard(ctx, m.dbPool, id)
 }
 
+func (m *GoRuntimeModule) TournamentList(ctx context.Context, categoryStart, categoryEnd int, startTime, endTime int64, limit int, cursor string, active bool) ([]*TournamentView, string, error) {
+	st, et := time.Time{}, time.Time{}
+	if startTime > 0 {
+		st = time.Unix(startTime, 0).UTC()
+	}
+	if endTime > 0 {
+		et = time.Unix(endTime, 0).UTC()
+	}
+	list, next, err := tournament.ListTournaments(ctx, m.dbPool, categoryStart, categoryEnd, st, et, limit, cursor, active)
+	if err != nil {
+		return nil, "", err
+	}
+	out := make([]*TournamentView, len(list))
+	for i, v := range list {
+		out[i] = toRuntimeTournamentView(v)
+	}
+	return out, next, nil
+}
+
+func (m *GoRuntimeModule) TournamentsGetId(ctx context.Context, ids []string) ([]*Leaderboard, error) {
+	list, err := leaderboard.TournamentsGetId(ctx, m.dbPool, ids)
+	if err != nil {
+		return nil, err
+	}
+	return toRuntimeLeaderboards(list), nil
+}
+
+func (m *GoRuntimeModule) TournamentRanksDisable(ctx context.Context, id string) error {
+	return leaderboard.DisableRanks(ctx, m.dbPool, id, true)
+}
+
 func (m *GoRuntimeModule) TournamentJoin(ctx context.Context, id, ownerID, username string) error {
 	return tournament.JoinTournament(ctx, m.dbPool, id, ownerID, username)
+}
+
+func (m *GoRuntimeModule) leaderboardRecordsList(ctx context.Context, id string, ownerIDs []string, limit int, cursor string, expiry int64) ([]*LeaderboardRecord, string, string, error) {
+	expiryTime := time.Time{}
+	if expiry != 0 {
+		expiryTime = leaderboard.ResolveExpiryTime(expiry)
+	}
+	if len(ownerIDs) > 0 {
+		recs, err := leaderboard.GetOwnerRecords(ctx, m.dbPool, id, ownerIDs, expiryTime)
+		if err != nil {
+			return nil, "", "", err
+		}
+		return toRuntimeRecords(recs), "", "", nil
+	}
+	recs, next, prev, err := leaderboard.GetLeaderboardRecordsPaged(ctx, m.dbPool, id, limit, cursor, expiryTime, expiry)
+	if err != nil {
+		return nil, "", "", err
+	}
+	return toRuntimeRecords(recs), next, prev, nil
+}
+
+func (m *GoRuntimeModule) LeaderboardRecordsList(ctx context.Context, id string, ownerIDs []string, limit int, cursor string, expiry int64) ([]*LeaderboardRecord, string, string, error) {
+	return m.leaderboardRecordsList(ctx, id, ownerIDs, limit, cursor, expiry)
+}
+
+func (m *GoRuntimeModule) LeaderboardRecordsAroundOwner(ctx context.Context, id, ownerID string, limit int, expiry int64) ([]*LeaderboardRecord, error) {
+	expiryTime := time.Time{}
+	if expiry != 0 {
+		expiryTime = leaderboard.ResolveExpiryTime(expiry)
+	}
+	recs, err := leaderboard.GetLeaderboardRecordsAroundPlayer(ctx, m.dbPool, nil, id, ownerID, limit, expiryTime)
+	if err != nil {
+		return nil, err
+	}
+	return toRuntimeRecords(recs), nil
+}
+
+func (m *GoRuntimeModule) LeaderboardRecordsHaystack(ctx context.Context, id, ownerID string, limit int, cursor string, expiry int64) ([]*LeaderboardRecord, string, string, error) {
+	recs, next, prev, err := leaderboard.RecordsHaystack(ctx, m.dbPool, id, ownerID, limit, cursor, expiry)
+	if err != nil {
+		return nil, "", "", err
+	}
+	return toRuntimeRecords(recs), next, prev, nil
+}
+
+func (m *GoRuntimeModule) LeaderboardRecordsListCursorFromRank(ctx context.Context, leaderboardID string, rank, expiry int64) (string, error) {
+	return leaderboard.RecordsListCursorFromRank(ctx, m.dbPool, leaderboardID, rank, expiry)
+}
+
+func (m *GoRuntimeModule) LeaderboardRecordDelete(ctx context.Context, id, ownerID string) error {
+	return leaderboard.DeleteRecord(ctx, m.dbPool, id, ownerID)
+}
+
+func (m *GoRuntimeModule) TournamentRecordWrite(ctx context.Context, id, ownerID, username string, score, subscore int64, metadata map[string]interface{}) (*LeaderboardRecord, error) {
+	return m.LeaderboardRecordWrite(ctx, id, ownerID, username, score, subscore, metadata)
+}
+
+func (m *GoRuntimeModule) TournamentRecordsList(ctx context.Context, id string, ownerIDs []string, limit int, cursor string, expiry int64) ([]*LeaderboardRecord, string, string, error) {
+	return m.leaderboardRecordsList(ctx, id, ownerIDs, limit, cursor, expiry)
+}
+
+func (m *GoRuntimeModule) TournamentRecordsAroundOwner(ctx context.Context, id, ownerID string, limit int, expiry int64) ([]*LeaderboardRecord, error) {
+	return m.LeaderboardRecordsAroundOwner(ctx, id, ownerID, limit, expiry)
+}
+
+func (m *GoRuntimeModule) TournamentRecordsHaystack(ctx context.Context, id, ownerID string, limit int, cursor string, expiry int64) ([]*LeaderboardRecord, string, string, error) {
+	return m.LeaderboardRecordsHaystack(ctx, id, ownerID, limit, cursor, expiry)
+}
+
+func (m *GoRuntimeModule) TournamentRecordDelete(ctx context.Context, id, ownerID string) error {
+	return leaderboard.DeleteRecord(ctx, m.dbPool, id, ownerID)
+}
+
+func (m *GoRuntimeModule) TournamentAddAttempt(ctx context.Context, id, ownerID string, count int) error {
+	return tournament.AddAttempt(ctx, m.dbPool, id, ownerID, count)
+}
+
+func toRuntimeRecords(recs []*leaderboard.LeaderboardRecord) []*LeaderboardRecord {
+	out := make([]*LeaderboardRecord, len(recs))
+	for i, r := range recs {
+		out[i] = &LeaderboardRecord{
+			LeaderboardID: r.LeaderboardID, OwnerID: r.OwnerID, Username: r.Username,
+			Score: r.Score, Subscore: r.Subscore, NumScore: r.NumScore, MaxNumScore: r.MaxNumScore,
+			Metadata: r.Metadata, CreateTime: r.CreateTime, UpdateTime: r.UpdateTime,
+			ExpiryTime: r.ExpiryTime, Rank: r.Rank,
+		}
+	}
+	return out
+}
+
+func toRuntimeLeaderboards(list []*leaderboard.Leaderboard) []*Leaderboard {
+	out := make([]*Leaderboard, len(list))
+	for i, lb := range list {
+		out[i] = &Leaderboard{
+			ID: lb.ID, Authoritative: lb.Authoritative, SortOrder: lb.SortOrder, Operator: lb.Operator,
+			ResetSchedule: lb.ResetSchedule, Metadata: lb.Metadata, CreateTime: lb.CreateTime,
+			Category: lb.Category, Description: lb.Description, Duration: lb.Duration, EndTime: lb.EndTime,
+			JoinRequired: lb.JoinRequired, MaxSize: lb.MaxSize, MaxNumScore: lb.MaxNumScore,
+			Title: lb.Title, Size: lb.Size, StartTime: lb.StartTime, EnableRanks: lb.EnableRanks,
+		}
+	}
+	return out
+}
+
+func toRuntimeTournamentView(v *tournament.TournamentView) *TournamentView {
+	return &TournamentView{
+		Leaderboard: toRuntimeLeaderboards([]*leaderboard.Leaderboard{v.Leaderboard})[0],
+		CanEnter:    v.CanEnter,
+		StartActive: v.StartActive,
+		EndActive:   v.EndActive,
+		PrevReset:   v.PrevReset,
+		NextReset:   v.NextReset,
+	}
 }

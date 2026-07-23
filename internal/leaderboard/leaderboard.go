@@ -5,9 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"regexp"
 	"sort"
-	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -22,6 +21,11 @@ var (
 	ErrMaxAttemptsReached  = errors.New("max score submission attempts reached")
 	ErrInvalidOperator     = errors.New("invalid score operator")
 	ErrJoinRequired        = errors.New("join required before submitting score")
+	ErrInvalidLeaderboardID = errors.New("invalid leaderboard id")
+	ErrMetadataTooLarge    = errors.New("metadata exceeds max size")
+	ErrRateLimited         = errors.New("score submission rate limit exceeded")
+	ErrInvalidCursor       = errors.New("leaderboard cursor invalid")
+	ErrNoRecordsPossible   = errors.New("no records available for current expiry")
 )
 
 const (
@@ -32,16 +36,22 @@ const (
 	OperatorSet       = 1
 	OperatorIncrement = 2
 	OperatorDecrement = 3
+
+	MaxMetadataBytes     = 2 * 1024
+	MaxPageSize            = 1000
+	ScoreSubmissionsPerMin = 10
 )
+
+var leaderboardIDPattern = regexp.MustCompile(`^[a-zA-Z0-9_-]{1,128}$`)
 
 // Leaderboard represents a leaderboard configuration.
 type Leaderboard struct {
 	ID            string    `json:"id"`
 	Authoritative bool      `json:"authoritative"`
-	SortOrder     int       `json:"sort_order"` // 0=asc, 1=desc
-	Operator      int       `json:"operator"`   // 0=best, 1=set, 2=increment, 3=decrement
+	SortOrder     int       `json:"sort_order"`
+	Operator      int       `json:"operator"`
 	ResetSchedule string    `json:"reset_schedule"`
-	Metadata      string    `json:"metadata"` // JSON
+	Metadata      string    `json:"metadata"`
 	CreateTime    time.Time `json:"create_time"`
 	Category      int       `json:"category"`
 	Description   string    `json:"description"`
@@ -65,7 +75,7 @@ type LeaderboardRecord struct {
 	Subscore      int64     `json:"subscore"`
 	NumScore      int       `json:"num_score"`
 	MaxNumScore   int       `json:"max_num_score"`
-	Metadata      string    `json:"metadata"` // JSON
+	Metadata      string    `json:"metadata"`
 	CreateTime    time.Time `json:"create_time"`
 	UpdateTime    time.Time `json:"update_time"`
 	ExpiryTime    time.Time `json:"expiry_time"`
@@ -75,21 +85,76 @@ type LeaderboardRecord struct {
 // InvalidationPayload is published to Redis Pub/Sub on score updates.
 type InvalidationPayload struct {
 	LeaderboardID string `json:"leaderboard_id"`
-	ExpiryTime    int64  `json:"expiry_time"` // unix timestamp
+	ExpiryTime    int64  `json:"expiry_time"`
 }
 
-// Local Rank Cache structures
-type rankCache struct {
+// Local record list cache (full sorted slices for around-owner).
+type rankListCache struct {
 	mu    sync.RWMutex
-	cache map[string][]*LeaderboardRecord // key: "leaderboardID:expiryTimeUnix"
+	cache map[string][]*LeaderboardRecord
 }
 
-var localCache = &rankCache{
+var localCache = &rankListCache{
 	cache: make(map[string][]*LeaderboardRecord),
+}
+
+// Per-user-per-board score submission rate limiting.
+type scoreRateLimiter struct {
+	mu   sync.Mutex
+	hits map[string][]time.Time
+}
+
+var scoreLimiter = &scoreRateLimiter{hits: make(map[string][]time.Time)}
+
+func (l *scoreRateLimiter) allow(leaderboardID, ownerID string) bool {
+	key := leaderboardID + ":" + ownerID
+	now := time.Now()
+	cutoff := now.Add(-1 * time.Minute)
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	times := l.hits[key]
+	filtered := times[:0]
+	for _, t := range times {
+		if t.After(cutoff) {
+			filtered = append(filtered, t)
+		}
+	}
+	if len(filtered) >= ScoreSubmissionsPerMin {
+		l.hits[key] = filtered
+		return false
+	}
+	l.hits[key] = append(filtered, now)
+	return true
+}
+
+func ValidateLeaderboardID(id string) error {
+	if !leaderboardIDPattern.MatchString(id) {
+		return ErrInvalidLeaderboardID
+	}
+	return nil
+}
+
+func ValidateMetadata(metadata string) error {
+	if len(metadata) > MaxMetadataBytes {
+		return ErrMetadataTooLarge
+	}
+	return nil
 }
 
 // CreateLeaderboard inserts a new leaderboard configuration.
 func CreateLeaderboard(ctx context.Context, pool *pgxpool.Pool, lb *Leaderboard) error {
+	if err := ValidateLeaderboardID(lb.ID); err != nil {
+		return err
+	}
+	if lb.ResetSchedule != "" {
+		if _, err := ParseResetSchedule(lb.ResetSchedule); err != nil {
+			return fmt.Errorf("invalid reset_schedule: %w", err)
+		}
+	}
+	if err := ValidateMetadata(lb.Metadata); err != nil {
+		return err
+	}
+
 	query := `
 		INSERT INTO leaderboard (
 			id, authoritative, sort_order, operator, reset_schedule, metadata, create_time,
@@ -98,10 +163,10 @@ func CreateLeaderboard(ctx context.Context, pool *pgxpool.Pool, lb *Leaderboard)
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
 	`
 	if lb.CreateTime.IsZero() {
-		lb.CreateTime = time.Now()
+		lb.CreateTime = time.Now().UTC()
 	}
 	if lb.StartTime.IsZero() {
-		lb.StartTime = time.Now()
+		lb.StartTime = time.Now().UTC()
 	}
 	if lb.EndTime.IsZero() {
 		lb.EndTime = time.Unix(0, 0).UTC()
@@ -121,7 +186,11 @@ func CreateLeaderboard(ctx context.Context, pool *pgxpool.Pool, lb *Leaderboard)
 		lb.Category, lb.Description, lb.Duration, lb.EndTime, lb.JoinRequired, lb.MaxSize, lb.MaxNumScore,
 		lb.Title, lb.Size, lb.StartTime, lb.EnableRanks,
 	)
-	return err
+	if err != nil {
+		return err
+	}
+	SharedConfigCache.Put(lb)
+	return nil
 }
 
 // GetLeaderboard fetches a leaderboard config.
@@ -144,38 +213,130 @@ func GetLeaderboard(ctx context.Context, pool *pgxpool.Pool, id string) (*Leader
 	return lb, err
 }
 
-// StartInvalidationListener subscribes to Redis Pub/Sub and evicts local caches dynamically.
+// ListLeaderboards returns paginated leaderboard configs (non-tournament first-class list).
+func ListLeaderboards(ctx context.Context, pool *pgxpool.Pool, limit int, cursor string) ([]*Leaderboard, string, error) {
+	if limit <= 0 {
+		limit = 10
+	}
+	if limit > MaxPageSize {
+		limit = MaxPageSize
+	}
+	query := `
+		SELECT id, authoritative, sort_order, operator, reset_schedule, metadata, create_time,
+		       category, description, duration, end_time, join_required, max_size, max_num_score,
+		       title, size, start_time, enable_ranks
+		FROM leaderboard
+		WHERE duration = 0
+	`
+	args := []interface{}{}
+	if cursor != "" {
+		query += ` AND id > $1`
+		args = append(args, cursor)
+	}
+	query += fmt.Sprintf(` ORDER BY id ASC LIMIT $%d`, len(args)+1)
+	args = append(args, limit+1)
+
+	rows, err := pool.Query(ctx, query, args...)
+	if err != nil {
+		return nil, "", err
+	}
+	defer rows.Close()
+
+	var list []*Leaderboard
+	for rows.Next() {
+		lb := &Leaderboard{}
+		if err := rows.Scan(
+			&lb.ID, &lb.Authoritative, &lb.SortOrder, &lb.Operator, &lb.ResetSchedule, &lb.Metadata, &lb.CreateTime,
+			&lb.Category, &lb.Description, &lb.Duration, &lb.EndTime, &lb.JoinRequired, &lb.MaxSize, &lb.MaxNumScore,
+			&lb.Title, &lb.Size, &lb.StartTime, &lb.EnableRanks,
+		); err != nil {
+			return nil, "", err
+		}
+		list = append(list, lb)
+	}
+
+	nextCursor := ""
+	if len(list) > limit {
+		nextCursor = list[limit-1].ID
+		list = list[:limit]
+	}
+	return list, nextCursor, nil
+}
+
+// StartInvalidationListener subscribes to Redis Pub/Sub and evicts local caches.
 func StartInvalidationListener(ctx context.Context, rdb *redis.Client) {
+	if rdb == nil {
+		return
+	}
 	pubsub := rdb.Subscribe(ctx, "leaderboard:invalidation")
 	go func() {
 		ch := pubsub.Channel()
-		for msg := range ch {
-			var payload InvalidationPayload
-			if err := json.Unmarshal([]byte(msg.Payload), &payload); err == nil {
-				key := fmt.Sprintf("%s:%d", payload.LeaderboardID, payload.ExpiryTime)
-				localCache.mu.Lock()
-				delete(localCache.cache, key)
-				localCache.mu.Unlock()
+		for {
+			select {
+			case <-ctx.Done():
+				_ = pubsub.Close()
+				return
+			case msg, ok := <-ch:
+				if !ok {
+					return
+				}
+				var payload InvalidationPayload
+				if err := json.Unmarshal([]byte(msg.Payload), &payload); err == nil {
+					key := fmt.Sprintf("%s:%d", payload.LeaderboardID, payload.ExpiryTime)
+					localCache.mu.Lock()
+					delete(localCache.cache, key)
+					localCache.mu.Unlock()
+					SharedRankCache.EvictPartition(payload.LeaderboardID, payload.ExpiryTime)
+				}
 			}
 		}
 	}()
 }
 
-// SubmitScore writes a player score to the database, enforcing constraints and operators.
+func publishInvalidation(ctx context.Context, rdb *redis.Client, leaderboardID string, expiryUnix int64) {
+	key := fmt.Sprintf("%s:%d", leaderboardID, expiryUnix)
+	localCache.mu.Lock()
+	delete(localCache.cache, key)
+	localCache.mu.Unlock()
+
+	if rdb != nil {
+		payload := InvalidationPayload{LeaderboardID: leaderboardID, ExpiryTime: expiryUnix}
+		pBytes, _ := json.Marshal(payload)
+		rdb.Publish(ctx, "leaderboard:invalidation", string(pBytes))
+	}
+}
+
+// SubmitScore writes a player score, enforcing constraints and operators.
 func SubmitScore(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Client, leaderboardID, ownerID, username string, score, subscore int64, metadata string, byPlayer bool) (*LeaderboardRecord, error) {
+	if score < 0 || subscore < 0 {
+		return nil, fmt.Errorf("score and subscore must be non-negative")
+	}
+	if byPlayer && !scoreLimiter.allow(leaderboardID, ownerID) {
+		return nil, ErrRateLimited
+	}
+	if metadata == "" {
+		metadata = "{}"
+	}
+	if err := ValidateMetadata(metadata); err != nil {
+		return nil, err
+	}
+
 	tx, err := pool.Begin(ctx)
 	if err != nil {
 		return nil, err
 	}
 	defer tx.Rollback(ctx)
 
-	// 1. Lock and check leaderboard config
-	lbQuery := `SELECT authoritative, sort_order, operator, max_num_score, duration, start_time, join_required FROM leaderboard WHERE id = $1 FOR SHARE`
+	lbQuery := `SELECT authoritative, sort_order, operator, max_num_score, duration, start_time, end_time, join_required, reset_schedule, enable_ranks
+		FROM leaderboard WHERE id = $1 FOR SHARE`
 	var authoritative bool
 	var sortOrder, operator, maxNumScore, duration int
-	var startTime time.Time
-	var joinRequired bool
-	err = tx.QueryRow(ctx, lbQuery, leaderboardID).Scan(&authoritative, &sortOrder, &operator, &maxNumScore, &duration, &startTime, &joinRequired)
+	var startTime, endTime time.Time
+	var joinRequired, enableRanks bool
+	var resetSchedule string
+	err = tx.QueryRow(ctx, lbQuery, leaderboardID).Scan(
+		&authoritative, &sortOrder, &operator, &maxNumScore, &duration, &startTime, &endTime, &joinRequired, &resetSchedule, &enableRanks,
+	)
 	if err == pgx.ErrNoRows {
 		return nil, ErrLeaderboardNotFound
 	} else if err != nil {
@@ -186,14 +347,20 @@ func SubmitScore(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Client, lea
 		return nil, ErrAuthoritative
 	}
 
-	// Calculate correct expiry time for the score partition (default Epoch if no duration/schedule)
-	expiryTime := time.Unix(0, 0).UTC()
-	if duration > 0 {
-		now := time.Now()
-		elapsed := now.Sub(startTime)
-		occIdx := int(elapsed.Seconds() / float64(duration))
-		expiryTime = startTime.Add(time.Duration(occIdx+1) * time.Duration(duration) * time.Second)
+	lb := &Leaderboard{
+		ID:            leaderboardID,
+		Duration:      duration,
+		StartTime:     startTime,
+		EndTime:       endTime,
+		ResetSchedule: resetSchedule,
+		EnableRanks:   enableRanks,
+		SortOrder:     sortOrder,
 	}
+	expiryUnix, ok := CalculateExpiry(lb, 0, time.Now().UTC())
+	if !ok {
+		return nil, ErrNoRecordsPossible
+	}
+	expiryTime := ResolveExpiryTime(expiryUnix)
 
 	if joinRequired {
 		var existsCheck bool
@@ -207,11 +374,6 @@ func SubmitScore(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Client, lea
 		}
 	}
 
-	if metadata == "" {
-		metadata = "{}"
-	}
-
-	// 2. Fetch existing score entry
 	recordQuery := `
 		SELECT score, subscore, num_score 
 		FROM leaderboard_record 
@@ -231,13 +393,13 @@ func SubmitScore(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Client, lea
 
 	newScore := score
 	newSubscore := subscore
+	now := time.Now().UTC()
 
 	if exists {
 		if numScore >= maxNumScore {
 			return nil, ErrMaxAttemptsReached
 		}
 
-		// Calculate based on operator rules
 		switch operator {
 		case OperatorBest:
 			if sortOrder == SortOrderDescending {
@@ -247,7 +409,7 @@ func SubmitScore(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Client, lea
 				} else if oldScore == score && oldSubscore > subscore {
 					newSubscore = oldSubscore
 				}
-			} else { // Ascending
+			} else {
 				if oldScore < score {
 					newScore = oldScore
 					newSubscore = oldSubscore
@@ -256,7 +418,6 @@ func SubmitScore(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Client, lea
 				}
 			}
 		case OperatorSet:
-			// newScore and newSubscore already hold the input arguments
 		case OperatorIncrement:
 			newScore = oldScore + score
 			newSubscore = oldSubscore + subscore
@@ -275,10 +436,10 @@ func SubmitScore(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Client, lea
 
 		updateQuery := `
 			UPDATE leaderboard_record 
-			SET score = $1, subscore = $2, num_score = num_score + 1, metadata = $3, update_time = now() 
+			SET score = $1, subscore = $2, num_score = num_score + 1, metadata = $3, update_time = now(), username = $7
 			WHERE owner_id = $4 AND leaderboard_id = $5 AND expiry_time = $6
 		`
-		_, err = tx.Exec(ctx, updateQuery, newScore, newSubscore, metadata, ownerID, leaderboardID, expiryTime)
+		_, err = tx.Exec(ctx, updateQuery, newScore, newSubscore, metadata, ownerID, leaderboardID, expiryTime, username)
 		if err != nil {
 			return nil, err
 		}
@@ -296,31 +457,17 @@ func SubmitScore(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Client, lea
 		numScore = 1
 	}
 
-	// Update size in leaderboard config
 	_, err = tx.Exec(ctx, `UPDATE leaderboard SET size = (SELECT COUNT(*) FROM leaderboard_record WHERE leaderboard_id = $1 AND expiry_time = $2) WHERE id = $1`, leaderboardID, expiryTime)
 	if err != nil {
 		return nil, err
 	}
 
-	err = tx.Commit(ctx)
-	if err != nil {
+	if err = tx.Commit(ctx); err != nil {
 		return nil, err
 	}
 
-	// 3. Publish to Redis & Evict locally
-	key := fmt.Sprintf("%s:%d", leaderboardID, expiryTime.Unix())
-	localCache.mu.Lock()
-	delete(localCache.cache, key)
-	localCache.mu.Unlock()
-
-	if rdb != nil {
-		payload := InvalidationPayload{
-			LeaderboardID: leaderboardID,
-			ExpiryTime:    expiryTime.Unix(),
-		}
-		pBytes, _ := json.Marshal(payload)
-		rdb.Publish(ctx, "leaderboard:invalidation", string(pBytes))
-	}
+	rank := SharedRankCache.Insert(leaderboardID, sortOrder, newScore, newSubscore, expiryUnix, ownerID, enableRanks)
+	publishInvalidation(ctx, rdb, leaderboardID, expiryUnix)
 
 	return &LeaderboardRecord{
 		LeaderboardID: leaderboardID,
@@ -332,64 +479,164 @@ func SubmitScore(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Client, lea
 		MaxNumScore:   maxNumScore,
 		Metadata:      metadata,
 		ExpiryTime:    expiryTime,
+		CreateTime:    now,
+		UpdateTime:    now,
+		Rank:          rank,
 	}, nil
 }
 
-// GetLeaderboardRecords retrieves sorted, paginated records.
+// ResolveCurrentExpiry loads the leaderboard and returns the active expiry time.
+func ResolveCurrentExpiry(ctx context.Context, pool *pgxpool.Pool, leaderboardID string, overrideExpiry int64) (time.Time, *Leaderboard, error) {
+	lb, err := GetLeaderboard(ctx, pool, leaderboardID)
+	if err != nil {
+		return time.Time{}, nil, err
+	}
+	expiryUnix, ok := CalculateExpiry(lb, overrideExpiry, time.Now().UTC())
+	if !ok {
+		return time.Time{}, lb, ErrNoRecordsPossible
+	}
+	return ResolveExpiryTime(expiryUnix), lb, nil
+}
+
+// GetLeaderboardRecords retrieves sorted, paginated records with keyset cursors.
 func GetLeaderboardRecords(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Client, leaderboardID string, limit int, cursor string, expiryTime time.Time) ([]*LeaderboardRecord, string, error) {
+	records, next, _, err := GetLeaderboardRecordsPaged(ctx, pool, leaderboardID, limit, cursor, expiryTime, 0)
+	return records, next, err
+}
+
+// GetLeaderboardRecordsPaged returns next and prev cursors.
+func GetLeaderboardRecordsPaged(ctx context.Context, pool *pgxpool.Pool, leaderboardID string, limit int, cursor string, expiryTime time.Time, overrideExpiry int64) ([]*LeaderboardRecord, string, string, error) {
 	if limit <= 0 {
 		limit = 10
 	}
-	if limit > 100 {
-		limit = 100 // Enforce max page size rule
+	if limit > MaxPageSize {
+		limit = MaxPageSize
 	}
 
-	records, err := getOrBuildRankCache(ctx, pool, leaderboardID, expiryTime)
+	lb, err := GetLeaderboard(ctx, pool, leaderboardID)
 	if err != nil {
-		return nil, "", err
+		return nil, "", "", err
 	}
 
-	startIdx := 0
-	if cursor != "" {
-		parsed, err := strconv.Atoi(cursor)
-		if err == nil {
-			startIdx = parsed
+	if expiryTime.IsZero() || (expiryTime.Unix() == 0 && overrideExpiry == 0 && (lb.IsTournament() || lb.ResetSchedule != "")) {
+		et, _, err := ResolveCurrentExpiry(ctx, pool, leaderboardID, overrideExpiry)
+		if err != nil {
+			if errors.Is(err, ErrNoRecordsPossible) {
+				return []*LeaderboardRecord{}, "", "", nil
+			}
+			return nil, "", "", err
+		}
+		expiryTime = et
+	} else if overrideExpiry != 0 {
+		expiryTime = ResolveExpiryTime(overrideExpiry)
+	}
+
+	incoming, err := DecodeCursor(cursor)
+	if err != nil {
+		return nil, "", "", ErrInvalidCursor
+	}
+
+	orderAsc := lb.SortOrder == SortOrderAscending
+	query := `SELECT owner_id, username, score, subscore, num_score, max_num_score, metadata, create_time, update_time, expiry_time
+		FROM leaderboard_record WHERE leaderboard_id = $1 AND expiry_time = $2`
+	params := []interface{}{leaderboardID, expiryTime}
+
+	if incoming == nil {
+		if orderAsc {
+			query += " ORDER BY score ASC, subscore ASC, owner_id ASC"
+		} else {
+			query += " ORDER BY score DESC, subscore DESC, owner_id DESC"
+		}
+	} else {
+		goingForward := incoming.IsNext
+		if (orderAsc && goingForward) || (!orderAsc && !goingForward) {
+			query += " AND (score, subscore, owner_id) > ($3, $4, $5) ORDER BY score ASC, subscore ASC, owner_id ASC"
+		} else {
+			query += " AND (score, subscore, owner_id) < ($3, $4, $5) ORDER BY score DESC, subscore DESC, owner_id DESC"
+		}
+		params = append(params, incoming.Score, incoming.Subscore, incoming.OwnerID)
+	}
+	query += fmt.Sprintf(" LIMIT $%d", len(params)+1)
+	params = append(params, limit+1)
+
+	rows, err := pool.Query(ctx, query, params...)
+	if err != nil {
+		return nil, "", "", err
+	}
+	defer rows.Close()
+
+	var records []*LeaderboardRecord
+	for rows.Next() {
+		r := &LeaderboardRecord{LeaderboardID: leaderboardID}
+		if err := rows.Scan(&r.OwnerID, &r.Username, &r.Score, &r.Subscore, &r.NumScore, &r.MaxNumScore,
+			&r.Metadata, &r.CreateTime, &r.UpdateTime, &r.ExpiryTime); err != nil {
+			return nil, "", "", err
+		}
+		records = append(records, r)
+	}
+
+	// If we walked backward, reverse to ascending display order for desc boards etc.
+	if incoming != nil && !incoming.IsNext {
+		for i, j := 0, len(records)-1; i < j; i, j = i+1, j-1 {
+			records[i], records[j] = records[j], records[i]
 		}
 	}
 
-	if startIdx < 0 {
-		startIdx = 0
+	var nextCursor, prevCursor string
+	if len(records) > limit {
+		records = records[:limit]
+		last := records[len(records)-1]
+		nextCursor, _ = EncodeCursor(&RecordListCursor{
+			IsNext: true, LeaderboardID: leaderboardID, ExpiryUnix: expiryTime.Unix(),
+			Score: last.Score, Subscore: last.Subscore, OwnerID: last.OwnerID,
+		})
 	}
-	if startIdx >= len(records) {
-		return []*LeaderboardRecord{}, "", nil
-	}
-
-	endIdx := startIdx + limit
-	if endIdx > len(records) {
-		endIdx = len(records)
-	}
-
-	nextCursor := ""
-	if endIdx < len(records) {
-		nextCursor = strconv.Itoa(endIdx)
-	}
-
-	// Return a copy slice to prevent mutation of the cache
-	out := make([]*LeaderboardRecord, endIdx-startIdx)
-	for i := startIdx; i < endIdx; i++ {
-		out[i-startIdx] = records[i]
+	if len(records) > 0 && (incoming != nil) {
+		first := records[0]
+		prevCursor, _ = EncodeCursor(&RecordListCursor{
+			IsNext: false, LeaderboardID: leaderboardID, ExpiryUnix: expiryTime.Unix(),
+			Score: first.Score, Subscore: first.Subscore, OwnerID: first.OwnerID,
+		})
 	}
 
-	return out, nextCursor, nil
+	expiryUnix := expiryTime.Unix()
+	SharedRankCache.FillRanks(leaderboardID, expiryUnix, records, lb.EnableRanks)
+	// Assign ranks from cache; if missing, build from list cache for this page.
+	for i, r := range records {
+		if r.Rank == 0 && lb.EnableRanks {
+			base := int64(0)
+			if incoming != nil && incoming.IsNext {
+				base = incoming.Rank
+			}
+			r.Rank = base + int64(i) + 1
+		}
+	}
+
+	return records, nextCursor, prevCursor, nil
 }
 
-// GetLeaderboardRecordsAroundPlayer retrieves records centered around the target player's rank.
+// GetLeaderboardRecordsAroundPlayer retrieves records centered around the target player.
 func GetLeaderboardRecordsAroundPlayer(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Client, leaderboardID, ownerID string, limit int, expiryTime time.Time) ([]*LeaderboardRecord, error) {
 	if limit <= 0 {
 		limit = 5
 	}
 
-	records, err := getOrBuildRankCache(ctx, pool, leaderboardID, expiryTime)
+	lb, err := GetLeaderboard(ctx, pool, leaderboardID)
+	if err != nil {
+		return nil, err
+	}
+	if expiryTime.IsZero() || (expiryTime.Unix() == 0 && (lb.IsTournament() || lb.ResetSchedule != "")) {
+		et, _, err := ResolveCurrentExpiry(ctx, pool, leaderboardID, 0)
+		if err != nil {
+			if errors.Is(err, ErrNoRecordsPossible) {
+				return []*LeaderboardRecord{}, nil
+			}
+			return nil, err
+		}
+		expiryTime = et
+	}
+
+	records, err := getOrBuildRankCache(ctx, pool, leaderboardID, expiryTime, lb)
 	if err != nil {
 		return nil, err
 	}
@@ -401,7 +648,6 @@ func GetLeaderboardRecordsAroundPlayer(ctx context.Context, pool *pgxpool.Pool, 
 			break
 		}
 	}
-
 	if targetIdx == -1 {
 		return []*LeaderboardRecord{}, nil
 	}
@@ -416,17 +662,13 @@ func GetLeaderboardRecordsAroundPlayer(ctx context.Context, pool *pgxpool.Pool, 
 	}
 
 	out := make([]*LeaderboardRecord, endIdx-startIdx)
-	for i := startIdx; i < endIdx; i++ {
-		out[i-startIdx] = records[i]
-	}
-
+	copy(out, records[startIdx:endIdx])
 	return out, nil
 }
 
-func getOrBuildRankCache(ctx context.Context, pool *pgxpool.Pool, leaderboardID string, expiryTime time.Time) ([]*LeaderboardRecord, error) {
+func getOrBuildRankCache(ctx context.Context, pool *pgxpool.Pool, leaderboardID string, expiryTime time.Time, lb *Leaderboard) ([]*LeaderboardRecord, error) {
 	key := fmt.Sprintf("%s:%d", leaderboardID, expiryTime.Unix())
 
-	// 1. Read Lock Check
 	localCache.mu.RLock()
 	cached, exists := localCache.cache[key]
 	localCache.mu.RUnlock()
@@ -434,26 +676,20 @@ func getOrBuildRankCache(ctx context.Context, pool *pgxpool.Pool, leaderboardID 
 		return cached, nil
 	}
 
-	// 2. Write Lock build
 	localCache.mu.Lock()
 	defer localCache.mu.Unlock()
-
-	// Double-checked locking
 	if cached, exists = localCache.cache[key]; exists {
 		return cached, nil
 	}
 
-	// Load leaderboard SortOrder
-	lbQuery := `SELECT sort_order FROM leaderboard WHERE id = $1`
-	var sortOrder int
-	err := pool.QueryRow(ctx, lbQuery, leaderboardID).Scan(&sortOrder)
-	if err == pgx.ErrNoRows {
-		return nil, ErrLeaderboardNotFound
-	} else if err != nil {
-		return nil, err
+	if lb == nil {
+		var err error
+		lb, err = GetLeaderboard(ctx, pool, leaderboardID)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	// Load all records from PostgreSQL
 	recordQuery := `
 		SELECT owner_id, username, score, subscore, num_score, max_num_score, metadata, create_time, update_time, expiry_time
 		FROM leaderboard_record
@@ -468,17 +704,34 @@ func getOrBuildRankCache(ctx context.Context, pool *pgxpool.Pool, leaderboardID 
 	var records []*LeaderboardRecord
 	for rows.Next() {
 		r := &LeaderboardRecord{LeaderboardID: leaderboardID}
-		err = rows.Scan(
+		if err = rows.Scan(
 			&r.OwnerID, &r.Username, &r.Score, &r.Subscore, &r.NumScore, &r.MaxNumScore,
 			&r.Metadata, &r.CreateTime, &r.UpdateTime, &r.ExpiryTime,
-		)
-		if err != nil {
+		); err != nil {
 			return nil, err
 		}
 		records = append(records, r)
 	}
 
-	// Sort records strictly to guarantee unique rank determination
+	sortOrder := lb.SortOrder
+	sortRecords(records, sortOrder)
+
+	SharedRankCache.LoadFromRecords(leaderboardID, expiryTime.Unix(), sortOrder, lb.EnableRanks, records)
+	if !lb.EnableRanks {
+		for _, r := range records {
+			r.Rank = 0
+		}
+	} else {
+		for i, r := range records {
+			r.Rank = int64(i + 1)
+		}
+	}
+
+	localCache.cache[key] = records
+	return records, nil
+}
+
+func sortRecords(records []*LeaderboardRecord, sortOrder int) {
 	sort.Slice(records, func(i, j int) bool {
 		r1, r2 := records[i], records[j]
 		if r1.Score != r2.Score {
@@ -494,18 +747,10 @@ func getOrBuildRankCache(ctx context.Context, pool *pgxpool.Pool, leaderboardID 
 			return r1.Subscore < r2.Subscore
 		}
 		if !r1.UpdateTime.Equal(r2.UpdateTime) {
-			return r1.UpdateTime.Before(r2.UpdateTime) // Earliest submission wins
+			return r1.UpdateTime.Before(r2.UpdateTime)
 		}
-		return r1.OwnerID < r2.OwnerID // Stable tie-breaker
+		return r1.OwnerID < r2.OwnerID
 	})
-
-	// Assign dense/sequential ranks
-	for i, r := range records {
-		r.Rank = int64(i + 1)
-	}
-
-	localCache.cache[key] = records
-	return records, nil
 }
 
 // DeleteLeaderboard deletes a leaderboard configuration and all its records.
@@ -516,36 +761,117 @@ func DeleteLeaderboard(ctx context.Context, pool *pgxpool.Pool, id string) error
 	}
 	defer tx.Rollback(ctx)
 
-	_, err = tx.Exec(ctx, "DELETE FROM leaderboard_record WHERE leaderboard_id = $1", id)
-	if err != nil {
+	if _, err = tx.Exec(ctx, "DELETE FROM leaderboard_record WHERE leaderboard_id = $1", id); err != nil {
+		return err
+	}
+	if _, err = tx.Exec(ctx, "DELETE FROM leaderboard WHERE id = $1", id); err != nil {
+		return err
+	}
+	if err = tx.Commit(ctx); err != nil {
 		return err
 	}
 
-	_, err = tx.Exec(ctx, "DELETE FROM leaderboard WHERE id = $1", id)
-	if err != nil {
-		return err
-	}
-
-	return tx.Commit(ctx)
-}
-
-// DeleteRecord deletes a specific leaderboard record for a user.
-func DeleteRecord(ctx context.Context, pool *pgxpool.Pool, leaderboardID, ownerID string) error {
-	query := `DELETE FROM leaderboard_record WHERE leaderboard_id = $1 AND owner_id = $2`
-	_, err := pool.Exec(ctx, query, leaderboardID, ownerID)
-	if err != nil {
-		return err
-	}
-
-	// Evict all local rank caches for this leaderboard
+	SharedConfigCache.Delete(id)
+	SharedRankCache.DeleteLeaderboard(id)
 	localCache.mu.Lock()
 	for k := range localCache.cache {
-		if strings.HasPrefix(k, leaderboardID+":") {
+		if len(k) >= len(id)+1 && k[:len(id)+1] == id+":" {
 			delete(localCache.cache, k)
 		}
 	}
 	localCache.mu.Unlock()
-
 	return nil
 }
 
+// DeleteRecord deletes a specific leaderboard record for a user across all expiries for the board.
+func DeleteRecord(ctx context.Context, pool *pgxpool.Pool, leaderboardID, ownerID string) error {
+	_, err := pool.Exec(ctx, `DELETE FROM leaderboard_record WHERE leaderboard_id = $1 AND owner_id = $2`, leaderboardID, ownerID)
+	if err != nil {
+		return err
+	}
+
+	localCache.mu.Lock()
+	for k := range localCache.cache {
+		if len(k) >= len(leaderboardID)+1 && k[:len(leaderboardID)+1] == leaderboardID+":" {
+			delete(localCache.cache, k)
+		}
+	}
+	localCache.mu.Unlock()
+	SharedRankCache.DeleteLeaderboard(leaderboardID)
+	return nil
+}
+
+// DeleteRecordForExpiry deletes a record for a specific expiry partition.
+func DeleteRecordForExpiry(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Client, leaderboardID, ownerID string, expiryUnix int64) error {
+	expiryTime := ResolveExpiryTime(expiryUnix)
+	_, err := pool.Exec(ctx, `DELETE FROM leaderboard_record WHERE leaderboard_id = $1 AND owner_id = $2 AND expiry_time = $3`,
+		leaderboardID, ownerID, expiryTime)
+	if err != nil {
+		return err
+	}
+	SharedRankCache.Delete(leaderboardID, expiryUnix, ownerID)
+	publishInvalidation(ctx, rdb, leaderboardID, expiryUnix)
+	return nil
+}
+
+// PruneExpiredRecords deletes records whose expiry_time has passed (and is not epoch).
+func PruneExpiredRecords(ctx context.Context, pool *pgxpool.Pool, now time.Time) (int64, error) {
+	tag, err := pool.Exec(ctx, `
+		DELETE FROM leaderboard_record
+		WHERE expiry_time > TIMESTAMPTZ '1970-01-01 00:00:00+00'
+		  AND expiry_time < $1
+	`, now.UTC())
+	if err != nil {
+		return 0, err
+	}
+	SharedRankCache.TrimExpired(now.Unix())
+	return tag.RowsAffected(), nil
+}
+
+// GetOwnerRecords fetches specific owners' records for a leaderboard expiry.
+func GetOwnerRecords(ctx context.Context, pool *pgxpool.Pool, leaderboardID string, ownerIDs []string, expiryTime time.Time) ([]*LeaderboardRecord, error) {
+	if len(ownerIDs) == 0 {
+		return nil, nil
+	}
+	lb, err := GetLeaderboard(ctx, pool, leaderboardID)
+	if err != nil {
+		return nil, err
+	}
+	if expiryTime.IsZero() {
+		et, _, err := ResolveCurrentExpiry(ctx, pool, leaderboardID, 0)
+		if err != nil {
+			if errors.Is(err, ErrNoRecordsPossible) {
+				return []*LeaderboardRecord{}, nil
+			}
+			return nil, err
+		}
+		expiryTime = et
+	}
+
+	rows, err := pool.Query(ctx, `
+		SELECT owner_id, username, score, subscore, num_score, max_num_score, metadata, create_time, update_time, expiry_time
+		FROM leaderboard_record
+		WHERE leaderboard_id = $1 AND expiry_time = $2 AND owner_id = ANY($3::uuid[])
+	`, leaderboardID, expiryTime, ownerIDs)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var records []*LeaderboardRecord
+	for rows.Next() {
+		r := &LeaderboardRecord{LeaderboardID: leaderboardID}
+		if err := rows.Scan(&r.OwnerID, &r.Username, &r.Score, &r.Subscore, &r.NumScore, &r.MaxNumScore,
+			&r.Metadata, &r.CreateTime, &r.UpdateTime, &r.ExpiryTime); err != nil {
+			return nil, err
+		}
+		records = append(records, r)
+	}
+	SharedRankCache.FillRanks(leaderboardID, expiryTime.Unix(), records, lb.EnableRanks)
+	for _, r := range records {
+		if r.Rank == 0 && lb.EnableRanks {
+			r.Rank = SharedRankCache.GetRank(leaderboardID, expiryTime.Unix(), r.OwnerID)
+		}
+	}
+	return records, nil
+}

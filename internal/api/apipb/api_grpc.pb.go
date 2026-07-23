@@ -20,8 +20,1099 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
+	AuthenticationService_AuthenticateEmail_FullMethodName      = "/ultimate.server.api.AuthenticationService/AuthenticateEmail"
+	AuthenticationService_AuthenticateDevice_FullMethodName     = "/ultimate.server.api.AuthenticationService/AuthenticateDevice"
+	AuthenticationService_AuthenticateApple_FullMethodName      = "/ultimate.server.api.AuthenticationService/AuthenticateApple"
+	AuthenticationService_AuthenticateGoogle_FullMethodName     = "/ultimate.server.api.AuthenticationService/AuthenticateGoogle"
+	AuthenticationService_AuthenticateFacebook_FullMethodName   = "/ultimate.server.api.AuthenticationService/AuthenticateFacebook"
+	AuthenticationService_AuthenticateSteam_FullMethodName      = "/ultimate.server.api.AuthenticationService/AuthenticateSteam"
+	AuthenticationService_AuthenticateGameCenter_FullMethodName = "/ultimate.server.api.AuthenticationService/AuthenticateGameCenter"
+	AuthenticationService_AuthenticateCustom_FullMethodName     = "/ultimate.server.api.AuthenticationService/AuthenticateCustom"
+	AuthenticationService_SessionRefresh_FullMethodName         = "/ultimate.server.api.AuthenticationService/SessionRefresh"
+	AuthenticationService_SessionLogout_FullMethodName          = "/ultimate.server.api.AuthenticationService/SessionLogout"
+	AuthenticationService_GetAccount_FullMethodName             = "/ultimate.server.api.AuthenticationService/GetAccount"
+	AuthenticationService_UpdateAccount_FullMethodName          = "/ultimate.server.api.AuthenticationService/UpdateAccount"
+	AuthenticationService_DeleteAccount_FullMethodName          = "/ultimate.server.api.AuthenticationService/DeleteAccount"
+	AuthenticationService_LinkEmail_FullMethodName              = "/ultimate.server.api.AuthenticationService/LinkEmail"
+	AuthenticationService_LinkDevice_FullMethodName             = "/ultimate.server.api.AuthenticationService/LinkDevice"
+	AuthenticationService_LinkApple_FullMethodName              = "/ultimate.server.api.AuthenticationService/LinkApple"
+	AuthenticationService_LinkGoogle_FullMethodName             = "/ultimate.server.api.AuthenticationService/LinkGoogle"
+	AuthenticationService_LinkFacebook_FullMethodName           = "/ultimate.server.api.AuthenticationService/LinkFacebook"
+	AuthenticationService_LinkSteam_FullMethodName              = "/ultimate.server.api.AuthenticationService/LinkSteam"
+	AuthenticationService_LinkCustom_FullMethodName             = "/ultimate.server.api.AuthenticationService/LinkCustom"
+	AuthenticationService_UnlinkEmail_FullMethodName            = "/ultimate.server.api.AuthenticationService/UnlinkEmail"
+	AuthenticationService_UnlinkDevice_FullMethodName           = "/ultimate.server.api.AuthenticationService/UnlinkDevice"
+	AuthenticationService_UnlinkApple_FullMethodName            = "/ultimate.server.api.AuthenticationService/UnlinkApple"
+	AuthenticationService_UnlinkGoogle_FullMethodName           = "/ultimate.server.api.AuthenticationService/UnlinkGoogle"
+	AuthenticationService_UnlinkFacebook_FullMethodName         = "/ultimate.server.api.AuthenticationService/UnlinkFacebook"
+	AuthenticationService_UnlinkSteam_FullMethodName            = "/ultimate.server.api.AuthenticationService/UnlinkSteam"
+	AuthenticationService_UnlinkCustom_FullMethodName           = "/ultimate.server.api.AuthenticationService/UnlinkCustom"
+)
+
+// AuthenticationServiceClient is the client API for AuthenticationService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type AuthenticationServiceClient interface {
+	AuthenticateEmail(ctx context.Context, in *AuthenticateEmailRequest, opts ...grpc.CallOption) (*Session, error)
+	AuthenticateDevice(ctx context.Context, in *AuthenticateDeviceRequest, opts ...grpc.CallOption) (*Session, error)
+	AuthenticateApple(ctx context.Context, in *AuthenticateAppleRequest, opts ...grpc.CallOption) (*Session, error)
+	AuthenticateGoogle(ctx context.Context, in *AuthenticateGoogleRequest, opts ...grpc.CallOption) (*Session, error)
+	AuthenticateFacebook(ctx context.Context, in *AuthenticateFacebookRequest, opts ...grpc.CallOption) (*Session, error)
+	AuthenticateSteam(ctx context.Context, in *AuthenticateSteamRequest, opts ...grpc.CallOption) (*Session, error)
+	AuthenticateGameCenter(ctx context.Context, in *AuthenticateGameCenterRequest, opts ...grpc.CallOption) (*Session, error)
+	AuthenticateCustom(ctx context.Context, in *AuthenticateCustomRequest, opts ...grpc.CallOption) (*Session, error)
+	SessionRefresh(ctx context.Context, in *SessionRefreshRequest, opts ...grpc.CallOption) (*Session, error)
+	SessionLogout(ctx context.Context, in *SessionLogoutRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	GetAccount(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*Account, error)
+	UpdateAccount(ctx context.Context, in *UpdateAccountRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	DeleteAccount(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	LinkEmail(ctx context.Context, in *AuthenticateEmailRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	LinkDevice(ctx context.Context, in *AuthenticateDeviceRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	LinkApple(ctx context.Context, in *AuthenticateAppleRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	LinkGoogle(ctx context.Context, in *AuthenticateGoogleRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	LinkFacebook(ctx context.Context, in *AuthenticateFacebookRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	LinkSteam(ctx context.Context, in *AuthenticateSteamRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	LinkCustom(ctx context.Context, in *AuthenticateCustomRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	UnlinkEmail(ctx context.Context, in *UnlinkRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	UnlinkDevice(ctx context.Context, in *UnlinkRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	UnlinkApple(ctx context.Context, in *UnlinkRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	UnlinkGoogle(ctx context.Context, in *UnlinkRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	UnlinkFacebook(ctx context.Context, in *UnlinkRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	UnlinkSteam(ctx context.Context, in *UnlinkRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	UnlinkCustom(ctx context.Context, in *UnlinkRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+}
+
+type authenticationServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewAuthenticationServiceClient(cc grpc.ClientConnInterface) AuthenticationServiceClient {
+	return &authenticationServiceClient{cc}
+}
+
+func (c *authenticationServiceClient) AuthenticateEmail(ctx context.Context, in *AuthenticateEmailRequest, opts ...grpc.CallOption) (*Session, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Session)
+	err := c.cc.Invoke(ctx, AuthenticationService_AuthenticateEmail_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authenticationServiceClient) AuthenticateDevice(ctx context.Context, in *AuthenticateDeviceRequest, opts ...grpc.CallOption) (*Session, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Session)
+	err := c.cc.Invoke(ctx, AuthenticationService_AuthenticateDevice_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authenticationServiceClient) AuthenticateApple(ctx context.Context, in *AuthenticateAppleRequest, opts ...grpc.CallOption) (*Session, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Session)
+	err := c.cc.Invoke(ctx, AuthenticationService_AuthenticateApple_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authenticationServiceClient) AuthenticateGoogle(ctx context.Context, in *AuthenticateGoogleRequest, opts ...grpc.CallOption) (*Session, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Session)
+	err := c.cc.Invoke(ctx, AuthenticationService_AuthenticateGoogle_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authenticationServiceClient) AuthenticateFacebook(ctx context.Context, in *AuthenticateFacebookRequest, opts ...grpc.CallOption) (*Session, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Session)
+	err := c.cc.Invoke(ctx, AuthenticationService_AuthenticateFacebook_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authenticationServiceClient) AuthenticateSteam(ctx context.Context, in *AuthenticateSteamRequest, opts ...grpc.CallOption) (*Session, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Session)
+	err := c.cc.Invoke(ctx, AuthenticationService_AuthenticateSteam_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authenticationServiceClient) AuthenticateGameCenter(ctx context.Context, in *AuthenticateGameCenterRequest, opts ...grpc.CallOption) (*Session, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Session)
+	err := c.cc.Invoke(ctx, AuthenticationService_AuthenticateGameCenter_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authenticationServiceClient) AuthenticateCustom(ctx context.Context, in *AuthenticateCustomRequest, opts ...grpc.CallOption) (*Session, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Session)
+	err := c.cc.Invoke(ctx, AuthenticationService_AuthenticateCustom_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authenticationServiceClient) SessionRefresh(ctx context.Context, in *SessionRefreshRequest, opts ...grpc.CallOption) (*Session, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Session)
+	err := c.cc.Invoke(ctx, AuthenticationService_SessionRefresh_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authenticationServiceClient) SessionLogout(ctx context.Context, in *SessionLogoutRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, AuthenticationService_SessionLogout_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authenticationServiceClient) GetAccount(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*Account, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Account)
+	err := c.cc.Invoke(ctx, AuthenticationService_GetAccount_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authenticationServiceClient) UpdateAccount(ctx context.Context, in *UpdateAccountRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, AuthenticationService_UpdateAccount_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authenticationServiceClient) DeleteAccount(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, AuthenticationService_DeleteAccount_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authenticationServiceClient) LinkEmail(ctx context.Context, in *AuthenticateEmailRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, AuthenticationService_LinkEmail_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authenticationServiceClient) LinkDevice(ctx context.Context, in *AuthenticateDeviceRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, AuthenticationService_LinkDevice_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authenticationServiceClient) LinkApple(ctx context.Context, in *AuthenticateAppleRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, AuthenticationService_LinkApple_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authenticationServiceClient) LinkGoogle(ctx context.Context, in *AuthenticateGoogleRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, AuthenticationService_LinkGoogle_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authenticationServiceClient) LinkFacebook(ctx context.Context, in *AuthenticateFacebookRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, AuthenticationService_LinkFacebook_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authenticationServiceClient) LinkSteam(ctx context.Context, in *AuthenticateSteamRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, AuthenticationService_LinkSteam_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authenticationServiceClient) LinkCustom(ctx context.Context, in *AuthenticateCustomRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, AuthenticationService_LinkCustom_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authenticationServiceClient) UnlinkEmail(ctx context.Context, in *UnlinkRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, AuthenticationService_UnlinkEmail_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authenticationServiceClient) UnlinkDevice(ctx context.Context, in *UnlinkRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, AuthenticationService_UnlinkDevice_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authenticationServiceClient) UnlinkApple(ctx context.Context, in *UnlinkRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, AuthenticationService_UnlinkApple_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authenticationServiceClient) UnlinkGoogle(ctx context.Context, in *UnlinkRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, AuthenticationService_UnlinkGoogle_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authenticationServiceClient) UnlinkFacebook(ctx context.Context, in *UnlinkRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, AuthenticationService_UnlinkFacebook_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authenticationServiceClient) UnlinkSteam(ctx context.Context, in *UnlinkRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, AuthenticationService_UnlinkSteam_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authenticationServiceClient) UnlinkCustom(ctx context.Context, in *UnlinkRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, AuthenticationService_UnlinkCustom_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// AuthenticationServiceServer is the server API for AuthenticationService service.
+// All implementations must embed UnimplementedAuthenticationServiceServer
+// for forward compatibility.
+type AuthenticationServiceServer interface {
+	AuthenticateEmail(context.Context, *AuthenticateEmailRequest) (*Session, error)
+	AuthenticateDevice(context.Context, *AuthenticateDeviceRequest) (*Session, error)
+	AuthenticateApple(context.Context, *AuthenticateAppleRequest) (*Session, error)
+	AuthenticateGoogle(context.Context, *AuthenticateGoogleRequest) (*Session, error)
+	AuthenticateFacebook(context.Context, *AuthenticateFacebookRequest) (*Session, error)
+	AuthenticateSteam(context.Context, *AuthenticateSteamRequest) (*Session, error)
+	AuthenticateGameCenter(context.Context, *AuthenticateGameCenterRequest) (*Session, error)
+	AuthenticateCustom(context.Context, *AuthenticateCustomRequest) (*Session, error)
+	SessionRefresh(context.Context, *SessionRefreshRequest) (*Session, error)
+	SessionLogout(context.Context, *SessionLogoutRequest) (*emptypb.Empty, error)
+	GetAccount(context.Context, *emptypb.Empty) (*Account, error)
+	UpdateAccount(context.Context, *UpdateAccountRequest) (*emptypb.Empty, error)
+	DeleteAccount(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
+	LinkEmail(context.Context, *AuthenticateEmailRequest) (*emptypb.Empty, error)
+	LinkDevice(context.Context, *AuthenticateDeviceRequest) (*emptypb.Empty, error)
+	LinkApple(context.Context, *AuthenticateAppleRequest) (*emptypb.Empty, error)
+	LinkGoogle(context.Context, *AuthenticateGoogleRequest) (*emptypb.Empty, error)
+	LinkFacebook(context.Context, *AuthenticateFacebookRequest) (*emptypb.Empty, error)
+	LinkSteam(context.Context, *AuthenticateSteamRequest) (*emptypb.Empty, error)
+	LinkCustom(context.Context, *AuthenticateCustomRequest) (*emptypb.Empty, error)
+	UnlinkEmail(context.Context, *UnlinkRequest) (*emptypb.Empty, error)
+	UnlinkDevice(context.Context, *UnlinkRequest) (*emptypb.Empty, error)
+	UnlinkApple(context.Context, *UnlinkRequest) (*emptypb.Empty, error)
+	UnlinkGoogle(context.Context, *UnlinkRequest) (*emptypb.Empty, error)
+	UnlinkFacebook(context.Context, *UnlinkRequest) (*emptypb.Empty, error)
+	UnlinkSteam(context.Context, *UnlinkRequest) (*emptypb.Empty, error)
+	UnlinkCustom(context.Context, *UnlinkRequest) (*emptypb.Empty, error)
+	mustEmbedUnimplementedAuthenticationServiceServer()
+}
+
+// UnimplementedAuthenticationServiceServer must be embedded to have
+// forward compatible implementations.
+//
+// NOTE: this should be embedded by value instead of pointer to avoid a nil
+// pointer dereference when methods are called.
+type UnimplementedAuthenticationServiceServer struct{}
+
+func (UnimplementedAuthenticationServiceServer) AuthenticateEmail(context.Context, *AuthenticateEmailRequest) (*Session, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AuthenticateEmail not implemented")
+}
+func (UnimplementedAuthenticationServiceServer) AuthenticateDevice(context.Context, *AuthenticateDeviceRequest) (*Session, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AuthenticateDevice not implemented")
+}
+func (UnimplementedAuthenticationServiceServer) AuthenticateApple(context.Context, *AuthenticateAppleRequest) (*Session, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AuthenticateApple not implemented")
+}
+func (UnimplementedAuthenticationServiceServer) AuthenticateGoogle(context.Context, *AuthenticateGoogleRequest) (*Session, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AuthenticateGoogle not implemented")
+}
+func (UnimplementedAuthenticationServiceServer) AuthenticateFacebook(context.Context, *AuthenticateFacebookRequest) (*Session, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AuthenticateFacebook not implemented")
+}
+func (UnimplementedAuthenticationServiceServer) AuthenticateSteam(context.Context, *AuthenticateSteamRequest) (*Session, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AuthenticateSteam not implemented")
+}
+func (UnimplementedAuthenticationServiceServer) AuthenticateGameCenter(context.Context, *AuthenticateGameCenterRequest) (*Session, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AuthenticateGameCenter not implemented")
+}
+func (UnimplementedAuthenticationServiceServer) AuthenticateCustom(context.Context, *AuthenticateCustomRequest) (*Session, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AuthenticateCustom not implemented")
+}
+func (UnimplementedAuthenticationServiceServer) SessionRefresh(context.Context, *SessionRefreshRequest) (*Session, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SessionRefresh not implemented")
+}
+func (UnimplementedAuthenticationServiceServer) SessionLogout(context.Context, *SessionLogoutRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SessionLogout not implemented")
+}
+func (UnimplementedAuthenticationServiceServer) GetAccount(context.Context, *emptypb.Empty) (*Account, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetAccount not implemented")
+}
+func (UnimplementedAuthenticationServiceServer) UpdateAccount(context.Context, *UpdateAccountRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateAccount not implemented")
+}
+func (UnimplementedAuthenticationServiceServer) DeleteAccount(context.Context, *emptypb.Empty) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteAccount not implemented")
+}
+func (UnimplementedAuthenticationServiceServer) LinkEmail(context.Context, *AuthenticateEmailRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method LinkEmail not implemented")
+}
+func (UnimplementedAuthenticationServiceServer) LinkDevice(context.Context, *AuthenticateDeviceRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method LinkDevice not implemented")
+}
+func (UnimplementedAuthenticationServiceServer) LinkApple(context.Context, *AuthenticateAppleRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method LinkApple not implemented")
+}
+func (UnimplementedAuthenticationServiceServer) LinkGoogle(context.Context, *AuthenticateGoogleRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method LinkGoogle not implemented")
+}
+func (UnimplementedAuthenticationServiceServer) LinkFacebook(context.Context, *AuthenticateFacebookRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method LinkFacebook not implemented")
+}
+func (UnimplementedAuthenticationServiceServer) LinkSteam(context.Context, *AuthenticateSteamRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method LinkSteam not implemented")
+}
+func (UnimplementedAuthenticationServiceServer) LinkCustom(context.Context, *AuthenticateCustomRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method LinkCustom not implemented")
+}
+func (UnimplementedAuthenticationServiceServer) UnlinkEmail(context.Context, *UnlinkRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UnlinkEmail not implemented")
+}
+func (UnimplementedAuthenticationServiceServer) UnlinkDevice(context.Context, *UnlinkRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UnlinkDevice not implemented")
+}
+func (UnimplementedAuthenticationServiceServer) UnlinkApple(context.Context, *UnlinkRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UnlinkApple not implemented")
+}
+func (UnimplementedAuthenticationServiceServer) UnlinkGoogle(context.Context, *UnlinkRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UnlinkGoogle not implemented")
+}
+func (UnimplementedAuthenticationServiceServer) UnlinkFacebook(context.Context, *UnlinkRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UnlinkFacebook not implemented")
+}
+func (UnimplementedAuthenticationServiceServer) UnlinkSteam(context.Context, *UnlinkRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UnlinkSteam not implemented")
+}
+func (UnimplementedAuthenticationServiceServer) UnlinkCustom(context.Context, *UnlinkRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UnlinkCustom not implemented")
+}
+func (UnimplementedAuthenticationServiceServer) mustEmbedUnimplementedAuthenticationServiceServer() {}
+func (UnimplementedAuthenticationServiceServer) testEmbeddedByValue()                               {}
+
+// UnsafeAuthenticationServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to AuthenticationServiceServer will
+// result in compilation errors.
+type UnsafeAuthenticationServiceServer interface {
+	mustEmbedUnimplementedAuthenticationServiceServer()
+}
+
+func RegisterAuthenticationServiceServer(s grpc.ServiceRegistrar, srv AuthenticationServiceServer) {
+	// If the following call pancis, it indicates UnimplementedAuthenticationServiceServer was
+	// embedded by pointer and is nil.  This will cause panics if an
+	// unimplemented method is ever invoked, so we test this at initialization
+	// time to prevent it from happening at runtime later due to I/O.
+	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
+		t.testEmbeddedByValue()
+	}
+	s.RegisterService(&AuthenticationService_ServiceDesc, srv)
+}
+
+func _AuthenticationService_AuthenticateEmail_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AuthenticateEmailRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthenticationServiceServer).AuthenticateEmail(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthenticationService_AuthenticateEmail_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthenticationServiceServer).AuthenticateEmail(ctx, req.(*AuthenticateEmailRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthenticationService_AuthenticateDevice_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AuthenticateDeviceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthenticationServiceServer).AuthenticateDevice(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthenticationService_AuthenticateDevice_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthenticationServiceServer).AuthenticateDevice(ctx, req.(*AuthenticateDeviceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthenticationService_AuthenticateApple_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AuthenticateAppleRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthenticationServiceServer).AuthenticateApple(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthenticationService_AuthenticateApple_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthenticationServiceServer).AuthenticateApple(ctx, req.(*AuthenticateAppleRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthenticationService_AuthenticateGoogle_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AuthenticateGoogleRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthenticationServiceServer).AuthenticateGoogle(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthenticationService_AuthenticateGoogle_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthenticationServiceServer).AuthenticateGoogle(ctx, req.(*AuthenticateGoogleRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthenticationService_AuthenticateFacebook_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AuthenticateFacebookRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthenticationServiceServer).AuthenticateFacebook(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthenticationService_AuthenticateFacebook_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthenticationServiceServer).AuthenticateFacebook(ctx, req.(*AuthenticateFacebookRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthenticationService_AuthenticateSteam_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AuthenticateSteamRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthenticationServiceServer).AuthenticateSteam(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthenticationService_AuthenticateSteam_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthenticationServiceServer).AuthenticateSteam(ctx, req.(*AuthenticateSteamRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthenticationService_AuthenticateGameCenter_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AuthenticateGameCenterRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthenticationServiceServer).AuthenticateGameCenter(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthenticationService_AuthenticateGameCenter_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthenticationServiceServer).AuthenticateGameCenter(ctx, req.(*AuthenticateGameCenterRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthenticationService_AuthenticateCustom_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AuthenticateCustomRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthenticationServiceServer).AuthenticateCustom(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthenticationService_AuthenticateCustom_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthenticationServiceServer).AuthenticateCustom(ctx, req.(*AuthenticateCustomRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthenticationService_SessionRefresh_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SessionRefreshRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthenticationServiceServer).SessionRefresh(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthenticationService_SessionRefresh_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthenticationServiceServer).SessionRefresh(ctx, req.(*SessionRefreshRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthenticationService_SessionLogout_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SessionLogoutRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthenticationServiceServer).SessionLogout(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthenticationService_SessionLogout_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthenticationServiceServer).SessionLogout(ctx, req.(*SessionLogoutRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthenticationService_GetAccount_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthenticationServiceServer).GetAccount(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthenticationService_GetAccount_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthenticationServiceServer).GetAccount(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthenticationService_UpdateAccount_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateAccountRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthenticationServiceServer).UpdateAccount(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthenticationService_UpdateAccount_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthenticationServiceServer).UpdateAccount(ctx, req.(*UpdateAccountRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthenticationService_DeleteAccount_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthenticationServiceServer).DeleteAccount(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthenticationService_DeleteAccount_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthenticationServiceServer).DeleteAccount(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthenticationService_LinkEmail_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AuthenticateEmailRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthenticationServiceServer).LinkEmail(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthenticationService_LinkEmail_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthenticationServiceServer).LinkEmail(ctx, req.(*AuthenticateEmailRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthenticationService_LinkDevice_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AuthenticateDeviceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthenticationServiceServer).LinkDevice(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthenticationService_LinkDevice_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthenticationServiceServer).LinkDevice(ctx, req.(*AuthenticateDeviceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthenticationService_LinkApple_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AuthenticateAppleRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthenticationServiceServer).LinkApple(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthenticationService_LinkApple_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthenticationServiceServer).LinkApple(ctx, req.(*AuthenticateAppleRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthenticationService_LinkGoogle_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AuthenticateGoogleRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthenticationServiceServer).LinkGoogle(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthenticationService_LinkGoogle_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthenticationServiceServer).LinkGoogle(ctx, req.(*AuthenticateGoogleRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthenticationService_LinkFacebook_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AuthenticateFacebookRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthenticationServiceServer).LinkFacebook(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthenticationService_LinkFacebook_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthenticationServiceServer).LinkFacebook(ctx, req.(*AuthenticateFacebookRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthenticationService_LinkSteam_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AuthenticateSteamRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthenticationServiceServer).LinkSteam(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthenticationService_LinkSteam_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthenticationServiceServer).LinkSteam(ctx, req.(*AuthenticateSteamRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthenticationService_LinkCustom_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AuthenticateCustomRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthenticationServiceServer).LinkCustom(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthenticationService_LinkCustom_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthenticationServiceServer).LinkCustom(ctx, req.(*AuthenticateCustomRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthenticationService_UnlinkEmail_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UnlinkRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthenticationServiceServer).UnlinkEmail(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthenticationService_UnlinkEmail_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthenticationServiceServer).UnlinkEmail(ctx, req.(*UnlinkRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthenticationService_UnlinkDevice_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UnlinkRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthenticationServiceServer).UnlinkDevice(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthenticationService_UnlinkDevice_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthenticationServiceServer).UnlinkDevice(ctx, req.(*UnlinkRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthenticationService_UnlinkApple_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UnlinkRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthenticationServiceServer).UnlinkApple(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthenticationService_UnlinkApple_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthenticationServiceServer).UnlinkApple(ctx, req.(*UnlinkRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthenticationService_UnlinkGoogle_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UnlinkRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthenticationServiceServer).UnlinkGoogle(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthenticationService_UnlinkGoogle_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthenticationServiceServer).UnlinkGoogle(ctx, req.(*UnlinkRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthenticationService_UnlinkFacebook_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UnlinkRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthenticationServiceServer).UnlinkFacebook(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthenticationService_UnlinkFacebook_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthenticationServiceServer).UnlinkFacebook(ctx, req.(*UnlinkRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthenticationService_UnlinkSteam_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UnlinkRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthenticationServiceServer).UnlinkSteam(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthenticationService_UnlinkSteam_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthenticationServiceServer).UnlinkSteam(ctx, req.(*UnlinkRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthenticationService_UnlinkCustom_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UnlinkRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthenticationServiceServer).UnlinkCustom(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthenticationService_UnlinkCustom_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthenticationServiceServer).UnlinkCustom(ctx, req.(*UnlinkRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// AuthenticationService_ServiceDesc is the grpc.ServiceDesc for AuthenticationService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var AuthenticationService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "ultimate.server.api.AuthenticationService",
+	HandlerType: (*AuthenticationServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "AuthenticateEmail",
+			Handler:    _AuthenticationService_AuthenticateEmail_Handler,
+		},
+		{
+			MethodName: "AuthenticateDevice",
+			Handler:    _AuthenticationService_AuthenticateDevice_Handler,
+		},
+		{
+			MethodName: "AuthenticateApple",
+			Handler:    _AuthenticationService_AuthenticateApple_Handler,
+		},
+		{
+			MethodName: "AuthenticateGoogle",
+			Handler:    _AuthenticationService_AuthenticateGoogle_Handler,
+		},
+		{
+			MethodName: "AuthenticateFacebook",
+			Handler:    _AuthenticationService_AuthenticateFacebook_Handler,
+		},
+		{
+			MethodName: "AuthenticateSteam",
+			Handler:    _AuthenticationService_AuthenticateSteam_Handler,
+		},
+		{
+			MethodName: "AuthenticateGameCenter",
+			Handler:    _AuthenticationService_AuthenticateGameCenter_Handler,
+		},
+		{
+			MethodName: "AuthenticateCustom",
+			Handler:    _AuthenticationService_AuthenticateCustom_Handler,
+		},
+		{
+			MethodName: "SessionRefresh",
+			Handler:    _AuthenticationService_SessionRefresh_Handler,
+		},
+		{
+			MethodName: "SessionLogout",
+			Handler:    _AuthenticationService_SessionLogout_Handler,
+		},
+		{
+			MethodName: "GetAccount",
+			Handler:    _AuthenticationService_GetAccount_Handler,
+		},
+		{
+			MethodName: "UpdateAccount",
+			Handler:    _AuthenticationService_UpdateAccount_Handler,
+		},
+		{
+			MethodName: "DeleteAccount",
+			Handler:    _AuthenticationService_DeleteAccount_Handler,
+		},
+		{
+			MethodName: "LinkEmail",
+			Handler:    _AuthenticationService_LinkEmail_Handler,
+		},
+		{
+			MethodName: "LinkDevice",
+			Handler:    _AuthenticationService_LinkDevice_Handler,
+		},
+		{
+			MethodName: "LinkApple",
+			Handler:    _AuthenticationService_LinkApple_Handler,
+		},
+		{
+			MethodName: "LinkGoogle",
+			Handler:    _AuthenticationService_LinkGoogle_Handler,
+		},
+		{
+			MethodName: "LinkFacebook",
+			Handler:    _AuthenticationService_LinkFacebook_Handler,
+		},
+		{
+			MethodName: "LinkSteam",
+			Handler:    _AuthenticationService_LinkSteam_Handler,
+		},
+		{
+			MethodName: "LinkCustom",
+			Handler:    _AuthenticationService_LinkCustom_Handler,
+		},
+		{
+			MethodName: "UnlinkEmail",
+			Handler:    _AuthenticationService_UnlinkEmail_Handler,
+		},
+		{
+			MethodName: "UnlinkDevice",
+			Handler:    _AuthenticationService_UnlinkDevice_Handler,
+		},
+		{
+			MethodName: "UnlinkApple",
+			Handler:    _AuthenticationService_UnlinkApple_Handler,
+		},
+		{
+			MethodName: "UnlinkGoogle",
+			Handler:    _AuthenticationService_UnlinkGoogle_Handler,
+		},
+		{
+			MethodName: "UnlinkFacebook",
+			Handler:    _AuthenticationService_UnlinkFacebook_Handler,
+		},
+		{
+			MethodName: "UnlinkSteam",
+			Handler:    _AuthenticationService_UnlinkSteam_Handler,
+		},
+		{
+			MethodName: "UnlinkCustom",
+			Handler:    _AuthenticationService_UnlinkCustom_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "api/api.proto",
+}
+
+const (
 	LeaderboardService_CreateLeaderboard_FullMethodName                 = "/ultimate.server.api.LeaderboardService/CreateLeaderboard"
 	LeaderboardService_DeleteLeaderboard_FullMethodName                 = "/ultimate.server.api.LeaderboardService/DeleteLeaderboard"
+	LeaderboardService_ListLeaderboards_FullMethodName                  = "/ultimate.server.api.LeaderboardService/ListLeaderboards"
 	LeaderboardService_WriteLeaderboardRecord_FullMethodName            = "/ultimate.server.api.LeaderboardService/WriteLeaderboardRecord"
 	LeaderboardService_ListLeaderboardRecords_FullMethodName            = "/ultimate.server.api.LeaderboardService/ListLeaderboardRecords"
 	LeaderboardService_ListLeaderboardRecordsAroundOwner_FullMethodName = "/ultimate.server.api.LeaderboardService/ListLeaderboardRecordsAroundOwner"
@@ -34,6 +1125,7 @@ const (
 type LeaderboardServiceClient interface {
 	CreateLeaderboard(ctx context.Context, in *CreateLeaderboardRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	DeleteLeaderboard(ctx context.Context, in *DeleteLeaderboardRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	ListLeaderboards(ctx context.Context, in *ListLeaderboardsRequest, opts ...grpc.CallOption) (*LeaderboardList, error)
 	WriteLeaderboardRecord(ctx context.Context, in *WriteLeaderboardRecordRequest, opts ...grpc.CallOption) (*LeaderboardRecord, error)
 	ListLeaderboardRecords(ctx context.Context, in *ListLeaderboardRecordsRequest, opts ...grpc.CallOption) (*LeaderboardRecordList, error)
 	ListLeaderboardRecordsAroundOwner(ctx context.Context, in *ListLeaderboardRecordsAroundOwnerRequest, opts ...grpc.CallOption) (*LeaderboardRecordList, error)
@@ -62,6 +1154,16 @@ func (c *leaderboardServiceClient) DeleteLeaderboard(ctx context.Context, in *De
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(emptypb.Empty)
 	err := c.cc.Invoke(ctx, LeaderboardService_DeleteLeaderboard_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *leaderboardServiceClient) ListLeaderboards(ctx context.Context, in *ListLeaderboardsRequest, opts ...grpc.CallOption) (*LeaderboardList, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(LeaderboardList)
+	err := c.cc.Invoke(ctx, LeaderboardService_ListLeaderboards_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -114,6 +1216,7 @@ func (c *leaderboardServiceClient) DeleteLeaderboardRecord(ctx context.Context, 
 type LeaderboardServiceServer interface {
 	CreateLeaderboard(context.Context, *CreateLeaderboardRequest) (*emptypb.Empty, error)
 	DeleteLeaderboard(context.Context, *DeleteLeaderboardRequest) (*emptypb.Empty, error)
+	ListLeaderboards(context.Context, *ListLeaderboardsRequest) (*LeaderboardList, error)
 	WriteLeaderboardRecord(context.Context, *WriteLeaderboardRecordRequest) (*LeaderboardRecord, error)
 	ListLeaderboardRecords(context.Context, *ListLeaderboardRecordsRequest) (*LeaderboardRecordList, error)
 	ListLeaderboardRecordsAroundOwner(context.Context, *ListLeaderboardRecordsAroundOwnerRequest) (*LeaderboardRecordList, error)
@@ -133,6 +1236,9 @@ func (UnimplementedLeaderboardServiceServer) CreateLeaderboard(context.Context, 
 }
 func (UnimplementedLeaderboardServiceServer) DeleteLeaderboard(context.Context, *DeleteLeaderboardRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteLeaderboard not implemented")
+}
+func (UnimplementedLeaderboardServiceServer) ListLeaderboards(context.Context, *ListLeaderboardsRequest) (*LeaderboardList, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListLeaderboards not implemented")
 }
 func (UnimplementedLeaderboardServiceServer) WriteLeaderboardRecord(context.Context, *WriteLeaderboardRecordRequest) (*LeaderboardRecord, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method WriteLeaderboardRecord not implemented")
@@ -199,6 +1305,24 @@ func _LeaderboardService_DeleteLeaderboard_Handler(srv interface{}, ctx context.
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(LeaderboardServiceServer).DeleteLeaderboard(ctx, req.(*DeleteLeaderboardRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _LeaderboardService_ListLeaderboards_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListLeaderboardsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LeaderboardServiceServer).ListLeaderboards(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: LeaderboardService_ListLeaderboards_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LeaderboardServiceServer).ListLeaderboards(ctx, req.(*ListLeaderboardsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -291,6 +1415,10 @@ var LeaderboardService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _LeaderboardService_DeleteLeaderboard_Handler,
 		},
 		{
+			MethodName: "ListLeaderboards",
+			Handler:    _LeaderboardService_ListLeaderboards_Handler,
+		},
+		{
 			MethodName: "WriteLeaderboardRecord",
 			Handler:    _LeaderboardService_WriteLeaderboardRecord_Handler,
 		},
@@ -312,12 +1440,14 @@ var LeaderboardService_ServiceDesc = grpc.ServiceDesc{
 }
 
 const (
-	TournamentService_CreateTournament_FullMethodName      = "/ultimate.server.api.TournamentService/CreateTournament"
-	TournamentService_DeleteTournament_FullMethodName      = "/ultimate.server.api.TournamentService/DeleteTournament"
-	TournamentService_JoinTournament_FullMethodName        = "/ultimate.server.api.TournamentService/JoinTournament"
-	TournamentService_ListTournaments_FullMethodName       = "/ultimate.server.api.TournamentService/ListTournaments"
-	TournamentService_WriteTournamentRecord_FullMethodName = "/ultimate.server.api.TournamentService/WriteTournamentRecord"
-	TournamentService_ListTournamentRecords_FullMethodName = "/ultimate.server.api.TournamentService/ListTournamentRecords"
+	TournamentService_CreateTournament_FullMethodName                 = "/ultimate.server.api.TournamentService/CreateTournament"
+	TournamentService_DeleteTournament_FullMethodName                 = "/ultimate.server.api.TournamentService/DeleteTournament"
+	TournamentService_JoinTournament_FullMethodName                   = "/ultimate.server.api.TournamentService/JoinTournament"
+	TournamentService_ListTournaments_FullMethodName                  = "/ultimate.server.api.TournamentService/ListTournaments"
+	TournamentService_WriteTournamentRecord_FullMethodName            = "/ultimate.server.api.TournamentService/WriteTournamentRecord"
+	TournamentService_ListTournamentRecords_FullMethodName            = "/ultimate.server.api.TournamentService/ListTournamentRecords"
+	TournamentService_ListTournamentRecordsAroundOwner_FullMethodName = "/ultimate.server.api.TournamentService/ListTournamentRecordsAroundOwner"
+	TournamentService_DeleteTournamentRecord_FullMethodName           = "/ultimate.server.api.TournamentService/DeleteTournamentRecord"
 )
 
 // TournamentServiceClient is the client API for TournamentService service.
@@ -330,6 +1460,8 @@ type TournamentServiceClient interface {
 	ListTournaments(ctx context.Context, in *ListTournamentsRequest, opts ...grpc.CallOption) (*TournamentList, error)
 	WriteTournamentRecord(ctx context.Context, in *WriteTournamentRecordRequest, opts ...grpc.CallOption) (*LeaderboardRecord, error)
 	ListTournamentRecords(ctx context.Context, in *ListTournamentRecordsRequest, opts ...grpc.CallOption) (*LeaderboardRecordList, error)
+	ListTournamentRecordsAroundOwner(ctx context.Context, in *ListTournamentRecordsAroundOwnerRequest, opts ...grpc.CallOption) (*LeaderboardRecordList, error)
+	DeleteTournamentRecord(ctx context.Context, in *DeleteTournamentRecordRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
 
 type tournamentServiceClient struct {
@@ -400,6 +1532,26 @@ func (c *tournamentServiceClient) ListTournamentRecords(ctx context.Context, in 
 	return out, nil
 }
 
+func (c *tournamentServiceClient) ListTournamentRecordsAroundOwner(ctx context.Context, in *ListTournamentRecordsAroundOwnerRequest, opts ...grpc.CallOption) (*LeaderboardRecordList, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(LeaderboardRecordList)
+	err := c.cc.Invoke(ctx, TournamentService_ListTournamentRecordsAroundOwner_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *tournamentServiceClient) DeleteTournamentRecord(ctx context.Context, in *DeleteTournamentRecordRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, TournamentService_DeleteTournamentRecord_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // TournamentServiceServer is the server API for TournamentService service.
 // All implementations must embed UnimplementedTournamentServiceServer
 // for forward compatibility.
@@ -410,6 +1562,8 @@ type TournamentServiceServer interface {
 	ListTournaments(context.Context, *ListTournamentsRequest) (*TournamentList, error)
 	WriteTournamentRecord(context.Context, *WriteTournamentRecordRequest) (*LeaderboardRecord, error)
 	ListTournamentRecords(context.Context, *ListTournamentRecordsRequest) (*LeaderboardRecordList, error)
+	ListTournamentRecordsAroundOwner(context.Context, *ListTournamentRecordsAroundOwnerRequest) (*LeaderboardRecordList, error)
+	DeleteTournamentRecord(context.Context, *DeleteTournamentRecordRequest) (*emptypb.Empty, error)
 	mustEmbedUnimplementedTournamentServiceServer()
 }
 
@@ -437,6 +1591,12 @@ func (UnimplementedTournamentServiceServer) WriteTournamentRecord(context.Contex
 }
 func (UnimplementedTournamentServiceServer) ListTournamentRecords(context.Context, *ListTournamentRecordsRequest) (*LeaderboardRecordList, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListTournamentRecords not implemented")
+}
+func (UnimplementedTournamentServiceServer) ListTournamentRecordsAroundOwner(context.Context, *ListTournamentRecordsAroundOwnerRequest) (*LeaderboardRecordList, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListTournamentRecordsAroundOwner not implemented")
+}
+func (UnimplementedTournamentServiceServer) DeleteTournamentRecord(context.Context, *DeleteTournamentRecordRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteTournamentRecord not implemented")
 }
 func (UnimplementedTournamentServiceServer) mustEmbedUnimplementedTournamentServiceServer() {}
 func (UnimplementedTournamentServiceServer) testEmbeddedByValue()                           {}
@@ -567,6 +1727,42 @@ func _TournamentService_ListTournamentRecords_Handler(srv interface{}, ctx conte
 	return interceptor(ctx, in, info, handler)
 }
 
+func _TournamentService_ListTournamentRecordsAroundOwner_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListTournamentRecordsAroundOwnerRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TournamentServiceServer).ListTournamentRecordsAroundOwner(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: TournamentService_ListTournamentRecordsAroundOwner_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TournamentServiceServer).ListTournamentRecordsAroundOwner(ctx, req.(*ListTournamentRecordsAroundOwnerRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _TournamentService_DeleteTournamentRecord_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteTournamentRecordRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TournamentServiceServer).DeleteTournamentRecord(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: TournamentService_DeleteTournamentRecord_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TournamentServiceServer).DeleteTournamentRecord(ctx, req.(*DeleteTournamentRecordRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // TournamentService_ServiceDesc is the grpc.ServiceDesc for TournamentService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -597,6 +1793,14 @@ var TournamentService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListTournamentRecords",
 			Handler:    _TournamentService_ListTournamentRecords_Handler,
+		},
+		{
+			MethodName: "ListTournamentRecordsAroundOwner",
+			Handler:    _TournamentService_ListTournamentRecordsAroundOwner_Handler,
+		},
+		{
+			MethodName: "DeleteTournamentRecord",
+			Handler:    _TournamentService_DeleteTournamentRecord_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

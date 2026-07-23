@@ -33,12 +33,29 @@ type RuntimeModule interface {
 	// Leaderboard operations
 	LeaderboardCreate(ctx context.Context, id string, authoritative bool, sortOrder int, operator int, resetSchedule string, metadata map[string]interface{}, enableRanks bool) error
 	LeaderboardDelete(ctx context.Context, id string) error
+	LeaderboardList(ctx context.Context, limit int, cursor string) ([]*Leaderboard, string, error)
+	LeaderboardsGetId(ctx context.Context, ids []string) ([]*Leaderboard, error)
+	LeaderboardRanksDisable(ctx context.Context, id string) error
 	LeaderboardRecordWrite(ctx context.Context, id, ownerID, username string, score, subscore int64, metadata map[string]interface{}) (*LeaderboardRecord, error)
+	LeaderboardRecordsList(ctx context.Context, id string, ownerIDs []string, limit int, cursor string, expiry int64) ([]*LeaderboardRecord, string, string, error)
+	LeaderboardRecordsAroundOwner(ctx context.Context, id, ownerID string, limit int, expiry int64) ([]*LeaderboardRecord, error)
+	LeaderboardRecordsHaystack(ctx context.Context, id, ownerID string, limit int, cursor string, expiry int64) ([]*LeaderboardRecord, string, string, error)
+	LeaderboardRecordsListCursorFromRank(ctx context.Context, leaderboardID string, rank, expiry int64) (string, error)
+	LeaderboardRecordDelete(ctx context.Context, id, ownerID string) error
 
 	// Tournament operations
 	TournamentCreate(ctx context.Context, id string, authoritative bool, sortOrder, operator int, resetSchedule string, metadata map[string]interface{}, title, description string, category int, startTime, endTime int64, duration, maxSize, maxNumScore int, joinRequired, enableRanks bool) error
 	TournamentDelete(ctx context.Context, id string) error
+	TournamentList(ctx context.Context, categoryStart, categoryEnd int, startTime, endTime int64, limit int, cursor string, active bool) ([]*TournamentView, string, error)
+	TournamentsGetId(ctx context.Context, ids []string) ([]*Leaderboard, error)
+	TournamentRanksDisable(ctx context.Context, id string) error
 	TournamentJoin(ctx context.Context, id, ownerID, username string) error
+	TournamentRecordWrite(ctx context.Context, id, ownerID, username string, score, subscore int64, metadata map[string]interface{}) (*LeaderboardRecord, error)
+	TournamentRecordsList(ctx context.Context, id string, ownerIDs []string, limit int, cursor string, expiry int64) ([]*LeaderboardRecord, string, string, error)
+	TournamentRecordsAroundOwner(ctx context.Context, id, ownerID string, limit int, expiry int64) ([]*LeaderboardRecord, error)
+	TournamentRecordsHaystack(ctx context.Context, id, ownerID string, limit int, cursor string, expiry int64) ([]*LeaderboardRecord, string, string, error)
+	TournamentRecordDelete(ctx context.Context, id, ownerID string) error
+	TournamentAddAttempt(ctx context.Context, id, ownerID string, count int) error
 
 	// Notification operations
 	NotificationSend(ctx context.Context, userID, subject string, content map[string]interface{}, code int, senderID string, persistent bool) error
@@ -113,6 +130,38 @@ type LeaderboardRecord struct {
 	Rank          int64     `json:"rank"`
 }
 
+// Leaderboard is a runtime-facing leaderboard/tournament config snapshot.
+type Leaderboard struct {
+	ID            string    `json:"id"`
+	Authoritative bool      `json:"authoritative"`
+	SortOrder     int       `json:"sort_order"`
+	Operator      int       `json:"operator"`
+	ResetSchedule string    `json:"reset_schedule"`
+	Metadata      string    `json:"metadata"`
+	CreateTime    time.Time `json:"create_time"`
+	Category      int       `json:"category"`
+	Description   string    `json:"description"`
+	Duration      int       `json:"duration"`
+	EndTime       time.Time `json:"end_time"`
+	JoinRequired  bool      `json:"join_required"`
+	MaxSize       int       `json:"max_size"`
+	MaxNumScore   int       `json:"max_num_score"`
+	Title         string    `json:"title"`
+	Size          int       `json:"size"`
+	StartTime     time.Time `json:"start_time"`
+	EnableRanks   bool      `json:"enable_ranks"`
+}
+
+// TournamentView is a runtime-facing tournament listing entry.
+type TournamentView struct {
+	*Leaderboard
+	CanEnter    bool  `json:"can_enter"`
+	StartActive int64 `json:"start_active"`
+	EndActive   int64 `json:"end_active"`
+	PrevReset   int64 `json:"prev_reset"`
+	NextReset   int64 `json:"next_reset"`
+}
+
 type AuthenticateEmailRequest struct {
 	Email       string `json:"email"`
 	Password    string `json:"password"`
@@ -120,6 +169,12 @@ type AuthenticateEmailRequest struct {
 	DisplayName string `json:"display_name"`
 	Register    bool   `json:"register"`
 }
+
+// Auth session/account hook targets (also registrable via RegisterBeforeRt / RegisterAfterRt):
+// AuthenticateEmail, AuthenticateCustom, AuthenticateDevice, AuthenticateApple,
+// AuthenticateGoogle, AuthenticateFacebook, AuthenticateSteam, AuthenticateGameCenter,
+// SessionRefresh, SessionLogout, GetAccount, UpdateAccount, DeleteAccount,
+// Link*, Unlink*.
 
 type WriteStorageObjectsRequest struct {
 	Objects []*StorageWrite `json:"objects"`
@@ -201,6 +256,12 @@ type Match interface {
 // MatchmakerMatchedHandler handles matchmaker match events.
 type MatchmakerMatchedHandler func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, entries []interface{}) (string, error)
 
+// MatchmakerProcessorHandler replaces default Process pairing. Tickets are *matchmaker.Ticket values.
+type MatchmakerProcessorHandler func(ctx context.Context, tickets []interface{}) [][]interface{}
+
+// MatchmakerOverrideHandler rewrites candidate match groups after default Process pairing.
+type MatchmakerOverrideHandler func(ctx context.Context, matches [][]interface{}) [][]interface{}
+
 // LeaderboardResetHandler handles leaderboard reset events.
 type LeaderboardResetHandler func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, leaderboardID string, reset int64) error
 
@@ -224,6 +285,8 @@ type Initializer interface {
 	RegisterAfterRt(id string, fn AfterHook) error
 	RegisterMatch(name string, fn MatchHandlerFactory) error
 	RegisterMatchmakerMatched(fn MatchmakerMatchedHandler) error
+	RegisterMatchmakerOverride(fn MatchmakerOverrideHandler) error
+	RegisterMatchmakerProcessor(fn MatchmakerProcessorHandler) error
 	RegisterLeaderboardReset(fn LeaderboardResetHandler) error
 	RegisterTournamentEnd(fn TournamentEndHandler) error
 	RegisterTournamentReset(fn TournamentResetHandler) error
@@ -257,10 +320,12 @@ type HookRegistry struct {
 	eventHandlers            []EventHandler
 	matchHandlers            map[string]MatchHandlerFactory
 	cronJobs                 map[string]*CronJob
-	matchmakerMatchedHandler MatchmakerMatchedHandler
-	leaderboardResetHandler  LeaderboardResetHandler
-	tournamentEndHandler     TournamentEndHandler
-	tournamentResetHandler   TournamentResetHandler
+	matchmakerMatchedHandler   MatchmakerMatchedHandler
+	matchmakerOverrideHandler  MatchmakerOverrideHandler
+	matchmakerProcessorHandler MatchmakerProcessorHandler
+	leaderboardResetHandler    LeaderboardResetHandler
+	tournamentEndHandler       TournamentEndHandler
+	tournamentResetHandler     TournamentResetHandler
 }
 
 // NewHookRegistry creates a new instance of HookRegistry.
@@ -463,6 +528,30 @@ func (hr *HookRegistry) GetMatchmakerMatched() MatchmakerMatchedHandler {
 	hr.mu.RLock()
 	defer hr.mu.RUnlock()
 	return hr.matchmakerMatchedHandler
+}
+
+func (hr *HookRegistry) RegisterMatchmakerOverride(fn MatchmakerOverrideHandler) {
+	hr.mu.Lock()
+	defer hr.mu.Unlock()
+	hr.matchmakerOverrideHandler = fn
+}
+
+func (hr *HookRegistry) GetMatchmakerOverride() MatchmakerOverrideHandler {
+	hr.mu.RLock()
+	defer hr.mu.RUnlock()
+	return hr.matchmakerOverrideHandler
+}
+
+func (hr *HookRegistry) RegisterMatchmakerProcessor(fn MatchmakerProcessorHandler) {
+	hr.mu.Lock()
+	defer hr.mu.Unlock()
+	hr.matchmakerProcessorHandler = fn
+}
+
+func (hr *HookRegistry) GetMatchmakerProcessor() MatchmakerProcessorHandler {
+	hr.mu.RLock()
+	defer hr.mu.RUnlock()
+	return hr.matchmakerProcessorHandler
 }
 
 func (hr *HookRegistry) RegisterLeaderboardReset(fn LeaderboardResetHandler) {

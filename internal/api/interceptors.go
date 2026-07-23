@@ -21,38 +21,112 @@ var (
 	jsVMMutex  sync.Mutex
 )
 
+// resolveHTTPHookID maps REST paths/methods to runtime before/after hook IDs.
+// Hook IDs match gRPC method names for leaderboard/tournament parity.
+func resolveHTTPHookID(method, path string) string {
+	switch {
+	case path == "/v2/storage":
+		return "WriteStorageObjects"
+	case path == "/v2/storage/read":
+		return "ReadStorageObjects"
+	case path == "/v2/storage/delete":
+		return "DeleteStorageObjects"
+	case strings.HasPrefix(path, "/v2/storage/"):
+		return "ListStorageObjects"
+	}
+
+	if strings.HasPrefix(path, "/v2/leaderboard") {
+		parts := strings.Split(strings.Trim(path, "/"), "/")
+		// parts: ["v2","leaderboard", ...]
+		switch {
+		case method == http.MethodPost && len(parts) == 3:
+			return "WriteLeaderboardRecord"
+		case method == http.MethodGet && len(parts) == 3:
+			return "ListLeaderboardRecords"
+		case method == http.MethodGet && len(parts) == 5 && parts[3] == "around":
+			return "ListLeaderboardRecordsAroundOwner"
+		case method == http.MethodDelete && len(parts) == 5 && parts[3] == "owner":
+			return "DeleteLeaderboardRecord"
+		}
+	}
+
+	if strings.HasPrefix(path, "/v2/tournament") {
+		parts := strings.Split(strings.Trim(path, "/"), "/")
+		switch {
+		case method == http.MethodGet && len(parts) == 2:
+			return "ListTournaments"
+		case method == http.MethodPost && len(parts) == 4 && parts[3] == "join":
+			return "JoinTournament"
+		case method == http.MethodPost && len(parts) == 3:
+			return "WriteTournamentRecord"
+		case method == http.MethodGet && len(parts) == 3:
+			return "ListTournamentRecords"
+		case method == http.MethodGet && len(parts) == 5 && parts[3] == "around":
+			return "ListTournamentRecordsAroundOwner"
+		case method == http.MethodDelete && len(parts) == 5 && parts[3] == "owner":
+			return "DeleteTournamentRecord"
+		}
+	}
+	return ""
+}
+
+func buildHTTPHookRequest(r *http.Request, bodyBytes []byte) map[string]interface{} {
+	reqVal := map[string]interface{}{}
+	if len(bodyBytes) > 0 {
+		_ = json.Unmarshal(bodyBytes, &reqVal)
+	}
+	// Enrich with path/query context for GET/DELETE hooks.
+	if id := r.PathValue("id"); id != "" {
+		if strings.HasPrefix(r.URL.Path, "/v2/tournament") {
+			if _, ok := reqVal["tournament_id"]; !ok {
+				reqVal["tournament_id"] = id
+			}
+		} else if _, ok := reqVal["leaderboard_id"]; !ok {
+			reqVal["leaderboard_id"] = id
+		}
+	}
+	if ownerID := r.PathValue("owner_id"); ownerID != "" {
+		reqVal["owner_id"] = ownerID
+	}
+	for k, vals := range r.URL.Query() {
+		if len(vals) == 1 {
+			reqVal[k] = vals[0]
+		} else if len(vals) > 1 {
+			reqVal[k] = vals
+		}
+	}
+	return reqVal
+}
+
 // HTTPHookMiddleware wraps a REST handler to intercept requests and responses with before/after hooks.
 func HTTPHookMiddleware(rm *runtime.GoRuntimeManager, luaVM *lua.LState, jsVM *goja.Runtime, next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		endpoint := r.URL.Path
-
-		var hookID string
-		switch {
-		case endpoint == "/v2/storage":
-			hookID = "WriteStorageObjects"
-		case endpoint == "/v2/storage/read":
-			hookID = "ReadStorageObjects"
-		case endpoint == "/v2/storage/delete":
-			hookID = "DeleteStorageObjects"
-		case strings.HasPrefix(endpoint, "/v2/storage/"):
-			hookID = "ListStorageObjects"
-		default:
+		if rm == nil {
+			next(w, r)
+			return
+		}
+		hookID := resolveHTTPHookID(r.Method, r.URL.Path)
+		if hookID == "" {
 			next(w, r)
 			return
 		}
 
+		var bodyBytes []byte
+		var reqVal map[string]interface{}
+
 		// Retrieve Before Hook from registry
 		gHook, runtimeType, fnName, found := rm.Registry().GetBeforeHook(hookID)
 		if found {
-			bodyBytes, err := io.ReadAll(r.Body)
-			if err != nil {
-				http.Error(w, "failed to read body", http.StatusBadRequest)
-				return
+			if r.Body != nil && r.Method != http.MethodGet && r.Method != http.MethodDelete {
+				var err error
+				bodyBytes, err = io.ReadAll(r.Body)
+				if err != nil {
+					http.Error(w, "failed to read body", http.StatusBadRequest)
+					return
+				}
+				r.Body.Close()
 			}
-			r.Body.Close()
-
-			var reqVal map[string]interface{}
-			_ = json.Unmarshal(bodyBytes, &reqVal)
+			reqVal = buildHTTPHookRequest(r, bodyBytes)
 
 			switch runtimeType {
 			case "go":
@@ -61,7 +135,12 @@ func HTTPHookMiddleware(rm *runtime.GoRuntimeManager, luaVM *lua.LState, jsVM *g
 					http.Error(w, err.Error(), http.StatusBadRequest)
 					return
 				}
-				bodyBytes, _ = json.Marshal(res)
+				if casted, ok := res.(*map[string]interface{}); ok {
+					reqVal = *casted
+				} else if casted, ok := res.(map[string]interface{}); ok {
+					reqVal = casted
+				}
+				bodyBytes, _ = json.Marshal(reqVal)
 			case "lua":
 				if luaVM != nil {
 					luaVMMutex.Lock()
@@ -72,6 +151,11 @@ func HTTPHookMiddleware(rm *runtime.GoRuntimeManager, luaVM *lua.LState, jsVM *g
 						return
 					}
 					bodyBytes, _ = json.Marshal(res)
+					if m, ok := res.(*map[string]interface{}); ok {
+						reqVal = *m
+					} else if m, ok := res.(map[string]interface{}); ok {
+						reqVal = m
+					}
 				}
 			case "js":
 				if jsVM != nil {
@@ -83,9 +167,23 @@ func HTTPHookMiddleware(rm *runtime.GoRuntimeManager, luaVM *lua.LState, jsVM *g
 						return
 					}
 					bodyBytes, _ = json.Marshal(res)
+					if m, ok := res.(*map[string]interface{}); ok {
+						reqVal = *m
+					} else if m, ok := res.(map[string]interface{}); ok {
+						reqVal = m
+					}
 				}
 			}
+			if r.Method != http.MethodGet && r.Method != http.MethodDelete {
+				r.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+			}
+		} else if r.Body != nil && (r.Method == http.MethodPost || r.Method == http.MethodPut || r.Method == http.MethodPatch) {
+			bodyBytes, _ = io.ReadAll(r.Body)
+			r.Body.Close()
+			reqVal = buildHTTPHookRequest(r, bodyBytes)
 			r.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+		} else {
+			reqVal = buildHTTPHookRequest(r, nil)
 		}
 
 		// Core execution: wrap response writer to capture output for After Hook
@@ -97,12 +195,6 @@ func HTTPHookMiddleware(rm *runtime.GoRuntimeManager, luaVM *lua.LState, jsVM *g
 		if aFound {
 			var respVal interface{}
 			_ = json.Unmarshal(rec.body.Bytes(), &respVal)
-
-			var reqVal interface{}
-			if r.Body != nil {
-				reqBytes, _ := io.ReadAll(r.Body)
-				_ = json.Unmarshal(reqBytes, &reqVal)
-			}
 
 			switch aRuntimeType {
 			case "go":

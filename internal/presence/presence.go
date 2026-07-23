@@ -25,10 +25,10 @@ type PresenceTracker struct {
 	sessionUser   map[string]string           // key: session_id, value: user_id
 
 	// Roaring Bitmap index mapping
-	onlineBitmap  *roaring.Bitmap
-	userToIdx     map[string]uint32
-	idxToUser     map[uint32]string
-	nextUserIdx   uint32
+	onlineBitmap *roaring.Bitmap
+	userToIdx    map[string]uint32
+	idxToUser    map[uint32]string
+	nextUserIdx  uint32
 }
 
 // NewPresenceTracker creates a new PresenceTracker.
@@ -167,6 +167,36 @@ func (pt *PresenceTracker) Unfollow(sessionID string, targetUserIDs []string) {
 			}
 		}
 	}
+}
+
+// UnfollowAll removes all follow subscriptions for a session.
+func (pt *PresenceTracker) UnfollowAll(sessionID string) {
+	pt.mu.Lock()
+	defer pt.mu.Unlock()
+
+	for targetID, subs := range pt.subscriptions {
+		delete(subs, sessionID)
+		if len(subs) == 0 {
+			delete(pt.subscriptions, targetID)
+		}
+	}
+}
+
+// PeekPresence returns the presence record for a session without removing it.
+func (pt *PresenceTracker) PeekPresence(sessionID string) (PresenceRecord, bool) {
+	pt.mu.RLock()
+	defer pt.mu.RUnlock()
+
+	userID, ok := pt.sessionUser[sessionID]
+	if !ok {
+		return PresenceRecord{}, false
+	}
+	for _, r := range pt.presences[userID] {
+		if r.SessionID == sessionID {
+			return r, true
+		}
+	}
+	return PresenceRecord{}, false
 }
 
 // GetOnlineFriends computes the intersection of a user's friends list and online states using a Roaring Bitmap.

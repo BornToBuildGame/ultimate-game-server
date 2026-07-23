@@ -2,6 +2,7 @@ package runtime
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 
@@ -9,7 +10,7 @@ import (
 )
 
 // MapLuaNK binds the core storage APIs to a Gopher-Lua VM.
-func MapLuaNK(L *lua.LState, nk RuntimeModule) {
+func MapLuaNK(L *lua.LState, nk RuntimeModule, registry ...*HookRegistry) {
 	nkTable := L.NewTable()
 
 	// 1. Storage Read
@@ -260,6 +261,54 @@ func MapLuaNK(L *lua.LState, nk RuntimeModule) {
 		return 0
 	}))
 
+	L.SetField(nkTable, "leaderboard_list", L.NewFunction(func(L *lua.LState) int {
+		list, next, err := nk.LeaderboardList(L.Context(), L.OptInt(1, 10), L.OptString(2, ""))
+		if err != nil {
+			L.RaiseError("leaderboard_list failed: %v", err)
+			return 0
+		}
+		arr := L.NewTable()
+		for i, lb := range list {
+			tbl := L.NewTable()
+			L.SetField(tbl, "id", lua.LString(lb.ID))
+			L.RawSetInt(arr, i+1, tbl)
+		}
+		L.Push(arr)
+		L.Push(lua.LString(next))
+		return 2
+	}))
+
+	L.SetField(nkTable, "leaderboard_ranks_disable", L.NewFunction(func(L *lua.LState) int {
+		if err := nk.LeaderboardRanksDisable(L.Context(), L.CheckString(1)); err != nil {
+			L.RaiseError("leaderboard_ranks_disable failed: %v", err)
+		}
+		return 0
+	}))
+
+	L.SetField(nkTable, "leaderboard_records_list_cursor_from_rank", L.NewFunction(func(L *lua.LState) int {
+		cur, err := nk.LeaderboardRecordsListCursorFromRank(L.Context(), L.CheckString(1), L.CheckInt64(2), L.OptInt64(3, 0))
+		if err != nil {
+			L.RaiseError("leaderboard_records_list_cursor_from_rank failed: %v", err)
+			return 0
+		}
+		L.Push(lua.LString(cur))
+		return 1
+	}))
+
+	L.SetField(nkTable, "tournament_record_delete", L.NewFunction(func(L *lua.LState) int {
+		if err := nk.TournamentRecordDelete(L.Context(), L.CheckString(1), L.CheckString(2)); err != nil {
+			L.RaiseError("tournament_record_delete failed: %v", err)
+		}
+		return 0
+	}))
+
+	L.SetField(nkTable, "tournament_ranks_disable", L.NewFunction(func(L *lua.LState) int {
+		if err := nk.TournamentRanksDisable(L.Context(), L.CheckString(1)); err != nil {
+			L.RaiseError("tournament_ranks_disable failed: %v", err)
+		}
+		return 0
+	}))
+
 	// 10. Tournament Create
 	L.SetField(nkTable, "tournament_create", L.NewFunction(func(L *lua.LState) int {
 		id := L.CheckString(1)
@@ -317,6 +366,174 @@ func MapLuaNK(L *lua.LState, nk RuntimeModule) {
 		}
 		return 0
 	}))
+
+	pushRecordList := func(L *lua.LState, records []*LeaderboardRecord, next, prev string) int {
+		arr := L.NewTable()
+		for i, rec := range records {
+			tbl := L.NewTable()
+			L.SetField(tbl, "leaderboard_id", lua.LString(rec.LeaderboardID))
+			L.SetField(tbl, "owner_id", lua.LString(rec.OwnerID))
+			L.SetField(tbl, "username", lua.LString(rec.Username))
+			L.SetField(tbl, "score", lua.LNumber(rec.Score))
+			L.SetField(tbl, "subscore", lua.LNumber(rec.Subscore))
+			L.SetField(tbl, "rank", lua.LNumber(rec.Rank))
+			L.SetField(tbl, "metadata", lua.LString(rec.Metadata))
+			arr.RawSetInt(i+1, tbl)
+		}
+		L.Push(arr)
+		L.Push(lua.LString(next))
+		L.Push(lua.LString(prev))
+		return 3
+	}
+
+	L.SetField(nkTable, "leaderboard_records_list", L.NewFunction(func(L *lua.LState) int {
+		id := L.CheckString(1)
+		var ownerIDs []string
+		if tbl, ok := L.Get(2).(*lua.LTable); ok {
+			tbl.ForEach(func(_, v lua.LValue) { ownerIDs = append(ownerIDs, v.String()) })
+		}
+		limit := L.OptInt(3, 10)
+		cursor := L.OptString(4, "")
+		expiry := L.OptInt64(5, 0)
+		recs, next, prev, err := nk.LeaderboardRecordsList(L.Context(), id, ownerIDs, limit, cursor, expiry)
+		if err != nil {
+			L.RaiseError("leaderboard_records_list failed: %v", err)
+			return 0
+		}
+		return pushRecordList(L, recs, next, prev)
+	}))
+
+	L.SetField(nkTable, "leaderboard_records_around_owner", L.NewFunction(func(L *lua.LState) int {
+		id := L.CheckString(1)
+		ownerID := L.CheckString(2)
+		limit := L.OptInt(3, 10)
+		expiry := L.OptInt64(4, 0)
+		recs, err := nk.LeaderboardRecordsAroundOwner(L.Context(), id, ownerID, limit, expiry)
+		if err != nil {
+			L.RaiseError("leaderboard_records_around_owner failed: %v", err)
+			return 0
+		}
+		return pushRecordList(L, recs, "", "")
+	}))
+
+	L.SetField(nkTable, "leaderboard_records_haystack", L.NewFunction(func(L *lua.LState) int {
+		recs, next, prev, err := nk.LeaderboardRecordsHaystack(L.Context(), L.CheckString(1), L.CheckString(2), L.OptInt(3, 10), L.OptString(4, ""), L.OptInt64(5, 0))
+		if err != nil {
+			L.RaiseError("leaderboard_records_haystack failed: %v", err)
+			return 0
+		}
+		return pushRecordList(L, recs, next, prev)
+	}))
+
+	L.SetField(nkTable, "tournament_records_haystack", L.NewFunction(func(L *lua.LState) int {
+		recs, next, prev, err := nk.TournamentRecordsHaystack(L.Context(), L.CheckString(1), L.CheckString(2), L.OptInt(3, 10), L.OptString(4, ""), L.OptInt64(5, 0))
+		if err != nil {
+			L.RaiseError("tournament_records_haystack failed: %v", err)
+			return 0
+		}
+		return pushRecordList(L, recs, next, prev)
+	}))
+
+	L.SetField(nkTable, "leaderboard_record_delete", L.NewFunction(func(L *lua.LState) int {
+		if err := nk.LeaderboardRecordDelete(L.Context(), L.CheckString(1), L.CheckString(2)); err != nil {
+			L.RaiseError("leaderboard_record_delete failed: %v", err)
+			return 0
+		}
+		return 0
+	}))
+
+	L.SetField(nkTable, "tournament_record_write", L.NewFunction(func(L *lua.LState) int {
+		id := L.CheckString(1)
+		ownerID := L.CheckString(2)
+		username := L.CheckString(3)
+		score := int64(L.CheckNumber(4))
+		subscore := int64(L.OptNumber(5, 0))
+		metadataTbl := L.OptTable(6, nil)
+		var metadata map[string]interface{}
+		if metadataTbl != nil {
+			if m, ok := ToGoValue(metadataTbl).(map[string]interface{}); ok {
+				metadata = m
+			}
+		}
+		rec, err := nk.TournamentRecordWrite(L.Context(), id, ownerID, username, score, subscore, metadata)
+		if err != nil {
+			L.RaiseError("tournament_record_write failed: %v", err)
+			return 0
+		}
+		resTbl := L.NewTable()
+		L.SetField(resTbl, "leaderboard_id", lua.LString(rec.LeaderboardID))
+		L.SetField(resTbl, "owner_id", lua.LString(rec.OwnerID))
+		L.SetField(resTbl, "score", lua.LNumber(rec.Score))
+		L.SetField(resTbl, "rank", lua.LNumber(rec.Rank))
+		L.Push(resTbl)
+		return 1
+	}))
+
+	L.SetField(nkTable, "tournament_records_list", L.NewFunction(func(L *lua.LState) int {
+		id := L.CheckString(1)
+		var ownerIDs []string
+		if tbl, ok := L.Get(2).(*lua.LTable); ok {
+			tbl.ForEach(func(_, v lua.LValue) { ownerIDs = append(ownerIDs, v.String()) })
+		}
+		limit := L.OptInt(3, 10)
+		cursor := L.OptString(4, "")
+		expiry := L.OptInt64(5, 0)
+		recs, next, prev, err := nk.TournamentRecordsList(L.Context(), id, ownerIDs, limit, cursor, expiry)
+		if err != nil {
+			L.RaiseError("tournament_records_list failed: %v", err)
+			return 0
+		}
+		return pushRecordList(L, recs, next, prev)
+	}))
+
+	L.SetField(nkTable, "tournament_records_around_owner", L.NewFunction(func(L *lua.LState) int {
+		id := L.CheckString(1)
+		ownerID := L.CheckString(2)
+		limit := L.OptInt(3, 10)
+		expiry := L.OptInt64(4, 0)
+		recs, err := nk.TournamentRecordsAroundOwner(L.Context(), id, ownerID, limit, expiry)
+		if err != nil {
+			L.RaiseError("tournament_records_around_owner failed: %v", err)
+			return 0
+		}
+		return pushRecordList(L, recs, "", "")
+	}))
+
+	L.SetField(nkTable, "tournament_add_attempt", L.NewFunction(func(L *lua.LState) int {
+		if err := nk.TournamentAddAttempt(L.Context(), L.CheckString(1), L.CheckString(2), L.CheckInt(3)); err != nil {
+			L.RaiseError("tournament_add_attempt failed: %v", err)
+			return 0
+		}
+		return 0
+	}))
+
+	if len(registry) > 0 && registry[0] != nil {
+		reg := registry[0]
+		L.SetField(nkTable, "register_leaderboard_reset", L.NewFunction(func(L *lua.LState) int {
+			fn := L.CheckFunction(1)
+			reg.RegisterLeaderboardReset(func(ctx context.Context, logger Logger, db *sql.DB, nkMod RuntimeModule, leaderboardID string, reset int64) error {
+				L.SetContext(ctx)
+				return L.CallByParam(lua.P{Fn: fn, NRet: 0, Protect: true}, lua.LString(leaderboardID), lua.LNumber(reset))
+			})
+			return 0
+		}))
+		L.SetField(nkTable, "register_tournament_end", L.NewFunction(func(L *lua.LState) int {
+			fn := L.CheckFunction(1)
+			reg.RegisterTournamentEnd(func(ctx context.Context, logger Logger, db *sql.DB, nkMod RuntimeModule, tournamentID string, end, reset int64) error {
+				L.SetContext(ctx)
+				return L.CallByParam(lua.P{Fn: fn, NRet: 0, Protect: true}, lua.LString(tournamentID), lua.LNumber(end), lua.LNumber(reset))
+			})
+			return 0
+		}))
+		L.SetField(nkTable, "register_tournament_reset", L.NewFunction(func(L *lua.LState) int {
+			fn := L.CheckFunction(1)
+			reg.RegisterTournamentReset(func(ctx context.Context, logger Logger, db *sql.DB, nkMod RuntimeModule, tournamentID string, end, reset int64) error {
+				L.SetContext(ctx)
+				return L.CallByParam(lua.P{Fn: fn, NRet: 0, Protect: true}, lua.LString(tournamentID), lua.LNumber(end), lua.LNumber(reset))
+			})
+			return 0
+		}))
+	}
 
 	L.SetGlobal("nk", nkTable)
 }

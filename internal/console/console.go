@@ -28,15 +28,26 @@ type ConsoleClaims struct {
 
 // Server encapsulates the Console Admin HTTP server.
 type Server struct {
-	logger      Logger
-	pool        *pgxpool.Pool
-	jwtSecret   []byte
-	listener    net.Listener
-	httpServer  *http.Server
-	bleveIndex  bleve.Index
-	auditChan   chan *AuditLogEntry
-	wg          sync.WaitGroup
-	mu          sync.Mutex
+	logger          Logger
+	pool            *pgxpool.Pool
+	jwtSecret       []byte
+	listener        net.Listener
+	httpServer      *http.Server
+	bleveIndex      bleve.Index
+	auditChan       chan *AuditLogEntry
+	wg              sync.WaitGroup
+	mu              sync.Mutex
+	sessionRevoker  SessionRevoker
+}
+
+// SessionRevoker invalidates player sessions (e.g. on ban).
+type SessionRevoker interface {
+	RevokeAllSessions(userID string)
+}
+
+// SetSessionRevoker configures session revocation on ban/delete.
+func (s *Server) SetSessionRevoker(r SessionRevoker) {
+	s.sessionRevoker = r
 }
 
 // Logger interface matching our requirements.
@@ -94,6 +105,7 @@ func (s *Server) Start(addr string) error {
 	mux.HandleFunc("/console/authenticate", s.handleAuthenticate)
 	mux.HandleFunc("/console/api/users/ban", s.handleBanUser)
 	mux.HandleFunc("/console/api/search", s.handleSearch)
+	s.registerLeaderboardRoutes(mux)
 
 	s.httpServer = &http.Server{
 		Handler:      mux,
@@ -249,6 +261,10 @@ func (s *Server) handleBanUser(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, "Failed to ban player", http.StatusInternalServerError)
 		return
+	}
+
+	if s.sessionRevoker != nil {
+		s.sessionRevoker.RevokeAllSessions(targetUserID)
 	}
 
 	// Queue audit log asynchronously

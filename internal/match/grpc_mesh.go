@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
+	"strconv"
 	"sync"
 
 	"ultimate-game-server/internal/runtime"
@@ -17,18 +19,19 @@ import (
 // Router maps active match IDs to their local loop execution thread.
 // It abstracts cross-node routing by providing local in-memory lookups and falling back to cluster forwarding.
 type Router struct {
-	mu               sync.RWMutex
-	matches          map[string]*MatchLoop
-	rdb              *redis.Client
-	nodeID           string
-	clusterForwarder func(ctx context.Context, targetNodeID, matchID string, input MatchInput) error
+	mu                     sync.RWMutex
+	matches                map[string]*MatchLoop
+	rdb                    *redis.Client
+	nodeID                 string
+	clusterForwarder       func(ctx context.Context, targetNodeID, matchID string, input MatchInput) error
+	clusterSignalForwarder func(ctx context.Context, targetNodeID, matchID string, data string) error
 
-	HookRegistry     *runtime.HookRegistry
-	Logger           runtime.Logger
-	ZapLogger        *zap.Logger
-	DB               *sql.DB
-	NK               runtime.RuntimeModule
-	Registry         SessionRegistry
+	HookRegistry *runtime.HookRegistry
+	Logger       runtime.Logger
+	ZapLogger    *zap.Logger
+	DB           *sql.DB
+	NK           runtime.RuntimeModule
+	Registry     SessionRegistry
 }
 
 // NewRouter creates a new match Router.
@@ -65,10 +68,14 @@ func (r *Router) CreateAndRegisterMatch(ctx context.Context, matchID string, mod
 	db := r.DB
 	nk := r.NK
 	registry := r.Registry
+	matchCount := len(r.matches)
 	r.mu.RUnlock()
 
 	if hr == nil {
 		return errors.New("HookRegistry is not set on Match Router")
+	}
+	if matchCount >= maxConcurrentMatches {
+		return fmt.Errorf("max concurrent matches (%d) reached", maxConcurrentMatches)
 	}
 
 	factory, ok := hr.GetMatch(module)
@@ -76,19 +83,35 @@ func (r *Router) CreateAndRegisterMatch(ctx context.Context, matchID string, mod
 		return fmt.Errorf("match handler factory %q not found", module)
 	}
 
-	// Instantiate match
 	goMatch, err := factory(ctx, logger, db, nk)
 	if err != nil {
 		return fmt.Errorf("failed to instantiate match %q: %w", module, err)
 	}
 
-	// Initialize state
 	state, tickRate, label := goMatch.MatchInit(ctx, logger, db, nk, params)
 
-	// Create MatchLoop
+	if tickRate < 1 || tickRate > 60 {
+		return fmt.Errorf("invalid tick rate %d (must be 1-60)", tickRate)
+	}
+	if len(label) > maxLabelBytes {
+		return fmt.Errorf("match label exceeds %d bytes", maxLabelBytes)
+	}
+
+	r.mu.Lock()
+	if len(r.matches) >= maxConcurrentMatches {
+		r.mu.Unlock()
+		return fmt.Errorf("max concurrent matches (%d) reached", maxConcurrentMatches)
+	}
+	r.mu.Unlock()
+
 	loop := NewMatchLoop(matchID, nil, tickRate, zapLogger, registry)
 	loop.SetGoMatch(goMatch, state, logger, db, nk)
 	loop.label = label
+	if v := os.Getenv("UGE_MATCH_MAX_EMPTY_SEC"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n >= 0 {
+			loop.maxEmptySec = n
+		}
+	}
 	loop.onMetadataUpdate = func(matchID string, label string, playerCount int) {
 		r.UpdateMetadata(matchID, label, playerCount)
 	}
@@ -96,10 +119,7 @@ func (r *Router) CreateAndRegisterMatch(ctx context.Context, matchID string, mod
 		r.Unregister(matchID)
 	}
 
-	// Register in Router
 	r.Register(matchID, loop)
-
-	// Start tick loop in goroutine
 	go loop.Start(context.Background())
 
 	return nil
@@ -112,6 +132,16 @@ func (r *Router) SetClusterConfig(nodeID string, rdb *redis.Client, forwarder fu
 	r.nodeID = nodeID
 	r.rdb = rdb
 	r.clusterForwarder = forwarder
+	if rdb != nil {
+		r.clusterSignalForwarder = NewPubSubSignalForwarder(rdb, nodeID, r.ZapLogger)
+	}
+}
+
+// SetClusterSignalForwarder overrides the cluster signal forwarder.
+func (r *Router) SetClusterSignalForwarder(forwarder func(ctx context.Context, targetNodeID, matchID string, data string) error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.clusterSignalForwarder = forwarder
 }
 
 // Register adds a match loop to the routing registry.
@@ -205,7 +235,6 @@ func (r *Router) ForwardInput(ctx context.Context, matchID string, input MatchIn
 		return nil
 	}
 
-	// Fallback to cluster lookup if configured
 	if rdb != nil && forwarder != nil {
 		targetNodeID, err := rdb.Get(ctx, "match:node:"+matchID).Result()
 		if err == redis.Nil {
@@ -220,6 +249,38 @@ func (r *Router) ForwardInput(ctx context.Context, matchID string, input MatchIn
 	}
 
 	return errors.New("match not found on this node")
+}
+
+// ForwardSignal routes an admin signal to the targeted match loop, forwarding to peer nodes if needed.
+func (r *Router) ForwardSignal(ctx context.Context, matchID string, data string) (string, error) {
+	r.mu.RLock()
+	loop, exists := r.matches[matchID]
+	nodeID := r.nodeID
+	rdb := r.rdb
+	forwarder := r.clusterSignalForwarder
+	r.mu.RUnlock()
+
+	if exists {
+		return loop.SubmitSignal(data)
+	}
+
+	if rdb != nil && forwarder != nil {
+		targetNodeID, err := rdb.Get(ctx, "match:node:"+matchID).Result()
+		if err == redis.Nil {
+			return "", errors.New("match not found in cluster registry")
+		} else if err != nil {
+			return "", err
+		}
+
+		if targetNodeID != nodeID {
+			if err := forwarder(ctx, targetNodeID, matchID, data); err != nil {
+				return "", err
+			}
+			return "", nil
+		}
+	}
+
+	return "", errors.New("match not found on this node")
 }
 
 // GetLocalMatches retrieves all active matches hosted on this node.
@@ -271,5 +332,3 @@ func (r *Router) GetLocalMatch(matchID string) (*ActiveMatch, []PresenceImpl, bo
 	}
 	return match, presences, true
 }
-
-

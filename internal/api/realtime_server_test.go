@@ -89,6 +89,9 @@ func TestRealtimeServer_GrpcAndRest(t *testing.T) {
 	if matchObj.MatchId == "" {
 		t.Error("expected non-empty match ID")
 	}
+	if !strings.Contains(matchObj.MatchId, ".") {
+		t.Errorf("expected match ID with node suffix (uuid.node), got: %s", matchObj.MatchId)
+	}
 	if !matchObj.Authoritative {
 		t.Error("expected authoritative match")
 	}
@@ -157,6 +160,9 @@ func TestRealtimeServer_GrpcAndRest(t *testing.T) {
 	restMatchID := createResp["match_id"]
 	if restMatchID == "" {
 		t.Error("expected non-empty match ID from REST response")
+	}
+	if !strings.Contains(restMatchID, ".") {
+		t.Errorf("expected REST match ID with node suffix, got: %s", restMatchID)
 	}
 
 	// Give new match loop a moment to start

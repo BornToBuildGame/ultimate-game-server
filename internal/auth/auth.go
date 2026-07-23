@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -18,115 +17,45 @@ import (
 
 // User represents a user profile retrieved from database.
 type User struct {
-	ID          uuid.UUID
-	Username    string
-	DisplayName string
-	Email       *string
-	DisableTime time.Time
+	ID           uuid.UUID
+	Username     string
+	DisplayName  string
+	AvatarURL    string
+	LangTag      string
+	Location     string
+	Timezone     string
+	Metadata     string
+	Email        *string
+	CustomID     *string
+	AppleID      *string
+	GoogleID     *string
+	FacebookID   *string
+	GamecenterID *string
+	SteamID      *string
+	FacebookIGID *string
+	DisableTime  time.Time
+	CreateTime   time.Time
+	UpdateTime   time.Time
+	Devices      []string
 }
 
-// SessionRegistry handles refresh token storage and rotation (token family tracking).
-type SessionRegistry struct {
-	mu           sync.RWMutex
-	tokens       map[string]string // key: refresh_token, value: user_id
-	tokenFamily  map[string]string // key: refresh_token, value: parent_refresh_token (for rotation tracking)
-	usedTokens   map[string]bool   // key: refresh_token, value: true if already rotated
-	revokedUsers map[string]bool   // key: user_id, value: true if all sessions are revoked
-}
-
-// NewSessionRegistry creates a new instance of SessionRegistry.
-func NewSessionRegistry() *SessionRegistry {
-	return &SessionRegistry{
-		tokens:       make(map[string]string),
-		tokenFamily:  make(map[string]string),
-		usedTokens:   make(map[string]bool),
-		revokedUsers: make(map[string]bool),
-	}
-}
-
-// RegisterSession registers a new refresh token for a user.
-func (sr *SessionRegistry) RegisterSession(userID, token string, parentToken string) {
-	sr.mu.Lock()
-	defer sr.mu.Unlock()
-
-	sr.tokens[token] = userID
-	if parentToken != "" {
-		sr.tokenFamily[token] = parentToken
-		sr.usedTokens[parentToken] = true
-	}
-}
-
-// ValidateAndRotateSession validates a refresh token and performs single-use rotation.
-// Returns the associated User ID and a boolean indicating if reuse/theft was detected.
-func (sr *SessionRegistry) ValidateAndRotateSession(token string) (string, bool, error) {
-	sr.mu.Lock()
-	defer sr.mu.Unlock()
-
-	userID, exists := sr.tokens[token]
-	if !exists {
-		return "", false, errors.New("refresh token not found")
-	}
-
-	if sr.revokedUsers[userID] {
-		return "", false, errors.New("user sessions are revoked")
-	}
-
-	// Token reuse detection (theft/replay attack prevention)
-	if sr.usedTokens[token] {
-		// Revoke all tokens in this user's registry
-		for t, uid := range sr.tokens {
-			if uid == userID {
-				delete(sr.tokens, t)
-				delete(sr.tokenFamily, t)
-				delete(sr.usedTokens, t)
-			}
-		}
-		sr.revokedUsers[userID] = true
-		return userID, true, errors.New("refresh token already used: token family revoked")
-	}
-
-	return userID, false, nil
-}
-
-// RevokeAllSessions revokes all sessions associated with a user ID.
-func (sr *SessionRegistry) RevokeAllSessions(userID string) {
-	sr.mu.Lock()
-	defer sr.mu.Unlock()
-
-	sr.revokedUsers[userID] = true
-	for t, uid := range sr.tokens {
-		if uid == userID {
-			delete(sr.tokens, t)
-			delete(sr.tokenFamily, t)
-			delete(sr.usedTokens, t)
-		}
-	}
+// AuthOptions controls create-or-login semantics shared by authenticate endpoints.
+type AuthOptions struct {
+	Create   bool
+	Username string
+	Vars     map[string]string
 }
 
 // RegisterEmail creates a new user account with an email and password.
 func RegisterEmail(ctx context.Context, pool *pgxpool.Pool, username, email, password, displayName string) (*User, error) {
-	if len(password) < 8 || len(password) > 128 {
-		return nil, errors.New("password must be between 8 and 128 characters")
+	if !ValidateEmailAddress(email) {
+		return nil, errors.New("invalid email address")
+	}
+	if err := ValidatePasswordPolicy(password); err != nil {
+		return nil, err
 	}
 	if len(username) < 3 || len(username) > 64 {
 		return nil, errors.New("username must be between 3 and 64 characters")
-	}
-
-	// 1. Check password strength
-	hasUpper := false
-	hasLower := false
-	hasDigit := false
-	for _, char := range password {
-		if char >= 'A' && char <= 'Z' {
-			hasUpper = true
-		} else if char >= 'a' && char <= 'z' {
-			hasLower = true
-		} else if char >= '0' && char <= '9' {
-			hasDigit = true
-		}
-	}
-	if !hasUpper || !hasLower || !hasDigit {
-		return nil, errors.New("password must contain at least one uppercase letter, one lowercase letter, and one digit")
 	}
 
 	// 2. Hash password with bcrypt work factor 12
@@ -164,6 +93,9 @@ func RegisterEmail(ctx context.Context, pool *pgxpool.Pool, username, email, pas
 
 // AuthenticateEmail verifies a user email and password.
 func AuthenticateEmail(ctx context.Context, pool *pgxpool.Pool, email, password string) (*User, error) {
+	if !ValidateEmailAddress(email) {
+		return nil, errors.New("invalid credentials")
+	}
 	query := `
 		SELECT id, username, display_name, email, password, disable_time
 		FROM users
@@ -197,10 +129,16 @@ func AuthenticateEmail(ctx context.Context, pool *pgxpool.Pool, email, password 
 	return &user, nil
 }
 
-// AuthenticateCustom authenticates a custom device ID, creating a user if they do not exist.
+// AuthenticateCustom authenticates a custom ID, creating a user if they do not exist.
 func AuthenticateCustom(ctx context.Context, pool *pgxpool.Pool, customID string) (*User, error) {
+	u, _, err := AuthenticateCustomWithOpts(ctx, pool, customID, AuthOptions{Create: true})
+	return u, err
+}
+
+// AuthenticateCustomWithOpts supports create=false and optional username.
+func AuthenticateCustomWithOpts(ctx context.Context, pool *pgxpool.Pool, customID string, opts AuthOptions) (*User, bool, error) {
 	if customID == "" {
-		return nil, errors.New("custom ID cannot be empty")
+		return nil, false, errors.New("custom ID cannot be empty")
 	}
 
 	query := `
@@ -215,22 +153,25 @@ func AuthenticateCustom(ctx context.Context, pool *pgxpool.Pool, customID string
 	)
 
 	if err == nil {
-		// Found user
 		if user.DisableTime.After(time.Unix(0, 0)) {
-			return nil, errors.New("account disabled")
+			return nil, false, errors.New("account disabled")
 		}
-		return &user, nil
+		return &user, false, nil
 	}
 
 	if !errors.Is(err, pgx.ErrNoRows) {
-		return nil, fmt.Errorf("failed to query custom_id: %w", err)
+		return nil, false, fmt.Errorf("failed to query custom_id: %w", err)
+	}
+	if !opts.Create {
+		return nil, false, errors.New("user not found")
 	}
 
-	// Generate a unique random username
 	userID := uuid.New()
-	username := fmt.Sprintf("user_%s", strings.ReplaceAll(uuid.New().String()[:8], "-", ""))
+	username := opts.Username
+	if username == "" {
+		username = randomUsername()
+	}
 
-	// Insert new user linked to custom ID
 	insertQuery := `
 		INSERT INTO users (id, username, custom_id, display_name)
 		VALUES ($1, $2, $3, $4)
@@ -241,16 +182,26 @@ func AuthenticateCustom(ctx context.Context, pool *pgxpool.Pool, customID string
 		&user.ID, &user.Username, &user.DisplayName, &user.Email, &user.DisableTime,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create custom user: %w", err)
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			return nil, false, errors.New("username already taken")
+		}
+		return nil, false, fmt.Errorf("failed to create custom user: %w", err)
 	}
 
-	return &user, nil
+	return &user, true, nil
 }
 
 // AuthenticateSocial authenticates a social provider ID, creating a user if they do not exist.
 func AuthenticateSocial(ctx context.Context, pool *pgxpool.Pool, provider string, providerID string) (*User, error) {
+	u, _, err := AuthenticateSocialWithOpts(ctx, pool, provider, providerID, AuthOptions{Create: true})
+	return u, err
+}
+
+// AuthenticateSocialWithOpts supports create=false and optional username.
+func AuthenticateSocialWithOpts(ctx context.Context, pool *pgxpool.Pool, provider, providerID string, opts AuthOptions) (*User, bool, error) {
 	if providerID == "" {
-		return nil, errors.New("provider ID cannot be empty")
+		return nil, false, errors.New("provider ID cannot be empty")
 	}
 
 	var providerColumn string
@@ -266,7 +217,7 @@ func AuthenticateSocial(ctx context.Context, pool *pgxpool.Pool, provider string
 	case "steam":
 		providerColumn = "steam_id"
 	default:
-		return nil, fmt.Errorf("unsupported provider: %s", provider)
+		return nil, false, fmt.Errorf("unsupported provider: %s", provider)
 	}
 
 	query := fmt.Sprintf(`
@@ -281,20 +232,24 @@ func AuthenticateSocial(ctx context.Context, pool *pgxpool.Pool, provider string
 	)
 
 	if err == nil {
-		// Found user
 		if user.DisableTime.After(time.Unix(0, 0)) {
-			return nil, errors.New("account disabled")
+			return nil, false, errors.New("account disabled")
 		}
-		return &user, nil
+		return &user, false, nil
 	}
 
 	if !errors.Is(err, pgx.ErrNoRows) {
-		return nil, fmt.Errorf("failed to query social provider: %w", err)
+		return nil, false, fmt.Errorf("failed to query social provider: %w", err)
+	}
+	if !opts.Create {
+		return nil, false, errors.New("user not found")
 	}
 
-	// Register new user linked to social provider
 	userID := uuid.New()
-	username := fmt.Sprintf("user_%s", strings.ReplaceAll(uuid.New().String()[:8], "-", ""))
+	username := opts.Username
+	if username == "" {
+		username = randomUsername()
+	}
 
 	insertQuery := fmt.Sprintf(`
 		INSERT INTO users (id, username, %s, display_name)
@@ -306,10 +261,14 @@ func AuthenticateSocial(ctx context.Context, pool *pgxpool.Pool, provider string
 		&user.ID, &user.Username, &user.DisplayName, &user.Email, &user.DisableTime,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create social user: %w", err)
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			return nil, false, errors.New("username already taken")
+		}
+		return nil, false, fmt.Errorf("failed to create social user: %w", err)
 	}
 
-	return &user, nil
+	return &user, true, nil
 }
 
 // LinkProvider links a social provider ID to an existing user profile.

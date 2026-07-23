@@ -2,7 +2,9 @@ package matchmaker
 
 import (
 	"context"
+	"crypto/hmac"
 	"crypto/rand"
+	"crypto/sha256"
 	"database/sql"
 	"encoding/hex"
 	"encoding/json"
@@ -13,13 +15,27 @@ import (
 
 	"ultimate-game-server/internal/runtime"
 
-	"github.com/blevesearch/bleve/v2"
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 )
 
-// Ticket represents a player's entry in the matchmaking queue.
+var (
+	ErrTooManyTickets = errors.New("too many tickets for session")
+	ErrRateLimited    = errors.New("matchmaker rate limited")
+	ErrInvalidTicket  = errors.New("invalid ticket parameters")
+	ErrTokenInvalid   = errors.New("match token invalid or expired")
+)
+
+// Presence is a player bound to a matchmaker ticket.
+type Presence struct {
+	UserID    string `json:"user_id"`
+	Username  string `json:"username"`
+	SessionID string `json:"session_id"`
+	Node      string `json:"node,omitempty"`
+}
+
+// Ticket represents a player's (or party's) entry in the matchmaking pool.
 type Ticket struct {
 	ID                string             `json:"id"`
 	UserID            string             `json:"user_id"`
@@ -30,9 +46,14 @@ type Ticket struct {
 	Query             string             `json:"query"`
 	MinCount          int                `json:"min_count"`
 	MaxCount          int                `json:"max_count"`
+	CountMultiple     int                `json:"count_multiple"`
+	Count             int                `json:"count"`
+	PartyID           string             `json:"party_id"`
+	SessionID         string             `json:"session_id"`
+	Presences         []*Presence        `json:"presences,omitempty"`
+	Intervals         int                `json:"intervals"`
 	StringProperties  map[string]string  `json:"string_properties"`
 	NumericProperties map[string]float64 `json:"numeric_properties"`
-	CountMultiple     int                `json:"count_multiple"`
 	ReversePrecision  bool               `json:"reverse_precision"`
 	QueueName         string             `json:"queue_name"`
 	Status            string             `json:"status"`
@@ -42,11 +63,29 @@ type Ticket struct {
 
 // MatchResult represents a successful matchmaking pairing.
 type MatchResult struct {
-	MatchID    string   `json:"match_id"`
-	PlayerIDs  []string `json:"player_ids"`
-	Usernames  []string `json:"usernames"`
-	MatchToken string   `json:"match_token"`
-	QueueName  string   `json:"queue_name"`
+	MatchID       string               `json:"match_id"`
+	PlayerIDs     []string             `json:"player_ids"`
+	Usernames     []string             `json:"usernames"`
+	Users         []*Presence          `json:"users"`
+	TicketIDs     map[string]string    `json:"ticket_ids"` // user_id -> ticket_id
+	MatchToken    string               `json:"match_token"`
+	QueueName     string               `json:"queue_name"`
+	Authoritative bool                 `json:"authoritative"`
+	Module        string               `json:"module"`
+}
+
+// CompletionRecord tracks a recently completed match for stats.
+type CompletionRecord struct {
+	MatchID     string    `json:"match_id"`
+	CompletedAt time.Time `json:"completed_at"`
+	PlayerCount int       `json:"player_count"`
+}
+
+// Stats is aggregate matchmaker health information.
+type Stats struct {
+	TicketCount            int                `json:"ticket_count"`
+	OldestTicketCreateTime time.Time          `json:"oldest_ticket_create_time"`
+	Completions            []CompletionRecord `json:"completions"`
 }
 
 // SkillMatchConfig configuration for skill-based matchmaking.
@@ -70,7 +109,7 @@ type ReversePrecisionConfig struct {
 	ReverseThresholdTicks int  `json:"reverse_threshold_ticks" yaml:"reverse_threshold_ticks"`
 }
 
-// QueueConfig configuration for an individual matchmaking queue.
+// QueueConfig configuration for an individual matchmaking queue partition.
 type QueueConfig struct {
 	Name             string                 `json:"name" yaml:"name"`
 	MinPlayers       int                    `json:"min_players" yaml:"min_players"`
@@ -85,22 +124,45 @@ type QueueConfig struct {
 type MatchmakerConfig struct {
 	ProcessingIntervalMs int                    `json:"processing_interval_ms" yaml:"processing_interval_ms"`
 	TicketExpirySec      int                    `json:"ticket_expiry_sec" yaml:"ticket_expiry_sec"`
+	MaxTickets           int                    `json:"max_tickets" yaml:"max_tickets"`
+	MaxIntervals         int                    `json:"max_intervals" yaml:"max_intervals"`
+	TokenTTLSec          int                    `json:"token_ttl_sec" yaml:"token_ttl_sec"`
+	RevPrecision         bool                   `json:"rev_precision" yaml:"rev_precision"`
+	UseRedlock           bool                   `json:"use_redlock" yaml:"use_redlock"`
+	RateLimitMax         int                    `json:"rate_limit_max" yaml:"rate_limit_max"`
+	RateLimitWindowSec   int                    `json:"rate_limit_window_sec" yaml:"rate_limit_window_sec"`
+	TokenSecret          string                 `json:"-" yaml:"-"`
 	Queues               map[string]QueueConfig `json:"queues" yaml:"queues"`
 }
+
+// MatchmakerProcessorHandler replaces default matching for a queue tick.
+// Return nil to form no matches this tick; otherwise each inner slice is a match group.
+type MatchmakerProcessorHandler func(ctx context.Context, tickets []*Ticket) [][]*Ticket
+
+// MatchmakerOverrideHandler rewrites candidate groups after default matching.
+type MatchmakerOverrideHandler func(ctx context.Context, candidates [][]*Ticket) [][]*Ticket
 
 // DefaultConfig returns default matchmaking configurations.
 func DefaultConfig() *MatchmakerConfig {
 	return &MatchmakerConfig{
 		ProcessingIntervalMs: 1000,
 		TicketExpirySec:      300,
+		MaxTickets:           3,
+		MaxIntervals:         2,
+		TokenTTLSec:          30,
+		RevPrecision:         false,
+		UseRedlock:           false,
+		RateLimitMax:         10,
+		RateLimitWindowSec:   300,
+		TokenSecret:          "uge-matchmaker-default-secret",
 		Queues: map[string]QueueConfig{
 			"default": {
 				Name:          "default",
 				MinPlayers:    2,
-				MaxPlayers:    2,
+				MaxPlayers:    8,
 				CountMultiple: 1,
 				SkillMatch: SkillMatchConfig{
-					Enabled:              true,
+					Enabled:              false,
 					InitialRange:         50,
 					MaxRange:             500,
 					ExpansionIntervalSec: 5,
@@ -111,7 +173,7 @@ func DefaultConfig() *MatchmakerConfig {
 					FallbackDelaySec: 15,
 				},
 				ReversePrecision: ReversePrecisionConfig{
-					Enabled:               true,
+					Enabled:               false,
 					ReverseThresholdTicks: 10,
 				},
 			},
@@ -128,16 +190,33 @@ type Matchmaker struct {
 	nk           runtime.RuntimeModule
 	hookRegistry *runtime.HookRegistry
 	onMatched    func(result MatchResult)
+	onSpawnMatch func(result MatchResult)
 
 	config *MatchmakerConfig
 	nodeID string
 
-	// Local state fallbacks (used if rdb is nil)
-	tickets      map[string]*Ticket
-	ticketStatus map[string]string // ticketID -> JSON status payload string
+	tickets        map[string]*Ticket
+	ticketStatus   map[string]string
+	sessionTickets map[string]map[string]struct{} // sessionID -> set(ticketID)
+	submitTimes    map[string][]time.Time         // userID -> submit timestamps
+	matchTokens    map[string]*matchTokenRecord   // token -> record
+	completions    []CompletionRecord             // ring of last 10
+
+	processorHandler MatchmakerProcessorHandler
+	overrideHandler  MatchmakerOverrideHandler
 
 	tickTicker *time.Ticker
 	stopChan   chan struct{}
+	stopOnce   sync.Once
+	started    bool
+}
+
+type matchTokenRecord struct {
+	MatchID   string
+	Users     []*Presence
+	TicketIDs map[string]string
+	ExpiresAt time.Time
+	Consumed  bool
 }
 
 // NewMatchmaker creates a new Matchmaker instance.
@@ -153,17 +232,21 @@ func NewMatchmaker(
 		logger = zap.NewNop()
 	}
 	return &Matchmaker{
-		logger:       logger,
-		rdb:          rdb,
-		db:           db,
-		nk:           nk,
-		hookRegistry: hookRegistry,
-		onMatched:    onMatched,
-		config:       DefaultConfig(),
-		nodeID:       uuid.New().String(),
-		tickets:      make(map[string]*Ticket),
-		ticketStatus: make(map[string]string),
-		stopChan:     make(chan struct{}),
+		logger:         logger,
+		rdb:            rdb,
+		db:             db,
+		nk:             nk,
+		hookRegistry:   hookRegistry,
+		onMatched:      onMatched,
+		config:         DefaultConfig(),
+		nodeID:         uuid.New().String(),
+		tickets:        make(map[string]*Ticket),
+		ticketStatus:   make(map[string]string),
+		sessionTickets: make(map[string]map[string]struct{}),
+		submitTimes:    make(map[string][]time.Time),
+		matchTokens:    make(map[string]*matchTokenRecord),
+		completions:    make([]CompletionRecord, 0, 10),
+		stopChan:       make(chan struct{}),
 	}
 }
 
@@ -172,7 +255,35 @@ func (mm *Matchmaker) Configure(cfg *MatchmakerConfig) {
 	mm.mu.Lock()
 	defer mm.mu.Unlock()
 	if cfg != nil {
+		mm.normalizeConfig(cfg)
 		mm.config = cfg
+	}
+}
+
+func (mm *Matchmaker) normalizeConfig(cfg *MatchmakerConfig) {
+	if cfg.MaxTickets <= 0 {
+		cfg.MaxTickets = 3
+	}
+	if cfg.MaxIntervals <= 0 {
+		cfg.MaxIntervals = 2
+	}
+	if cfg.TokenTTLSec <= 0 {
+		cfg.TokenTTLSec = 30
+	}
+	if cfg.TicketExpirySec <= 0 {
+		cfg.TicketExpirySec = 300
+	}
+	if cfg.RateLimitMax <= 0 {
+		cfg.RateLimitMax = 10
+	}
+	if cfg.RateLimitWindowSec <= 0 {
+		cfg.RateLimitWindowSec = 300
+	}
+	if cfg.TokenSecret == "" {
+		cfg.TokenSecret = "uge-matchmaker-default-secret"
+	}
+	if cfg.Queues == nil {
+		cfg.Queues = DefaultConfig().Queues
 	}
 }
 
@@ -185,9 +296,45 @@ func (mm *Matchmaker) SetDependencies(db *sql.DB, nk runtime.RuntimeModule, hook
 	mm.hookRegistry = hookRegistry
 }
 
+// SetSpawnMatch registers a callback invoked for authoritative matches that should be spawned.
+func (mm *Matchmaker) SetSpawnMatch(fn func(result MatchResult)) {
+	mm.mu.Lock()
+	defer mm.mu.Unlock()
+	mm.onSpawnMatch = fn
+}
+
+// SetMatchedCallback updates the onMatched notification callback.
+func (mm *Matchmaker) SetMatchedCallback(fn func(result MatchResult)) {
+	mm.mu.Lock()
+	defer mm.mu.Unlock()
+	mm.onMatched = fn
+}
+
+// SetProcessorHandler sets a processor that replaces default matching.
+func (mm *Matchmaker) SetProcessorHandler(fn MatchmakerProcessorHandler) {
+	mm.mu.Lock()
+	defer mm.mu.Unlock()
+	mm.processorHandler = fn
+}
+
+// SetOverrideHandler sets an override that rewrites default candidate groups.
+func (mm *Matchmaker) SetOverrideHandler(fn MatchmakerOverrideHandler) {
+	mm.mu.Lock()
+	defer mm.mu.Unlock()
+	mm.overrideHandler = fn
+}
 
 // Submit adds a ticket to the matchmaking queue.
 func (mm *Matchmaker) Submit(ctx context.Context, t *Ticket) error {
+	mm.mu.Lock()
+	defer mm.mu.Unlock()
+	return mm.submitLocked(ctx, t)
+}
+
+func (mm *Matchmaker) submitLocked(ctx context.Context, t *Ticket) error {
+	if t == nil {
+		return ErrInvalidTicket
+	}
 	if t.ID == "" {
 		t.ID = uuid.New().String()
 	}
@@ -197,56 +344,158 @@ func (mm *Matchmaker) Submit(ctx context.Context, t *Ticket) error {
 	if t.QueueName == "" {
 		t.QueueName = "default"
 	}
-	t.Status = "queued"
+	if t.SessionID == "" {
+		t.SessionID = t.UserID
+	}
+	if t.Query == "" {
+		t.Query = "*"
+	}
 
-	mm.mu.Lock()
-	defer mm.mu.Unlock()
-
-	// Enforce 1 active ticket per user
-	if mm.rdb != nil {
-		// Verify if user already has ticket
-		userKey := "matchmaker:user:" + t.UserID
-		exists, err := mm.rdb.Exists(ctx, userKey).Result()
-		if err == nil && exists > 0 {
-			oldTicketID, err := mm.rdb.Get(ctx, userKey).Result()
-			if err == nil && oldTicketID != "" {
-				// Cancel old ticket
-				mm.cancelLocked(ctx, oldTicketID)
-			}
+	queueCfg := mm.queueConfig(t.QueueName)
+	if t.MinCount <= 0 {
+		t.MinCount = queueCfg.MinPlayers
+	}
+	if t.MaxCount <= 0 {
+		t.MaxCount = queueCfg.MaxPlayers
+	}
+	if t.CountMultiple <= 0 {
+		t.CountMultiple = queueCfg.CountMultiple
+		if t.CountMultiple <= 0 {
+			t.CountMultiple = 1
 		}
+	}
+	if t.Count <= 0 {
+		if len(t.Presences) > 0 {
+			t.Count = len(t.Presences)
+		} else {
+			t.Count = 1
+		}
+	}
+	if len(t.Presences) == 0 {
+		t.Presences = []*Presence{{
+			UserID:    t.UserID,
+			Username:  t.Username,
+			SessionID: t.SessionID,
+		}}
+	}
+	if t.StringProperties == nil {
+		t.StringProperties = map[string]string{}
+	}
+	if t.NumericProperties == nil {
+		t.NumericProperties = map[string]float64{}
+	}
+	if region, ok := t.StringProperties["region"]; ok && t.Region == "" {
+		t.Region = region
+	}
+	t.Status = "queued"
+	t.Intervals = 0
 
+	if t.MinCount < 2 || t.MaxCount < t.MinCount || t.CountMultiple < 1 {
+		return fmt.Errorf("%w: min_count/max_count/count_multiple invalid", ErrInvalidTicket)
+	}
+	if t.Count > t.MaxCount {
+		return fmt.Errorf("%w: party/ticket count exceeds max_count", ErrInvalidTicket)
+	}
+
+	if err := mm.checkRateLimitLocked(t.UserID); err != nil {
+		return err
+	}
+
+	sessionSet := mm.sessionTickets[t.SessionID]
+	if sessionSet == nil {
+		sessionSet = make(map[string]struct{})
+		mm.sessionTickets[t.SessionID] = sessionSet
+	}
+	if len(sessionSet) >= mm.config.MaxTickets {
+		return ErrTooManyTickets
+	}
+
+	if mm.rdb != nil {
 		payload, err := json.Marshal(t)
 		if err != nil {
 			return fmt.Errorf("failed to marshal ticket: %w", err)
 		}
 
 		tx := mm.rdb.TxPipeline()
-		tx.Set(ctx, userKey, t.ID, time.Duration(mm.config.TicketExpirySec)*time.Second)
+		tx.Set(ctx, "matchmaker:user:"+t.UserID, t.ID, time.Duration(mm.config.TicketExpirySec)*time.Second)
 		tx.HSet(ctx, "matchmaker:ticket:"+t.ID, "payload", string(payload))
 		tx.ZAdd(ctx, "matchmaker:queue:"+t.QueueName, redis.Z{
-			Score:  float64(t.CreatedAt.Unix()),
+			Score:  float64(t.CreatedAt.UnixNano()),
 			Member: t.ID,
 		})
-		// Set status record
+		tx.SAdd(ctx, "matchmaker:session:"+t.SessionID, t.ID)
+		tx.Expire(ctx, "matchmaker:session:"+t.SessionID, time.Duration(mm.config.TicketExpirySec)*time.Second)
 		tx.Set(ctx, "matchmaker:status:"+t.ID, string(payload), 5*time.Minute)
-		_, err = tx.Exec(ctx)
-		if err != nil {
+		if _, err = tx.Exec(ctx); err != nil {
 			return fmt.Errorf("failed to submit ticket to Redis: %w", err)
 		}
-	} else {
-		// Local fallback
-		for _, ticket := range mm.tickets {
-			if ticket.UserID == t.UserID {
-				delete(mm.tickets, ticket.ID)
-			}
-		}
-		mm.tickets[t.ID] = t
-		payload, _ := json.Marshal(t)
-		mm.ticketStatus[t.ID] = string(payload)
 	}
 
-	mm.logger.Debug("Matchmaking ticket submitted", zap.String("ticket_id", t.ID), zap.String("user_id", t.UserID))
+	mm.tickets[t.ID] = t
+	payload, _ := json.Marshal(t)
+	mm.ticketStatus[t.ID] = string(payload)
+	sessionSet[t.ID] = struct{}{}
+
+	mm.logger.Debug("Matchmaking ticket submitted",
+		zap.String("ticket_id", t.ID),
+		zap.String("user_id", t.UserID),
+		zap.String("session_id", t.SessionID),
+	)
 	return nil
+}
+
+func (mm *Matchmaker) checkRateLimitLocked(userID string) error {
+	now := time.Now()
+	window := time.Duration(mm.config.RateLimitWindowSec) * time.Second
+	cutoff := now.Add(-window)
+	times := mm.submitTimes[userID]
+	filtered := times[:0]
+	for _, ts := range times {
+		if ts.After(cutoff) {
+			filtered = append(filtered, ts)
+		}
+	}
+	if len(filtered) >= mm.config.RateLimitMax {
+		mm.submitTimes[userID] = filtered
+		return ErrRateLimited
+	}
+	mm.submitTimes[userID] = append(filtered, now)
+	return nil
+}
+
+// SubmitParty submits an atomic party ticket listing leader + members.
+func (mm *Matchmaker) SubmitParty(ctx context.Context, leader *Presence, members []*Presence, ticket *Ticket) error {
+	if ticket == nil {
+		ticket = &Ticket{}
+	}
+	if leader == nil {
+		return ErrInvalidTicket
+	}
+
+	presences := make([]*Presence, 0, 1+len(members))
+	presences = append(presences, leader)
+	seen := map[string]struct{}{leader.UserID: {}}
+	for _, m := range members {
+		if m == nil {
+			continue
+		}
+		if _, ok := seen[m.UserID]; ok {
+			continue
+		}
+		seen[m.UserID] = struct{}{}
+		presences = append(presences, m)
+	}
+
+	ticket.UserID = leader.UserID
+	ticket.Username = leader.Username
+	ticket.SessionID = leader.SessionID
+	ticket.Presences = presences
+	ticket.Count = len(presences)
+	if ticket.PartyID == "" {
+		ticket.PartyID = uuid.New().String()
+	}
+
+	return mm.Submit(ctx, ticket)
 }
 
 // Cancel removes a ticket from the matchmaking queue.
@@ -257,44 +506,100 @@ func (mm *Matchmaker) Cancel(ctx context.Context, ticketID string) error {
 }
 
 func (mm *Matchmaker) cancelLocked(ctx context.Context, ticketID string) error {
+	var t *Ticket
 	if mm.rdb != nil {
-		// Fetch ticket to get user_id and queue_name
 		payload, err := mm.rdb.HGet(ctx, "matchmaker:ticket:"+ticketID, "payload").Result()
 		if err != nil {
 			if errors.Is(err, redis.Nil) {
-				return nil // already deleted
+				// Also try local cleanup
+				if local, ok := mm.tickets[ticketID]; ok {
+					t = local
+				} else {
+					return nil
+				}
+			} else {
+				return fmt.Errorf("failed to get ticket for cancel: %w", err)
 			}
-			return fmt.Errorf("failed to get ticket for cancel: %w", err)
+		} else {
+			var parsed Ticket
+			if err := json.Unmarshal([]byte(payload), &parsed); err != nil {
+				return fmt.Errorf("failed to unmarshal ticket for cancel: %w", err)
+			}
+			t = &parsed
 		}
-
-		var t Ticket
-		if err := json.Unmarshal([]byte(payload), &t); err != nil {
-			return fmt.Errorf("failed to unmarshal ticket for cancel: %w", err)
+	} else {
+		local, ok := mm.tickets[ticketID]
+		if !ok {
+			return nil
 		}
-		t.Status = "cancelled"
-		cancelledPayload, _ := json.Marshal(t)
+		t = local
+	}
 
+	t.Status = "cancelled"
+	cancelledPayload, _ := json.Marshal(t)
+
+	if mm.rdb != nil {
 		tx := mm.rdb.TxPipeline()
 		tx.Del(ctx, "matchmaker:user:"+t.UserID)
 		tx.Del(ctx, "matchmaker:ticket:"+ticketID)
 		tx.ZRem(ctx, "matchmaker:queue:"+t.QueueName, ticketID)
+		tx.SRem(ctx, "matchmaker:session:"+t.SessionID, ticketID)
 		tx.Set(ctx, "matchmaker:status:"+ticketID, string(cancelledPayload), 5*time.Minute)
-		_, err = tx.Exec(ctx)
-		if err != nil {
+		if _, err := tx.Exec(ctx); err != nil {
 			return fmt.Errorf("failed to cancel ticket in Redis: %w", err)
 		}
-	} else {
-		t, ok := mm.tickets[ticketID]
-		if ok {
-			t.Status = "cancelled"
-			cancelledPayload, _ := json.Marshal(t)
-			mm.ticketStatus[ticketID] = string(cancelledPayload)
-			delete(mm.tickets, ticketID)
+	}
+
+	mm.ticketStatus[ticketID] = string(cancelledPayload)
+	delete(mm.tickets, ticketID)
+	if set, ok := mm.sessionTickets[t.SessionID]; ok {
+		delete(set, ticketID)
+		if len(set) == 0 {
+			delete(mm.sessionTickets, t.SessionID)
 		}
 	}
 
 	mm.logger.Debug("Matchmaking ticket cancelled", zap.String("ticket_id", ticketID))
 	return nil
+}
+
+// RemoveSessionAll cancels every ticket owned by the session.
+func (mm *Matchmaker) RemoveSessionAll(ctx context.Context, sessionID string) error {
+	mm.mu.Lock()
+	defer mm.mu.Unlock()
+
+	ids := make([]string, 0)
+	if set, ok := mm.sessionTickets[sessionID]; ok {
+		for id := range set {
+			ids = append(ids, id)
+		}
+	}
+	if mm.rdb != nil {
+		members, err := mm.rdb.SMembers(ctx, "matchmaker:session:"+sessionID).Result()
+		if err == nil {
+			seen := map[string]struct{}{}
+			for _, id := range ids {
+				seen[id] = struct{}{}
+			}
+			for _, id := range members {
+				if _, ok := seen[id]; !ok {
+					ids = append(ids, id)
+				}
+			}
+		}
+	}
+
+	var firstErr error
+	for _, id := range ids {
+		if err := mm.cancelLocked(ctx, id); err != nil && firstErr == nil {
+			firstErr = err
+		}
+	}
+	delete(mm.sessionTickets, sessionID)
+	if mm.rdb != nil {
+		_ = mm.rdb.Del(ctx, "matchmaker:session:"+sessionID).Err()
+	}
+	return firstErr
 }
 
 // GetTicket retrieves a ticket status (either active or historical).
@@ -303,7 +608,6 @@ func (mm *Matchmaker) GetTicket(ctx context.Context, ticketID string) (*Ticket, 
 	defer mm.mu.Unlock()
 
 	if mm.rdb != nil {
-		// First try status mapping (active or historical)
 		payload, err := mm.rdb.Get(ctx, "matchmaker:status:"+ticketID).Result()
 		if err == nil && payload != "" {
 			var t Ticket
@@ -311,8 +615,6 @@ func (mm *Matchmaker) GetTicket(ctx context.Context, ticketID string) (*Ticket, 
 				return &t, nil
 			}
 		}
-
-		// Fallback to active ticket
 		payload, err = mm.rdb.HGet(ctx, "matchmaker:ticket:"+ticketID, "payload").Result()
 		if err != nil {
 			if errors.Is(err, redis.Nil) {
@@ -327,30 +629,39 @@ func (mm *Matchmaker) GetTicket(ctx context.Context, ticketID string) (*Ticket, 
 		return &t, nil
 	}
 
-	payload, ok := mm.ticketStatus[ticketID]
-	if ok {
+	if payload, ok := mm.ticketStatus[ticketID]; ok {
 		var t Ticket
 		if err := json.Unmarshal([]byte(payload), &t); err == nil {
 			return &t, nil
 		}
 	}
-
 	t, ok := mm.tickets[ticketID]
 	if !ok {
 		return nil, errors.New("ticket not found")
 	}
-	return t, nil
+	cp := *t
+	return &cp, nil
 }
 
 // Start runs the matchmaking tick loop.
 func (mm *Matchmaker) Start(ctx context.Context, interval time.Duration) {
+	mm.mu.Lock()
+	defer mm.mu.Unlock()
+	if mm.started {
+		return
+	}
+	mm.started = true
+	mm.stopOnce = sync.Once{}
+	mm.stopChan = make(chan struct{})
 	mm.tickTicker = time.NewTicker(interval)
+	ticker := mm.tickTicker
+	stopChan := mm.stopChan
 	go func() {
 		for {
 			select {
-			case <-mm.tickTicker.C:
+			case <-ticker.C:
 				mm.Tick(ctx)
-			case <-mm.stopChan:
+			case <-stopChan:
 				return
 			case <-ctx.Done():
 				return
@@ -359,421 +670,154 @@ func (mm *Matchmaker) Start(ctx context.Context, interval time.Duration) {
 	}()
 }
 
-// Stop halts the matchmaking loop.
+// Stop halts the matchmaking loop. Safe to call multiple times.
 func (mm *Matchmaker) Stop() {
-	if mm.tickTicker != nil {
-		mm.tickTicker.Stop()
-	}
-	close(mm.stopChan)
+	mm.stopOnce.Do(func() {
+		mm.mu.Lock()
+		if mm.tickTicker != nil {
+			mm.tickTicker.Stop()
+			mm.tickTicker = nil
+		}
+		mm.started = false
+		ch := mm.stopChan
+		mm.mu.Unlock()
+		if ch != nil {
+			select {
+			case <-ch:
+			default:
+				close(ch)
+			}
+		}
+	})
 }
 
 // GetQueueStats retrieves queue statistics.
 func (mm *Matchmaker) GetQueueStats(ctx context.Context, queueName string) (int, int, error) {
+	stats := mm.GetStats(ctx)
+	return stats.TicketCount, len(stats.Completions), nil
+}
+
+// GetStats returns ticket_count, oldest create time, and recent completions.
+func (mm *Matchmaker) GetStats(ctx context.Context) Stats {
 	mm.mu.Lock()
 	defer mm.mu.Unlock()
 
-	if mm.rdb != nil {
-		count, err := mm.rdb.ZCard(ctx, "matchmaker:queue:"+queueName).Result()
-		if err != nil {
-			return 0, 0, err
-		}
-		return int(count), 0, nil
+	stats := Stats{
+		TicketCount: len(mm.tickets),
+		Completions: append([]CompletionRecord(nil), mm.completions...),
 	}
-
-	count := 0
+	var oldest time.Time
 	for _, t := range mm.tickets {
-		if t.QueueName == queueName {
-			count++
+		if oldest.IsZero() || t.CreatedAt.Before(oldest) {
+			oldest = t.CreatedAt
 		}
 	}
-	return count, 0, nil
+	stats.OldestTicketCreateTime = oldest
+
+	if mm.rdb != nil && stats.TicketCount == 0 {
+		// Best-effort Redis count across configured queues
+		for qName := range mm.config.Queues {
+			n, err := mm.rdb.ZCard(ctx, "matchmaker:queue:"+qName).Result()
+			if err == nil {
+				stats.TicketCount += int(n)
+			}
+		}
+	}
+	return stats
 }
 
-// Tick evaluates candidate tickets, pairing them based on region, skill, and query.
-func (mm *Matchmaker) Tick(ctx context.Context) {
+// ConsumeMatchToken validates and consumes a single-use join token.
+func (mm *Matchmaker) ConsumeMatchToken(ctx context.Context, token string) (*MatchResult, error) {
 	mm.mu.Lock()
 	defer mm.mu.Unlock()
 
-	queuesToProcess := []string{"default"}
+	if token == "" {
+		return nil, ErrTokenInvalid
+	}
+
+	if mm.rdb != nil {
+		key := "matchmaker:token:" + token
+		payload, err := mm.rdb.Get(ctx, key).Result()
+		if err != nil {
+			if errors.Is(err, redis.Nil) {
+				return nil, ErrTokenInvalid
+			}
+			return nil, err
+		}
+		if err := mm.rdb.Del(ctx, key).Err(); err != nil {
+			return nil, err
+		}
+		var rec matchTokenRecord
+		if err := json.Unmarshal([]byte(payload), &rec); err != nil {
+			return nil, ErrTokenInvalid
+		}
+		if time.Now().After(rec.ExpiresAt) {
+			return nil, ErrTokenInvalid
+		}
+		return &MatchResult{
+			MatchID:    rec.MatchID,
+			Users:      rec.Users,
+			TicketIDs:  rec.TicketIDs,
+			MatchToken: token,
+		}, nil
+	}
+
+	rec, ok := mm.matchTokens[token]
+	if !ok || rec.Consumed || time.Now().After(rec.ExpiresAt) {
+		return nil, ErrTokenInvalid
+	}
+	rec.Consumed = true
+	return &MatchResult{
+		MatchID:    rec.MatchID,
+		Users:      rec.Users,
+		TicketIDs:  rec.TicketIDs,
+		MatchToken: token,
+	}, nil
+}
+
+func (mm *Matchmaker) queueConfig(queueName string) QueueConfig {
 	if mm.config != nil {
-		queuesToProcess = make([]string, 0, len(mm.config.Queues))
-		for qName := range mm.config.Queues {
-			queuesToProcess = append(queuesToProcess, qName)
+		if q, ok := mm.config.Queues[queueName]; ok {
+			return q
+		}
+		if q, ok := mm.config.Queues["default"]; ok {
+			q.Name = queueName
+			return q
 		}
 	}
-
-	for _, queueName := range queuesToProcess {
-		mm.processQueue(ctx, queueName)
-	}
+	return QueueConfig{Name: queueName, MinPlayers: 2, MaxPlayers: 8, CountMultiple: 1}
 }
 
-func (mm *Matchmaker) processQueue(ctx context.Context, queueName string) {
-	queueCfg, exists := mm.config.Queues[queueName]
-	if !exists {
-		queueCfg = mm.config.Queues["default"]
-		queueCfg.Name = queueName
+func (mm *Matchmaker) mintMatchToken(matchID string, users []*Presence, ticketIDs map[string]string) (string, error) {
+	nonce := make([]byte, 16)
+	if _, err := rand.Read(nonce); err != nil {
+		return "", err
 	}
+	mac := hmac.New(sha256.New, []byte(mm.config.TokenSecret))
+	_, _ = mac.Write([]byte(matchID))
+	_, _ = mac.Write(nonce)
+	token := hex.EncodeToString(mac.Sum(nil)) + hex.EncodeToString(nonce)
 
-	// 1. Multi-node coordination lock
-	if mm.rdb != nil {
-		lockKey := "lock:matchmaker:" + queueName
-		// Acquire lock for 800ms
-		ok, err := mm.rdb.SetNX(ctx, lockKey, mm.nodeID, 800*time.Millisecond).Result()
-		if err != nil || !ok {
-			return // Lock acquired by other node, or error
-		}
-		defer func() {
-			// Release lock if owned by this node
-			val, err := mm.rdb.Get(ctx, lockKey).Result()
-			if err == nil && val == mm.nodeID {
-				mm.rdb.Del(ctx, lockKey)
-			}
-		}()
+	rec := &matchTokenRecord{
+		MatchID:   matchID,
+		Users:     users,
+		TicketIDs: ticketIDs,
+		ExpiresAt: time.Now().Add(time.Duration(mm.config.TokenTTLSec) * time.Second),
 	}
-
-	// 2. Fetch active tickets
-	var activeTickets []*Ticket
-	now := time.Now()
-
-	if mm.rdb != nil {
-		ticketIDs, err := mm.rdb.ZRangeByScore(ctx, "matchmaker:queue:"+queueName, &redis.ZRangeBy{
-			Min: "-inf",
-			Max: "+inf",
-		}).Result()
-		if err != nil || len(ticketIDs) == 0 {
-			return
-		}
-
-		// Fetch payloads in pipeline
-		pipe := mm.rdb.Pipeline()
-		for _, tid := range ticketIDs {
-			pipe.HGet(ctx, "matchmaker:ticket:"+tid, "payload")
-		}
-		cmds, err := pipe.Exec(ctx)
-		if err != nil && !errors.Is(err, redis.Nil) {
-			mm.logger.Error("Failed to fetch tickets pipeline", zap.Error(err))
-			return
-		}
-
-		for _, cmd := range cmds {
-			payload, err := cmd.(*redis.StringCmd).Result()
-			if err != nil {
-				continue
-			}
-			var t Ticket
-			if err := json.Unmarshal([]byte(payload), &t); err == nil {
-				// Enforce ticket expiration GC
-				if now.Sub(t.CreatedAt).Seconds() > float64(mm.config.TicketExpirySec) {
-					mm.logger.Info("Garbage collecting expired ticket", zap.String("ticket_id", t.ID))
-					t.Status = "expired"
-					expiredPayload, _ := json.Marshal(t)
-					mm.rdb.Del(ctx, "matchmaker:user:"+t.UserID)
-					mm.rdb.Del(ctx, "matchmaker:ticket:"+t.ID)
-					mm.rdb.ZRem(ctx, "matchmaker:queue:"+queueName, t.ID)
-					mm.rdb.Set(ctx, "matchmaker:status:"+t.ID, string(expiredPayload), 5*time.Minute)
-					continue
-				}
-				activeTickets = append(activeTickets, &t)
-			}
-		}
-	} else {
-		// Local state GC and collection
-		for id, t := range mm.tickets {
-			if t.QueueName != queueName {
-				continue
-			}
-			if now.Sub(t.CreatedAt).Seconds() > float64(mm.config.TicketExpirySec) {
-				t.Status = "expired"
-				expiredPayload, _ := json.Marshal(t)
-				mm.ticketStatus[t.ID] = string(expiredPayload)
-				delete(mm.tickets, id)
-				continue
-			}
-			activeTickets = append(activeTickets, t)
-		}
-	}
-
-	if len(activeTickets) < queueCfg.MinPlayers {
-		return
-	}
-
-	// 3. Pairing algorithm
-	matchedTicketIDs := make(map[string]bool)
-
-	for i := 0; i < len(activeTickets); i++ {
-		t1 := activeTickets[i]
-		if matchedTicketIDs[t1.ID] {
-			continue
-		}
-
-		matchGroup := []*Ticket{t1}
-
-		for j := i + 1; j < len(activeTickets); j++ {
-			t2 := activeTickets[j]
-			if matchedTicketIDs[t2.ID] {
-				continue
-			}
-
-			// Validate compatibility
-			if mm.evaluatePairing(t1, t2, &queueCfg, now) {
-				matchGroup = append(matchGroup, t2)
-				if len(matchGroup) == queueCfg.MaxPlayers {
-					break
-				}
-			}
-		}
-
-		// Verify minimum constraints
-		if len(matchGroup) >= queueCfg.MinPlayers {
-			// Apply count_multiple check
-			if queueCfg.CountMultiple > 1 {
-				rem := len(matchGroup) % queueCfg.CountMultiple
-				if rem != 0 {
-					// Slice down to largest multiple
-					validSize := len(matchGroup) - rem
-					if validSize >= queueCfg.MinPlayers {
-						matchGroup = matchGroup[:validSize]
-					} else {
-						continue // Cannot satisfy count_multiple
-					}
-				}
-			}
-
-			// Complete match formed!
-			for _, t := range matchGroup {
-				matchedTicketIDs[t.ID] = true
-			}
-
-			// Finalize Match
-			mm.finalizeMatch(ctx, matchGroup, queueName)
-		}
-	}
+	mm.matchTokens[token] = rec
+	return token, nil
 }
 
-func (mm *Matchmaker) evaluatePairing(t1, t2 *Ticket, queueCfg *QueueConfig, now time.Time) bool {
-	// 1. Region match check
-	wait1 := now.Sub(t1.CreatedAt).Seconds()
-	wait2 := now.Sub(t2.CreatedAt).Seconds()
-	strictRegion := queueCfg.RegionMatch.Strict
-
-	if t1.Region != t2.Region {
-		if strictRegion {
-			return false
-		}
-		// Fallback delay check
-		fallbackDelay := float64(queueCfg.RegionMatch.FallbackDelaySec)
-		if wait1 < fallbackDelay || wait2 < fallbackDelay {
-			return false
-		}
+func (mm *Matchmaker) storeMatchTokenRedis(ctx context.Context, token string, rec *matchTokenRecord) error {
+	if mm.rdb == nil {
+		return nil
 	}
-
-	// 2. Skill MMR check with progressive expansion
-	if queueCfg.SkillMatch.Enabled {
-		delta1 := getSkillDelta(wait1)
-		delta2 := getSkillDelta(wait2)
-		maxAllowedDelta := delta1
-		if delta2 > maxAllowedDelta {
-			maxAllowedDelta = delta2
-		}
-
-		actualDelta := t1.SkillRating - t2.SkillRating
-		if actualDelta < 0 {
-			actualDelta = -actualDelta
-		}
-		if actualDelta > maxAllowedDelta {
-			return false
-		}
+	payload, err := json.Marshal(rec)
+	if err != nil {
+		return err
 	}
-
-	// 3. Bleve custom properties matching
-	if t1.Query != "" || t2.Query != "" {
-		mapping := bleve.NewIndexMapping()
-		index, err := bleve.NewMemOnly(mapping)
-		if err != nil {
-			return false
-		}
-
-		// Index t2
-		doc2 := map[string]interface{}{
-			"properties": mergeProperties(t2),
-			"skill":      t2.SkillRating,
-			"region":     t2.Region,
-		}
-		_ = index.Index("t2", doc2)
-
-		if t1.Query != "" {
-			q := bleve.NewQueryStringQuery(t1.Query)
-			req := bleve.NewSearchRequest(q)
-			res, err := index.Search(req)
-			if err != nil || res.Total == 0 {
-				return false
-			}
-		}
-
-		// Bidirectional reverse precision check
-		isReverseEnabled := queueCfg.ReversePrecision.Enabled
-		if isReverseEnabled && t2.Query != "" {
-			thresholdTicks := queueCfg.ReversePrecision.ReverseThresholdTicks
-			if thresholdTicks <= 0 {
-				thresholdTicks = 10
-			}
-
-			// Bidirectional check only within threshold wait times
-			if wait1 < float64(thresholdTicks) && wait2 < float64(thresholdTicks) {
-				index1, err := bleve.NewMemOnly(mapping)
-				if err == nil {
-					doc1 := map[string]interface{}{
-						"properties": mergeProperties(t1),
-						"skill":      t1.SkillRating,
-						"region":     t1.Region,
-					}
-					_ = index1.Index("t1", doc1)
-					q2 := bleve.NewQueryStringQuery(t2.Query)
-					req2 := bleve.NewSearchRequest(q2)
-					res2, err := index1.Search(req2)
-					if err != nil || res2.Total == 0 {
-						return false
-					}
-				}
-			}
-		}
-	}
-
-	return true
-}
-
-func getSkillDelta(waitSeconds float64) int {
-	if waitSeconds < 5 {
-		return 50
-	}
-	if waitSeconds < 10 {
-		return 75
-	}
-	if waitSeconds < 20 {
-		return 125
-	}
-	if waitSeconds < 30 {
-		return 200
-	}
-	if waitSeconds < 60 {
-		return 350
-	}
-	return 500
-}
-
-func mergeProperties(t *Ticket) map[string]interface{} {
-	props := make(map[string]interface{})
-	for k, v := range t.StringProperties {
-		props[k] = v
-	}
-	for k, v := range t.NumericProperties {
-		props[k] = v
-	}
-	return props
-}
-
-func (mm *Matchmaker) finalizeMatch(ctx context.Context, tickets []*Ticket, queueName string) {
-	playerIDs := make([]string, len(tickets))
-	usernames := make([]string, len(tickets))
-	for idx, t := range tickets {
-		playerIDs[idx] = t.UserID
-		usernames[idx] = t.Username
-	}
-
-	// 1. Remove tickets from queue
-	if mm.rdb != nil {
-		tx := mm.rdb.TxPipeline()
-		for _, t := range tickets {
-			tx.Del(ctx, "matchmaker:user:"+t.UserID)
-			tx.Del(ctx, "matchmaker:ticket:"+t.ID)
-			tx.ZRem(ctx, "matchmaker:queue:"+queueName, t.ID)
-		}
-		_, err := tx.Exec(ctx)
-		if err != nil {
-			mm.logger.Error("Failed to delete matched tickets in Redis transaction", zap.Error(err))
-			return
-		}
-	} else {
-		for _, t := range tickets {
-			delete(mm.tickets, t.ID)
-		}
-	}
-
-	// 2. Trigger runtime hook matchmaker_matched
-	matchID := ""
-	if mm.hookRegistry != nil {
-		handler := mm.hookRegistry.GetMatchmakerMatched()
-		if handler != nil {
-			entries := make([]interface{}, len(tickets))
-			for idx, t := range tickets {
-				entries[idx] = map[string]interface{}{
-					"ticket_id":          t.ID,
-					"user_id":            t.UserID,
-					"username":           t.Username,
-					"skill_rating":       t.SkillRating,
-					"region":             t.Region,
-					"created_at":         t.CreatedAt.Unix(),
-					"string_properties":  t.StringProperties,
-					"numeric_properties": t.NumericProperties,
-				}
-			}
-
-			// Execute hook
-			var err error
-			matchID, err = handler(ctx, &runtimeLogger{zapLogger: mm.logger}, mm.db, mm.nk, entries)
-			if err != nil {
-				mm.logger.Warn("matchmaker_matched runtime hook returned error, falling back", zap.Error(err))
-			}
-		}
-	}
-
-	// 3. Fallback to default Match ID and spawn authoritative match loop
-	if matchID == "" {
-		matchID = "match_" + uuid.New().String()
-	}
-
-	// Generate secure token
-	tokenBytes := make([]byte, 16)
-	_, _ = rand.Read(tokenBytes)
-	matchToken := hex.EncodeToString(tokenBytes)
-
-	// Register match in Redis (if distributed)
-	if mm.rdb != nil {
-		matchKey := "matchmaker:match:" + matchID
-		_ = mm.rdb.HSet(ctx, matchKey, map[string]interface{}{
-			"players":     playerIDs,
-			"match_token": matchToken,
-			"region":      tickets[0].Region,
-			"node_id":     mm.nodeID,
-		}).Err()
-	}
-
-	// Notify and update ticket status records
-	for _, t := range tickets {
-		t.Status = "matched"
-		t.MatchID = matchID
-		t.MatchToken = matchToken
-		matchedPayload, _ := json.Marshal(t)
-		if mm.rdb != nil {
-			mm.rdb.Set(ctx, "matchmaker:status:"+t.ID, string(matchedPayload), 5*time.Minute)
-		} else {
-			mm.ticketStatus[t.ID] = string(matchedPayload)
-		}
-	}
-
-	result := MatchResult{
-		MatchID:    matchID,
-		PlayerIDs:  playerIDs,
-		Usernames:  usernames,
-		MatchToken: matchToken,
-		QueueName:  queueName,
-	}
-
-	if mm.onMatched != nil {
-		go mm.onMatched(result)
-	}
-
-	mm.logger.Info("Match formed successfully!", zap.String("match_id", matchID), zap.Int("players_count", len(playerIDs)))
+	ttl := time.Duration(mm.config.TokenTTLSec) * time.Second
+	return mm.rdb.Set(ctx, "matchmaker:token:"+token, string(payload), ttl).Err()
 }
 
 type runtimeLogger struct {
@@ -783,15 +827,12 @@ type runtimeLogger struct {
 func (l *runtimeLogger) Debug(format string, args ...interface{}) {
 	l.zapLogger.Debug(fmt.Sprintf(format, args...))
 }
-
 func (l *runtimeLogger) Info(format string, args ...interface{}) {
 	l.zapLogger.Info(fmt.Sprintf(format, args...))
 }
-
 func (l *runtimeLogger) Warn(format string, args ...interface{}) {
 	l.zapLogger.Warn(fmt.Sprintf(format, args...))
 }
-
 func (l *runtimeLogger) Error(format string, args ...interface{}) {
 	l.zapLogger.Error(fmt.Sprintf(format, args...))
 }

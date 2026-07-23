@@ -2,8 +2,10 @@ package match
 
 import (
 	"context"
+	"database/sql"
 	"encoding/base64"
 	"encoding/json"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -314,16 +316,13 @@ func TestMatchLoop_LuaAuthoritative(t *testing.T) {
 
 	time.Sleep(30 * time.Millisecond)
 
-	mockReg.mu.Lock()
-	if len(mockReg.broadcasts) == 0 {
-		t.Fatal("expected broadcast state delta")
+	// Lua path no longer auto-broadcasts full state; verify via loop state.
+	ml.mu.RLock()
+	pos := ml.state.Positions["p-1"]
+	ml.mu.RUnlock()
+	if pos != "50,60" {
+		t.Errorf("expected p-1 position to be '50,60', got: %v", pos)
 	}
-	var st MatchState
-	_ = json.Unmarshal(mockReg.broadcasts[len(mockReg.broadcasts)-1], &st)
-	if st.Positions["p-1"] != "50,60" {
-		t.Errorf("expected p-1 position to be '50,60', got: %v", st.Positions["p-1"])
-	}
-	mockReg.mu.Unlock()
 
 	// Submit scoring inputs to trigger termination via Lua hook limit (score >= 3)
 	for i := 0; i < 3; i++ {
@@ -343,4 +342,184 @@ func TestMatchLoop_LuaAuthoritative(t *testing.T) {
 		t.Errorf("expected final score to be >= 3, got: %d", finalState.Score["p-1"])
 	}
 	mu.Unlock()
+}
+
+type terminateTrackingMatch struct {
+	mu             sync.Mutex
+	terminateCalls int
+	joinAttempts   int
+	loopReturnsNil bool
+	deferredData   []byte
+}
+
+func (m *terminateTrackingMatch) MatchInit(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.RuntimeModule, params map[string]interface{}) (interface{}, int, string) {
+	return map[string]interface{}{"ok": true}, 30, "{}"
+}
+
+func (m *terminateTrackingMatch) MatchJoinAttempt(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.RuntimeModule, dispatcher interface{}, tick int64, state interface{}, presence runtime.Presence, metadata map[string]string) (interface{}, bool, string) {
+	m.mu.Lock()
+	m.joinAttempts++
+	m.mu.Unlock()
+	return state, true, ""
+}
+
+func (m *terminateTrackingMatch) MatchJoin(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.RuntimeModule, dispatcher interface{}, tick int64, state interface{}, presences []runtime.Presence) interface{} {
+	return state
+}
+
+func (m *terminateTrackingMatch) MatchLeave(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.RuntimeModule, dispatcher interface{}, tick int64, state interface{}, presences []runtime.Presence) interface{} {
+	return state
+}
+
+func (m *terminateTrackingMatch) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.RuntimeModule, dispatcher interface{}, tick int64, state interface{}, messages []runtime.MatchData) interface{} {
+	if m.deferredData != nil {
+		if d, ok := dispatcher.(interface {
+			BroadcastMessageDeferred(opCode int64, data []byte, presences []runtime.Presence, sender runtime.Presence, reliable bool) error
+		}); ok {
+			_ = d.BroadcastMessageDeferred(7, m.deferredData, nil, nil, true)
+		}
+	}
+	m.mu.Lock()
+	end := m.loopReturnsNil && m.joinAttempts > 0
+	m.mu.Unlock()
+	if end {
+		return nil
+	}
+	return state
+}
+
+func (m *terminateTrackingMatch) MatchTerminate(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.RuntimeModule, dispatcher interface{}, tick int64, state interface{}, graceSeconds int) interface{} {
+	m.mu.Lock()
+	m.terminateCalls++
+	m.mu.Unlock()
+	return state
+}
+
+func (m *terminateTrackingMatch) MatchSignal(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.RuntimeModule, dispatcher interface{}, tick int64, state interface{}, data string) (interface{}, string) {
+	return state, data
+}
+
+func TestMatchTerminateInvoked(t *testing.T) {
+	logger := zap.NewNop()
+	mockMatch := &terminateTrackingMatch{loopReturnsNil: true}
+	ml := NewMatchLoop("m-term", nil, 50, logger, nil)
+	ml.SetGoMatch(mockMatch, map[string]interface{}{"v": 1}, nil, nil, nil)
+	ml.graceSeconds = 0
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go ml.Start(ctx)
+
+	time.Sleep(20 * time.Millisecond)
+	accept, err := ml.JoinAttempt("u1", "user1", "s1", nil)
+	if err != nil || !accept {
+		t.Fatalf("join failed: accept=%v err=%v", accept, err)
+	}
+
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		mockMatch.mu.Lock()
+		calls := mockMatch.terminateCalls
+		mockMatch.mu.Unlock()
+		if calls > 0 {
+			return
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	mockMatch.mu.Lock()
+	calls := mockMatch.terminateCalls
+	mockMatch.mu.Unlock()
+	t.Fatalf("expected MatchTerminate to be called, got %d calls", calls)
+}
+
+func TestStateQuotaEndsMatch(t *testing.T) {
+	logger := zap.NewNop()
+	ml := NewMatchLoop("m-quota", nil, 30, logger, nil)
+	// Force oversized goState past maxMatchStateBytes (1 MiB)
+	big := strings.Repeat("x", maxMatchStateBytes+1024)
+	ml.SetGoMatch(&terminateTrackingMatch{}, map[string]interface{}{"blob": big}, nil, nil, nil)
+
+	finished := ml.tick()
+	if !finished {
+		t.Fatal("expected match to finish when state exceeds quota")
+	}
+	ml.mu.RLock()
+	finishedFlag := ml.state.IsFinished
+	ml.mu.RUnlock()
+	if !finishedFlag {
+		t.Fatal("expected IsFinished after state quota breach")
+	}
+}
+
+func TestDeferredBroadcastFlushed(t *testing.T) {
+	logger := zap.NewNop()
+	reg := &mockSessionRegistry{}
+	mockMatch := &terminateTrackingMatch{deferredData: []byte(`{"hello":"deferred"}`)}
+	ml := NewMatchLoop("m-def", nil, 30, logger, reg)
+	ml.SetGoMatch(mockMatch, map[string]interface{}{"ok": true}, nil, nil, nil)
+	ml.presences["s1"] = &PresenceImpl{UserID: "u1", SessionID: "s1", Username: "user1"}
+
+	_ = ml.tick()
+
+	reg.mu.Lock()
+	defer reg.mu.Unlock()
+	if len(reg.broadcasts) == 0 {
+		t.Fatal("expected deferred broadcast flushed to session registry")
+	}
+	found := false
+	for _, b := range reg.broadcasts {
+		if strings.Contains(string(b), "deferred") {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("expected deferred payload in broadcasts, got: %v", reg.broadcasts)
+	}
+}
+
+func TestAuthoritativeMatchIDHasNodeSuffix(t *testing.T) {
+	id := NewAuthoritativeMatchID()
+	if !strings.Contains(id, ".") {
+		t.Fatalf("expected uuid.node format, got %s", id)
+	}
+	parts := strings.SplitN(id, ".", 2)
+	if parts[0] == "" || parts[1] == "" {
+		t.Fatalf("expected non-empty uuid and node, got %s", id)
+	}
+	if parts[1] != ResolveNodeID() {
+		t.Fatalf("expected node suffix %s, got %s", ResolveNodeID(), parts[1])
+	}
+}
+
+func TestJoinAttemptAlreadyMember(t *testing.T) {
+	logger := zap.NewNop()
+	mockMatch := &terminateTrackingMatch{}
+	ml := NewMatchLoop("m-member", nil, 50, logger, nil)
+	ml.SetGoMatch(mockMatch, map[string]interface{}{"ok": true}, nil, nil, nil)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go ml.Start(ctx)
+	time.Sleep(20 * time.Millisecond)
+
+	accept, err := ml.JoinAttempt("u1", "user1", "s1", nil)
+	if err != nil || !accept {
+		t.Fatalf("first join failed: %v", err)
+	}
+	time.Sleep(30 * time.Millisecond)
+	mockMatch.mu.Lock()
+	firstAttempts := mockMatch.joinAttempts
+	mockMatch.mu.Unlock()
+
+	accept, err = ml.JoinAttempt("u1", "user1", "s1", nil)
+	if err != nil || !accept {
+		t.Fatalf("second join (already member) failed: %v", err)
+	}
+	mockMatch.mu.Lock()
+	secondAttempts := mockMatch.joinAttempts
+	mockMatch.mu.Unlock()
+	if secondAttempts != firstAttempts {
+		t.Fatalf("expected already-member to skip JoinAttempt handler, attempts %d -> %d", firstAttempts, secondAttempts)
+	}
 }

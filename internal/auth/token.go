@@ -11,8 +11,9 @@ import (
 
 // Claims defines the custom JWT claims structure.
 type Claims struct {
-	UserID   string `json:"sub"`
-	Username string `json:"usn"`
+	UserID   string            `json:"sub"`
+	Username string            `json:"usn"`
+	Vars     map[string]string `json:"vrs,omitempty"`
 	jwt.RegisteredClaims
 }
 
@@ -35,13 +36,25 @@ func NewTokenManager(secretKey []byte, expiry time.Duration) (*TokenManager, err
 	}, nil
 }
 
-// GenerateSession generates a stateless JWT access token and a cryptographically secure refresh token.
+// Expiry returns the configured access-token lifetime.
+func (tm *TokenManager) Expiry() time.Duration {
+	return tm.expiry
+}
+
+// GenerateSession generates a JWT access token (with jti) and opaque refresh token.
 func (tm *TokenManager) GenerateSession(userID string, username string) (string, string, error) {
+	return tm.GenerateSessionWithVars(userID, username, nil)
+}
+
+// GenerateSessionWithVars embeds optional session vars into the access JWT.
+func (tm *TokenManager) GenerateSessionWithVars(userID, username string, vars map[string]string) (string, string, error) {
 	now := time.Now()
 	claims := Claims{
 		UserID:   userID,
 		Username: username,
+		Vars:     vars,
 		RegisteredClaims: jwt.RegisteredClaims{
+			ID:        uuid.New().String(),
 			ExpiresAt: jwt.NewNumericDate(now.Add(tm.expiry)),
 			IssuedAt:  jwt.NewNumericDate(now),
 			NotBefore: jwt.NewNumericDate(now),
@@ -54,30 +67,48 @@ func (tm *TokenManager) GenerateSession(userID string, username string) (string,
 		return "", "", fmt.Errorf("failed to sign access token: %w", err)
 	}
 
-	// Generate random cryptographically secure Refresh Token UUID
 	refreshToken := uuid.New().String()
-
 	return accessToken, refreshToken, nil
 }
 
-// VerifyToken parses and validates a JWT access token, returning the custom claims if valid.
+// VerifyToken parses and validates a JWT access token.
 func (tm *TokenManager) VerifyToken(tokenStr string) (*Claims, error) {
-	token, err := jwt.ParseWithClaims(tokenStr, &Claims{}, func(token *jwt.Token) (interface{}, error) {
-		// Ensure correct signing method family
+	return tm.verifyToken(tokenStr, true)
+}
+
+// VerifyTokenIgnoreExpiry validates signature/claims but ignores expiry (logout/blacklist).
+func (tm *TokenManager) VerifyTokenIgnoreExpiry(tokenStr string) (*Claims, error) {
+	return tm.verifyToken(tokenStr, false)
+}
+
+func (tm *TokenManager) verifyToken(tokenStr string, checkExpiry bool) (*Claims, error) {
+	opts := []jwt.ParserOption{}
+	if !checkExpiry {
+		opts = append(opts, jwt.WithoutClaimsValidation())
+	}
+	parser := jwt.NewParser(opts...)
+	token, err := parser.ParseWithClaims(tokenStr, &Claims{}, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
 		return tm.secretKey, nil
 	})
-
 	if err != nil {
 		return nil, fmt.Errorf("invalid token: %w", err)
 	}
 
 	claims, ok := token.Claims.(*Claims)
-	if !ok || !token.Valid {
+	if !ok {
 		return nil, errors.New("invalid token claims")
 	}
-
+	if checkExpiry && !token.Valid {
+		return nil, errors.New("invalid token claims")
+	}
+	if !checkExpiry {
+		// still require matching HMAC method / populated claims
+		if claims.UserID == "" {
+			return nil, errors.New("invalid token claims")
+		}
+	}
 	return claims, nil
 }

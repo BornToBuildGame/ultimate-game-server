@@ -312,6 +312,16 @@ func (i *goInitializer) RegisterMatchmakerMatched(fn MatchmakerMatchedHandler) e
 	return nil
 }
 
+func (i *goInitializer) RegisterMatchmakerOverride(fn MatchmakerOverrideHandler) error {
+	i.registry.RegisterMatchmakerOverride(fn)
+	return nil
+}
+
+func (i *goInitializer) RegisterMatchmakerProcessor(fn MatchmakerProcessorHandler) error {
+	i.registry.RegisterMatchmakerProcessor(fn)
+	return nil
+}
+
 func (i *goInitializer) RegisterLeaderboardReset(fn LeaderboardResetHandler) error {
 	i.registry.RegisterLeaderboardReset(fn)
 	return nil

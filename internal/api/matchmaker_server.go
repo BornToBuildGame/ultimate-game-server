@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"time"
 
@@ -64,6 +65,7 @@ func (s *MatchmakerServer) AddMatchmaker(ctx context.Context, req *apipb.AddMatc
 		ID:                uuid.New().String(),
 		UserID:            claims.UserID,
 		Username:          claims.Username,
+		SessionID:         claims.UserID,
 		Region:            req.GetStringProperties()["region"],
 		CreatedAt:         time.Now(),
 		Query:             req.GetQuery(),
@@ -85,6 +87,12 @@ func (s *MatchmakerServer) AddMatchmaker(ctx context.Context, req *apipb.AddMatc
 
 	err = s.mm.Submit(ctx, t)
 	if err != nil {
+		if err == matchmaker.ErrTooManyTickets || err == matchmaker.ErrRateLimited {
+			return nil, status.Errorf(codes.ResourceExhausted, "%v", err)
+		}
+		if errors.Is(err, matchmaker.ErrInvalidTicket) {
+			return nil, status.Errorf(codes.InvalidArgument, "%v", err)
+		}
 		return nil, status.Errorf(codes.Internal, "failed to submit ticket: %v", err)
 	}
 
@@ -153,15 +161,11 @@ func (s *MatchmakerServer) GetQueueStats(ctx context.Context, req *apipb.GetQueu
 		queueName = "default"
 	}
 
-	count, _, err := s.mm.GetQueueStats(ctx, queueName)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to get stats: %v", err)
-	}
-
+	stats := s.mm.GetStats(ctx)
 	return &apipb.QueueStats{
 		QueueName:      queueName,
-		TicketCount:    int32(count),
+		TicketCount:    int32(stats.TicketCount),
 		AverageWaitSec: 0,
-		ActiveMatches:  0,
+		ActiveMatches:  int32(len(stats.Completions)),
 	}, nil
 }

@@ -62,19 +62,22 @@ func TestTournament_Integration(t *testing.T) {
 	// 2. Create a Tournament Leaderboard Config with static, past dates
 	// This makes the test robust and independent of the execution time of the day.
 	startTime := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	duration := 3600
+	endTime := startTime.Add(time.Duration(duration) * time.Second)
 	lb := &leaderboard.Leaderboard{
 		ID:            "weekly_cup",
 		Authoritative: false,
 		SortOrder:     leaderboard.SortOrderDescending,
 		Operator:      leaderboard.OperatorBest,
-		ResetSchedule: "0 0 1 1 *", // resets yearly on Jan 1st
+		ResetSchedule: "",
 		Metadata:      `{"tier": "gold"}`,
 		Category:      2,
 		Description:   "Weekly Cup",
-		Duration:      3600, // 1 hour duration
+		Duration:      duration,
 		MaxNumScore:   3,
 		Title:         "Weekly PvP Cup",
 		StartTime:     startTime,
+		EndTime:       endTime,
 	}
 
 	err = leaderboard.CreateLeaderboard(ctx, pool, lb)
@@ -82,8 +85,8 @@ func TestTournament_Integration(t *testing.T) {
 		t.Fatalf("failed to create leaderboard: %v", err)
 	}
 
-	// Expiry time is exactly start_time + duration
-	expiryTime := startTime.Add(time.Duration(lb.Duration) * time.Second)
+	// Expiry time matches end_time when no reset schedule is set
+	expiryTime := endTime
 
 	// 3. Submit Scores to this expired occurrence
 	userA := uuid.New().String()
@@ -202,6 +205,10 @@ func TestTournamentJoin_Integration(t *testing.T) {
 		ResetSchedule: "",
 		JoinRequired:  true,
 		StartTime:     startTime,
+		Duration:      86400 * 7,
+		EndTime:       time.Now().Add(7 * 24 * time.Hour),
+		MaxNumScore:   10,
+		EnableRanks:   true,
 	}
 
 	err = leaderboard.CreateLeaderboard(ctx, pool, lb)

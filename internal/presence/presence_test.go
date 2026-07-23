@@ -103,3 +103,19 @@ func TestPresenceTracker_Subscriptions(t *testing.T) {
 		t.Fatalf("expected subscriber %q to be notified of offline, got: %v", subscriberSess, subsOff)
 	}
 }
+
+func TestPresenceTracker_UnfollowAll(t *testing.T) {
+	pt := NewPresenceTracker()
+	sess := "sess-watcher"
+	pt.Follow(sess, []string{"a", "b", "c"})
+	pt.UnfollowAll(sess)
+	online := pt.Follow("other", []string{"a"})
+	_ = online
+	// After UnfollowAll, setting presence should not notify sess
+	subs := pt.SetPresence(PresenceRecord{UserID: "a", SessionID: "s1", Username: "a", JoinedAt: time.Now()})
+	for _, id := range subs {
+		if id == sess {
+			t.Fatal("expected unfollowed session not to be notified")
+		}
+	}
+}

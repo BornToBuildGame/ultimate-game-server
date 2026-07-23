@@ -2,6 +2,7 @@ package runtime
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -10,7 +11,7 @@ import (
 )
 
 // MapJSNK binds the core storage APIs to a Goja JS VM.
-func MapJSNK(vm *goja.Runtime, nk RuntimeModule, timeout time.Duration) {
+func MapJSNK(vm *goja.Runtime, nk RuntimeModule, timeout time.Duration, registry ...*HookRegistry) {
 	// Set up background watchdog interrupt timer
 	var timer *time.Timer
 	if timeout > 0 {
@@ -313,6 +314,193 @@ func MapJSNK(vm *goja.Runtime, nk RuntimeModule, timeout time.Duration) {
 		}
 		return goja.Undefined()
 	})
+
+	toJSRecords := func(recs []*LeaderboardRecord) []map[string]interface{} {
+		out := make([]map[string]interface{}, len(recs))
+		for i, r := range recs {
+			out[i] = map[string]interface{}{
+				"leaderboard_id": r.LeaderboardID, "owner_id": r.OwnerID, "username": r.Username,
+				"score": r.Score, "subscore": r.Subscore, "rank": r.Rank, "metadata": r.Metadata,
+			}
+		}
+		return out
+	}
+
+	_ = nkObj.Set("leaderboard_records_list", func(call goja.FunctionCall) goja.Value {
+		id := call.Argument(0).String()
+		var ownerIDs []string
+		if arr, ok := call.Argument(1).Export().([]interface{}); ok {
+			for _, v := range arr {
+				ownerIDs = append(ownerIDs, fmt.Sprintf("%v", v))
+			}
+		}
+		limit := int(call.Argument(2).ToInteger())
+		cursor := call.Argument(3).String()
+		expiry := call.Argument(4).ToInteger()
+		recs, next, prev, err := nk.LeaderboardRecordsList(context.Background(), id, ownerIDs, limit, cursor, expiry)
+		if err != nil {
+			panic(vm.NewGoError(err))
+		}
+		return vm.ToValue(map[string]interface{}{"records": toJSRecords(recs), "next_cursor": next, "prev_cursor": prev})
+	})
+
+	_ = nkObj.Set("leaderboard_records_around_owner", func(call goja.FunctionCall) goja.Value {
+		recs, err := nk.LeaderboardRecordsAroundOwner(context.Background(), call.Argument(0).String(), call.Argument(1).String(), int(call.Argument(2).ToInteger()), call.Argument(3).ToInteger())
+		if err != nil {
+			panic(vm.NewGoError(err))
+		}
+		return vm.ToValue(map[string]interface{}{"records": toJSRecords(recs)})
+	})
+
+	_ = nkObj.Set("leaderboard_records_haystack", func(call goja.FunctionCall) goja.Value {
+		recs, next, prev, err := nk.LeaderboardRecordsHaystack(context.Background(), call.Argument(0).String(), call.Argument(1).String(), int(call.Argument(2).ToInteger()), call.Argument(3).String(), call.Argument(4).ToInteger())
+		if err != nil {
+			panic(vm.NewGoError(err))
+		}
+		return vm.ToValue(map[string]interface{}{"records": toJSRecords(recs), "next_cursor": next, "prev_cursor": prev})
+	})
+
+	_ = nkObj.Set("leaderboard_records_list_cursor_from_rank", func(call goja.FunctionCall) goja.Value {
+		cur, err := nk.LeaderboardRecordsListCursorFromRank(context.Background(), call.Argument(0).String(), call.Argument(1).ToInteger(), call.Argument(2).ToInteger())
+		if err != nil {
+			panic(vm.NewGoError(err))
+		}
+		return vm.ToValue(cur)
+	})
+
+	_ = nkObj.Set("leaderboard_list", func(call goja.FunctionCall) goja.Value {
+		list, next, err := nk.LeaderboardList(context.Background(), int(call.Argument(0).ToInteger()), call.Argument(1).String())
+		if err != nil {
+			panic(vm.NewGoError(err))
+		}
+		ids := make([]string, len(list))
+		for i, lb := range list {
+			ids[i] = lb.ID
+		}
+		return vm.ToValue(map[string]interface{}{"leaderboards": ids, "next_cursor": next})
+	})
+
+	_ = nkObj.Set("leaderboard_ranks_disable", func(call goja.FunctionCall) goja.Value {
+		if err := nk.LeaderboardRanksDisable(context.Background(), call.Argument(0).String()); err != nil {
+			panic(vm.NewGoError(err))
+		}
+		return goja.Undefined()
+	})
+
+	_ = nkObj.Set("tournament_ranks_disable", func(call goja.FunctionCall) goja.Value {
+		if err := nk.TournamentRanksDisable(context.Background(), call.Argument(0).String()); err != nil {
+			panic(vm.NewGoError(err))
+		}
+		return goja.Undefined()
+	})
+
+	_ = nkObj.Set("tournament_record_delete", func(call goja.FunctionCall) goja.Value {
+		if err := nk.TournamentRecordDelete(context.Background(), call.Argument(0).String(), call.Argument(1).String()); err != nil {
+			panic(vm.NewGoError(err))
+		}
+		return goja.Undefined()
+	})
+
+	_ = nkObj.Set("tournament_records_haystack", func(call goja.FunctionCall) goja.Value {
+		recs, next, prev, err := nk.TournamentRecordsHaystack(context.Background(), call.Argument(0).String(), call.Argument(1).String(), int(call.Argument(2).ToInteger()), call.Argument(3).String(), call.Argument(4).ToInteger())
+		if err != nil {
+			panic(vm.NewGoError(err))
+		}
+		return vm.ToValue(map[string]interface{}{"records": toJSRecords(recs), "next_cursor": next, "prev_cursor": prev})
+	})
+
+	_ = nkObj.Set("leaderboard_record_delete", func(call goja.FunctionCall) goja.Value {
+		if err := nk.LeaderboardRecordDelete(context.Background(), call.Argument(0).String(), call.Argument(1).String()); err != nil {
+			panic(vm.NewGoError(err))
+		}
+		return goja.Undefined()
+	})
+
+	_ = nkObj.Set("tournament_record_write", func(call goja.FunctionCall) goja.Value {
+		id := call.Argument(0).String()
+		ownerID := call.Argument(1).String()
+		username := call.Argument(2).String()
+		score := call.Argument(3).ToInteger()
+		subscore := call.Argument(4).ToInteger()
+		var metadata map[string]interface{}
+		if metadataVal := call.Argument(5).Export(); metadataVal != nil {
+			if m, ok := metadataVal.(map[string]interface{}); ok {
+				metadata = m
+			}
+		}
+		rec, err := nk.TournamentRecordWrite(context.Background(), id, ownerID, username, score, subscore, metadata)
+		if err != nil {
+			panic(vm.NewGoError(err))
+		}
+		return vm.ToValue(map[string]interface{}{"leaderboard_id": rec.LeaderboardID, "score": rec.Score, "rank": rec.Rank})
+	})
+
+	_ = nkObj.Set("tournament_records_list", func(call goja.FunctionCall) goja.Value {
+		id := call.Argument(0).String()
+		var ownerIDs []string
+		if arr, ok := call.Argument(1).Export().([]interface{}); ok {
+			for _, v := range arr {
+				ownerIDs = append(ownerIDs, fmt.Sprintf("%v", v))
+			}
+		}
+		recs, next, prev, err := nk.TournamentRecordsList(context.Background(), id, ownerIDs, int(call.Argument(2).ToInteger()), call.Argument(3).String(), call.Argument(4).ToInteger())
+		if err != nil {
+			panic(vm.NewGoError(err))
+		}
+		return vm.ToValue(map[string]interface{}{"records": toJSRecords(recs), "next_cursor": next, "prev_cursor": prev})
+	})
+
+	_ = nkObj.Set("tournament_records_around_owner", func(call goja.FunctionCall) goja.Value {
+		recs, err := nk.TournamentRecordsAroundOwner(context.Background(), call.Argument(0).String(), call.Argument(1).String(), int(call.Argument(2).ToInteger()), call.Argument(3).ToInteger())
+		if err != nil {
+			panic(vm.NewGoError(err))
+		}
+		return vm.ToValue(map[string]interface{}{"records": toJSRecords(recs)})
+	})
+
+	_ = nkObj.Set("tournament_add_attempt", func(call goja.FunctionCall) goja.Value {
+		if err := nk.TournamentAddAttempt(context.Background(), call.Argument(0).String(), call.Argument(1).String(), int(call.Argument(2).ToInteger())); err != nil {
+			panic(vm.NewGoError(err))
+		}
+		return goja.Undefined()
+	})
+
+	if len(registry) > 0 && registry[0] != nil {
+		reg := registry[0]
+		_ = nkObj.Set("register_leaderboard_reset", func(call goja.FunctionCall) goja.Value {
+			cb, ok := goja.AssertFunction(call.Argument(0))
+			if !ok {
+				panic(vm.NewTypeError("expected function"))
+			}
+			reg.RegisterLeaderboardReset(func(ctx context.Context, logger Logger, db *sql.DB, nkMod RuntimeModule, leaderboardID string, reset int64) error {
+				_, err := cb(goja.Undefined(), vm.ToValue(leaderboardID), vm.ToValue(reset))
+				return err
+			})
+			return goja.Undefined()
+		})
+		_ = nkObj.Set("register_tournament_end", func(call goja.FunctionCall) goja.Value {
+			cb, ok := goja.AssertFunction(call.Argument(0))
+			if !ok {
+				panic(vm.NewTypeError("expected function"))
+			}
+			reg.RegisterTournamentEnd(func(ctx context.Context, logger Logger, db *sql.DB, nkMod RuntimeModule, tournamentID string, end, reset int64) error {
+				_, err := cb(goja.Undefined(), vm.ToValue(tournamentID), vm.ToValue(end), vm.ToValue(reset))
+				return err
+			})
+			return goja.Undefined()
+		})
+		_ = nkObj.Set("register_tournament_reset", func(call goja.FunctionCall) goja.Value {
+			cb, ok := goja.AssertFunction(call.Argument(0))
+			if !ok {
+				panic(vm.NewTypeError("expected function"))
+			}
+			reg.RegisterTournamentReset(func(ctx context.Context, logger Logger, db *sql.DB, nkMod RuntimeModule, tournamentID string, end, reset int64) error {
+				_, err := cb(goja.Undefined(), vm.ToValue(tournamentID), vm.ToValue(end), vm.ToValue(reset))
+				return err
+			})
+			return goja.Undefined()
+		})
+	}
 
 	_ = vm.Set("nk", nkObj)
 }

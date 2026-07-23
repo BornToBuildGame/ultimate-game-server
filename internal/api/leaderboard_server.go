@@ -9,9 +9,9 @@ import (
 	"strings"
 	"time"
 
+	"ultimate-game-server/internal/api/apipb"
 	"ultimate-game-server/internal/auth"
 	"ultimate-game-server/internal/leaderboard"
-	"ultimate-game-server/internal/api/apipb"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
@@ -30,11 +30,7 @@ type LeaderboardServer struct {
 }
 
 func NewLeaderboardServer(dbPool *pgxpool.Pool, rdb *redis.Client, tokenMgr *auth.TokenManager) *LeaderboardServer {
-	return &LeaderboardServer{
-		dbPool:   dbPool,
-		rdb:      rdb,
-		tokenMgr: tokenMgr,
-	}
+	return &LeaderboardServer{dbPool: dbPool, rdb: rdb, tokenMgr: tokenMgr}
 }
 
 func (s *LeaderboardServer) authenticate(ctx context.Context) (string, string, error) {
@@ -54,14 +50,13 @@ func (s *LeaderboardServer) authenticate(ctx context.Context) (string, string, e
 	return claims.UserID, claims.Username, nil
 }
 
-func (s *LeaderboardServer) CreateLeaderboard(ctx context.Context, req *apipb.CreateLeaderboardRequest) (*emptypb.Empty, error) {
+func parseSortOperator(sortOrderStr, operatorStr string) (int, int) {
 	sortOrder := leaderboard.SortOrderDescending
-	if strings.ToLower(req.GetSortOrder()) == "ascending" {
+	if strings.ToLower(sortOrderStr) == "ascending" {
 		sortOrder = leaderboard.SortOrderAscending
 	}
-
 	operator := leaderboard.OperatorBest
-	switch strings.ToLower(req.GetOperator()) {
+	switch strings.ToLower(operatorStr) {
 	case "set":
 		operator = leaderboard.OperatorSet
 	case "increment", "incr":
@@ -69,7 +64,11 @@ func (s *LeaderboardServer) CreateLeaderboard(ctx context.Context, req *apipb.Cr
 	case "decrement", "decr":
 		operator = leaderboard.OperatorDecrement
 	}
+	return sortOrder, operator
+}
 
+func (s *LeaderboardServer) CreateLeaderboard(ctx context.Context, req *apipb.CreateLeaderboardRequest) (*emptypb.Empty, error) {
+	sortOrder, operator := parseSortOperator(req.GetSortOrder(), req.GetOperator())
 	lb := &leaderboard.Leaderboard{
 		ID:            req.GetId(),
 		Authoritative: req.GetAuthoritative(),
@@ -77,21 +76,48 @@ func (s *LeaderboardServer) CreateLeaderboard(ctx context.Context, req *apipb.Cr
 		Operator:      operator,
 		ResetSchedule: req.GetResetSchedule(),
 		Metadata:      req.GetMetadata(),
+		EnableRanks:   true,
 	}
-
-	err := leaderboard.CreateLeaderboard(ctx, s.dbPool, lb)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to create leaderboard: %v", err)
+	if err := leaderboard.CreateLeaderboard(ctx, s.dbPool, lb); err != nil {
+		return nil, mapLeaderboardErr(err)
 	}
 	return &emptypb.Empty{}, nil
 }
 
 func (s *LeaderboardServer) DeleteLeaderboard(ctx context.Context, req *apipb.DeleteLeaderboardRequest) (*emptypb.Empty, error) {
-	err := leaderboard.DeleteLeaderboard(ctx, s.dbPool, req.GetId())
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to delete leaderboard: %v", err)
+	if err := leaderboard.DeleteLeaderboard(ctx, s.dbPool, req.GetId()); err != nil {
+		return nil, mapLeaderboardErr(err)
 	}
 	return &emptypb.Empty{}, nil
+}
+
+func (s *LeaderboardServer) ListLeaderboards(ctx context.Context, req *apipb.ListLeaderboardsRequest) (*apipb.LeaderboardList, error) {
+	list, next, err := leaderboard.ListLeaderboards(ctx, s.dbPool, int(req.GetLimit()), req.GetCursor())
+	if err != nil {
+		return nil, mapLeaderboardErr(err)
+	}
+	out := make([]*apipb.Leaderboard, len(list))
+	now := time.Now().UTC()
+	for i, lb := range list {
+		prev, nextReset := int64(0), int64(0)
+		if sched := leaderboard.MustParseResetSchedule(lb.ResetSchedule); sched != nil {
+			prev = leaderboard.CalculatePrevReset(now, lb.StartTime.Unix(), sched)
+			nextReset = sched.Next(now).Unix()
+		}
+		out[i] = &apipb.Leaderboard{
+			Id:            lb.ID,
+			SortOrder:     strconv.Itoa(lb.SortOrder),
+			Operator:      strconv.Itoa(lb.Operator),
+			ResetSchedule: lb.ResetSchedule,
+			Metadata:      lb.Metadata,
+			Authoritative: lb.Authoritative,
+			CreateTime:    timestamppb.New(lb.CreateTime),
+			PrevReset:     prev,
+			NextReset:     nextReset,
+			EnableRanks:   lb.EnableRanks,
+		}
+	}
+	return &apipb.LeaderboardList{Leaderboards: out, NextCursor: next}, nil
 }
 
 func (s *LeaderboardServer) WriteLeaderboardRecord(ctx context.Context, req *apipb.WriteLeaderboardRecordRequest) (*apipb.LeaderboardRecord, error) {
@@ -99,76 +125,49 @@ func (s *LeaderboardServer) WriteLeaderboardRecord(ctx context.Context, req *api
 	if err != nil {
 		return nil, err
 	}
-
 	record, err := leaderboard.SubmitScore(ctx, s.dbPool, s.rdb, req.GetLeaderboardId(), userID, username, req.GetScore(), req.GetSubscore(), req.GetMetadata(), true)
 	if err != nil {
-		if errors.Is(err, leaderboard.ErrLeaderboardNotFound) {
-			return nil, status.Error(codes.NotFound, err.Error())
-		}
-		if errors.Is(err, leaderboard.ErrAuthoritative) {
-			return nil, status.Error(codes.PermissionDenied, err.Error())
-		}
-		if errors.Is(err, leaderboard.ErrJoinRequired) {
-			return nil, status.Error(codes.FailedPrecondition, err.Error())
-		}
-		return nil, status.Errorf(codes.Internal, "failed to submit score: %v", err)
+		return nil, mapLeaderboardErr(err)
 	}
-
 	return toProtoRecord(record), nil
 }
 
 func (s *LeaderboardServer) ListLeaderboardRecords(ctx context.Context, req *apipb.ListLeaderboardRecordsRequest) (*apipb.LeaderboardRecordList, error) {
-	expiryTime := time.Unix(0, 0).UTC()
-	
+	expiryOverride := req.GetExpiry()
+	expiryTime := time.Time{}
+	if expiryOverride != 0 {
+		expiryTime = leaderboard.ResolveExpiryTime(expiryOverride)
+	}
+
 	if len(req.GetOwnerIds()) > 0 {
-		records, _, err := leaderboard.GetLeaderboardRecords(ctx, s.dbPool, s.rdb, req.GetLeaderboardId(), 1000, "", expiryTime)
+		records, err := leaderboard.GetOwnerRecords(ctx, s.dbPool, req.GetLeaderboardId(), req.GetOwnerIds(), expiryTime)
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "failed to get records: %v", err)
+			return nil, mapLeaderboardErr(err)
 		}
-		var filtered []*apipb.LeaderboardRecord
-		ownerSet := make(map[string]bool)
-		for _, oid := range req.GetOwnerIds() {
-			ownerSet[oid] = true
-		}
-		for _, r := range records {
-			if ownerSet[r.OwnerID] {
-				filtered = append(filtered, toProtoRecord(r))
-			}
-		}
-		return &apipb.LeaderboardRecordList{Records: filtered}, nil
+		return &apipb.LeaderboardRecordList{OwnerRecords: toProtoRecords(records)}, nil
 	}
 
-	records, nextCursor, err := leaderboard.GetLeaderboardRecords(ctx, s.dbPool, s.rdb, req.GetLeaderboardId(), int(req.GetLimit()), req.GetCursor(), expiryTime)
+	records, nextCursor, prevCursor, err := leaderboard.GetLeaderboardRecordsPaged(ctx, s.dbPool, req.GetLeaderboardId(), int(req.GetLimit()), req.GetCursor(), expiryTime, expiryOverride)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to get records: %v", err)
+		return nil, mapLeaderboardErr(err)
 	}
-
-	protoRecords := make([]*apipb.LeaderboardRecord, len(records))
-	for i, r := range records {
-		protoRecords[i] = toProtoRecord(r)
-	}
-
 	return &apipb.LeaderboardRecordList{
-		Records:    protoRecords,
+		Records:    toProtoRecords(records),
 		NextCursor: nextCursor,
+		PrevCursor: prevCursor,
 	}, nil
 }
 
 func (s *LeaderboardServer) ListLeaderboardRecordsAroundOwner(ctx context.Context, req *apipb.ListLeaderboardRecordsAroundOwnerRequest) (*apipb.LeaderboardRecordList, error) {
-	expiryTime := time.Unix(0, 0).UTC()
+	expiryTime := time.Time{}
+	if req.GetExpiry() != 0 {
+		expiryTime = leaderboard.ResolveExpiryTime(req.GetExpiry())
+	}
 	records, err := leaderboard.GetLeaderboardRecordsAroundPlayer(ctx, s.dbPool, s.rdb, req.GetLeaderboardId(), req.GetOwnerId(), int(req.GetLimit()), expiryTime)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to get records around owner: %v", err)
+		return nil, mapLeaderboardErr(err)
 	}
-
-	protoRecords := make([]*apipb.LeaderboardRecord, len(records))
-	for i, r := range records {
-		protoRecords[i] = toProtoRecord(r)
-	}
-
-	return &apipb.LeaderboardRecordList{
-		Records: protoRecords,
-	}, nil
+	return &apipb.LeaderboardRecordList{Records: toProtoRecords(records)}, nil
 }
 
 func (s *LeaderboardServer) DeleteLeaderboardRecord(ctx context.Context, req *apipb.DeleteLeaderboardRecordRequest) (*emptypb.Empty, error) {
@@ -176,12 +175,31 @@ func (s *LeaderboardServer) DeleteLeaderboardRecord(ctx context.Context, req *ap
 	if err != nil {
 		return nil, err
 	}
-
-	err = leaderboard.DeleteRecord(ctx, s.dbPool, req.GetLeaderboardId(), userID)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to delete record: %v", err)
+	if err := leaderboard.DeleteRecord(ctx, s.dbPool, req.GetLeaderboardId(), userID); err != nil {
+		return nil, mapLeaderboardErr(err)
 	}
 	return &emptypb.Empty{}, nil
+}
+
+func mapLeaderboardErr(err error) error {
+	switch {
+	case errors.Is(err, leaderboard.ErrLeaderboardNotFound):
+		return status.Error(codes.NotFound, err.Error())
+	case errors.Is(err, leaderboard.ErrAuthoritative):
+		return status.Error(codes.PermissionDenied, err.Error())
+	case errors.Is(err, leaderboard.ErrJoinRequired):
+		return status.Error(codes.FailedPrecondition, err.Error())
+	case errors.Is(err, leaderboard.ErrRateLimited):
+		return status.Error(codes.ResourceExhausted, err.Error())
+	case errors.Is(err, leaderboard.ErrMaxAttemptsReached):
+		return status.Error(codes.ResourceExhausted, err.Error())
+	case errors.Is(err, leaderboard.ErrInvalidCursor):
+		return status.Error(codes.InvalidArgument, err.Error())
+	case errors.Is(err, leaderboard.ErrInvalidLeaderboardID), errors.Is(err, leaderboard.ErrMetadataTooLarge):
+		return status.Error(codes.InvalidArgument, err.Error())
+	default:
+		return status.Errorf(codes.Internal, "%v", err)
+	}
 }
 
 func toProtoRecord(r *leaderboard.LeaderboardRecord) *apipb.LeaderboardRecord {
@@ -201,7 +219,15 @@ func toProtoRecord(r *leaderboard.LeaderboardRecord) *apipb.LeaderboardRecord {
 	}
 }
 
-// REST Leaderboard Handlers on Server
+func toProtoRecords(records []*leaderboard.LeaderboardRecord) []*apipb.LeaderboardRecord {
+	out := make([]*apipb.LeaderboardRecord, len(records))
+	for i, r := range records {
+		out[i] = toProtoRecord(r)
+	}
+	return out
+}
+
+// --- REST handlers ---
 
 type restCreateLeaderboardRequest struct {
 	ID            string                 `json:"id"`
@@ -210,6 +236,7 @@ type restCreateLeaderboardRequest struct {
 	ResetSchedule string                 `json:"reset_schedule"`
 	Metadata      map[string]interface{} `json:"metadata"`
 	Authoritative bool                   `json:"authoritative"`
+	EnableRanks   *bool                  `json:"enable_ranks"`
 }
 
 func (s *Server) handleCreateLeaderboard(w http.ResponseWriter, r *http.Request) {
@@ -218,39 +245,20 @@ func (s *Server) handleCreateLeaderboard(w http.ResponseWriter, r *http.Request)
 		http.Error(w, "bad request", http.StatusBadRequest)
 		return
 	}
-
-	sortOrder := leaderboard.SortOrderDescending
-	if strings.ToLower(req.SortOrder) == "ascending" {
-		sortOrder = leaderboard.SortOrderAscending
-	}
-
-	operator := leaderboard.OperatorBest
-	switch strings.ToLower(req.Operator) {
-	case "set":
-		operator = leaderboard.OperatorSet
-	case "increment", "incr":
-		operator = leaderboard.OperatorIncrement
-	case "decrement", "decr":
-		operator = leaderboard.OperatorDecrement
-	}
-
+	sortOrder, operator := parseSortOperator(req.SortOrder, req.Operator)
 	metaBytes, _ := json.Marshal(req.Metadata)
-
-	lb := &leaderboard.Leaderboard{
-		ID:            req.ID,
-		Authoritative: req.Authoritative,
-		SortOrder:     sortOrder,
-		Operator:      operator,
-		ResetSchedule: req.ResetSchedule,
-		Metadata:      string(metaBytes),
+	enableRanks := true
+	if req.EnableRanks != nil {
+		enableRanks = *req.EnableRanks
 	}
-
-	err := leaderboard.CreateLeaderboard(r.Context(), s.dbPool, lb)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	lb := &leaderboard.Leaderboard{
+		ID: req.ID, Authoritative: req.Authoritative, SortOrder: sortOrder, Operator: operator,
+		ResetSchedule: req.ResetSchedule, Metadata: string(metaBytes), EnableRanks: enableRanks,
+	}
+	if err := leaderboard.CreateLeaderboard(r.Context(), s.dbPool, lb); err != nil {
+		writeLeaderboardHTTPError(w, err)
 		return
 	}
-
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -260,14 +268,28 @@ func (s *Server) handleDeleteLeaderboard(w http.ResponseWriter, r *http.Request)
 		http.Error(w, "missing leaderboard id", http.StatusBadRequest)
 		return
 	}
-
-	err := leaderboard.DeleteLeaderboard(r.Context(), s.dbPool, id)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if err := leaderboard.DeleteLeaderboard(r.Context(), s.dbPool, id); err != nil {
+		writeLeaderboardHTTPError(w, err)
 		return
 	}
-
 	w.WriteHeader(http.StatusOK)
+}
+
+func (s *Server) handleListLeaderboards(w http.ResponseWriter, r *http.Request) {
+	q := r.URL.Query()
+	limitVal := 10
+	if limitStr := q.Get("limit"); limitStr != "" {
+		if parsed, err := strconv.Atoi(limitStr); err == nil {
+			limitVal = parsed
+		}
+	}
+	list, next, err := leaderboard.ListLeaderboards(r.Context(), s.dbPool, limitVal, q.Get("cursor"))
+	if err != nil {
+		writeLeaderboardHTTPError(w, err)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{"leaderboards": list, "next_cursor": next})
 }
 
 type restSubmitScoreRequest struct {
@@ -283,33 +305,17 @@ func (s *Server) handleSubmitScore(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	id := r.PathValue("id")
-
 	var req restSubmitScoreRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "bad request", http.StatusBadRequest)
 		return
 	}
-
 	metaBytes, _ := json.Marshal(req.Metadata)
-
-	record, err := leaderboard.SubmitScore(r.Context(), s.dbPool, nil, id, userID, username, req.Score, req.Subscore, string(metaBytes), true)
+	record, err := leaderboard.SubmitScore(r.Context(), s.dbPool, s.rdb, id, userID, username, req.Score, req.Subscore, string(metaBytes), true)
 	if err != nil {
-		if errors.Is(err, leaderboard.ErrLeaderboardNotFound) {
-			http.Error(w, err.Error(), http.StatusNotFound)
-			return
-		}
-		if errors.Is(err, leaderboard.ErrAuthoritative) {
-			http.Error(w, err.Error(), http.StatusForbidden)
-			return
-		}
-		if errors.Is(err, leaderboard.ErrJoinRequired) {
-			http.Error(w, err.Error(), http.StatusPreconditionFailed)
-			return
-		}
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeLeaderboardHTTPError(w, err)
 		return
 	}
-
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(record)
 }
@@ -317,105 +323,83 @@ func (s *Server) handleSubmitScore(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleListLeaderboardRecords(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	q := r.URL.Query()
-
 	limitVal := 10
 	if limitStr := q.Get("limit"); limitStr != "" {
 		if parsed, err := strconv.Atoi(limitStr); err == nil {
 			limitVal = parsed
 		}
 	}
+	var expiryOverride int64
+	if expStr := q.Get("expiry"); expStr != "" {
+		expiryOverride, _ = strconv.ParseInt(expStr, 10, 64)
+	}
+	expiryTime := time.Time{}
+	if expiryOverride != 0 {
+		expiryTime = leaderboard.ResolveExpiryTime(expiryOverride)
+	}
 
-	cursor := q.Get("cursor")
-	ownerIDsStr := q.Get("owner_ids")
-
-	expiryTime := time.Unix(0, 0).UTC()
-
-	if ownerIDsStr != "" {
+	if ownerIDsStr := q.Get("owner_ids"); ownerIDsStr != "" {
 		ownerIDs := strings.Split(ownerIDsStr, ",")
-		records, _, err := leaderboard.GetLeaderboardRecords(r.Context(), s.dbPool, nil, id, 1000, "", expiryTime)
+		records, err := leaderboard.GetOwnerRecords(r.Context(), s.dbPool, id, ownerIDs, expiryTime)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			writeLeaderboardHTTPError(w, err)
 			return
 		}
-		var filtered []*leaderboard.LeaderboardRecord
-		ownerSet := make(map[string]bool)
-		for _, oid := range ownerIDs {
-			ownerSet[oid] = true
-		}
-		for _, r := range records {
-			if ownerSet[r.OwnerID] {
-				filtered = append(filtered, r)
-			}
-		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]interface{}{"records": filtered})
+		json.NewEncoder(w).Encode(map[string]interface{}{"owner_records": records})
 		return
 	}
 
-	records, nextCursor, err := leaderboard.GetLeaderboardRecords(r.Context(), s.dbPool, nil, id, limitVal, cursor, expiryTime)
+	records, nextCursor, prevCursor, err := leaderboard.GetLeaderboardRecordsPaged(r.Context(), s.dbPool, id, limitVal, q.Get("cursor"), expiryTime, expiryOverride)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeLeaderboardHTTPError(w, err)
 		return
 	}
-
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
-		"records":     records,
-		"next_cursor": nextCursor,
+		"records": records, "next_cursor": nextCursor, "prev_cursor": prevCursor,
 	})
 }
 
 func (s *Server) handleGetOwnerRecord(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	ownerID := r.PathValue("owner_id")
-
-	expiryTime := time.Unix(0, 0).UTC()
-	records, err := leaderboard.GetLeaderboardRecordsAroundPlayer(r.Context(), s.dbPool, nil, id, ownerID, 0, expiryTime)
+	records, err := leaderboard.GetOwnerRecords(r.Context(), s.dbPool, id, []string{ownerID}, time.Time{})
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeLeaderboardHTTPError(w, err)
 		return
 	}
-
-	var match *leaderboard.LeaderboardRecord
-	for _, r := range records {
-		if r.OwnerID == ownerID {
-			match = r
-			break
-		}
-	}
-
-	if match == nil {
+	if len(records) == 0 {
 		http.Error(w, "record not found", http.StatusNotFound)
 		return
 	}
-
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(match)
+	json.NewEncoder(w).Encode(records[0])
 }
 
 func (s *Server) handleAroundPlayerLookup(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	ownerID := r.PathValue("owner_id")
 	q := r.URL.Query()
-
 	limitVal := 10
 	if limitStr := q.Get("limit"); limitStr != "" {
 		if parsed, err := strconv.Atoi(limitStr); err == nil {
 			limitVal = parsed
 		}
 	}
-
-	expiryTime := time.Unix(0, 0).UTC()
-	records, err := leaderboard.GetLeaderboardRecordsAroundPlayer(r.Context(), s.dbPool, nil, id, ownerID, limitVal, expiryTime)
+	var expiryTime time.Time
+	if expStr := q.Get("expiry"); expStr != "" {
+		if parsed, err := strconv.ParseInt(expStr, 10, 64); err == nil {
+			expiryTime = leaderboard.ResolveExpiryTime(parsed)
+		}
+	}
+	records, err := leaderboard.GetLeaderboardRecordsAroundPlayer(r.Context(), s.dbPool, s.rdb, id, ownerID, limitVal, expiryTime)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeLeaderboardHTTPError(w, err)
 		return
 	}
-
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"records": records,
-	})
+	json.NewEncoder(w).Encode(map[string]interface{}{"records": records})
 }
 
 func (s *Server) handleDeleteRecord(w http.ResponseWriter, r *http.Request) {
@@ -424,13 +408,57 @@ func (s *Server) handleDeleteRecord(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
 	}
-	id := r.PathValue("id")
-
-	err = leaderboard.DeleteRecord(r.Context(), s.dbPool, id, userID)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if err := leaderboard.DeleteRecord(r.Context(), s.dbPool, r.PathValue("id"), userID); err != nil {
+		writeLeaderboardHTTPError(w, err)
 		return
 	}
-
 	w.WriteHeader(http.StatusOK)
+}
+
+func writeLeaderboardHTTPError(w http.ResponseWriter, err error) {
+	switch {
+	case errors.Is(err, leaderboard.ErrLeaderboardNotFound):
+		http.Error(w, err.Error(), http.StatusNotFound)
+	case errors.Is(err, leaderboard.ErrAuthoritative):
+		http.Error(w, err.Error(), http.StatusForbidden)
+	case errors.Is(err, leaderboard.ErrJoinRequired):
+		http.Error(w, err.Error(), http.StatusPreconditionFailed)
+	case errors.Is(err, leaderboard.ErrRateLimited), errors.Is(err, leaderboard.ErrMaxAttemptsReached):
+		http.Error(w, err.Error(), http.StatusTooManyRequests)
+	case errors.Is(err, leaderboard.ErrInvalidLeaderboardID), errors.Is(err, leaderboard.ErrMetadataTooLarge), errors.Is(err, leaderboard.ErrInvalidCursor), errors.Is(err, leaderboard.ErrNoRecordsPossible):
+		http.Error(w, err.Error(), http.StatusBadRequest)
+	default:
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+}
+
+func (s *Server) handleManualLeaderboardReset(w http.ResponseWriter, r *http.Request) {
+	if _, err := s.authenticateREST(r); err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+	archive := r.URL.Query().Get("archive") != "false"
+	n, err := leaderboard.ManualReset(r.Context(), s.dbPool, r.PathValue("id"), archive)
+	if err != nil {
+		writeLeaderboardHTTPError(w, err)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{"archived": n})
+}
+
+func (s *Server) handleListLeaderboardArchive(w http.ResponseWriter, r *http.Request) {
+	limitVal := 100
+	if limitStr := r.URL.Query().Get("limit"); limitStr != "" {
+		if parsed, err := strconv.Atoi(limitStr); err == nil {
+			limitVal = parsed
+		}
+	}
+	recs, err := leaderboard.ListArchivedRecords(r.Context(), s.dbPool, r.PathValue("id"), r.URL.Query().Get("season_key"), limitVal)
+	if err != nil {
+		writeLeaderboardHTTPError(w, err)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{"records": recs})
 }

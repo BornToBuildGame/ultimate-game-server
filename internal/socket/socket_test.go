@@ -3,11 +3,13 @@ package socket
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"sync"
 	"testing"
 	"time"
 
 	"ultimate-game-server/internal/auth"
+	"ultimate-game-server/internal/presence"
 
 	"go.uber.org/zap"
 )
@@ -124,6 +126,9 @@ func TestGatewayHandler_RelayedMultiplayer(t *testing.T) {
 		if matchID == "" {
 			t.Fatal("expected non-empty match ID")
 		}
+		if !strings.HasSuffix(matchID, ".") {
+			t.Fatalf("expected relayed match ID to end with '.', got %q", matchID)
+		}
 
 		// 2. Join session 1
 		joinEnv := fmt.Sprintf(`{"cid": "124", "match_join": {"match_id": "%s"}}`, matchID)
@@ -207,5 +212,107 @@ func TestGatewayHandler_RelayedMultiplayer(t *testing.T) {
 
 	default:
 		t.Fatal("expected match_create response")
+	}
+}
+
+func TestGatewayHandler_StatusFollowAndUpdate(t *testing.T) {
+	logger := zap.NewNop()
+	secret := []byte("super_secret_signing_key_at_least_32_bytes_long_1234567")
+	tm, _ := auth.NewTokenManager(secret, 10*time.Minute)
+
+	reg := NewConnectionRegistry()
+	gh := NewGatewayHandler(logger, tm, reg, nil, nil, nil)
+	pt := presence.NewPresenceTracker()
+	gh.SetPresenceTracker(pt)
+
+	target := &Session{
+		ID:       "sess-target",
+		UserID:   "user-target",
+		Username: "target",
+		Send:     make(chan []byte, 10),
+		IsActive: true,
+		matchIDs: make(map[string]bool),
+	}
+	follower := &Session{
+		ID:       "sess-follower",
+		UserID:   "user-follower",
+		Username: "follower",
+		Send:     make(chan []byte, 10),
+		IsActive: true,
+		matchIDs: make(map[string]bool),
+	}
+	reg.Add(target)
+	reg.Add(follower)
+
+	pt.SetPresence(presence.PresenceRecord{
+		UserID:    target.UserID,
+		SessionID: target.ID,
+		Username:  target.Username,
+		Status:    "",
+		JoinedAt:  time.Now(),
+	})
+
+	gh.RouteMessage(follower, []byte(`{"cid":"1","status_follow":{"user_ids":["user-target"]}}`))
+	select {
+	case msg := <-follower.Send:
+		var resp struct {
+			Cid    string `json:"cid"`
+			Status struct {
+				Presences []struct {
+					UserID string `json:"user_id"`
+				} `json:"presences"`
+			} `json:"status"`
+		}
+		if err := json.Unmarshal(msg, &resp); err != nil {
+			t.Fatalf("unmarshal status: %v", err)
+		}
+		if resp.Cid != "1" || len(resp.Status.Presences) != 1 || resp.Status.Presences[0].UserID != "user-target" {
+			t.Fatalf("unexpected status snapshot: %s", string(msg))
+		}
+	default:
+		t.Fatal("expected status follow snapshot")
+	}
+
+	gh.RouteMessage(target, []byte(`{"cid":"2","status_update":{"status":"{\"state\":\"ready\"}"}}`))
+	select {
+	case <-target.Send:
+	default:
+		t.Fatal("expected status_update ack")
+	}
+	select {
+	case msg := <-follower.Send:
+		var evt struct {
+			StatusPresenceEvent struct {
+				Joins []struct {
+					UserID string `json:"user_id"`
+					Status string `json:"status"`
+				} `json:"joins"`
+			} `json:"status_presence_event"`
+		}
+		if err := json.Unmarshal(msg, &evt); err != nil {
+			t.Fatalf("unmarshal presence event: %v", err)
+		}
+		if len(evt.StatusPresenceEvent.Joins) != 1 || evt.StatusPresenceEvent.Joins[0].UserID != "user-target" {
+			t.Fatalf("unexpected presence event: %s", string(msg))
+		}
+	default:
+		t.Fatal("expected status_presence_event on follower")
+	}
+
+	gh.RouteMessage(follower, []byte(`{"cid":"3","ping":{}}`))
+	select {
+	case msg := <-follower.Send:
+		var resp struct {
+			Cid  string                 `json:"cid"`
+			Pong map[string]interface{} `json:"pong"`
+		}
+		if err := json.Unmarshal(msg, &resp); err != nil {
+			t.Fatalf("unmarshal pong: %v", err)
+		}
+		if resp.Cid != "3" || resp.Pong == nil {
+			t.Fatalf("expected pong with cid 3, got %s", string(msg))
+		}
+	default:
+		t.Fatal("expected pong")
 	}
 }

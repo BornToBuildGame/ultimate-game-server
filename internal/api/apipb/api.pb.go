@@ -32,6 +32,9 @@ type User struct {
 	LangTag       string                 `protobuf:"bytes,5,opt,name=lang_tag,json=langTag,proto3" json:"lang_tag,omitempty"`
 	Location      string                 `protobuf:"bytes,6,opt,name=location,proto3" json:"location,omitempty"`
 	Timezone      string                 `protobuf:"bytes,7,opt,name=timezone,proto3" json:"timezone,omitempty"`
+	Metadata      string                 `protobuf:"bytes,8,opt,name=metadata,proto3" json:"metadata,omitempty"`
+	CreateTime    *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=create_time,json=createTime,proto3" json:"create_time,omitempty"`
+	UpdateTime    *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=update_time,json=updateTime,proto3" json:"update_time,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -115,6 +118,999 @@ func (x *User) GetTimezone() string {
 	return ""
 }
 
+func (x *User) GetMetadata() string {
+	if x != nil {
+		return x.Metadata
+	}
+	return ""
+}
+
+func (x *User) GetCreateTime() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreateTime
+	}
+	return nil
+}
+
+func (x *User) GetUpdateTime() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdateTime
+	}
+	return nil
+}
+
+type AuthenticateEmailRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Email         string                 `protobuf:"bytes,1,opt,name=email,proto3" json:"email,omitempty"`
+	Password      string                 `protobuf:"bytes,2,opt,name=password,proto3" json:"password,omitempty"`
+	Create        bool                   `protobuf:"varint,3,opt,name=create,proto3" json:"create,omitempty"`
+	Username      string                 `protobuf:"bytes,4,opt,name=username,proto3" json:"username,omitempty"`
+	DisplayName   string                 `protobuf:"bytes,5,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AuthenticateEmailRequest) Reset() {
+	*x = AuthenticateEmailRequest{}
+	mi := &file_api_api_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AuthenticateEmailRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AuthenticateEmailRequest) ProtoMessage() {}
+
+func (x *AuthenticateEmailRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AuthenticateEmailRequest.ProtoReflect.Descriptor instead.
+func (*AuthenticateEmailRequest) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *AuthenticateEmailRequest) GetEmail() string {
+	if x != nil {
+		return x.Email
+	}
+	return ""
+}
+
+func (x *AuthenticateEmailRequest) GetPassword() string {
+	if x != nil {
+		return x.Password
+	}
+	return ""
+}
+
+func (x *AuthenticateEmailRequest) GetCreate() bool {
+	if x != nil {
+		return x.Create
+	}
+	return false
+}
+
+func (x *AuthenticateEmailRequest) GetUsername() string {
+	if x != nil {
+		return x.Username
+	}
+	return ""
+}
+
+func (x *AuthenticateEmailRequest) GetDisplayName() string {
+	if x != nil {
+		return x.DisplayName
+	}
+	return ""
+}
+
+type AuthenticateDeviceRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Create        bool                   `protobuf:"varint,2,opt,name=create,proto3" json:"create,omitempty"`
+	Username      string                 `protobuf:"bytes,3,opt,name=username,proto3" json:"username,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AuthenticateDeviceRequest) Reset() {
+	*x = AuthenticateDeviceRequest{}
+	mi := &file_api_api_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AuthenticateDeviceRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AuthenticateDeviceRequest) ProtoMessage() {}
+
+func (x *AuthenticateDeviceRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AuthenticateDeviceRequest.ProtoReflect.Descriptor instead.
+func (*AuthenticateDeviceRequest) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *AuthenticateDeviceRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *AuthenticateDeviceRequest) GetCreate() bool {
+	if x != nil {
+		return x.Create
+	}
+	return false
+}
+
+func (x *AuthenticateDeviceRequest) GetUsername() string {
+	if x != nil {
+		return x.Username
+	}
+	return ""
+}
+
+type AuthenticateAppleRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Token         string                 `protobuf:"bytes,1,opt,name=token,proto3" json:"token,omitempty"`
+	Create        bool                   `protobuf:"varint,2,opt,name=create,proto3" json:"create,omitempty"`
+	Username      string                 `protobuf:"bytes,3,opt,name=username,proto3" json:"username,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AuthenticateAppleRequest) Reset() {
+	*x = AuthenticateAppleRequest{}
+	mi := &file_api_api_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AuthenticateAppleRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AuthenticateAppleRequest) ProtoMessage() {}
+
+func (x *AuthenticateAppleRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AuthenticateAppleRequest.ProtoReflect.Descriptor instead.
+func (*AuthenticateAppleRequest) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *AuthenticateAppleRequest) GetToken() string {
+	if x != nil {
+		return x.Token
+	}
+	return ""
+}
+
+func (x *AuthenticateAppleRequest) GetCreate() bool {
+	if x != nil {
+		return x.Create
+	}
+	return false
+}
+
+func (x *AuthenticateAppleRequest) GetUsername() string {
+	if x != nil {
+		return x.Username
+	}
+	return ""
+}
+
+type AuthenticateGoogleRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Token         string                 `protobuf:"bytes,1,opt,name=token,proto3" json:"token,omitempty"`
+	Create        bool                   `protobuf:"varint,2,opt,name=create,proto3" json:"create,omitempty"`
+	Username      string                 `protobuf:"bytes,3,opt,name=username,proto3" json:"username,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AuthenticateGoogleRequest) Reset() {
+	*x = AuthenticateGoogleRequest{}
+	mi := &file_api_api_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AuthenticateGoogleRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AuthenticateGoogleRequest) ProtoMessage() {}
+
+func (x *AuthenticateGoogleRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AuthenticateGoogleRequest.ProtoReflect.Descriptor instead.
+func (*AuthenticateGoogleRequest) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *AuthenticateGoogleRequest) GetToken() string {
+	if x != nil {
+		return x.Token
+	}
+	return ""
+}
+
+func (x *AuthenticateGoogleRequest) GetCreate() bool {
+	if x != nil {
+		return x.Create
+	}
+	return false
+}
+
+func (x *AuthenticateGoogleRequest) GetUsername() string {
+	if x != nil {
+		return x.Username
+	}
+	return ""
+}
+
+type AuthenticateFacebookRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Token         string                 `protobuf:"bytes,1,opt,name=token,proto3" json:"token,omitempty"`
+	Create        bool                   `protobuf:"varint,2,opt,name=create,proto3" json:"create,omitempty"`
+	Username      string                 `protobuf:"bytes,3,opt,name=username,proto3" json:"username,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AuthenticateFacebookRequest) Reset() {
+	*x = AuthenticateFacebookRequest{}
+	mi := &file_api_api_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AuthenticateFacebookRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AuthenticateFacebookRequest) ProtoMessage() {}
+
+func (x *AuthenticateFacebookRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AuthenticateFacebookRequest.ProtoReflect.Descriptor instead.
+func (*AuthenticateFacebookRequest) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *AuthenticateFacebookRequest) GetToken() string {
+	if x != nil {
+		return x.Token
+	}
+	return ""
+}
+
+func (x *AuthenticateFacebookRequest) GetCreate() bool {
+	if x != nil {
+		return x.Create
+	}
+	return false
+}
+
+func (x *AuthenticateFacebookRequest) GetUsername() string {
+	if x != nil {
+		return x.Username
+	}
+	return ""
+}
+
+type AuthenticateSteamRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Ticket        []byte                 `protobuf:"bytes,1,opt,name=ticket,proto3" json:"ticket,omitempty"`
+	Create        bool                   `protobuf:"varint,2,opt,name=create,proto3" json:"create,omitempty"`
+	Username      string                 `protobuf:"bytes,3,opt,name=username,proto3" json:"username,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AuthenticateSteamRequest) Reset() {
+	*x = AuthenticateSteamRequest{}
+	mi := &file_api_api_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AuthenticateSteamRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AuthenticateSteamRequest) ProtoMessage() {}
+
+func (x *AuthenticateSteamRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AuthenticateSteamRequest.ProtoReflect.Descriptor instead.
+func (*AuthenticateSteamRequest) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *AuthenticateSteamRequest) GetTicket() []byte {
+	if x != nil {
+		return x.Ticket
+	}
+	return nil
+}
+
+func (x *AuthenticateSteamRequest) GetCreate() bool {
+	if x != nil {
+		return x.Create
+	}
+	return false
+}
+
+func (x *AuthenticateSteamRequest) GetUsername() string {
+	if x != nil {
+		return x.Username
+	}
+	return ""
+}
+
+type AuthenticateGameCenterRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	PlayerId      string                 `protobuf:"bytes,1,opt,name=player_id,json=playerId,proto3" json:"player_id,omitempty"`
+	BundleId      string                 `protobuf:"bytes,2,opt,name=bundle_id,json=bundleId,proto3" json:"bundle_id,omitempty"`
+	Timestamp     int64                  `protobuf:"varint,3,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
+	Salt          string                 `protobuf:"bytes,4,opt,name=salt,proto3" json:"salt,omitempty"`
+	Signature     string                 `protobuf:"bytes,5,opt,name=signature,proto3" json:"signature,omitempty"`
+	PublicKeyUrl  string                 `protobuf:"bytes,6,opt,name=public_key_url,json=publicKeyUrl,proto3" json:"public_key_url,omitempty"`
+	Create        bool                   `protobuf:"varint,7,opt,name=create,proto3" json:"create,omitempty"`
+	Username      string                 `protobuf:"bytes,8,opt,name=username,proto3" json:"username,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AuthenticateGameCenterRequest) Reset() {
+	*x = AuthenticateGameCenterRequest{}
+	mi := &file_api_api_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AuthenticateGameCenterRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AuthenticateGameCenterRequest) ProtoMessage() {}
+
+func (x *AuthenticateGameCenterRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AuthenticateGameCenterRequest.ProtoReflect.Descriptor instead.
+func (*AuthenticateGameCenterRequest) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *AuthenticateGameCenterRequest) GetPlayerId() string {
+	if x != nil {
+		return x.PlayerId
+	}
+	return ""
+}
+
+func (x *AuthenticateGameCenterRequest) GetBundleId() string {
+	if x != nil {
+		return x.BundleId
+	}
+	return ""
+}
+
+func (x *AuthenticateGameCenterRequest) GetTimestamp() int64 {
+	if x != nil {
+		return x.Timestamp
+	}
+	return 0
+}
+
+func (x *AuthenticateGameCenterRequest) GetSalt() string {
+	if x != nil {
+		return x.Salt
+	}
+	return ""
+}
+
+func (x *AuthenticateGameCenterRequest) GetSignature() string {
+	if x != nil {
+		return x.Signature
+	}
+	return ""
+}
+
+func (x *AuthenticateGameCenterRequest) GetPublicKeyUrl() string {
+	if x != nil {
+		return x.PublicKeyUrl
+	}
+	return ""
+}
+
+func (x *AuthenticateGameCenterRequest) GetCreate() bool {
+	if x != nil {
+		return x.Create
+	}
+	return false
+}
+
+func (x *AuthenticateGameCenterRequest) GetUsername() string {
+	if x != nil {
+		return x.Username
+	}
+	return ""
+}
+
+type AuthenticateCustomRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Create        bool                   `protobuf:"varint,2,opt,name=create,proto3" json:"create,omitempty"`
+	Username      string                 `protobuf:"bytes,3,opt,name=username,proto3" json:"username,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AuthenticateCustomRequest) Reset() {
+	*x = AuthenticateCustomRequest{}
+	mi := &file_api_api_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AuthenticateCustomRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AuthenticateCustomRequest) ProtoMessage() {}
+
+func (x *AuthenticateCustomRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AuthenticateCustomRequest.ProtoReflect.Descriptor instead.
+func (*AuthenticateCustomRequest) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *AuthenticateCustomRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *AuthenticateCustomRequest) GetCreate() bool {
+	if x != nil {
+		return x.Create
+	}
+	return false
+}
+
+func (x *AuthenticateCustomRequest) GetUsername() string {
+	if x != nil {
+		return x.Username
+	}
+	return ""
+}
+
+type SessionRefreshRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Token         string                 `protobuf:"bytes,1,opt,name=token,proto3" json:"token,omitempty"`
+	RefreshToken  string                 `protobuf:"bytes,2,opt,name=refresh_token,json=refreshToken,proto3" json:"refresh_token,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SessionRefreshRequest) Reset() {
+	*x = SessionRefreshRequest{}
+	mi := &file_api_api_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SessionRefreshRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SessionRefreshRequest) ProtoMessage() {}
+
+func (x *SessionRefreshRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SessionRefreshRequest.ProtoReflect.Descriptor instead.
+func (*SessionRefreshRequest) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *SessionRefreshRequest) GetToken() string {
+	if x != nil {
+		return x.Token
+	}
+	return ""
+}
+
+func (x *SessionRefreshRequest) GetRefreshToken() string {
+	if x != nil {
+		return x.RefreshToken
+	}
+	return ""
+}
+
+type SessionLogoutRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Token         string                 `protobuf:"bytes,1,opt,name=token,proto3" json:"token,omitempty"`
+	RefreshToken  string                 `protobuf:"bytes,2,opt,name=refresh_token,json=refreshToken,proto3" json:"refresh_token,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SessionLogoutRequest) Reset() {
+	*x = SessionLogoutRequest{}
+	mi := &file_api_api_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SessionLogoutRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SessionLogoutRequest) ProtoMessage() {}
+
+func (x *SessionLogoutRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SessionLogoutRequest.ProtoReflect.Descriptor instead.
+func (*SessionLogoutRequest) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *SessionLogoutRequest) GetToken() string {
+	if x != nil {
+		return x.Token
+	}
+	return ""
+}
+
+func (x *SessionLogoutRequest) GetRefreshToken() string {
+	if x != nil {
+		return x.RefreshToken
+	}
+	return ""
+}
+
+type Session struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Token         string                 `protobuf:"bytes,1,opt,name=token,proto3" json:"token,omitempty"`
+	RefreshToken  string                 `protobuf:"bytes,2,opt,name=refresh_token,json=refreshToken,proto3" json:"refresh_token,omitempty"`
+	Created       bool                   `protobuf:"varint,3,opt,name=created,proto3" json:"created,omitempty"`
+	UserId        string                 `protobuf:"bytes,4,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	Username      string                 `protobuf:"bytes,5,opt,name=username,proto3" json:"username,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Session) Reset() {
+	*x = Session{}
+	mi := &file_api_api_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Session) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Session) ProtoMessage() {}
+
+func (x *Session) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Session.ProtoReflect.Descriptor instead.
+func (*Session) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *Session) GetToken() string {
+	if x != nil {
+		return x.Token
+	}
+	return ""
+}
+
+func (x *Session) GetRefreshToken() string {
+	if x != nil {
+		return x.RefreshToken
+	}
+	return ""
+}
+
+func (x *Session) GetCreated() bool {
+	if x != nil {
+		return x.Created
+	}
+	return false
+}
+
+func (x *Session) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *Session) GetUsername() string {
+	if x != nil {
+		return x.Username
+	}
+	return ""
+}
+
+type Device struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Device) Reset() {
+	*x = Device{}
+	mi := &file_api_api_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Device) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Device) ProtoMessage() {}
+
+func (x *Device) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Device.ProtoReflect.Descriptor instead.
+func (*Device) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *Device) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+type Account struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	User          *User                  `protobuf:"bytes,1,opt,name=user,proto3" json:"user,omitempty"`
+	Devices       []*Device              `protobuf:"bytes,2,rep,name=devices,proto3" json:"devices,omitempty"`
+	Email         string                 `protobuf:"bytes,3,opt,name=email,proto3" json:"email,omitempty"`
+	CustomId      string                 `protobuf:"bytes,4,opt,name=custom_id,json=customId,proto3" json:"custom_id,omitempty"`
+	VerifyTime    *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=verify_time,json=verifyTime,proto3" json:"verify_time,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Account) Reset() {
+	*x = Account{}
+	mi := &file_api_api_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Account) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Account) ProtoMessage() {}
+
+func (x *Account) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Account.ProtoReflect.Descriptor instead.
+func (*Account) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *Account) GetUser() *User {
+	if x != nil {
+		return x.User
+	}
+	return nil
+}
+
+func (x *Account) GetDevices() []*Device {
+	if x != nil {
+		return x.Devices
+	}
+	return nil
+}
+
+func (x *Account) GetEmail() string {
+	if x != nil {
+		return x.Email
+	}
+	return ""
+}
+
+func (x *Account) GetCustomId() string {
+	if x != nil {
+		return x.CustomId
+	}
+	return ""
+}
+
+func (x *Account) GetVerifyTime() *timestamppb.Timestamp {
+	if x != nil {
+		return x.VerifyTime
+	}
+	return nil
+}
+
+type UpdateAccountRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	DisplayName   string                 `protobuf:"bytes,1,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	AvatarUrl     string                 `protobuf:"bytes,2,opt,name=avatar_url,json=avatarUrl,proto3" json:"avatar_url,omitempty"`
+	LangTag       string                 `protobuf:"bytes,3,opt,name=lang_tag,json=langTag,proto3" json:"lang_tag,omitempty"`
+	Location      string                 `protobuf:"bytes,4,opt,name=location,proto3" json:"location,omitempty"`
+	Timezone      string                 `protobuf:"bytes,5,opt,name=timezone,proto3" json:"timezone,omitempty"`
+	Metadata      string                 `protobuf:"bytes,6,opt,name=metadata,proto3" json:"metadata,omitempty"`
+	Username      string                 `protobuf:"bytes,7,opt,name=username,proto3" json:"username,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateAccountRequest) Reset() {
+	*x = UpdateAccountRequest{}
+	mi := &file_api_api_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateAccountRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateAccountRequest) ProtoMessage() {}
+
+func (x *UpdateAccountRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateAccountRequest.ProtoReflect.Descriptor instead.
+func (*UpdateAccountRequest) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *UpdateAccountRequest) GetDisplayName() string {
+	if x != nil {
+		return x.DisplayName
+	}
+	return ""
+}
+
+func (x *UpdateAccountRequest) GetAvatarUrl() string {
+	if x != nil {
+		return x.AvatarUrl
+	}
+	return ""
+}
+
+func (x *UpdateAccountRequest) GetLangTag() string {
+	if x != nil {
+		return x.LangTag
+	}
+	return ""
+}
+
+func (x *UpdateAccountRequest) GetLocation() string {
+	if x != nil {
+		return x.Location
+	}
+	return ""
+}
+
+func (x *UpdateAccountRequest) GetTimezone() string {
+	if x != nil {
+		return x.Timezone
+	}
+	return ""
+}
+
+func (x *UpdateAccountRequest) GetMetadata() string {
+	if x != nil {
+		return x.Metadata
+	}
+	return ""
+}
+
+func (x *UpdateAccountRequest) GetUsername() string {
+	if x != nil {
+		return x.Username
+	}
+	return ""
+}
+
+type UnlinkRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UnlinkRequest) Reset() {
+	*x = UnlinkRequest{}
+	mi := &file_api_api_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UnlinkRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UnlinkRequest) ProtoMessage() {}
+
+func (x *UnlinkRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UnlinkRequest.ProtoReflect.Descriptor instead.
+func (*UnlinkRequest) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *UnlinkRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
 type CreateLeaderboardRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -123,13 +1119,14 @@ type CreateLeaderboardRequest struct {
 	ResetSchedule string                 `protobuf:"bytes,4,opt,name=reset_schedule,json=resetSchedule,proto3" json:"reset_schedule,omitempty"` // Cron format
 	Metadata      string                 `protobuf:"bytes,5,opt,name=metadata,proto3" json:"metadata,omitempty"`                                // JSON string format
 	Authoritative bool                   `protobuf:"varint,6,opt,name=authoritative,proto3" json:"authoritative,omitempty"`
+	EnableRanks   bool                   `protobuf:"varint,7,opt,name=enable_ranks,json=enableRanks,proto3" json:"enable_ranks,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *CreateLeaderboardRequest) Reset() {
 	*x = CreateLeaderboardRequest{}
-	mi := &file_api_api_proto_msgTypes[1]
+	mi := &file_api_api_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -141,7 +1138,7 @@ func (x *CreateLeaderboardRequest) String() string {
 func (*CreateLeaderboardRequest) ProtoMessage() {}
 
 func (x *CreateLeaderboardRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[1]
+	mi := &file_api_api_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -154,7 +1151,7 @@ func (x *CreateLeaderboardRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateLeaderboardRequest.ProtoReflect.Descriptor instead.
 func (*CreateLeaderboardRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{1}
+	return file_api_api_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *CreateLeaderboardRequest) GetId() string {
@@ -199,6 +1196,233 @@ func (x *CreateLeaderboardRequest) GetAuthoritative() bool {
 	return false
 }
 
+func (x *CreateLeaderboardRequest) GetEnableRanks() bool {
+	if x != nil {
+		return x.EnableRanks
+	}
+	return false
+}
+
+type ListLeaderboardsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Limit         int32                  `protobuf:"varint,1,opt,name=limit,proto3" json:"limit,omitempty"`
+	Cursor        string                 `protobuf:"bytes,2,opt,name=cursor,proto3" json:"cursor,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListLeaderboardsRequest) Reset() {
+	*x = ListLeaderboardsRequest{}
+	mi := &file_api_api_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListLeaderboardsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListLeaderboardsRequest) ProtoMessage() {}
+
+func (x *ListLeaderboardsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListLeaderboardsRequest.ProtoReflect.Descriptor instead.
+func (*ListLeaderboardsRequest) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *ListLeaderboardsRequest) GetLimit() int32 {
+	if x != nil {
+		return x.Limit
+	}
+	return 0
+}
+
+func (x *ListLeaderboardsRequest) GetCursor() string {
+	if x != nil {
+		return x.Cursor
+	}
+	return ""
+}
+
+type Leaderboard struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	SortOrder     string                 `protobuf:"bytes,2,opt,name=sort_order,json=sortOrder,proto3" json:"sort_order,omitempty"`
+	Operator      string                 `protobuf:"bytes,3,opt,name=operator,proto3" json:"operator,omitempty"`
+	ResetSchedule string                 `protobuf:"bytes,4,opt,name=reset_schedule,json=resetSchedule,proto3" json:"reset_schedule,omitempty"`
+	Metadata      string                 `protobuf:"bytes,5,opt,name=metadata,proto3" json:"metadata,omitempty"`
+	Authoritative bool                   `protobuf:"varint,6,opt,name=authoritative,proto3" json:"authoritative,omitempty"`
+	CreateTime    *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=create_time,json=createTime,proto3" json:"create_time,omitempty"`
+	PrevReset     int64                  `protobuf:"varint,8,opt,name=prev_reset,json=prevReset,proto3" json:"prev_reset,omitempty"`
+	NextReset     int64                  `protobuf:"varint,9,opt,name=next_reset,json=nextReset,proto3" json:"next_reset,omitempty"`
+	EnableRanks   bool                   `protobuf:"varint,10,opt,name=enable_ranks,json=enableRanks,proto3" json:"enable_ranks,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Leaderboard) Reset() {
+	*x = Leaderboard{}
+	mi := &file_api_api_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Leaderboard) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Leaderboard) ProtoMessage() {}
+
+func (x *Leaderboard) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Leaderboard.ProtoReflect.Descriptor instead.
+func (*Leaderboard) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *Leaderboard) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *Leaderboard) GetSortOrder() string {
+	if x != nil {
+		return x.SortOrder
+	}
+	return ""
+}
+
+func (x *Leaderboard) GetOperator() string {
+	if x != nil {
+		return x.Operator
+	}
+	return ""
+}
+
+func (x *Leaderboard) GetResetSchedule() string {
+	if x != nil {
+		return x.ResetSchedule
+	}
+	return ""
+}
+
+func (x *Leaderboard) GetMetadata() string {
+	if x != nil {
+		return x.Metadata
+	}
+	return ""
+}
+
+func (x *Leaderboard) GetAuthoritative() bool {
+	if x != nil {
+		return x.Authoritative
+	}
+	return false
+}
+
+func (x *Leaderboard) GetCreateTime() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreateTime
+	}
+	return nil
+}
+
+func (x *Leaderboard) GetPrevReset() int64 {
+	if x != nil {
+		return x.PrevReset
+	}
+	return 0
+}
+
+func (x *Leaderboard) GetNextReset() int64 {
+	if x != nil {
+		return x.NextReset
+	}
+	return 0
+}
+
+func (x *Leaderboard) GetEnableRanks() bool {
+	if x != nil {
+		return x.EnableRanks
+	}
+	return false
+}
+
+type LeaderboardList struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Leaderboards  []*Leaderboard         `protobuf:"bytes,1,rep,name=leaderboards,proto3" json:"leaderboards,omitempty"`
+	NextCursor    string                 `protobuf:"bytes,2,opt,name=next_cursor,json=nextCursor,proto3" json:"next_cursor,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *LeaderboardList) Reset() {
+	*x = LeaderboardList{}
+	mi := &file_api_api_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *LeaderboardList) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*LeaderboardList) ProtoMessage() {}
+
+func (x *LeaderboardList) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use LeaderboardList.ProtoReflect.Descriptor instead.
+func (*LeaderboardList) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *LeaderboardList) GetLeaderboards() []*Leaderboard {
+	if x != nil {
+		return x.Leaderboards
+	}
+	return nil
+}
+
+func (x *LeaderboardList) GetNextCursor() string {
+	if x != nil {
+		return x.NextCursor
+	}
+	return ""
+}
+
 type DeleteLeaderboardRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -208,7 +1432,7 @@ type DeleteLeaderboardRequest struct {
 
 func (x *DeleteLeaderboardRequest) Reset() {
 	*x = DeleteLeaderboardRequest{}
-	mi := &file_api_api_proto_msgTypes[2]
+	mi := &file_api_api_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -220,7 +1444,7 @@ func (x *DeleteLeaderboardRequest) String() string {
 func (*DeleteLeaderboardRequest) ProtoMessage() {}
 
 func (x *DeleteLeaderboardRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[2]
+	mi := &file_api_api_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -233,7 +1457,7 @@ func (x *DeleteLeaderboardRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteLeaderboardRequest.ProtoReflect.Descriptor instead.
 func (*DeleteLeaderboardRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{2}
+	return file_api_api_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *DeleteLeaderboardRequest) GetId() string {
@@ -255,7 +1479,7 @@ type WriteLeaderboardRecordRequest struct {
 
 func (x *WriteLeaderboardRecordRequest) Reset() {
 	*x = WriteLeaderboardRecordRequest{}
-	mi := &file_api_api_proto_msgTypes[3]
+	mi := &file_api_api_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -267,7 +1491,7 @@ func (x *WriteLeaderboardRecordRequest) String() string {
 func (*WriteLeaderboardRecordRequest) ProtoMessage() {}
 
 func (x *WriteLeaderboardRecordRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[3]
+	mi := &file_api_api_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -280,7 +1504,7 @@ func (x *WriteLeaderboardRecordRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WriteLeaderboardRecordRequest.ProtoReflect.Descriptor instead.
 func (*WriteLeaderboardRecordRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{3}
+	return file_api_api_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *WriteLeaderboardRecordRequest) GetLeaderboardId() string {
@@ -331,7 +1555,7 @@ type LeaderboardRecord struct {
 
 func (x *LeaderboardRecord) Reset() {
 	*x = LeaderboardRecord{}
-	mi := &file_api_api_proto_msgTypes[4]
+	mi := &file_api_api_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -343,7 +1567,7 @@ func (x *LeaderboardRecord) String() string {
 func (*LeaderboardRecord) ProtoMessage() {}
 
 func (x *LeaderboardRecord) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[4]
+	mi := &file_api_api_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -356,7 +1580,7 @@ func (x *LeaderboardRecord) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LeaderboardRecord.ProtoReflect.Descriptor instead.
 func (*LeaderboardRecord) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{4}
+	return file_api_api_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *LeaderboardRecord) GetLeaderboardId() string {
@@ -449,13 +1673,14 @@ type ListLeaderboardRecordsRequest struct {
 	Limit         int32                  `protobuf:"varint,2,opt,name=limit,proto3" json:"limit,omitempty"`
 	Cursor        string                 `protobuf:"bytes,3,opt,name=cursor,proto3" json:"cursor,omitempty"`
 	OwnerIds      []string               `protobuf:"bytes,4,rep,name=owner_ids,json=ownerIds,proto3" json:"owner_ids,omitempty"`
+	Expiry        int64                  `protobuf:"varint,5,opt,name=expiry,proto3" json:"expiry,omitempty"` // optional override unix expiry
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ListLeaderboardRecordsRequest) Reset() {
 	*x = ListLeaderboardRecordsRequest{}
-	mi := &file_api_api_proto_msgTypes[5]
+	mi := &file_api_api_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -467,7 +1692,7 @@ func (x *ListLeaderboardRecordsRequest) String() string {
 func (*ListLeaderboardRecordsRequest) ProtoMessage() {}
 
 func (x *ListLeaderboardRecordsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[5]
+	mi := &file_api_api_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -480,7 +1705,7 @@ func (x *ListLeaderboardRecordsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListLeaderboardRecordsRequest.ProtoReflect.Descriptor instead.
 func (*ListLeaderboardRecordsRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{5}
+	return file_api_api_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *ListLeaderboardRecordsRequest) GetLeaderboardId() string {
@@ -511,18 +1736,26 @@ func (x *ListLeaderboardRecordsRequest) GetOwnerIds() []string {
 	return nil
 }
 
+func (x *ListLeaderboardRecordsRequest) GetExpiry() int64 {
+	if x != nil {
+		return x.Expiry
+	}
+	return 0
+}
+
 type ListLeaderboardRecordsAroundOwnerRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	LeaderboardId string                 `protobuf:"bytes,1,opt,name=leaderboard_id,json=leaderboardId,proto3" json:"leaderboard_id,omitempty"`
 	OwnerId       string                 `protobuf:"bytes,2,opt,name=owner_id,json=ownerId,proto3" json:"owner_id,omitempty"`
 	Limit         int32                  `protobuf:"varint,3,opt,name=limit,proto3" json:"limit,omitempty"`
+	Expiry        int64                  `protobuf:"varint,4,opt,name=expiry,proto3" json:"expiry,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ListLeaderboardRecordsAroundOwnerRequest) Reset() {
 	*x = ListLeaderboardRecordsAroundOwnerRequest{}
-	mi := &file_api_api_proto_msgTypes[6]
+	mi := &file_api_api_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -534,7 +1767,7 @@ func (x *ListLeaderboardRecordsAroundOwnerRequest) String() string {
 func (*ListLeaderboardRecordsAroundOwnerRequest) ProtoMessage() {}
 
 func (x *ListLeaderboardRecordsAroundOwnerRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[6]
+	mi := &file_api_api_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -547,7 +1780,7 @@ func (x *ListLeaderboardRecordsAroundOwnerRequest) ProtoReflect() protoreflect.M
 
 // Deprecated: Use ListLeaderboardRecordsAroundOwnerRequest.ProtoReflect.Descriptor instead.
 func (*ListLeaderboardRecordsAroundOwnerRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{6}
+	return file_api_api_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *ListLeaderboardRecordsAroundOwnerRequest) GetLeaderboardId() string {
@@ -571,18 +1804,26 @@ func (x *ListLeaderboardRecordsAroundOwnerRequest) GetLimit() int32 {
 	return 0
 }
 
+func (x *ListLeaderboardRecordsAroundOwnerRequest) GetExpiry() int64 {
+	if x != nil {
+		return x.Expiry
+	}
+	return 0
+}
+
 type LeaderboardRecordList struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Records       []*LeaderboardRecord   `protobuf:"bytes,1,rep,name=records,proto3" json:"records,omitempty"`
 	NextCursor    string                 `protobuf:"bytes,2,opt,name=next_cursor,json=nextCursor,proto3" json:"next_cursor,omitempty"`
 	PrevCursor    string                 `protobuf:"bytes,3,opt,name=prev_cursor,json=prevCursor,proto3" json:"prev_cursor,omitempty"`
+	OwnerRecords  []*LeaderboardRecord   `protobuf:"bytes,4,rep,name=owner_records,json=ownerRecords,proto3" json:"owner_records,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *LeaderboardRecordList) Reset() {
 	*x = LeaderboardRecordList{}
-	mi := &file_api_api_proto_msgTypes[7]
+	mi := &file_api_api_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -594,7 +1835,7 @@ func (x *LeaderboardRecordList) String() string {
 func (*LeaderboardRecordList) ProtoMessage() {}
 
 func (x *LeaderboardRecordList) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[7]
+	mi := &file_api_api_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -607,7 +1848,7 @@ func (x *LeaderboardRecordList) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LeaderboardRecordList.ProtoReflect.Descriptor instead.
 func (*LeaderboardRecordList) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{7}
+	return file_api_api_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *LeaderboardRecordList) GetRecords() []*LeaderboardRecord {
@@ -631,6 +1872,13 @@ func (x *LeaderboardRecordList) GetPrevCursor() string {
 	return ""
 }
 
+func (x *LeaderboardRecordList) GetOwnerRecords() []*LeaderboardRecord {
+	if x != nil {
+		return x.OwnerRecords
+	}
+	return nil
+}
+
 type DeleteLeaderboardRecordRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	LeaderboardId string                 `protobuf:"bytes,1,opt,name=leaderboard_id,json=leaderboardId,proto3" json:"leaderboard_id,omitempty"`
@@ -640,7 +1888,7 @@ type DeleteLeaderboardRecordRequest struct {
 
 func (x *DeleteLeaderboardRecordRequest) Reset() {
 	*x = DeleteLeaderboardRecordRequest{}
-	mi := &file_api_api_proto_msgTypes[8]
+	mi := &file_api_api_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -652,7 +1900,7 @@ func (x *DeleteLeaderboardRecordRequest) String() string {
 func (*DeleteLeaderboardRecordRequest) ProtoMessage() {}
 
 func (x *DeleteLeaderboardRecordRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[8]
+	mi := &file_api_api_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -665,7 +1913,7 @@ func (x *DeleteLeaderboardRecordRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteLeaderboardRecordRequest.ProtoReflect.Descriptor instead.
 func (*DeleteLeaderboardRecordRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{8}
+	return file_api_api_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *DeleteLeaderboardRecordRequest) GetLeaderboardId() string {
@@ -698,7 +1946,7 @@ type CreateTournamentRequest struct {
 
 func (x *CreateTournamentRequest) Reset() {
 	*x = CreateTournamentRequest{}
-	mi := &file_api_api_proto_msgTypes[9]
+	mi := &file_api_api_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -710,7 +1958,7 @@ func (x *CreateTournamentRequest) String() string {
 func (*CreateTournamentRequest) ProtoMessage() {}
 
 func (x *CreateTournamentRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[9]
+	mi := &file_api_api_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -723,7 +1971,7 @@ func (x *CreateTournamentRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateTournamentRequest.ProtoReflect.Descriptor instead.
 func (*CreateTournamentRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{9}
+	return file_api_api_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *CreateTournamentRequest) GetId() string {
@@ -840,7 +2088,7 @@ type DeleteTournamentRequest struct {
 
 func (x *DeleteTournamentRequest) Reset() {
 	*x = DeleteTournamentRequest{}
-	mi := &file_api_api_proto_msgTypes[10]
+	mi := &file_api_api_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -852,7 +2100,7 @@ func (x *DeleteTournamentRequest) String() string {
 func (*DeleteTournamentRequest) ProtoMessage() {}
 
 func (x *DeleteTournamentRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[10]
+	mi := &file_api_api_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -865,7 +2113,7 @@ func (x *DeleteTournamentRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteTournamentRequest.ProtoReflect.Descriptor instead.
 func (*DeleteTournamentRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{10}
+	return file_api_api_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *DeleteTournamentRequest) GetId() string {
@@ -884,7 +2132,7 @@ type JoinTournamentRequest struct {
 
 func (x *JoinTournamentRequest) Reset() {
 	*x = JoinTournamentRequest{}
-	mi := &file_api_api_proto_msgTypes[11]
+	mi := &file_api_api_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -896,7 +2144,7 @@ func (x *JoinTournamentRequest) String() string {
 func (*JoinTournamentRequest) ProtoMessage() {}
 
 func (x *JoinTournamentRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[11]
+	mi := &file_api_api_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -909,7 +2157,7 @@ func (x *JoinTournamentRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use JoinTournamentRequest.ProtoReflect.Descriptor instead.
 func (*JoinTournamentRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{11}
+	return file_api_api_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *JoinTournamentRequest) GetId() string {
@@ -927,13 +2175,14 @@ type ListTournamentsRequest struct {
 	EndTime       *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=end_time,json=endTime,proto3" json:"end_time,omitempty"`
 	Limit         int32                  `protobuf:"varint,5,opt,name=limit,proto3" json:"limit,omitempty"`
 	Cursor        string                 `protobuf:"bytes,6,opt,name=cursor,proto3" json:"cursor,omitempty"`
+	Active        bool                   `protobuf:"varint,7,opt,name=active,proto3" json:"active,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ListTournamentsRequest) Reset() {
 	*x = ListTournamentsRequest{}
-	mi := &file_api_api_proto_msgTypes[12]
+	mi := &file_api_api_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -945,7 +2194,7 @@ func (x *ListTournamentsRequest) String() string {
 func (*ListTournamentsRequest) ProtoMessage() {}
 
 func (x *ListTournamentsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[12]
+	mi := &file_api_api_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -958,7 +2207,7 @@ func (x *ListTournamentsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListTournamentsRequest.ProtoReflect.Descriptor instead.
 func (*ListTournamentsRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{12}
+	return file_api_api_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *ListTournamentsRequest) GetCategoryStart() int32 {
@@ -1003,6 +2252,13 @@ func (x *ListTournamentsRequest) GetCursor() string {
 	return ""
 }
 
+func (x *ListTournamentsRequest) GetActive() bool {
+	if x != nil {
+		return x.Active
+	}
+	return false
+}
+
 type Tournament struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -1021,13 +2277,18 @@ type Tournament struct {
 	Title         string                 `protobuf:"bytes,14,opt,name=title,proto3" json:"title,omitempty"`
 	StartTime     *timestamppb.Timestamp `protobuf:"bytes,15,opt,name=start_time,json=startTime,proto3" json:"start_time,omitempty"`
 	Size          int32                  `protobuf:"varint,16,opt,name=size,proto3" json:"size,omitempty"`
+	CanEnter      bool                   `protobuf:"varint,17,opt,name=can_enter,json=canEnter,proto3" json:"can_enter,omitempty"`
+	StartActive   int64                  `protobuf:"varint,18,opt,name=start_active,json=startActive,proto3" json:"start_active,omitempty"`
+	EndActive     int64                  `protobuf:"varint,19,opt,name=end_active,json=endActive,proto3" json:"end_active,omitempty"`
+	PrevReset     int64                  `protobuf:"varint,20,opt,name=prev_reset,json=prevReset,proto3" json:"prev_reset,omitempty"`
+	NextReset     int64                  `protobuf:"varint,21,opt,name=next_reset,json=nextReset,proto3" json:"next_reset,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *Tournament) Reset() {
 	*x = Tournament{}
-	mi := &file_api_api_proto_msgTypes[13]
+	mi := &file_api_api_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1039,7 +2300,7 @@ func (x *Tournament) String() string {
 func (*Tournament) ProtoMessage() {}
 
 func (x *Tournament) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[13]
+	mi := &file_api_api_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1052,7 +2313,7 @@ func (x *Tournament) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Tournament.ProtoReflect.Descriptor instead.
 func (*Tournament) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{13}
+	return file_api_api_proto_rawDescGZIP(), []int{31}
 }
 
 func (x *Tournament) GetId() string {
@@ -1167,6 +2428,41 @@ func (x *Tournament) GetSize() int32 {
 	return 0
 }
 
+func (x *Tournament) GetCanEnter() bool {
+	if x != nil {
+		return x.CanEnter
+	}
+	return false
+}
+
+func (x *Tournament) GetStartActive() int64 {
+	if x != nil {
+		return x.StartActive
+	}
+	return 0
+}
+
+func (x *Tournament) GetEndActive() int64 {
+	if x != nil {
+		return x.EndActive
+	}
+	return 0
+}
+
+func (x *Tournament) GetPrevReset() int64 {
+	if x != nil {
+		return x.PrevReset
+	}
+	return 0
+}
+
+func (x *Tournament) GetNextReset() int64 {
+	if x != nil {
+		return x.NextReset
+	}
+	return 0
+}
+
 type TournamentList struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Tournaments   []*Tournament          `protobuf:"bytes,1,rep,name=tournaments,proto3" json:"tournaments,omitempty"`
@@ -1177,7 +2473,7 @@ type TournamentList struct {
 
 func (x *TournamentList) Reset() {
 	*x = TournamentList{}
-	mi := &file_api_api_proto_msgTypes[14]
+	mi := &file_api_api_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1189,7 +2485,7 @@ func (x *TournamentList) String() string {
 func (*TournamentList) ProtoMessage() {}
 
 func (x *TournamentList) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[14]
+	mi := &file_api_api_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1202,7 +2498,7 @@ func (x *TournamentList) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TournamentList.ProtoReflect.Descriptor instead.
 func (*TournamentList) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{14}
+	return file_api_api_proto_rawDescGZIP(), []int{32}
 }
 
 func (x *TournamentList) GetTournaments() []*Tournament {
@@ -1231,7 +2527,7 @@ type WriteTournamentRecordRequest struct {
 
 func (x *WriteTournamentRecordRequest) Reset() {
 	*x = WriteTournamentRecordRequest{}
-	mi := &file_api_api_proto_msgTypes[15]
+	mi := &file_api_api_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1243,7 +2539,7 @@ func (x *WriteTournamentRecordRequest) String() string {
 func (*WriteTournamentRecordRequest) ProtoMessage() {}
 
 func (x *WriteTournamentRecordRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[15]
+	mi := &file_api_api_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1256,7 +2552,7 @@ func (x *WriteTournamentRecordRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WriteTournamentRecordRequest.ProtoReflect.Descriptor instead.
 func (*WriteTournamentRecordRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{15}
+	return file_api_api_proto_rawDescGZIP(), []int{33}
 }
 
 func (x *WriteTournamentRecordRequest) GetTournamentId() string {
@@ -1293,13 +2589,14 @@ type ListTournamentRecordsRequest struct {
 	Limit         int32                  `protobuf:"varint,2,opt,name=limit,proto3" json:"limit,omitempty"`
 	Cursor        string                 `protobuf:"bytes,3,opt,name=cursor,proto3" json:"cursor,omitempty"`
 	OwnerIds      []string               `protobuf:"bytes,4,rep,name=owner_ids,json=ownerIds,proto3" json:"owner_ids,omitempty"`
+	Expiry        int64                  `protobuf:"varint,5,opt,name=expiry,proto3" json:"expiry,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ListTournamentRecordsRequest) Reset() {
 	*x = ListTournamentRecordsRequest{}
-	mi := &file_api_api_proto_msgTypes[16]
+	mi := &file_api_api_proto_msgTypes[34]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1311,7 +2608,7 @@ func (x *ListTournamentRecordsRequest) String() string {
 func (*ListTournamentRecordsRequest) ProtoMessage() {}
 
 func (x *ListTournamentRecordsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[16]
+	mi := &file_api_api_proto_msgTypes[34]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1324,7 +2621,7 @@ func (x *ListTournamentRecordsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListTournamentRecordsRequest.ProtoReflect.Descriptor instead.
 func (*ListTournamentRecordsRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{16}
+	return file_api_api_proto_rawDescGZIP(), []int{34}
 }
 
 func (x *ListTournamentRecordsRequest) GetTournamentId() string {
@@ -1355,6 +2652,125 @@ func (x *ListTournamentRecordsRequest) GetOwnerIds() []string {
 	return nil
 }
 
+func (x *ListTournamentRecordsRequest) GetExpiry() int64 {
+	if x != nil {
+		return x.Expiry
+	}
+	return 0
+}
+
+type ListTournamentRecordsAroundOwnerRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TournamentId  string                 `protobuf:"bytes,1,opt,name=tournament_id,json=tournamentId,proto3" json:"tournament_id,omitempty"`
+	OwnerId       string                 `protobuf:"bytes,2,opt,name=owner_id,json=ownerId,proto3" json:"owner_id,omitempty"`
+	Limit         int32                  `protobuf:"varint,3,opt,name=limit,proto3" json:"limit,omitempty"`
+	Expiry        int64                  `protobuf:"varint,4,opt,name=expiry,proto3" json:"expiry,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListTournamentRecordsAroundOwnerRequest) Reset() {
+	*x = ListTournamentRecordsAroundOwnerRequest{}
+	mi := &file_api_api_proto_msgTypes[35]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListTournamentRecordsAroundOwnerRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListTournamentRecordsAroundOwnerRequest) ProtoMessage() {}
+
+func (x *ListTournamentRecordsAroundOwnerRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[35]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListTournamentRecordsAroundOwnerRequest.ProtoReflect.Descriptor instead.
+func (*ListTournamentRecordsAroundOwnerRequest) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{35}
+}
+
+func (x *ListTournamentRecordsAroundOwnerRequest) GetTournamentId() string {
+	if x != nil {
+		return x.TournamentId
+	}
+	return ""
+}
+
+func (x *ListTournamentRecordsAroundOwnerRequest) GetOwnerId() string {
+	if x != nil {
+		return x.OwnerId
+	}
+	return ""
+}
+
+func (x *ListTournamentRecordsAroundOwnerRequest) GetLimit() int32 {
+	if x != nil {
+		return x.Limit
+	}
+	return 0
+}
+
+func (x *ListTournamentRecordsAroundOwnerRequest) GetExpiry() int64 {
+	if x != nil {
+		return x.Expiry
+	}
+	return 0
+}
+
+type DeleteTournamentRecordRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TournamentId  string                 `protobuf:"bytes,1,opt,name=tournament_id,json=tournamentId,proto3" json:"tournament_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteTournamentRecordRequest) Reset() {
+	*x = DeleteTournamentRecordRequest{}
+	mi := &file_api_api_proto_msgTypes[36]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteTournamentRecordRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteTournamentRecordRequest) ProtoMessage() {}
+
+func (x *DeleteTournamentRecordRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[36]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteTournamentRecordRequest.ProtoReflect.Descriptor instead.
+func (*DeleteTournamentRecordRequest) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{36}
+}
+
+func (x *DeleteTournamentRecordRequest) GetTournamentId() string {
+	if x != nil {
+		return x.TournamentId
+	}
+	return ""
+}
+
 type AddFriendsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Ids           []string               `protobuf:"bytes,1,rep,name=ids,proto3" json:"ids,omitempty"`
@@ -1365,7 +2781,7 @@ type AddFriendsRequest struct {
 
 func (x *AddFriendsRequest) Reset() {
 	*x = AddFriendsRequest{}
-	mi := &file_api_api_proto_msgTypes[17]
+	mi := &file_api_api_proto_msgTypes[37]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1377,7 +2793,7 @@ func (x *AddFriendsRequest) String() string {
 func (*AddFriendsRequest) ProtoMessage() {}
 
 func (x *AddFriendsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[17]
+	mi := &file_api_api_proto_msgTypes[37]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1390,7 +2806,7 @@ func (x *AddFriendsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AddFriendsRequest.ProtoReflect.Descriptor instead.
 func (*AddFriendsRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{17}
+	return file_api_api_proto_rawDescGZIP(), []int{37}
 }
 
 func (x *AddFriendsRequest) GetIds() []string {
@@ -1418,7 +2834,7 @@ type ListFriendsRequest struct {
 
 func (x *ListFriendsRequest) Reset() {
 	*x = ListFriendsRequest{}
-	mi := &file_api_api_proto_msgTypes[18]
+	mi := &file_api_api_proto_msgTypes[38]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1430,7 +2846,7 @@ func (x *ListFriendsRequest) String() string {
 func (*ListFriendsRequest) ProtoMessage() {}
 
 func (x *ListFriendsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[18]
+	mi := &file_api_api_proto_msgTypes[38]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1443,7 +2859,7 @@ func (x *ListFriendsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListFriendsRequest.ProtoReflect.Descriptor instead.
 func (*ListFriendsRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{18}
+	return file_api_api_proto_rawDescGZIP(), []int{38}
 }
 
 func (x *ListFriendsRequest) GetLimit() int32 {
@@ -1478,7 +2894,7 @@ type Friend struct {
 
 func (x *Friend) Reset() {
 	*x = Friend{}
-	mi := &file_api_api_proto_msgTypes[19]
+	mi := &file_api_api_proto_msgTypes[39]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1490,7 +2906,7 @@ func (x *Friend) String() string {
 func (*Friend) ProtoMessage() {}
 
 func (x *Friend) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[19]
+	mi := &file_api_api_proto_msgTypes[39]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1503,7 +2919,7 @@ func (x *Friend) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Friend.ProtoReflect.Descriptor instead.
 func (*Friend) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{19}
+	return file_api_api_proto_rawDescGZIP(), []int{39}
 }
 
 func (x *Friend) GetUser() *User {
@@ -1537,7 +2953,7 @@ type FriendList struct {
 
 func (x *FriendList) Reset() {
 	*x = FriendList{}
-	mi := &file_api_api_proto_msgTypes[20]
+	mi := &file_api_api_proto_msgTypes[40]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1549,7 +2965,7 @@ func (x *FriendList) String() string {
 func (*FriendList) ProtoMessage() {}
 
 func (x *FriendList) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[20]
+	mi := &file_api_api_proto_msgTypes[40]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1562,7 +2978,7 @@ func (x *FriendList) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FriendList.ProtoReflect.Descriptor instead.
 func (*FriendList) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{20}
+	return file_api_api_proto_rawDescGZIP(), []int{40}
 }
 
 func (x *FriendList) GetFriends() []*Friend {
@@ -1589,7 +3005,7 @@ type DeleteFriendsRequest struct {
 
 func (x *DeleteFriendsRequest) Reset() {
 	*x = DeleteFriendsRequest{}
-	mi := &file_api_api_proto_msgTypes[21]
+	mi := &file_api_api_proto_msgTypes[41]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1601,7 +3017,7 @@ func (x *DeleteFriendsRequest) String() string {
 func (*DeleteFriendsRequest) ProtoMessage() {}
 
 func (x *DeleteFriendsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[21]
+	mi := &file_api_api_proto_msgTypes[41]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1614,7 +3030,7 @@ func (x *DeleteFriendsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteFriendsRequest.ProtoReflect.Descriptor instead.
 func (*DeleteFriendsRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{21}
+	return file_api_api_proto_rawDescGZIP(), []int{41}
 }
 
 func (x *DeleteFriendsRequest) GetIds() []string {
@@ -1641,7 +3057,7 @@ type BlockFriendsRequest struct {
 
 func (x *BlockFriendsRequest) Reset() {
 	*x = BlockFriendsRequest{}
-	mi := &file_api_api_proto_msgTypes[22]
+	mi := &file_api_api_proto_msgTypes[42]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1653,7 +3069,7 @@ func (x *BlockFriendsRequest) String() string {
 func (*BlockFriendsRequest) ProtoMessage() {}
 
 func (x *BlockFriendsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[22]
+	mi := &file_api_api_proto_msgTypes[42]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1666,7 +3082,7 @@ func (x *BlockFriendsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BlockFriendsRequest.ProtoReflect.Descriptor instead.
 func (*BlockFriendsRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{22}
+	return file_api_api_proto_rawDescGZIP(), []int{42}
 }
 
 func (x *BlockFriendsRequest) GetIds() []string {
@@ -1693,7 +3109,7 @@ type ImportFacebookFriendsRequest struct {
 
 func (x *ImportFacebookFriendsRequest) Reset() {
 	*x = ImportFacebookFriendsRequest{}
-	mi := &file_api_api_proto_msgTypes[23]
+	mi := &file_api_api_proto_msgTypes[43]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1705,7 +3121,7 @@ func (x *ImportFacebookFriendsRequest) String() string {
 func (*ImportFacebookFriendsRequest) ProtoMessage() {}
 
 func (x *ImportFacebookFriendsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[23]
+	mi := &file_api_api_proto_msgTypes[43]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1718,7 +3134,7 @@ func (x *ImportFacebookFriendsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ImportFacebookFriendsRequest.ProtoReflect.Descriptor instead.
 func (*ImportFacebookFriendsRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{23}
+	return file_api_api_proto_rawDescGZIP(), []int{43}
 }
 
 func (x *ImportFacebookFriendsRequest) GetToken() string {
@@ -1745,7 +3161,7 @@ type ImportSteamFriendsRequest struct {
 
 func (x *ImportSteamFriendsRequest) Reset() {
 	*x = ImportSteamFriendsRequest{}
-	mi := &file_api_api_proto_msgTypes[24]
+	mi := &file_api_api_proto_msgTypes[44]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1757,7 +3173,7 @@ func (x *ImportSteamFriendsRequest) String() string {
 func (*ImportSteamFriendsRequest) ProtoMessage() {}
 
 func (x *ImportSteamFriendsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[24]
+	mi := &file_api_api_proto_msgTypes[44]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1770,7 +3186,7 @@ func (x *ImportSteamFriendsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ImportSteamFriendsRequest.ProtoReflect.Descriptor instead.
 func (*ImportSteamFriendsRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{24}
+	return file_api_api_proto_rawDescGZIP(), []int{44}
 }
 
 func (x *ImportSteamFriendsRequest) GetSteamToken() string {
@@ -1802,7 +3218,7 @@ type CreateGroupRequest struct {
 
 func (x *CreateGroupRequest) Reset() {
 	*x = CreateGroupRequest{}
-	mi := &file_api_api_proto_msgTypes[25]
+	mi := &file_api_api_proto_msgTypes[45]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1814,7 +3230,7 @@ func (x *CreateGroupRequest) String() string {
 func (*CreateGroupRequest) ProtoMessage() {}
 
 func (x *CreateGroupRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[25]
+	mi := &file_api_api_proto_msgTypes[45]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1827,7 +3243,7 @@ func (x *CreateGroupRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateGroupRequest.ProtoReflect.Descriptor instead.
 func (*CreateGroupRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{25}
+	return file_api_api_proto_rawDescGZIP(), []int{45}
 }
 
 func (x *CreateGroupRequest) GetName() string {
@@ -1899,7 +3315,7 @@ type Group struct {
 
 func (x *Group) Reset() {
 	*x = Group{}
-	mi := &file_api_api_proto_msgTypes[26]
+	mi := &file_api_api_proto_msgTypes[46]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1911,7 +3327,7 @@ func (x *Group) String() string {
 func (*Group) ProtoMessage() {}
 
 func (x *Group) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[26]
+	mi := &file_api_api_proto_msgTypes[46]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1924,7 +3340,7 @@ func (x *Group) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Group.ProtoReflect.Descriptor instead.
 func (*Group) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{26}
+	return file_api_api_proto_rawDescGZIP(), []int{46}
 }
 
 func (x *Group) GetId() string {
@@ -2026,7 +3442,7 @@ type UpdateGroupRequest struct {
 
 func (x *UpdateGroupRequest) Reset() {
 	*x = UpdateGroupRequest{}
-	mi := &file_api_api_proto_msgTypes[27]
+	mi := &file_api_api_proto_msgTypes[47]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2038,7 +3454,7 @@ func (x *UpdateGroupRequest) String() string {
 func (*UpdateGroupRequest) ProtoMessage() {}
 
 func (x *UpdateGroupRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[27]
+	mi := &file_api_api_proto_msgTypes[47]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2051,7 +3467,7 @@ func (x *UpdateGroupRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateGroupRequest.ProtoReflect.Descriptor instead.
 func (*UpdateGroupRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{27}
+	return file_api_api_proto_rawDescGZIP(), []int{47}
 }
 
 func (x *UpdateGroupRequest) GetId() string {
@@ -2112,7 +3528,7 @@ type DeleteGroupRequest struct {
 
 func (x *DeleteGroupRequest) Reset() {
 	*x = DeleteGroupRequest{}
-	mi := &file_api_api_proto_msgTypes[28]
+	mi := &file_api_api_proto_msgTypes[48]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2124,7 +3540,7 @@ func (x *DeleteGroupRequest) String() string {
 func (*DeleteGroupRequest) ProtoMessage() {}
 
 func (x *DeleteGroupRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[28]
+	mi := &file_api_api_proto_msgTypes[48]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2137,7 +3553,7 @@ func (x *DeleteGroupRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteGroupRequest.ProtoReflect.Descriptor instead.
 func (*DeleteGroupRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{28}
+	return file_api_api_proto_rawDescGZIP(), []int{48}
 }
 
 func (x *DeleteGroupRequest) GetId() string {
@@ -2160,7 +3576,7 @@ type ListGroupsRequest struct {
 
 func (x *ListGroupsRequest) Reset() {
 	*x = ListGroupsRequest{}
-	mi := &file_api_api_proto_msgTypes[29]
+	mi := &file_api_api_proto_msgTypes[49]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2172,7 +3588,7 @@ func (x *ListGroupsRequest) String() string {
 func (*ListGroupsRequest) ProtoMessage() {}
 
 func (x *ListGroupsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[29]
+	mi := &file_api_api_proto_msgTypes[49]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2185,7 +3601,7 @@ func (x *ListGroupsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListGroupsRequest.ProtoReflect.Descriptor instead.
 func (*ListGroupsRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{29}
+	return file_api_api_proto_rawDescGZIP(), []int{49}
 }
 
 func (x *ListGroupsRequest) GetName() string {
@@ -2233,7 +3649,7 @@ type GroupList struct {
 
 func (x *GroupList) Reset() {
 	*x = GroupList{}
-	mi := &file_api_api_proto_msgTypes[30]
+	mi := &file_api_api_proto_msgTypes[50]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2245,7 +3661,7 @@ func (x *GroupList) String() string {
 func (*GroupList) ProtoMessage() {}
 
 func (x *GroupList) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[30]
+	mi := &file_api_api_proto_msgTypes[50]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2258,7 +3674,7 @@ func (x *GroupList) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GroupList.ProtoReflect.Descriptor instead.
 func (*GroupList) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{30}
+	return file_api_api_proto_rawDescGZIP(), []int{50}
 }
 
 func (x *GroupList) GetGroups() []*Group {
@@ -2284,7 +3700,7 @@ type JoinGroupRequest struct {
 
 func (x *JoinGroupRequest) Reset() {
 	*x = JoinGroupRequest{}
-	mi := &file_api_api_proto_msgTypes[31]
+	mi := &file_api_api_proto_msgTypes[51]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2296,7 +3712,7 @@ func (x *JoinGroupRequest) String() string {
 func (*JoinGroupRequest) ProtoMessage() {}
 
 func (x *JoinGroupRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[31]
+	mi := &file_api_api_proto_msgTypes[51]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2309,7 +3725,7 @@ func (x *JoinGroupRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use JoinGroupRequest.ProtoReflect.Descriptor instead.
 func (*JoinGroupRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{31}
+	return file_api_api_proto_rawDescGZIP(), []int{51}
 }
 
 func (x *JoinGroupRequest) GetId() string {
@@ -2328,7 +3744,7 @@ type LeaveGroupRequest struct {
 
 func (x *LeaveGroupRequest) Reset() {
 	*x = LeaveGroupRequest{}
-	mi := &file_api_api_proto_msgTypes[32]
+	mi := &file_api_api_proto_msgTypes[52]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2340,7 +3756,7 @@ func (x *LeaveGroupRequest) String() string {
 func (*LeaveGroupRequest) ProtoMessage() {}
 
 func (x *LeaveGroupRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[32]
+	mi := &file_api_api_proto_msgTypes[52]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2353,7 +3769,7 @@ func (x *LeaveGroupRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LeaveGroupRequest.ProtoReflect.Descriptor instead.
 func (*LeaveGroupRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{32}
+	return file_api_api_proto_rawDescGZIP(), []int{52}
 }
 
 func (x *LeaveGroupRequest) GetId() string {
@@ -2373,7 +3789,7 @@ type AddGroupUsersRequest struct {
 
 func (x *AddGroupUsersRequest) Reset() {
 	*x = AddGroupUsersRequest{}
-	mi := &file_api_api_proto_msgTypes[33]
+	mi := &file_api_api_proto_msgTypes[53]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2385,7 +3801,7 @@ func (x *AddGroupUsersRequest) String() string {
 func (*AddGroupUsersRequest) ProtoMessage() {}
 
 func (x *AddGroupUsersRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[33]
+	mi := &file_api_api_proto_msgTypes[53]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2398,7 +3814,7 @@ func (x *AddGroupUsersRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AddGroupUsersRequest.ProtoReflect.Descriptor instead.
 func (*AddGroupUsersRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{33}
+	return file_api_api_proto_rawDescGZIP(), []int{53}
 }
 
 func (x *AddGroupUsersRequest) GetGroupId() string {
@@ -2425,7 +3841,7 @@ type KickGroupUsersRequest struct {
 
 func (x *KickGroupUsersRequest) Reset() {
 	*x = KickGroupUsersRequest{}
-	mi := &file_api_api_proto_msgTypes[34]
+	mi := &file_api_api_proto_msgTypes[54]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2437,7 +3853,7 @@ func (x *KickGroupUsersRequest) String() string {
 func (*KickGroupUsersRequest) ProtoMessage() {}
 
 func (x *KickGroupUsersRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[34]
+	mi := &file_api_api_proto_msgTypes[54]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2450,7 +3866,7 @@ func (x *KickGroupUsersRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use KickGroupUsersRequest.ProtoReflect.Descriptor instead.
 func (*KickGroupUsersRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{34}
+	return file_api_api_proto_rawDescGZIP(), []int{54}
 }
 
 func (x *KickGroupUsersRequest) GetGroupId() string {
@@ -2477,7 +3893,7 @@ type PromoteGroupUsersRequest struct {
 
 func (x *PromoteGroupUsersRequest) Reset() {
 	*x = PromoteGroupUsersRequest{}
-	mi := &file_api_api_proto_msgTypes[35]
+	mi := &file_api_api_proto_msgTypes[55]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2489,7 +3905,7 @@ func (x *PromoteGroupUsersRequest) String() string {
 func (*PromoteGroupUsersRequest) ProtoMessage() {}
 
 func (x *PromoteGroupUsersRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[35]
+	mi := &file_api_api_proto_msgTypes[55]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2502,7 +3918,7 @@ func (x *PromoteGroupUsersRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PromoteGroupUsersRequest.ProtoReflect.Descriptor instead.
 func (*PromoteGroupUsersRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{35}
+	return file_api_api_proto_rawDescGZIP(), []int{55}
 }
 
 func (x *PromoteGroupUsersRequest) GetGroupId() string {
@@ -2529,7 +3945,7 @@ type DemoteGroupUsersRequest struct {
 
 func (x *DemoteGroupUsersRequest) Reset() {
 	*x = DemoteGroupUsersRequest{}
-	mi := &file_api_api_proto_msgTypes[36]
+	mi := &file_api_api_proto_msgTypes[56]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2541,7 +3957,7 @@ func (x *DemoteGroupUsersRequest) String() string {
 func (*DemoteGroupUsersRequest) ProtoMessage() {}
 
 func (x *DemoteGroupUsersRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[36]
+	mi := &file_api_api_proto_msgTypes[56]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2554,7 +3970,7 @@ func (x *DemoteGroupUsersRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DemoteGroupUsersRequest.ProtoReflect.Descriptor instead.
 func (*DemoteGroupUsersRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{36}
+	return file_api_api_proto_rawDescGZIP(), []int{56}
 }
 
 func (x *DemoteGroupUsersRequest) GetGroupId() string {
@@ -2581,7 +3997,7 @@ type BanGroupUsersRequest struct {
 
 func (x *BanGroupUsersRequest) Reset() {
 	*x = BanGroupUsersRequest{}
-	mi := &file_api_api_proto_msgTypes[37]
+	mi := &file_api_api_proto_msgTypes[57]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2593,7 +4009,7 @@ func (x *BanGroupUsersRequest) String() string {
 func (*BanGroupUsersRequest) ProtoMessage() {}
 
 func (x *BanGroupUsersRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[37]
+	mi := &file_api_api_proto_msgTypes[57]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2606,7 +4022,7 @@ func (x *BanGroupUsersRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BanGroupUsersRequest.ProtoReflect.Descriptor instead.
 func (*BanGroupUsersRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{37}
+	return file_api_api_proto_rawDescGZIP(), []int{57}
 }
 
 func (x *BanGroupUsersRequest) GetGroupId() string {
@@ -2633,7 +4049,7 @@ type GroupUser struct {
 
 func (x *GroupUser) Reset() {
 	*x = GroupUser{}
-	mi := &file_api_api_proto_msgTypes[38]
+	mi := &file_api_api_proto_msgTypes[58]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2645,7 +4061,7 @@ func (x *GroupUser) String() string {
 func (*GroupUser) ProtoMessage() {}
 
 func (x *GroupUser) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[38]
+	mi := &file_api_api_proto_msgTypes[58]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2658,7 +4074,7 @@ func (x *GroupUser) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GroupUser.ProtoReflect.Descriptor instead.
 func (*GroupUser) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{38}
+	return file_api_api_proto_rawDescGZIP(), []int{58}
 }
 
 func (x *GroupUser) GetUser() *User {
@@ -2685,7 +4101,7 @@ type GroupUserList struct {
 
 func (x *GroupUserList) Reset() {
 	*x = GroupUserList{}
-	mi := &file_api_api_proto_msgTypes[39]
+	mi := &file_api_api_proto_msgTypes[59]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2697,7 +4113,7 @@ func (x *GroupUserList) String() string {
 func (*GroupUserList) ProtoMessage() {}
 
 func (x *GroupUserList) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[39]
+	mi := &file_api_api_proto_msgTypes[59]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2710,7 +4126,7 @@ func (x *GroupUserList) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GroupUserList.ProtoReflect.Descriptor instead.
 func (*GroupUserList) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{39}
+	return file_api_api_proto_rawDescGZIP(), []int{59}
 }
 
 func (x *GroupUserList) GetGroupUsers() []*GroupUser {
@@ -2737,7 +4153,7 @@ type UserGroup struct {
 
 func (x *UserGroup) Reset() {
 	*x = UserGroup{}
-	mi := &file_api_api_proto_msgTypes[40]
+	mi := &file_api_api_proto_msgTypes[60]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2749,7 +4165,7 @@ func (x *UserGroup) String() string {
 func (*UserGroup) ProtoMessage() {}
 
 func (x *UserGroup) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[40]
+	mi := &file_api_api_proto_msgTypes[60]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2762,7 +4178,7 @@ func (x *UserGroup) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UserGroup.ProtoReflect.Descriptor instead.
 func (*UserGroup) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{40}
+	return file_api_api_proto_rawDescGZIP(), []int{60}
 }
 
 func (x *UserGroup) GetGroup() *Group {
@@ -2789,7 +4205,7 @@ type UserGroupList struct {
 
 func (x *UserGroupList) Reset() {
 	*x = UserGroupList{}
-	mi := &file_api_api_proto_msgTypes[41]
+	mi := &file_api_api_proto_msgTypes[61]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2801,7 +4217,7 @@ func (x *UserGroupList) String() string {
 func (*UserGroupList) ProtoMessage() {}
 
 func (x *UserGroupList) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[41]
+	mi := &file_api_api_proto_msgTypes[61]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2814,7 +4230,7 @@ func (x *UserGroupList) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UserGroupList.ProtoReflect.Descriptor instead.
 func (*UserGroupList) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{41}
+	return file_api_api_proto_rawDescGZIP(), []int{61}
 }
 
 func (x *UserGroupList) GetUserGroups() []*UserGroup {
@@ -2842,7 +4258,7 @@ type ListGroupUsersRequest struct {
 
 func (x *ListGroupUsersRequest) Reset() {
 	*x = ListGroupUsersRequest{}
-	mi := &file_api_api_proto_msgTypes[42]
+	mi := &file_api_api_proto_msgTypes[62]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2854,7 +4270,7 @@ func (x *ListGroupUsersRequest) String() string {
 func (*ListGroupUsersRequest) ProtoMessage() {}
 
 func (x *ListGroupUsersRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[42]
+	mi := &file_api_api_proto_msgTypes[62]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2867,7 +4283,7 @@ func (x *ListGroupUsersRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListGroupUsersRequest.ProtoReflect.Descriptor instead.
 func (*ListGroupUsersRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{42}
+	return file_api_api_proto_rawDescGZIP(), []int{62}
 }
 
 func (x *ListGroupUsersRequest) GetGroupId() string {
@@ -2902,7 +4318,7 @@ type ListUserGroupsRequest struct {
 
 func (x *ListUserGroupsRequest) Reset() {
 	*x = ListUserGroupsRequest{}
-	mi := &file_api_api_proto_msgTypes[43]
+	mi := &file_api_api_proto_msgTypes[63]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2914,7 +4330,7 @@ func (x *ListUserGroupsRequest) String() string {
 func (*ListUserGroupsRequest) ProtoMessage() {}
 
 func (x *ListUserGroupsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[43]
+	mi := &file_api_api_proto_msgTypes[63]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2927,7 +4343,7 @@ func (x *ListUserGroupsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListUserGroupsRequest.ProtoReflect.Descriptor instead.
 func (*ListUserGroupsRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{43}
+	return file_api_api_proto_rawDescGZIP(), []int{63}
 }
 
 func (x *ListUserGroupsRequest) GetUserId() string {
@@ -2967,7 +4383,7 @@ type AddMatchmakerRequest struct {
 
 func (x *AddMatchmakerRequest) Reset() {
 	*x = AddMatchmakerRequest{}
-	mi := &file_api_api_proto_msgTypes[44]
+	mi := &file_api_api_proto_msgTypes[64]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2979,7 +4395,7 @@ func (x *AddMatchmakerRequest) String() string {
 func (*AddMatchmakerRequest) ProtoMessage() {}
 
 func (x *AddMatchmakerRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[44]
+	mi := &file_api_api_proto_msgTypes[64]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2992,7 +4408,7 @@ func (x *AddMatchmakerRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AddMatchmakerRequest.ProtoReflect.Descriptor instead.
 func (*AddMatchmakerRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{44}
+	return file_api_api_proto_rawDescGZIP(), []int{64}
 }
 
 func (x *AddMatchmakerRequest) GetQueueName() string {
@@ -3064,7 +4480,7 @@ type MatchmakerTicket struct {
 
 func (x *MatchmakerTicket) Reset() {
 	*x = MatchmakerTicket{}
-	mi := &file_api_api_proto_msgTypes[45]
+	mi := &file_api_api_proto_msgTypes[65]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3076,7 +4492,7 @@ func (x *MatchmakerTicket) String() string {
 func (*MatchmakerTicket) ProtoMessage() {}
 
 func (x *MatchmakerTicket) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[45]
+	mi := &file_api_api_proto_msgTypes[65]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3089,7 +4505,7 @@ func (x *MatchmakerTicket) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MatchmakerTicket.ProtoReflect.Descriptor instead.
 func (*MatchmakerTicket) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{45}
+	return file_api_api_proto_rawDescGZIP(), []int{65}
 }
 
 func (x *MatchmakerTicket) GetTicketId() string {
@@ -3136,7 +4552,7 @@ type RemoveMatchmakerRequest struct {
 
 func (x *RemoveMatchmakerRequest) Reset() {
 	*x = RemoveMatchmakerRequest{}
-	mi := &file_api_api_proto_msgTypes[46]
+	mi := &file_api_api_proto_msgTypes[66]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3148,7 +4564,7 @@ func (x *RemoveMatchmakerRequest) String() string {
 func (*RemoveMatchmakerRequest) ProtoMessage() {}
 
 func (x *RemoveMatchmakerRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[46]
+	mi := &file_api_api_proto_msgTypes[66]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3161,7 +4577,7 @@ func (x *RemoveMatchmakerRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RemoveMatchmakerRequest.ProtoReflect.Descriptor instead.
 func (*RemoveMatchmakerRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{46}
+	return file_api_api_proto_rawDescGZIP(), []int{66}
 }
 
 func (x *RemoveMatchmakerRequest) GetTicketId() string {
@@ -3180,7 +4596,7 @@ type GetMatchmakerTicketRequest struct {
 
 func (x *GetMatchmakerTicketRequest) Reset() {
 	*x = GetMatchmakerTicketRequest{}
-	mi := &file_api_api_proto_msgTypes[47]
+	mi := &file_api_api_proto_msgTypes[67]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3192,7 +4608,7 @@ func (x *GetMatchmakerTicketRequest) String() string {
 func (*GetMatchmakerTicketRequest) ProtoMessage() {}
 
 func (x *GetMatchmakerTicketRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[47]
+	mi := &file_api_api_proto_msgTypes[67]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3205,7 +4621,7 @@ func (x *GetMatchmakerTicketRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetMatchmakerTicketRequest.ProtoReflect.Descriptor instead.
 func (*GetMatchmakerTicketRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{47}
+	return file_api_api_proto_rawDescGZIP(), []int{67}
 }
 
 func (x *GetMatchmakerTicketRequest) GetTicketId() string {
@@ -3224,7 +4640,7 @@ type GetQueueStatsRequest struct {
 
 func (x *GetQueueStatsRequest) Reset() {
 	*x = GetQueueStatsRequest{}
-	mi := &file_api_api_proto_msgTypes[48]
+	mi := &file_api_api_proto_msgTypes[68]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3236,7 +4652,7 @@ func (x *GetQueueStatsRequest) String() string {
 func (*GetQueueStatsRequest) ProtoMessage() {}
 
 func (x *GetQueueStatsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[48]
+	mi := &file_api_api_proto_msgTypes[68]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3249,7 +4665,7 @@ func (x *GetQueueStatsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetQueueStatsRequest.ProtoReflect.Descriptor instead.
 func (*GetQueueStatsRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{48}
+	return file_api_api_proto_rawDescGZIP(), []int{68}
 }
 
 func (x *GetQueueStatsRequest) GetQueueName() string {
@@ -3271,7 +4687,7 @@ type QueueStats struct {
 
 func (x *QueueStats) Reset() {
 	*x = QueueStats{}
-	mi := &file_api_api_proto_msgTypes[49]
+	mi := &file_api_api_proto_msgTypes[69]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3283,7 +4699,7 @@ func (x *QueueStats) String() string {
 func (*QueueStats) ProtoMessage() {}
 
 func (x *QueueStats) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[49]
+	mi := &file_api_api_proto_msgTypes[69]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3296,7 +4712,7 @@ func (x *QueueStats) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use QueueStats.ProtoReflect.Descriptor instead.
 func (*QueueStats) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{49}
+	return file_api_api_proto_rawDescGZIP(), []int{69}
 }
 
 func (x *QueueStats) GetQueueName() string {
@@ -3337,7 +4753,7 @@ type CreateMatchRequest struct {
 
 func (x *CreateMatchRequest) Reset() {
 	*x = CreateMatchRequest{}
-	mi := &file_api_api_proto_msgTypes[50]
+	mi := &file_api_api_proto_msgTypes[70]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3349,7 +4765,7 @@ func (x *CreateMatchRequest) String() string {
 func (*CreateMatchRequest) ProtoMessage() {}
 
 func (x *CreateMatchRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[50]
+	mi := &file_api_api_proto_msgTypes[70]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3362,7 +4778,7 @@ func (x *CreateMatchRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateMatchRequest.ProtoReflect.Descriptor instead.
 func (*CreateMatchRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{50}
+	return file_api_api_proto_rawDescGZIP(), []int{70}
 }
 
 func (x *CreateMatchRequest) GetModule() string {
@@ -3392,7 +4808,7 @@ type ListMatchesRequest struct {
 
 func (x *ListMatchesRequest) Reset() {
 	*x = ListMatchesRequest{}
-	mi := &file_api_api_proto_msgTypes[51]
+	mi := &file_api_api_proto_msgTypes[71]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3404,7 +4820,7 @@ func (x *ListMatchesRequest) String() string {
 func (*ListMatchesRequest) ProtoMessage() {}
 
 func (x *ListMatchesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[51]
+	mi := &file_api_api_proto_msgTypes[71]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3417,7 +4833,7 @@ func (x *ListMatchesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListMatchesRequest.ProtoReflect.Descriptor instead.
 func (*ListMatchesRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{51}
+	return file_api_api_proto_rawDescGZIP(), []int{71}
 }
 
 func (x *ListMatchesRequest) GetLimit() int32 {
@@ -3464,7 +4880,7 @@ type GetMatchRequest struct {
 
 func (x *GetMatchRequest) Reset() {
 	*x = GetMatchRequest{}
-	mi := &file_api_api_proto_msgTypes[52]
+	mi := &file_api_api_proto_msgTypes[72]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3476,7 +4892,7 @@ func (x *GetMatchRequest) String() string {
 func (*GetMatchRequest) ProtoMessage() {}
 
 func (x *GetMatchRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[52]
+	mi := &file_api_api_proto_msgTypes[72]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3489,7 +4905,7 @@ func (x *GetMatchRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetMatchRequest.ProtoReflect.Descriptor instead.
 func (*GetMatchRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{52}
+	return file_api_api_proto_rawDescGZIP(), []int{72}
 }
 
 func (x *GetMatchRequest) GetMatchId() string {
@@ -3510,7 +4926,7 @@ type MatchPresence struct {
 
 func (x *MatchPresence) Reset() {
 	*x = MatchPresence{}
-	mi := &file_api_api_proto_msgTypes[53]
+	mi := &file_api_api_proto_msgTypes[73]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3522,7 +4938,7 @@ func (x *MatchPresence) String() string {
 func (*MatchPresence) ProtoMessage() {}
 
 func (x *MatchPresence) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[53]
+	mi := &file_api_api_proto_msgTypes[73]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3535,7 +4951,7 @@ func (x *MatchPresence) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MatchPresence.ProtoReflect.Descriptor instead.
 func (*MatchPresence) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{53}
+	return file_api_api_proto_rawDescGZIP(), []int{73}
 }
 
 func (x *MatchPresence) GetUserId() string {
@@ -3573,7 +4989,7 @@ type Match struct {
 
 func (x *Match) Reset() {
 	*x = Match{}
-	mi := &file_api_api_proto_msgTypes[54]
+	mi := &file_api_api_proto_msgTypes[74]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3585,7 +5001,7 @@ func (x *Match) String() string {
 func (*Match) ProtoMessage() {}
 
 func (x *Match) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[54]
+	mi := &file_api_api_proto_msgTypes[74]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3598,7 +5014,7 @@ func (x *Match) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Match.ProtoReflect.Descriptor instead.
 func (*Match) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{54}
+	return file_api_api_proto_rawDescGZIP(), []int{74}
 }
 
 func (x *Match) GetMatchId() string {
@@ -3652,7 +5068,7 @@ type MatchList struct {
 
 func (x *MatchList) Reset() {
 	*x = MatchList{}
-	mi := &file_api_api_proto_msgTypes[55]
+	mi := &file_api_api_proto_msgTypes[75]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3664,7 +5080,7 @@ func (x *MatchList) String() string {
 func (*MatchList) ProtoMessage() {}
 
 func (x *MatchList) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[55]
+	mi := &file_api_api_proto_msgTypes[75]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3677,7 +5093,7 @@ func (x *MatchList) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MatchList.ProtoReflect.Descriptor instead.
 func (*MatchList) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{55}
+	return file_api_api_proto_rawDescGZIP(), []int{75}
 }
 
 func (x *MatchList) GetMatches() []*Match {
@@ -3697,7 +5113,7 @@ type MatchSignalRequest struct {
 
 func (x *MatchSignalRequest) Reset() {
 	*x = MatchSignalRequest{}
-	mi := &file_api_api_proto_msgTypes[56]
+	mi := &file_api_api_proto_msgTypes[76]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3709,7 +5125,7 @@ func (x *MatchSignalRequest) String() string {
 func (*MatchSignalRequest) ProtoMessage() {}
 
 func (x *MatchSignalRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[56]
+	mi := &file_api_api_proto_msgTypes[76]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3722,7 +5138,7 @@ func (x *MatchSignalRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MatchSignalRequest.ProtoReflect.Descriptor instead.
 func (*MatchSignalRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{56}
+	return file_api_api_proto_rawDescGZIP(), []int{76}
 }
 
 func (x *MatchSignalRequest) GetMatchId() string {
@@ -3748,7 +5164,7 @@ type MatchSignalResponse struct {
 
 func (x *MatchSignalResponse) Reset() {
 	*x = MatchSignalResponse{}
-	mi := &file_api_api_proto_msgTypes[57]
+	mi := &file_api_api_proto_msgTypes[77]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3760,7 +5176,7 @@ func (x *MatchSignalResponse) String() string {
 func (*MatchSignalResponse) ProtoMessage() {}
 
 func (x *MatchSignalResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[57]
+	mi := &file_api_api_proto_msgTypes[77]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3773,7 +5189,7 @@ func (x *MatchSignalResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MatchSignalResponse.ProtoReflect.Descriptor instead.
 func (*MatchSignalResponse) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{57}
+	return file_api_api_proto_rawDescGZIP(), []int{77}
 }
 
 func (x *MatchSignalResponse) GetResponse() string {
@@ -3787,7 +5203,7 @@ var File_api_api_proto protoreflect.FileDescriptor
 
 const file_api_api_proto_rawDesc = "" +
 	"\n" +
-	"\rapi/api.proto\x12\x13ultimate.server.api\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xc7\x01\n" +
+	"\rapi/api.proto\x12\x13ultimate.server.api\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xdd\x02\n" +
 	"\x04User\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1a\n" +
 	"\busername\x18\x02 \x01(\tR\busername\x12!\n" +
@@ -3796,7 +5212,84 @@ const file_api_api_proto_rawDesc = "" +
 	"avatar_url\x18\x04 \x01(\tR\tavatarUrl\x12\x19\n" +
 	"\blang_tag\x18\x05 \x01(\tR\alangTag\x12\x1a\n" +
 	"\blocation\x18\x06 \x01(\tR\blocation\x12\x1a\n" +
-	"\btimezone\x18\a \x01(\tR\btimezone\"\xce\x01\n" +
+	"\btimezone\x18\a \x01(\tR\btimezone\x12\x1a\n" +
+	"\bmetadata\x18\b \x01(\tR\bmetadata\x12;\n" +
+	"\vcreate_time\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"createTime\x12;\n" +
+	"\vupdate_time\x18\n" +
+	" \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"updateTime\"\xa3\x01\n" +
+	"\x18AuthenticateEmailRequest\x12\x14\n" +
+	"\x05email\x18\x01 \x01(\tR\x05email\x12\x1a\n" +
+	"\bpassword\x18\x02 \x01(\tR\bpassword\x12\x16\n" +
+	"\x06create\x18\x03 \x01(\bR\x06create\x12\x1a\n" +
+	"\busername\x18\x04 \x01(\tR\busername\x12!\n" +
+	"\fdisplay_name\x18\x05 \x01(\tR\vdisplayName\"_\n" +
+	"\x19AuthenticateDeviceRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
+	"\x06create\x18\x02 \x01(\bR\x06create\x12\x1a\n" +
+	"\busername\x18\x03 \x01(\tR\busername\"d\n" +
+	"\x18AuthenticateAppleRequest\x12\x14\n" +
+	"\x05token\x18\x01 \x01(\tR\x05token\x12\x16\n" +
+	"\x06create\x18\x02 \x01(\bR\x06create\x12\x1a\n" +
+	"\busername\x18\x03 \x01(\tR\busername\"e\n" +
+	"\x19AuthenticateGoogleRequest\x12\x14\n" +
+	"\x05token\x18\x01 \x01(\tR\x05token\x12\x16\n" +
+	"\x06create\x18\x02 \x01(\bR\x06create\x12\x1a\n" +
+	"\busername\x18\x03 \x01(\tR\busername\"g\n" +
+	"\x1bAuthenticateFacebookRequest\x12\x14\n" +
+	"\x05token\x18\x01 \x01(\tR\x05token\x12\x16\n" +
+	"\x06create\x18\x02 \x01(\bR\x06create\x12\x1a\n" +
+	"\busername\x18\x03 \x01(\tR\busername\"f\n" +
+	"\x18AuthenticateSteamRequest\x12\x16\n" +
+	"\x06ticket\x18\x01 \x01(\fR\x06ticket\x12\x16\n" +
+	"\x06create\x18\x02 \x01(\bR\x06create\x12\x1a\n" +
+	"\busername\x18\x03 \x01(\tR\busername\"\x83\x02\n" +
+	"\x1dAuthenticateGameCenterRequest\x12\x1b\n" +
+	"\tplayer_id\x18\x01 \x01(\tR\bplayerId\x12\x1b\n" +
+	"\tbundle_id\x18\x02 \x01(\tR\bbundleId\x12\x1c\n" +
+	"\ttimestamp\x18\x03 \x01(\x03R\ttimestamp\x12\x12\n" +
+	"\x04salt\x18\x04 \x01(\tR\x04salt\x12\x1c\n" +
+	"\tsignature\x18\x05 \x01(\tR\tsignature\x12$\n" +
+	"\x0epublic_key_url\x18\x06 \x01(\tR\fpublicKeyUrl\x12\x16\n" +
+	"\x06create\x18\a \x01(\bR\x06create\x12\x1a\n" +
+	"\busername\x18\b \x01(\tR\busername\"_\n" +
+	"\x19AuthenticateCustomRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
+	"\x06create\x18\x02 \x01(\bR\x06create\x12\x1a\n" +
+	"\busername\x18\x03 \x01(\tR\busername\"R\n" +
+	"\x15SessionRefreshRequest\x12\x14\n" +
+	"\x05token\x18\x01 \x01(\tR\x05token\x12#\n" +
+	"\rrefresh_token\x18\x02 \x01(\tR\frefreshToken\"Q\n" +
+	"\x14SessionLogoutRequest\x12\x14\n" +
+	"\x05token\x18\x01 \x01(\tR\x05token\x12#\n" +
+	"\rrefresh_token\x18\x02 \x01(\tR\frefreshToken\"\x93\x01\n" +
+	"\aSession\x12\x14\n" +
+	"\x05token\x18\x01 \x01(\tR\x05token\x12#\n" +
+	"\rrefresh_token\x18\x02 \x01(\tR\frefreshToken\x12\x18\n" +
+	"\acreated\x18\x03 \x01(\bR\acreated\x12\x17\n" +
+	"\auser_id\x18\x04 \x01(\tR\x06userId\x12\x1a\n" +
+	"\busername\x18\x05 \x01(\tR\busername\"\x18\n" +
+	"\x06Device\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"\xdf\x01\n" +
+	"\aAccount\x12-\n" +
+	"\x04user\x18\x01 \x01(\v2\x19.ultimate.server.api.UserR\x04user\x125\n" +
+	"\adevices\x18\x02 \x03(\v2\x1b.ultimate.server.api.DeviceR\adevices\x12\x14\n" +
+	"\x05email\x18\x03 \x01(\tR\x05email\x12\x1b\n" +
+	"\tcustom_id\x18\x04 \x01(\tR\bcustomId\x12;\n" +
+	"\vverify_time\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"verifyTime\"\xe3\x01\n" +
+	"\x14UpdateAccountRequest\x12!\n" +
+	"\fdisplay_name\x18\x01 \x01(\tR\vdisplayName\x12\x1d\n" +
+	"\n" +
+	"avatar_url\x18\x02 \x01(\tR\tavatarUrl\x12\x19\n" +
+	"\blang_tag\x18\x03 \x01(\tR\alangTag\x12\x1a\n" +
+	"\blocation\x18\x04 \x01(\tR\blocation\x12\x1a\n" +
+	"\btimezone\x18\x05 \x01(\tR\btimezone\x12\x1a\n" +
+	"\bmetadata\x18\x06 \x01(\tR\bmetadata\x12\x1a\n" +
+	"\busername\x18\a \x01(\tR\busername\"\x1f\n" +
+	"\rUnlinkRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"\xf1\x01\n" +
 	"\x18CreateLeaderboardRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
 	"\n" +
@@ -3804,7 +5297,31 @@ const file_api_api_proto_rawDesc = "" +
 	"\boperator\x18\x03 \x01(\tR\boperator\x12%\n" +
 	"\x0ereset_schedule\x18\x04 \x01(\tR\rresetSchedule\x12\x1a\n" +
 	"\bmetadata\x18\x05 \x01(\tR\bmetadata\x12$\n" +
-	"\rauthoritative\x18\x06 \x01(\bR\rauthoritative\"*\n" +
+	"\rauthoritative\x18\x06 \x01(\bR\rauthoritative\x12!\n" +
+	"\fenable_ranks\x18\a \x01(\bR\venableRanks\"G\n" +
+	"\x17ListLeaderboardsRequest\x12\x14\n" +
+	"\x05limit\x18\x01 \x01(\x05R\x05limit\x12\x16\n" +
+	"\x06cursor\x18\x02 \x01(\tR\x06cursor\"\xdf\x02\n" +
+	"\vLeaderboard\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
+	"\n" +
+	"sort_order\x18\x02 \x01(\tR\tsortOrder\x12\x1a\n" +
+	"\boperator\x18\x03 \x01(\tR\boperator\x12%\n" +
+	"\x0ereset_schedule\x18\x04 \x01(\tR\rresetSchedule\x12\x1a\n" +
+	"\bmetadata\x18\x05 \x01(\tR\bmetadata\x12$\n" +
+	"\rauthoritative\x18\x06 \x01(\bR\rauthoritative\x12;\n" +
+	"\vcreate_time\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"createTime\x12\x1d\n" +
+	"\n" +
+	"prev_reset\x18\b \x01(\x03R\tprevReset\x12\x1d\n" +
+	"\n" +
+	"next_reset\x18\t \x01(\x03R\tnextReset\x12!\n" +
+	"\fenable_ranks\x18\n" +
+	" \x01(\bR\venableRanks\"x\n" +
+	"\x0fLeaderboardList\x12D\n" +
+	"\fleaderboards\x18\x01 \x03(\v2 .ultimate.server.api.LeaderboardR\fleaderboards\x12\x1f\n" +
+	"\vnext_cursor\x18\x02 \x01(\tR\n" +
+	"nextCursor\"*\n" +
 	"\x18DeleteLeaderboardRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"\x94\x01\n" +
 	"\x1dWriteLeaderboardRecordRequest\x12%\n" +
@@ -3828,22 +5345,25 @@ const file_api_api_proto_rawDesc = "" +
 	" \x01(\v2\x1a.google.protobuf.TimestampR\n" +
 	"expiryTime\x12\x1b\n" +
 	"\tnum_score\x18\v \x01(\x05R\bnumScore\x12\"\n" +
-	"\rmax_num_score\x18\f \x01(\x05R\vmaxNumScore\"\x91\x01\n" +
+	"\rmax_num_score\x18\f \x01(\x05R\vmaxNumScore\"\xa9\x01\n" +
 	"\x1dListLeaderboardRecordsRequest\x12%\n" +
 	"\x0eleaderboard_id\x18\x01 \x01(\tR\rleaderboardId\x12\x14\n" +
 	"\x05limit\x18\x02 \x01(\x05R\x05limit\x12\x16\n" +
 	"\x06cursor\x18\x03 \x01(\tR\x06cursor\x12\x1b\n" +
-	"\towner_ids\x18\x04 \x03(\tR\bownerIds\"\x82\x01\n" +
+	"\towner_ids\x18\x04 \x03(\tR\bownerIds\x12\x16\n" +
+	"\x06expiry\x18\x05 \x01(\x03R\x06expiry\"\x9a\x01\n" +
 	"(ListLeaderboardRecordsAroundOwnerRequest\x12%\n" +
 	"\x0eleaderboard_id\x18\x01 \x01(\tR\rleaderboardId\x12\x19\n" +
 	"\bowner_id\x18\x02 \x01(\tR\aownerId\x12\x14\n" +
-	"\x05limit\x18\x03 \x01(\x05R\x05limit\"\x9b\x01\n" +
+	"\x05limit\x18\x03 \x01(\x05R\x05limit\x12\x16\n" +
+	"\x06expiry\x18\x04 \x01(\x03R\x06expiry\"\xe8\x01\n" +
 	"\x15LeaderboardRecordList\x12@\n" +
 	"\arecords\x18\x01 \x03(\v2&.ultimate.server.api.LeaderboardRecordR\arecords\x12\x1f\n" +
 	"\vnext_cursor\x18\x02 \x01(\tR\n" +
 	"nextCursor\x12\x1f\n" +
 	"\vprev_cursor\x18\x03 \x01(\tR\n" +
-	"prevCursor\"G\n" +
+	"prevCursor\x12K\n" +
+	"\rowner_records\x18\x04 \x03(\v2&.ultimate.server.api.LeaderboardRecordR\fownerRecords\"G\n" +
 	"\x1eDeleteLeaderboardRecordRequest\x12%\n" +
 	"\x0eleaderboard_id\x18\x01 \x01(\tR\rleaderboardId\"\x93\x04\n" +
 	"\x17CreateTournamentRequest\x12\x0e\n" +
@@ -3868,7 +5388,7 @@ const file_api_api_proto_rawDesc = "" +
 	"\x17DeleteTournamentRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"'\n" +
 	"\x15JoinTournamentRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"\x82\x02\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"\x9a\x02\n" +
 	"\x16ListTournamentsRequest\x12%\n" +
 	"\x0ecategory_start\x18\x01 \x01(\x05R\rcategoryStart\x12!\n" +
 	"\fcategory_end\x18\x02 \x01(\x05R\vcategoryEnd\x129\n" +
@@ -3876,7 +5396,8 @@ const file_api_api_proto_rawDesc = "" +
 	"start_time\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\tstartTime\x125\n" +
 	"\bend_time\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\aendTime\x12\x14\n" +
 	"\x05limit\x18\x05 \x01(\x05R\x05limit\x12\x16\n" +
-	"\x06cursor\x18\x06 \x01(\tR\x06cursor\"\x9a\x04\n" +
+	"\x06cursor\x18\x06 \x01(\tR\x06cursor\x12\x16\n" +
+	"\x06active\x18\a \x01(\bR\x06active\"\xb7\x05\n" +
 	"\n" +
 	"Tournament\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
@@ -3897,7 +5418,15 @@ const file_api_api_proto_rawDesc = "" +
 	"\x05title\x18\x0e \x01(\tR\x05title\x129\n" +
 	"\n" +
 	"start_time\x18\x0f \x01(\v2\x1a.google.protobuf.TimestampR\tstartTime\x12\x12\n" +
-	"\x04size\x18\x10 \x01(\x05R\x04size\"t\n" +
+	"\x04size\x18\x10 \x01(\x05R\x04size\x12\x1b\n" +
+	"\tcan_enter\x18\x11 \x01(\bR\bcanEnter\x12!\n" +
+	"\fstart_active\x18\x12 \x01(\x03R\vstartActive\x12\x1d\n" +
+	"\n" +
+	"end_active\x18\x13 \x01(\x03R\tendActive\x12\x1d\n" +
+	"\n" +
+	"prev_reset\x18\x14 \x01(\x03R\tprevReset\x12\x1d\n" +
+	"\n" +
+	"next_reset\x18\x15 \x01(\x03R\tnextReset\"t\n" +
 	"\x0eTournamentList\x12A\n" +
 	"\vtournaments\x18\x01 \x03(\v2\x1f.ultimate.server.api.TournamentR\vtournaments\x12\x1f\n" +
 	"\vnext_cursor\x18\x02 \x01(\tR\n" +
@@ -3906,12 +5435,20 @@ const file_api_api_proto_rawDesc = "" +
 	"\rtournament_id\x18\x01 \x01(\tR\ftournamentId\x12\x14\n" +
 	"\x05score\x18\x02 \x01(\x03R\x05score\x12\x1a\n" +
 	"\bsubscore\x18\x03 \x01(\x03R\bsubscore\x12\x1a\n" +
-	"\bmetadata\x18\x04 \x01(\tR\bmetadata\"\x8e\x01\n" +
+	"\bmetadata\x18\x04 \x01(\tR\bmetadata\"\xa6\x01\n" +
 	"\x1cListTournamentRecordsRequest\x12#\n" +
 	"\rtournament_id\x18\x01 \x01(\tR\ftournamentId\x12\x14\n" +
 	"\x05limit\x18\x02 \x01(\x05R\x05limit\x12\x16\n" +
 	"\x06cursor\x18\x03 \x01(\tR\x06cursor\x12\x1b\n" +
-	"\towner_ids\x18\x04 \x03(\tR\bownerIds\"C\n" +
+	"\towner_ids\x18\x04 \x03(\tR\bownerIds\x12\x16\n" +
+	"\x06expiry\x18\x05 \x01(\x03R\x06expiry\"\x97\x01\n" +
+	"'ListTournamentRecordsAroundOwnerRequest\x12#\n" +
+	"\rtournament_id\x18\x01 \x01(\tR\ftournamentId\x12\x19\n" +
+	"\bowner_id\x18\x02 \x01(\tR\aownerId\x12\x14\n" +
+	"\x05limit\x18\x03 \x01(\x05R\x05limit\x12\x16\n" +
+	"\x06expiry\x18\x04 \x01(\x03R\x06expiry\"D\n" +
+	"\x1dDeleteTournamentRecordRequest\x12#\n" +
+	"\rtournament_id\x18\x01 \x01(\tR\ftournamentId\"C\n" +
 	"\x11AddFriendsRequest\x12\x10\n" +
 	"\x03ids\x18\x01 \x03(\tR\x03ids\x12\x1c\n" +
 	"\tusernames\x18\x02 \x03(\tR\tusernames\"X\n" +
@@ -4104,21 +5641,56 @@ const file_api_api_proto_rawDesc = "" +
 	"\bmatch_id\x18\x01 \x01(\tR\amatchId\x12\x18\n" +
 	"\apayload\x18\x02 \x01(\tR\apayload\"1\n" +
 	"\x13MatchSignalResponse\x12\x1a\n" +
-	"\bresponse\x18\x01 \x01(\tR\bresponse2\xb5\x05\n" +
+	"\bresponse\x18\x01 \x01(\tR\bresponse2\xb1\x12\n" +
+	"\x15AuthenticationService\x12`\n" +
+	"\x11AuthenticateEmail\x12-.ultimate.server.api.AuthenticateEmailRequest\x1a\x1c.ultimate.server.api.Session\x12b\n" +
+	"\x12AuthenticateDevice\x12..ultimate.server.api.AuthenticateDeviceRequest\x1a\x1c.ultimate.server.api.Session\x12`\n" +
+	"\x11AuthenticateApple\x12-.ultimate.server.api.AuthenticateAppleRequest\x1a\x1c.ultimate.server.api.Session\x12b\n" +
+	"\x12AuthenticateGoogle\x12..ultimate.server.api.AuthenticateGoogleRequest\x1a\x1c.ultimate.server.api.Session\x12f\n" +
+	"\x14AuthenticateFacebook\x120.ultimate.server.api.AuthenticateFacebookRequest\x1a\x1c.ultimate.server.api.Session\x12`\n" +
+	"\x11AuthenticateSteam\x12-.ultimate.server.api.AuthenticateSteamRequest\x1a\x1c.ultimate.server.api.Session\x12j\n" +
+	"\x16AuthenticateGameCenter\x122.ultimate.server.api.AuthenticateGameCenterRequest\x1a\x1c.ultimate.server.api.Session\x12b\n" +
+	"\x12AuthenticateCustom\x12..ultimate.server.api.AuthenticateCustomRequest\x1a\x1c.ultimate.server.api.Session\x12Z\n" +
+	"\x0eSessionRefresh\x12*.ultimate.server.api.SessionRefreshRequest\x1a\x1c.ultimate.server.api.Session\x12R\n" +
+	"\rSessionLogout\x12).ultimate.server.api.SessionLogoutRequest\x1a\x16.google.protobuf.Empty\x12B\n" +
+	"\n" +
+	"GetAccount\x12\x16.google.protobuf.Empty\x1a\x1c.ultimate.server.api.Account\x12R\n" +
+	"\rUpdateAccount\x12).ultimate.server.api.UpdateAccountRequest\x1a\x16.google.protobuf.Empty\x12?\n" +
+	"\rDeleteAccount\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.Empty\x12R\n" +
+	"\tLinkEmail\x12-.ultimate.server.api.AuthenticateEmailRequest\x1a\x16.google.protobuf.Empty\x12T\n" +
+	"\n" +
+	"LinkDevice\x12..ultimate.server.api.AuthenticateDeviceRequest\x1a\x16.google.protobuf.Empty\x12R\n" +
+	"\tLinkApple\x12-.ultimate.server.api.AuthenticateAppleRequest\x1a\x16.google.protobuf.Empty\x12T\n" +
+	"\n" +
+	"LinkGoogle\x12..ultimate.server.api.AuthenticateGoogleRequest\x1a\x16.google.protobuf.Empty\x12X\n" +
+	"\fLinkFacebook\x120.ultimate.server.api.AuthenticateFacebookRequest\x1a\x16.google.protobuf.Empty\x12R\n" +
+	"\tLinkSteam\x12-.ultimate.server.api.AuthenticateSteamRequest\x1a\x16.google.protobuf.Empty\x12T\n" +
+	"\n" +
+	"LinkCustom\x12..ultimate.server.api.AuthenticateCustomRequest\x1a\x16.google.protobuf.Empty\x12I\n" +
+	"\vUnlinkEmail\x12\".ultimate.server.api.UnlinkRequest\x1a\x16.google.protobuf.Empty\x12J\n" +
+	"\fUnlinkDevice\x12\".ultimate.server.api.UnlinkRequest\x1a\x16.google.protobuf.Empty\x12I\n" +
+	"\vUnlinkApple\x12\".ultimate.server.api.UnlinkRequest\x1a\x16.google.protobuf.Empty\x12J\n" +
+	"\fUnlinkGoogle\x12\".ultimate.server.api.UnlinkRequest\x1a\x16.google.protobuf.Empty\x12L\n" +
+	"\x0eUnlinkFacebook\x12\".ultimate.server.api.UnlinkRequest\x1a\x16.google.protobuf.Empty\x12I\n" +
+	"\vUnlinkSteam\x12\".ultimate.server.api.UnlinkRequest\x1a\x16.google.protobuf.Empty\x12J\n" +
+	"\fUnlinkCustom\x12\".ultimate.server.api.UnlinkRequest\x1a\x16.google.protobuf.Empty2\x9d\x06\n" +
 	"\x12LeaderboardService\x12Z\n" +
 	"\x11CreateLeaderboard\x12-.ultimate.server.api.CreateLeaderboardRequest\x1a\x16.google.protobuf.Empty\x12Z\n" +
-	"\x11DeleteLeaderboard\x12-.ultimate.server.api.DeleteLeaderboardRequest\x1a\x16.google.protobuf.Empty\x12t\n" +
+	"\x11DeleteLeaderboard\x12-.ultimate.server.api.DeleteLeaderboardRequest\x1a\x16.google.protobuf.Empty\x12f\n" +
+	"\x10ListLeaderboards\x12,.ultimate.server.api.ListLeaderboardsRequest\x1a$.ultimate.server.api.LeaderboardList\x12t\n" +
 	"\x16WriteLeaderboardRecord\x122.ultimate.server.api.WriteLeaderboardRecordRequest\x1a&.ultimate.server.api.LeaderboardRecord\x12x\n" +
 	"\x16ListLeaderboardRecords\x122.ultimate.server.api.ListLeaderboardRecordsRequest\x1a*.ultimate.server.api.LeaderboardRecordList\x12\x8e\x01\n" +
 	"!ListLeaderboardRecordsAroundOwner\x12=.ultimate.server.api.ListLeaderboardRecordsAroundOwnerRequest\x1a*.ultimate.server.api.LeaderboardRecordList\x12f\n" +
-	"\x17DeleteLeaderboardRecord\x123.ultimate.server.api.DeleteLeaderboardRecordRequest\x1a\x16.google.protobuf.Empty2\xee\x04\n" +
+	"\x17DeleteLeaderboardRecord\x123.ultimate.server.api.DeleteLeaderboardRecordRequest\x1a\x16.google.protobuf.Empty2\xe3\x06\n" +
 	"\x11TournamentService\x12X\n" +
 	"\x10CreateTournament\x12,.ultimate.server.api.CreateTournamentRequest\x1a\x16.google.protobuf.Empty\x12X\n" +
 	"\x10DeleteTournament\x12,.ultimate.server.api.DeleteTournamentRequest\x1a\x16.google.protobuf.Empty\x12T\n" +
 	"\x0eJoinTournament\x12*.ultimate.server.api.JoinTournamentRequest\x1a\x16.google.protobuf.Empty\x12c\n" +
 	"\x0fListTournaments\x12+.ultimate.server.api.ListTournamentsRequest\x1a#.ultimate.server.api.TournamentList\x12r\n" +
 	"\x15WriteTournamentRecord\x121.ultimate.server.api.WriteTournamentRecordRequest\x1a&.ultimate.server.api.LeaderboardRecord\x12v\n" +
-	"\x15ListTournamentRecords\x121.ultimate.server.api.ListTournamentRecordsRequest\x1a*.ultimate.server.api.LeaderboardRecordList2\x9f\x04\n" +
+	"\x15ListTournamentRecords\x121.ultimate.server.api.ListTournamentRecordsRequest\x1a*.ultimate.server.api.LeaderboardRecordList\x12\x8c\x01\n" +
+	" ListTournamentRecordsAroundOwner\x12<.ultimate.server.api.ListTournamentRecordsAroundOwnerRequest\x1a*.ultimate.server.api.LeaderboardRecordList\x12d\n" +
+	"\x16DeleteTournamentRecord\x122.ultimate.server.api.DeleteTournamentRecordRequest\x1a\x16.google.protobuf.Empty2\x9f\x04\n" +
 	"\x0eFriendsService\x12L\n" +
 	"\n" +
 	"AddFriends\x12&.ultimate.server.api.AddFriendsRequest\x1a\x16.google.protobuf.Empty\x12W\n" +
@@ -4166,182 +5738,270 @@ func file_api_api_proto_rawDescGZIP() []byte {
 	return file_api_api_proto_rawDescData
 }
 
-var file_api_api_proto_msgTypes = make([]protoimpl.MessageInfo, 61)
+var file_api_api_proto_msgTypes = make([]protoimpl.MessageInfo, 81)
 var file_api_api_proto_goTypes = []any{
 	(*User)(nil),                                     // 0: ultimate.server.api.User
-	(*CreateLeaderboardRequest)(nil),                 // 1: ultimate.server.api.CreateLeaderboardRequest
-	(*DeleteLeaderboardRequest)(nil),                 // 2: ultimate.server.api.DeleteLeaderboardRequest
-	(*WriteLeaderboardRecordRequest)(nil),            // 3: ultimate.server.api.WriteLeaderboardRecordRequest
-	(*LeaderboardRecord)(nil),                        // 4: ultimate.server.api.LeaderboardRecord
-	(*ListLeaderboardRecordsRequest)(nil),            // 5: ultimate.server.api.ListLeaderboardRecordsRequest
-	(*ListLeaderboardRecordsAroundOwnerRequest)(nil), // 6: ultimate.server.api.ListLeaderboardRecordsAroundOwnerRequest
-	(*LeaderboardRecordList)(nil),                    // 7: ultimate.server.api.LeaderboardRecordList
-	(*DeleteLeaderboardRecordRequest)(nil),           // 8: ultimate.server.api.DeleteLeaderboardRecordRequest
-	(*CreateTournamentRequest)(nil),                  // 9: ultimate.server.api.CreateTournamentRequest
-	(*DeleteTournamentRequest)(nil),                  // 10: ultimate.server.api.DeleteTournamentRequest
-	(*JoinTournamentRequest)(nil),                    // 11: ultimate.server.api.JoinTournamentRequest
-	(*ListTournamentsRequest)(nil),                   // 12: ultimate.server.api.ListTournamentsRequest
-	(*Tournament)(nil),                               // 13: ultimate.server.api.Tournament
-	(*TournamentList)(nil),                           // 14: ultimate.server.api.TournamentList
-	(*WriteTournamentRecordRequest)(nil),             // 15: ultimate.server.api.WriteTournamentRecordRequest
-	(*ListTournamentRecordsRequest)(nil),             // 16: ultimate.server.api.ListTournamentRecordsRequest
-	(*AddFriendsRequest)(nil),                        // 17: ultimate.server.api.AddFriendsRequest
-	(*ListFriendsRequest)(nil),                       // 18: ultimate.server.api.ListFriendsRequest
-	(*Friend)(nil),                                   // 19: ultimate.server.api.Friend
-	(*FriendList)(nil),                               // 20: ultimate.server.api.FriendList
-	(*DeleteFriendsRequest)(nil),                     // 21: ultimate.server.api.DeleteFriendsRequest
-	(*BlockFriendsRequest)(nil),                      // 22: ultimate.server.api.BlockFriendsRequest
-	(*ImportFacebookFriendsRequest)(nil),             // 23: ultimate.server.api.ImportFacebookFriendsRequest
-	(*ImportSteamFriendsRequest)(nil),                // 24: ultimate.server.api.ImportSteamFriendsRequest
-	(*CreateGroupRequest)(nil),                       // 25: ultimate.server.api.CreateGroupRequest
-	(*Group)(nil),                                    // 26: ultimate.server.api.Group
-	(*UpdateGroupRequest)(nil),                       // 27: ultimate.server.api.UpdateGroupRequest
-	(*DeleteGroupRequest)(nil),                       // 28: ultimate.server.api.DeleteGroupRequest
-	(*ListGroupsRequest)(nil),                        // 29: ultimate.server.api.ListGroupsRequest
-	(*GroupList)(nil),                                // 30: ultimate.server.api.GroupList
-	(*JoinGroupRequest)(nil),                         // 31: ultimate.server.api.JoinGroupRequest
-	(*LeaveGroupRequest)(nil),                        // 32: ultimate.server.api.LeaveGroupRequest
-	(*AddGroupUsersRequest)(nil),                     // 33: ultimate.server.api.AddGroupUsersRequest
-	(*KickGroupUsersRequest)(nil),                    // 34: ultimate.server.api.KickGroupUsersRequest
-	(*PromoteGroupUsersRequest)(nil),                 // 35: ultimate.server.api.PromoteGroupUsersRequest
-	(*DemoteGroupUsersRequest)(nil),                  // 36: ultimate.server.api.DemoteGroupUsersRequest
-	(*BanGroupUsersRequest)(nil),                     // 37: ultimate.server.api.BanGroupUsersRequest
-	(*GroupUser)(nil),                                // 38: ultimate.server.api.GroupUser
-	(*GroupUserList)(nil),                            // 39: ultimate.server.api.GroupUserList
-	(*UserGroup)(nil),                                // 40: ultimate.server.api.UserGroup
-	(*UserGroupList)(nil),                            // 41: ultimate.server.api.UserGroupList
-	(*ListGroupUsersRequest)(nil),                    // 42: ultimate.server.api.ListGroupUsersRequest
-	(*ListUserGroupsRequest)(nil),                    // 43: ultimate.server.api.ListUserGroupsRequest
-	(*AddMatchmakerRequest)(nil),                     // 44: ultimate.server.api.AddMatchmakerRequest
-	(*MatchmakerTicket)(nil),                         // 45: ultimate.server.api.MatchmakerTicket
-	(*RemoveMatchmakerRequest)(nil),                  // 46: ultimate.server.api.RemoveMatchmakerRequest
-	(*GetMatchmakerTicketRequest)(nil),               // 47: ultimate.server.api.GetMatchmakerTicketRequest
-	(*GetQueueStatsRequest)(nil),                     // 48: ultimate.server.api.GetQueueStatsRequest
-	(*QueueStats)(nil),                               // 49: ultimate.server.api.QueueStats
-	(*CreateMatchRequest)(nil),                       // 50: ultimate.server.api.CreateMatchRequest
-	(*ListMatchesRequest)(nil),                       // 51: ultimate.server.api.ListMatchesRequest
-	(*GetMatchRequest)(nil),                          // 52: ultimate.server.api.GetMatchRequest
-	(*MatchPresence)(nil),                            // 53: ultimate.server.api.MatchPresence
-	(*Match)(nil),                                    // 54: ultimate.server.api.Match
-	(*MatchList)(nil),                                // 55: ultimate.server.api.MatchList
-	(*MatchSignalRequest)(nil),                       // 56: ultimate.server.api.MatchSignalRequest
-	(*MatchSignalResponse)(nil),                      // 57: ultimate.server.api.MatchSignalResponse
-	nil,                                              // 58: ultimate.server.api.AddMatchmakerRequest.StringPropertiesEntry
-	nil,                                              // 59: ultimate.server.api.AddMatchmakerRequest.NumericPropertiesEntry
-	nil,                                              // 60: ultimate.server.api.CreateMatchRequest.ParamsEntry
-	(*timestamppb.Timestamp)(nil),                    // 61: google.protobuf.Timestamp
-	(*emptypb.Empty)(nil),                            // 62: google.protobuf.Empty
+	(*AuthenticateEmailRequest)(nil),                 // 1: ultimate.server.api.AuthenticateEmailRequest
+	(*AuthenticateDeviceRequest)(nil),                // 2: ultimate.server.api.AuthenticateDeviceRequest
+	(*AuthenticateAppleRequest)(nil),                 // 3: ultimate.server.api.AuthenticateAppleRequest
+	(*AuthenticateGoogleRequest)(nil),                // 4: ultimate.server.api.AuthenticateGoogleRequest
+	(*AuthenticateFacebookRequest)(nil),              // 5: ultimate.server.api.AuthenticateFacebookRequest
+	(*AuthenticateSteamRequest)(nil),                 // 6: ultimate.server.api.AuthenticateSteamRequest
+	(*AuthenticateGameCenterRequest)(nil),            // 7: ultimate.server.api.AuthenticateGameCenterRequest
+	(*AuthenticateCustomRequest)(nil),                // 8: ultimate.server.api.AuthenticateCustomRequest
+	(*SessionRefreshRequest)(nil),                    // 9: ultimate.server.api.SessionRefreshRequest
+	(*SessionLogoutRequest)(nil),                     // 10: ultimate.server.api.SessionLogoutRequest
+	(*Session)(nil),                                  // 11: ultimate.server.api.Session
+	(*Device)(nil),                                   // 12: ultimate.server.api.Device
+	(*Account)(nil),                                  // 13: ultimate.server.api.Account
+	(*UpdateAccountRequest)(nil),                     // 14: ultimate.server.api.UpdateAccountRequest
+	(*UnlinkRequest)(nil),                            // 15: ultimate.server.api.UnlinkRequest
+	(*CreateLeaderboardRequest)(nil),                 // 16: ultimate.server.api.CreateLeaderboardRequest
+	(*ListLeaderboardsRequest)(nil),                  // 17: ultimate.server.api.ListLeaderboardsRequest
+	(*Leaderboard)(nil),                              // 18: ultimate.server.api.Leaderboard
+	(*LeaderboardList)(nil),                          // 19: ultimate.server.api.LeaderboardList
+	(*DeleteLeaderboardRequest)(nil),                 // 20: ultimate.server.api.DeleteLeaderboardRequest
+	(*WriteLeaderboardRecordRequest)(nil),            // 21: ultimate.server.api.WriteLeaderboardRecordRequest
+	(*LeaderboardRecord)(nil),                        // 22: ultimate.server.api.LeaderboardRecord
+	(*ListLeaderboardRecordsRequest)(nil),            // 23: ultimate.server.api.ListLeaderboardRecordsRequest
+	(*ListLeaderboardRecordsAroundOwnerRequest)(nil), // 24: ultimate.server.api.ListLeaderboardRecordsAroundOwnerRequest
+	(*LeaderboardRecordList)(nil),                    // 25: ultimate.server.api.LeaderboardRecordList
+	(*DeleteLeaderboardRecordRequest)(nil),           // 26: ultimate.server.api.DeleteLeaderboardRecordRequest
+	(*CreateTournamentRequest)(nil),                  // 27: ultimate.server.api.CreateTournamentRequest
+	(*DeleteTournamentRequest)(nil),                  // 28: ultimate.server.api.DeleteTournamentRequest
+	(*JoinTournamentRequest)(nil),                    // 29: ultimate.server.api.JoinTournamentRequest
+	(*ListTournamentsRequest)(nil),                   // 30: ultimate.server.api.ListTournamentsRequest
+	(*Tournament)(nil),                               // 31: ultimate.server.api.Tournament
+	(*TournamentList)(nil),                           // 32: ultimate.server.api.TournamentList
+	(*WriteTournamentRecordRequest)(nil),             // 33: ultimate.server.api.WriteTournamentRecordRequest
+	(*ListTournamentRecordsRequest)(nil),             // 34: ultimate.server.api.ListTournamentRecordsRequest
+	(*ListTournamentRecordsAroundOwnerRequest)(nil),  // 35: ultimate.server.api.ListTournamentRecordsAroundOwnerRequest
+	(*DeleteTournamentRecordRequest)(nil),            // 36: ultimate.server.api.DeleteTournamentRecordRequest
+	(*AddFriendsRequest)(nil),                        // 37: ultimate.server.api.AddFriendsRequest
+	(*ListFriendsRequest)(nil),                       // 38: ultimate.server.api.ListFriendsRequest
+	(*Friend)(nil),                                   // 39: ultimate.server.api.Friend
+	(*FriendList)(nil),                               // 40: ultimate.server.api.FriendList
+	(*DeleteFriendsRequest)(nil),                     // 41: ultimate.server.api.DeleteFriendsRequest
+	(*BlockFriendsRequest)(nil),                      // 42: ultimate.server.api.BlockFriendsRequest
+	(*ImportFacebookFriendsRequest)(nil),             // 43: ultimate.server.api.ImportFacebookFriendsRequest
+	(*ImportSteamFriendsRequest)(nil),                // 44: ultimate.server.api.ImportSteamFriendsRequest
+	(*CreateGroupRequest)(nil),                       // 45: ultimate.server.api.CreateGroupRequest
+	(*Group)(nil),                                    // 46: ultimate.server.api.Group
+	(*UpdateGroupRequest)(nil),                       // 47: ultimate.server.api.UpdateGroupRequest
+	(*DeleteGroupRequest)(nil),                       // 48: ultimate.server.api.DeleteGroupRequest
+	(*ListGroupsRequest)(nil),                        // 49: ultimate.server.api.ListGroupsRequest
+	(*GroupList)(nil),                                // 50: ultimate.server.api.GroupList
+	(*JoinGroupRequest)(nil),                         // 51: ultimate.server.api.JoinGroupRequest
+	(*LeaveGroupRequest)(nil),                        // 52: ultimate.server.api.LeaveGroupRequest
+	(*AddGroupUsersRequest)(nil),                     // 53: ultimate.server.api.AddGroupUsersRequest
+	(*KickGroupUsersRequest)(nil),                    // 54: ultimate.server.api.KickGroupUsersRequest
+	(*PromoteGroupUsersRequest)(nil),                 // 55: ultimate.server.api.PromoteGroupUsersRequest
+	(*DemoteGroupUsersRequest)(nil),                  // 56: ultimate.server.api.DemoteGroupUsersRequest
+	(*BanGroupUsersRequest)(nil),                     // 57: ultimate.server.api.BanGroupUsersRequest
+	(*GroupUser)(nil),                                // 58: ultimate.server.api.GroupUser
+	(*GroupUserList)(nil),                            // 59: ultimate.server.api.GroupUserList
+	(*UserGroup)(nil),                                // 60: ultimate.server.api.UserGroup
+	(*UserGroupList)(nil),                            // 61: ultimate.server.api.UserGroupList
+	(*ListGroupUsersRequest)(nil),                    // 62: ultimate.server.api.ListGroupUsersRequest
+	(*ListUserGroupsRequest)(nil),                    // 63: ultimate.server.api.ListUserGroupsRequest
+	(*AddMatchmakerRequest)(nil),                     // 64: ultimate.server.api.AddMatchmakerRequest
+	(*MatchmakerTicket)(nil),                         // 65: ultimate.server.api.MatchmakerTicket
+	(*RemoveMatchmakerRequest)(nil),                  // 66: ultimate.server.api.RemoveMatchmakerRequest
+	(*GetMatchmakerTicketRequest)(nil),               // 67: ultimate.server.api.GetMatchmakerTicketRequest
+	(*GetQueueStatsRequest)(nil),                     // 68: ultimate.server.api.GetQueueStatsRequest
+	(*QueueStats)(nil),                               // 69: ultimate.server.api.QueueStats
+	(*CreateMatchRequest)(nil),                       // 70: ultimate.server.api.CreateMatchRequest
+	(*ListMatchesRequest)(nil),                       // 71: ultimate.server.api.ListMatchesRequest
+	(*GetMatchRequest)(nil),                          // 72: ultimate.server.api.GetMatchRequest
+	(*MatchPresence)(nil),                            // 73: ultimate.server.api.MatchPresence
+	(*Match)(nil),                                    // 74: ultimate.server.api.Match
+	(*MatchList)(nil),                                // 75: ultimate.server.api.MatchList
+	(*MatchSignalRequest)(nil),                       // 76: ultimate.server.api.MatchSignalRequest
+	(*MatchSignalResponse)(nil),                      // 77: ultimate.server.api.MatchSignalResponse
+	nil,                                              // 78: ultimate.server.api.AddMatchmakerRequest.StringPropertiesEntry
+	nil,                                              // 79: ultimate.server.api.AddMatchmakerRequest.NumericPropertiesEntry
+	nil,                                              // 80: ultimate.server.api.CreateMatchRequest.ParamsEntry
+	(*timestamppb.Timestamp)(nil),                    // 81: google.protobuf.Timestamp
+	(*emptypb.Empty)(nil),                            // 82: google.protobuf.Empty
 }
 var file_api_api_proto_depIdxs = []int32{
-	61, // 0: ultimate.server.api.LeaderboardRecord.create_time:type_name -> google.protobuf.Timestamp
-	61, // 1: ultimate.server.api.LeaderboardRecord.update_time:type_name -> google.protobuf.Timestamp
-	61, // 2: ultimate.server.api.LeaderboardRecord.expiry_time:type_name -> google.protobuf.Timestamp
-	4,  // 3: ultimate.server.api.LeaderboardRecordList.records:type_name -> ultimate.server.api.LeaderboardRecord
-	61, // 4: ultimate.server.api.CreateTournamentRequest.end_time:type_name -> google.protobuf.Timestamp
-	61, // 5: ultimate.server.api.CreateTournamentRequest.start_time:type_name -> google.protobuf.Timestamp
-	61, // 6: ultimate.server.api.ListTournamentsRequest.start_time:type_name -> google.protobuf.Timestamp
-	61, // 7: ultimate.server.api.ListTournamentsRequest.end_time:type_name -> google.protobuf.Timestamp
-	61, // 8: ultimate.server.api.Tournament.end_time:type_name -> google.protobuf.Timestamp
-	61, // 9: ultimate.server.api.Tournament.start_time:type_name -> google.protobuf.Timestamp
-	13, // 10: ultimate.server.api.TournamentList.tournaments:type_name -> ultimate.server.api.Tournament
-	0,  // 11: ultimate.server.api.Friend.user:type_name -> ultimate.server.api.User
-	61, // 12: ultimate.server.api.Friend.update_time:type_name -> google.protobuf.Timestamp
-	19, // 13: ultimate.server.api.FriendList.friends:type_name -> ultimate.server.api.Friend
-	61, // 14: ultimate.server.api.Group.create_time:type_name -> google.protobuf.Timestamp
-	61, // 15: ultimate.server.api.Group.update_time:type_name -> google.protobuf.Timestamp
-	26, // 16: ultimate.server.api.GroupList.groups:type_name -> ultimate.server.api.Group
-	0,  // 17: ultimate.server.api.GroupUser.user:type_name -> ultimate.server.api.User
-	38, // 18: ultimate.server.api.GroupUserList.group_users:type_name -> ultimate.server.api.GroupUser
-	26, // 19: ultimate.server.api.UserGroup.group:type_name -> ultimate.server.api.Group
-	40, // 20: ultimate.server.api.UserGroupList.user_groups:type_name -> ultimate.server.api.UserGroup
-	58, // 21: ultimate.server.api.AddMatchmakerRequest.string_properties:type_name -> ultimate.server.api.AddMatchmakerRequest.StringPropertiesEntry
-	59, // 22: ultimate.server.api.AddMatchmakerRequest.numeric_properties:type_name -> ultimate.server.api.AddMatchmakerRequest.NumericPropertiesEntry
-	60, // 23: ultimate.server.api.CreateMatchRequest.params:type_name -> ultimate.server.api.CreateMatchRequest.ParamsEntry
-	53, // 24: ultimate.server.api.Match.presences:type_name -> ultimate.server.api.MatchPresence
-	54, // 25: ultimate.server.api.MatchList.matches:type_name -> ultimate.server.api.Match
-	1,  // 26: ultimate.server.api.LeaderboardService.CreateLeaderboard:input_type -> ultimate.server.api.CreateLeaderboardRequest
-	2,  // 27: ultimate.server.api.LeaderboardService.DeleteLeaderboard:input_type -> ultimate.server.api.DeleteLeaderboardRequest
-	3,  // 28: ultimate.server.api.LeaderboardService.WriteLeaderboardRecord:input_type -> ultimate.server.api.WriteLeaderboardRecordRequest
-	5,  // 29: ultimate.server.api.LeaderboardService.ListLeaderboardRecords:input_type -> ultimate.server.api.ListLeaderboardRecordsRequest
-	6,  // 30: ultimate.server.api.LeaderboardService.ListLeaderboardRecordsAroundOwner:input_type -> ultimate.server.api.ListLeaderboardRecordsAroundOwnerRequest
-	8,  // 31: ultimate.server.api.LeaderboardService.DeleteLeaderboardRecord:input_type -> ultimate.server.api.DeleteLeaderboardRecordRequest
-	9,  // 32: ultimate.server.api.TournamentService.CreateTournament:input_type -> ultimate.server.api.CreateTournamentRequest
-	10, // 33: ultimate.server.api.TournamentService.DeleteTournament:input_type -> ultimate.server.api.DeleteTournamentRequest
-	11, // 34: ultimate.server.api.TournamentService.JoinTournament:input_type -> ultimate.server.api.JoinTournamentRequest
-	12, // 35: ultimate.server.api.TournamentService.ListTournaments:input_type -> ultimate.server.api.ListTournamentsRequest
-	15, // 36: ultimate.server.api.TournamentService.WriteTournamentRecord:input_type -> ultimate.server.api.WriteTournamentRecordRequest
-	16, // 37: ultimate.server.api.TournamentService.ListTournamentRecords:input_type -> ultimate.server.api.ListTournamentRecordsRequest
-	17, // 38: ultimate.server.api.FriendsService.AddFriends:input_type -> ultimate.server.api.AddFriendsRequest
-	18, // 39: ultimate.server.api.FriendsService.ListFriends:input_type -> ultimate.server.api.ListFriendsRequest
-	21, // 40: ultimate.server.api.FriendsService.DeleteFriends:input_type -> ultimate.server.api.DeleteFriendsRequest
-	22, // 41: ultimate.server.api.FriendsService.BlockFriends:input_type -> ultimate.server.api.BlockFriendsRequest
-	23, // 42: ultimate.server.api.FriendsService.ImportFacebookFriends:input_type -> ultimate.server.api.ImportFacebookFriendsRequest
-	24, // 43: ultimate.server.api.FriendsService.ImportSteamFriends:input_type -> ultimate.server.api.ImportSteamFriendsRequest
-	25, // 44: ultimate.server.api.GroupService.CreateGroup:input_type -> ultimate.server.api.CreateGroupRequest
-	27, // 45: ultimate.server.api.GroupService.UpdateGroup:input_type -> ultimate.server.api.UpdateGroupRequest
-	28, // 46: ultimate.server.api.GroupService.DeleteGroup:input_type -> ultimate.server.api.DeleteGroupRequest
-	29, // 47: ultimate.server.api.GroupService.ListGroups:input_type -> ultimate.server.api.ListGroupsRequest
-	31, // 48: ultimate.server.api.GroupService.JoinGroup:input_type -> ultimate.server.api.JoinGroupRequest
-	32, // 49: ultimate.server.api.GroupService.LeaveGroup:input_type -> ultimate.server.api.LeaveGroupRequest
-	33, // 50: ultimate.server.api.GroupService.AddGroupUsers:input_type -> ultimate.server.api.AddGroupUsersRequest
-	34, // 51: ultimate.server.api.GroupService.KickGroupUsers:input_type -> ultimate.server.api.KickGroupUsersRequest
-	35, // 52: ultimate.server.api.GroupService.PromoteGroupUsers:input_type -> ultimate.server.api.PromoteGroupUsersRequest
-	36, // 53: ultimate.server.api.GroupService.DemoteGroupUsers:input_type -> ultimate.server.api.DemoteGroupUsersRequest
-	37, // 54: ultimate.server.api.GroupService.BanGroupUsers:input_type -> ultimate.server.api.BanGroupUsersRequest
-	42, // 55: ultimate.server.api.GroupService.ListGroupUsers:input_type -> ultimate.server.api.ListGroupUsersRequest
-	43, // 56: ultimate.server.api.GroupService.ListUserGroups:input_type -> ultimate.server.api.ListUserGroupsRequest
-	44, // 57: ultimate.server.api.MatchmakerService.AddMatchmaker:input_type -> ultimate.server.api.AddMatchmakerRequest
-	46, // 58: ultimate.server.api.MatchmakerService.RemoveMatchmaker:input_type -> ultimate.server.api.RemoveMatchmakerRequest
-	47, // 59: ultimate.server.api.MatchmakerService.GetMatchmakerTicket:input_type -> ultimate.server.api.GetMatchmakerTicketRequest
-	48, // 60: ultimate.server.api.MatchmakerService.GetQueueStats:input_type -> ultimate.server.api.GetQueueStatsRequest
-	50, // 61: ultimate.server.api.RealtimeService.CreateMatch:input_type -> ultimate.server.api.CreateMatchRequest
-	51, // 62: ultimate.server.api.RealtimeService.ListMatches:input_type -> ultimate.server.api.ListMatchesRequest
-	52, // 63: ultimate.server.api.RealtimeService.GetMatch:input_type -> ultimate.server.api.GetMatchRequest
-	56, // 64: ultimate.server.api.RealtimeService.MatchSignal:input_type -> ultimate.server.api.MatchSignalRequest
-	62, // 65: ultimate.server.api.LeaderboardService.CreateLeaderboard:output_type -> google.protobuf.Empty
-	62, // 66: ultimate.server.api.LeaderboardService.DeleteLeaderboard:output_type -> google.protobuf.Empty
-	4,  // 67: ultimate.server.api.LeaderboardService.WriteLeaderboardRecord:output_type -> ultimate.server.api.LeaderboardRecord
-	7,  // 68: ultimate.server.api.LeaderboardService.ListLeaderboardRecords:output_type -> ultimate.server.api.LeaderboardRecordList
-	7,  // 69: ultimate.server.api.LeaderboardService.ListLeaderboardRecordsAroundOwner:output_type -> ultimate.server.api.LeaderboardRecordList
-	62, // 70: ultimate.server.api.LeaderboardService.DeleteLeaderboardRecord:output_type -> google.protobuf.Empty
-	62, // 71: ultimate.server.api.TournamentService.CreateTournament:output_type -> google.protobuf.Empty
-	62, // 72: ultimate.server.api.TournamentService.DeleteTournament:output_type -> google.protobuf.Empty
-	62, // 73: ultimate.server.api.TournamentService.JoinTournament:output_type -> google.protobuf.Empty
-	14, // 74: ultimate.server.api.TournamentService.ListTournaments:output_type -> ultimate.server.api.TournamentList
-	4,  // 75: ultimate.server.api.TournamentService.WriteTournamentRecord:output_type -> ultimate.server.api.LeaderboardRecord
-	7,  // 76: ultimate.server.api.TournamentService.ListTournamentRecords:output_type -> ultimate.server.api.LeaderboardRecordList
-	62, // 77: ultimate.server.api.FriendsService.AddFriends:output_type -> google.protobuf.Empty
-	20, // 78: ultimate.server.api.FriendsService.ListFriends:output_type -> ultimate.server.api.FriendList
-	62, // 79: ultimate.server.api.FriendsService.DeleteFriends:output_type -> google.protobuf.Empty
-	62, // 80: ultimate.server.api.FriendsService.BlockFriends:output_type -> google.protobuf.Empty
-	62, // 81: ultimate.server.api.FriendsService.ImportFacebookFriends:output_type -> google.protobuf.Empty
-	62, // 82: ultimate.server.api.FriendsService.ImportSteamFriends:output_type -> google.protobuf.Empty
-	26, // 83: ultimate.server.api.GroupService.CreateGroup:output_type -> ultimate.server.api.Group
-	62, // 84: ultimate.server.api.GroupService.UpdateGroup:output_type -> google.protobuf.Empty
-	62, // 85: ultimate.server.api.GroupService.DeleteGroup:output_type -> google.protobuf.Empty
-	30, // 86: ultimate.server.api.GroupService.ListGroups:output_type -> ultimate.server.api.GroupList
-	62, // 87: ultimate.server.api.GroupService.JoinGroup:output_type -> google.protobuf.Empty
-	62, // 88: ultimate.server.api.GroupService.LeaveGroup:output_type -> google.protobuf.Empty
-	62, // 89: ultimate.server.api.GroupService.AddGroupUsers:output_type -> google.protobuf.Empty
-	62, // 90: ultimate.server.api.GroupService.KickGroupUsers:output_type -> google.protobuf.Empty
-	62, // 91: ultimate.server.api.GroupService.PromoteGroupUsers:output_type -> google.protobuf.Empty
-	62, // 92: ultimate.server.api.GroupService.DemoteGroupUsers:output_type -> google.protobuf.Empty
-	62, // 93: ultimate.server.api.GroupService.BanGroupUsers:output_type -> google.protobuf.Empty
-	39, // 94: ultimate.server.api.GroupService.ListGroupUsers:output_type -> ultimate.server.api.GroupUserList
-	41, // 95: ultimate.server.api.GroupService.ListUserGroups:output_type -> ultimate.server.api.UserGroupList
-	45, // 96: ultimate.server.api.MatchmakerService.AddMatchmaker:output_type -> ultimate.server.api.MatchmakerTicket
-	62, // 97: ultimate.server.api.MatchmakerService.RemoveMatchmaker:output_type -> google.protobuf.Empty
-	45, // 98: ultimate.server.api.MatchmakerService.GetMatchmakerTicket:output_type -> ultimate.server.api.MatchmakerTicket
-	49, // 99: ultimate.server.api.MatchmakerService.GetQueueStats:output_type -> ultimate.server.api.QueueStats
-	54, // 100: ultimate.server.api.RealtimeService.CreateMatch:output_type -> ultimate.server.api.Match
-	55, // 101: ultimate.server.api.RealtimeService.ListMatches:output_type -> ultimate.server.api.MatchList
-	54, // 102: ultimate.server.api.RealtimeService.GetMatch:output_type -> ultimate.server.api.Match
-	57, // 103: ultimate.server.api.RealtimeService.MatchSignal:output_type -> ultimate.server.api.MatchSignalResponse
-	65, // [65:104] is the sub-list for method output_type
-	26, // [26:65] is the sub-list for method input_type
-	26, // [26:26] is the sub-list for extension type_name
-	26, // [26:26] is the sub-list for extension extendee
-	0,  // [0:26] is the sub-list for field type_name
+	81,  // 0: ultimate.server.api.User.create_time:type_name -> google.protobuf.Timestamp
+	81,  // 1: ultimate.server.api.User.update_time:type_name -> google.protobuf.Timestamp
+	0,   // 2: ultimate.server.api.Account.user:type_name -> ultimate.server.api.User
+	12,  // 3: ultimate.server.api.Account.devices:type_name -> ultimate.server.api.Device
+	81,  // 4: ultimate.server.api.Account.verify_time:type_name -> google.protobuf.Timestamp
+	81,  // 5: ultimate.server.api.Leaderboard.create_time:type_name -> google.protobuf.Timestamp
+	18,  // 6: ultimate.server.api.LeaderboardList.leaderboards:type_name -> ultimate.server.api.Leaderboard
+	81,  // 7: ultimate.server.api.LeaderboardRecord.create_time:type_name -> google.protobuf.Timestamp
+	81,  // 8: ultimate.server.api.LeaderboardRecord.update_time:type_name -> google.protobuf.Timestamp
+	81,  // 9: ultimate.server.api.LeaderboardRecord.expiry_time:type_name -> google.protobuf.Timestamp
+	22,  // 10: ultimate.server.api.LeaderboardRecordList.records:type_name -> ultimate.server.api.LeaderboardRecord
+	22,  // 11: ultimate.server.api.LeaderboardRecordList.owner_records:type_name -> ultimate.server.api.LeaderboardRecord
+	81,  // 12: ultimate.server.api.CreateTournamentRequest.end_time:type_name -> google.protobuf.Timestamp
+	81,  // 13: ultimate.server.api.CreateTournamentRequest.start_time:type_name -> google.protobuf.Timestamp
+	81,  // 14: ultimate.server.api.ListTournamentsRequest.start_time:type_name -> google.protobuf.Timestamp
+	81,  // 15: ultimate.server.api.ListTournamentsRequest.end_time:type_name -> google.protobuf.Timestamp
+	81,  // 16: ultimate.server.api.Tournament.end_time:type_name -> google.protobuf.Timestamp
+	81,  // 17: ultimate.server.api.Tournament.start_time:type_name -> google.protobuf.Timestamp
+	31,  // 18: ultimate.server.api.TournamentList.tournaments:type_name -> ultimate.server.api.Tournament
+	0,   // 19: ultimate.server.api.Friend.user:type_name -> ultimate.server.api.User
+	81,  // 20: ultimate.server.api.Friend.update_time:type_name -> google.protobuf.Timestamp
+	39,  // 21: ultimate.server.api.FriendList.friends:type_name -> ultimate.server.api.Friend
+	81,  // 22: ultimate.server.api.Group.create_time:type_name -> google.protobuf.Timestamp
+	81,  // 23: ultimate.server.api.Group.update_time:type_name -> google.protobuf.Timestamp
+	46,  // 24: ultimate.server.api.GroupList.groups:type_name -> ultimate.server.api.Group
+	0,   // 25: ultimate.server.api.GroupUser.user:type_name -> ultimate.server.api.User
+	58,  // 26: ultimate.server.api.GroupUserList.group_users:type_name -> ultimate.server.api.GroupUser
+	46,  // 27: ultimate.server.api.UserGroup.group:type_name -> ultimate.server.api.Group
+	60,  // 28: ultimate.server.api.UserGroupList.user_groups:type_name -> ultimate.server.api.UserGroup
+	78,  // 29: ultimate.server.api.AddMatchmakerRequest.string_properties:type_name -> ultimate.server.api.AddMatchmakerRequest.StringPropertiesEntry
+	79,  // 30: ultimate.server.api.AddMatchmakerRequest.numeric_properties:type_name -> ultimate.server.api.AddMatchmakerRequest.NumericPropertiesEntry
+	80,  // 31: ultimate.server.api.CreateMatchRequest.params:type_name -> ultimate.server.api.CreateMatchRequest.ParamsEntry
+	73,  // 32: ultimate.server.api.Match.presences:type_name -> ultimate.server.api.MatchPresence
+	74,  // 33: ultimate.server.api.MatchList.matches:type_name -> ultimate.server.api.Match
+	1,   // 34: ultimate.server.api.AuthenticationService.AuthenticateEmail:input_type -> ultimate.server.api.AuthenticateEmailRequest
+	2,   // 35: ultimate.server.api.AuthenticationService.AuthenticateDevice:input_type -> ultimate.server.api.AuthenticateDeviceRequest
+	3,   // 36: ultimate.server.api.AuthenticationService.AuthenticateApple:input_type -> ultimate.server.api.AuthenticateAppleRequest
+	4,   // 37: ultimate.server.api.AuthenticationService.AuthenticateGoogle:input_type -> ultimate.server.api.AuthenticateGoogleRequest
+	5,   // 38: ultimate.server.api.AuthenticationService.AuthenticateFacebook:input_type -> ultimate.server.api.AuthenticateFacebookRequest
+	6,   // 39: ultimate.server.api.AuthenticationService.AuthenticateSteam:input_type -> ultimate.server.api.AuthenticateSteamRequest
+	7,   // 40: ultimate.server.api.AuthenticationService.AuthenticateGameCenter:input_type -> ultimate.server.api.AuthenticateGameCenterRequest
+	8,   // 41: ultimate.server.api.AuthenticationService.AuthenticateCustom:input_type -> ultimate.server.api.AuthenticateCustomRequest
+	9,   // 42: ultimate.server.api.AuthenticationService.SessionRefresh:input_type -> ultimate.server.api.SessionRefreshRequest
+	10,  // 43: ultimate.server.api.AuthenticationService.SessionLogout:input_type -> ultimate.server.api.SessionLogoutRequest
+	82,  // 44: ultimate.server.api.AuthenticationService.GetAccount:input_type -> google.protobuf.Empty
+	14,  // 45: ultimate.server.api.AuthenticationService.UpdateAccount:input_type -> ultimate.server.api.UpdateAccountRequest
+	82,  // 46: ultimate.server.api.AuthenticationService.DeleteAccount:input_type -> google.protobuf.Empty
+	1,   // 47: ultimate.server.api.AuthenticationService.LinkEmail:input_type -> ultimate.server.api.AuthenticateEmailRequest
+	2,   // 48: ultimate.server.api.AuthenticationService.LinkDevice:input_type -> ultimate.server.api.AuthenticateDeviceRequest
+	3,   // 49: ultimate.server.api.AuthenticationService.LinkApple:input_type -> ultimate.server.api.AuthenticateAppleRequest
+	4,   // 50: ultimate.server.api.AuthenticationService.LinkGoogle:input_type -> ultimate.server.api.AuthenticateGoogleRequest
+	5,   // 51: ultimate.server.api.AuthenticationService.LinkFacebook:input_type -> ultimate.server.api.AuthenticateFacebookRequest
+	6,   // 52: ultimate.server.api.AuthenticationService.LinkSteam:input_type -> ultimate.server.api.AuthenticateSteamRequest
+	8,   // 53: ultimate.server.api.AuthenticationService.LinkCustom:input_type -> ultimate.server.api.AuthenticateCustomRequest
+	15,  // 54: ultimate.server.api.AuthenticationService.UnlinkEmail:input_type -> ultimate.server.api.UnlinkRequest
+	15,  // 55: ultimate.server.api.AuthenticationService.UnlinkDevice:input_type -> ultimate.server.api.UnlinkRequest
+	15,  // 56: ultimate.server.api.AuthenticationService.UnlinkApple:input_type -> ultimate.server.api.UnlinkRequest
+	15,  // 57: ultimate.server.api.AuthenticationService.UnlinkGoogle:input_type -> ultimate.server.api.UnlinkRequest
+	15,  // 58: ultimate.server.api.AuthenticationService.UnlinkFacebook:input_type -> ultimate.server.api.UnlinkRequest
+	15,  // 59: ultimate.server.api.AuthenticationService.UnlinkSteam:input_type -> ultimate.server.api.UnlinkRequest
+	15,  // 60: ultimate.server.api.AuthenticationService.UnlinkCustom:input_type -> ultimate.server.api.UnlinkRequest
+	16,  // 61: ultimate.server.api.LeaderboardService.CreateLeaderboard:input_type -> ultimate.server.api.CreateLeaderboardRequest
+	20,  // 62: ultimate.server.api.LeaderboardService.DeleteLeaderboard:input_type -> ultimate.server.api.DeleteLeaderboardRequest
+	17,  // 63: ultimate.server.api.LeaderboardService.ListLeaderboards:input_type -> ultimate.server.api.ListLeaderboardsRequest
+	21,  // 64: ultimate.server.api.LeaderboardService.WriteLeaderboardRecord:input_type -> ultimate.server.api.WriteLeaderboardRecordRequest
+	23,  // 65: ultimate.server.api.LeaderboardService.ListLeaderboardRecords:input_type -> ultimate.server.api.ListLeaderboardRecordsRequest
+	24,  // 66: ultimate.server.api.LeaderboardService.ListLeaderboardRecordsAroundOwner:input_type -> ultimate.server.api.ListLeaderboardRecordsAroundOwnerRequest
+	26,  // 67: ultimate.server.api.LeaderboardService.DeleteLeaderboardRecord:input_type -> ultimate.server.api.DeleteLeaderboardRecordRequest
+	27,  // 68: ultimate.server.api.TournamentService.CreateTournament:input_type -> ultimate.server.api.CreateTournamentRequest
+	28,  // 69: ultimate.server.api.TournamentService.DeleteTournament:input_type -> ultimate.server.api.DeleteTournamentRequest
+	29,  // 70: ultimate.server.api.TournamentService.JoinTournament:input_type -> ultimate.server.api.JoinTournamentRequest
+	30,  // 71: ultimate.server.api.TournamentService.ListTournaments:input_type -> ultimate.server.api.ListTournamentsRequest
+	33,  // 72: ultimate.server.api.TournamentService.WriteTournamentRecord:input_type -> ultimate.server.api.WriteTournamentRecordRequest
+	34,  // 73: ultimate.server.api.TournamentService.ListTournamentRecords:input_type -> ultimate.server.api.ListTournamentRecordsRequest
+	35,  // 74: ultimate.server.api.TournamentService.ListTournamentRecordsAroundOwner:input_type -> ultimate.server.api.ListTournamentRecordsAroundOwnerRequest
+	36,  // 75: ultimate.server.api.TournamentService.DeleteTournamentRecord:input_type -> ultimate.server.api.DeleteTournamentRecordRequest
+	37,  // 76: ultimate.server.api.FriendsService.AddFriends:input_type -> ultimate.server.api.AddFriendsRequest
+	38,  // 77: ultimate.server.api.FriendsService.ListFriends:input_type -> ultimate.server.api.ListFriendsRequest
+	41,  // 78: ultimate.server.api.FriendsService.DeleteFriends:input_type -> ultimate.server.api.DeleteFriendsRequest
+	42,  // 79: ultimate.server.api.FriendsService.BlockFriends:input_type -> ultimate.server.api.BlockFriendsRequest
+	43,  // 80: ultimate.server.api.FriendsService.ImportFacebookFriends:input_type -> ultimate.server.api.ImportFacebookFriendsRequest
+	44,  // 81: ultimate.server.api.FriendsService.ImportSteamFriends:input_type -> ultimate.server.api.ImportSteamFriendsRequest
+	45,  // 82: ultimate.server.api.GroupService.CreateGroup:input_type -> ultimate.server.api.CreateGroupRequest
+	47,  // 83: ultimate.server.api.GroupService.UpdateGroup:input_type -> ultimate.server.api.UpdateGroupRequest
+	48,  // 84: ultimate.server.api.GroupService.DeleteGroup:input_type -> ultimate.server.api.DeleteGroupRequest
+	49,  // 85: ultimate.server.api.GroupService.ListGroups:input_type -> ultimate.server.api.ListGroupsRequest
+	51,  // 86: ultimate.server.api.GroupService.JoinGroup:input_type -> ultimate.server.api.JoinGroupRequest
+	52,  // 87: ultimate.server.api.GroupService.LeaveGroup:input_type -> ultimate.server.api.LeaveGroupRequest
+	53,  // 88: ultimate.server.api.GroupService.AddGroupUsers:input_type -> ultimate.server.api.AddGroupUsersRequest
+	54,  // 89: ultimate.server.api.GroupService.KickGroupUsers:input_type -> ultimate.server.api.KickGroupUsersRequest
+	55,  // 90: ultimate.server.api.GroupService.PromoteGroupUsers:input_type -> ultimate.server.api.PromoteGroupUsersRequest
+	56,  // 91: ultimate.server.api.GroupService.DemoteGroupUsers:input_type -> ultimate.server.api.DemoteGroupUsersRequest
+	57,  // 92: ultimate.server.api.GroupService.BanGroupUsers:input_type -> ultimate.server.api.BanGroupUsersRequest
+	62,  // 93: ultimate.server.api.GroupService.ListGroupUsers:input_type -> ultimate.server.api.ListGroupUsersRequest
+	63,  // 94: ultimate.server.api.GroupService.ListUserGroups:input_type -> ultimate.server.api.ListUserGroupsRequest
+	64,  // 95: ultimate.server.api.MatchmakerService.AddMatchmaker:input_type -> ultimate.server.api.AddMatchmakerRequest
+	66,  // 96: ultimate.server.api.MatchmakerService.RemoveMatchmaker:input_type -> ultimate.server.api.RemoveMatchmakerRequest
+	67,  // 97: ultimate.server.api.MatchmakerService.GetMatchmakerTicket:input_type -> ultimate.server.api.GetMatchmakerTicketRequest
+	68,  // 98: ultimate.server.api.MatchmakerService.GetQueueStats:input_type -> ultimate.server.api.GetQueueStatsRequest
+	70,  // 99: ultimate.server.api.RealtimeService.CreateMatch:input_type -> ultimate.server.api.CreateMatchRequest
+	71,  // 100: ultimate.server.api.RealtimeService.ListMatches:input_type -> ultimate.server.api.ListMatchesRequest
+	72,  // 101: ultimate.server.api.RealtimeService.GetMatch:input_type -> ultimate.server.api.GetMatchRequest
+	76,  // 102: ultimate.server.api.RealtimeService.MatchSignal:input_type -> ultimate.server.api.MatchSignalRequest
+	11,  // 103: ultimate.server.api.AuthenticationService.AuthenticateEmail:output_type -> ultimate.server.api.Session
+	11,  // 104: ultimate.server.api.AuthenticationService.AuthenticateDevice:output_type -> ultimate.server.api.Session
+	11,  // 105: ultimate.server.api.AuthenticationService.AuthenticateApple:output_type -> ultimate.server.api.Session
+	11,  // 106: ultimate.server.api.AuthenticationService.AuthenticateGoogle:output_type -> ultimate.server.api.Session
+	11,  // 107: ultimate.server.api.AuthenticationService.AuthenticateFacebook:output_type -> ultimate.server.api.Session
+	11,  // 108: ultimate.server.api.AuthenticationService.AuthenticateSteam:output_type -> ultimate.server.api.Session
+	11,  // 109: ultimate.server.api.AuthenticationService.AuthenticateGameCenter:output_type -> ultimate.server.api.Session
+	11,  // 110: ultimate.server.api.AuthenticationService.AuthenticateCustom:output_type -> ultimate.server.api.Session
+	11,  // 111: ultimate.server.api.AuthenticationService.SessionRefresh:output_type -> ultimate.server.api.Session
+	82,  // 112: ultimate.server.api.AuthenticationService.SessionLogout:output_type -> google.protobuf.Empty
+	13,  // 113: ultimate.server.api.AuthenticationService.GetAccount:output_type -> ultimate.server.api.Account
+	82,  // 114: ultimate.server.api.AuthenticationService.UpdateAccount:output_type -> google.protobuf.Empty
+	82,  // 115: ultimate.server.api.AuthenticationService.DeleteAccount:output_type -> google.protobuf.Empty
+	82,  // 116: ultimate.server.api.AuthenticationService.LinkEmail:output_type -> google.protobuf.Empty
+	82,  // 117: ultimate.server.api.AuthenticationService.LinkDevice:output_type -> google.protobuf.Empty
+	82,  // 118: ultimate.server.api.AuthenticationService.LinkApple:output_type -> google.protobuf.Empty
+	82,  // 119: ultimate.server.api.AuthenticationService.LinkGoogle:output_type -> google.protobuf.Empty
+	82,  // 120: ultimate.server.api.AuthenticationService.LinkFacebook:output_type -> google.protobuf.Empty
+	82,  // 121: ultimate.server.api.AuthenticationService.LinkSteam:output_type -> google.protobuf.Empty
+	82,  // 122: ultimate.server.api.AuthenticationService.LinkCustom:output_type -> google.protobuf.Empty
+	82,  // 123: ultimate.server.api.AuthenticationService.UnlinkEmail:output_type -> google.protobuf.Empty
+	82,  // 124: ultimate.server.api.AuthenticationService.UnlinkDevice:output_type -> google.protobuf.Empty
+	82,  // 125: ultimate.server.api.AuthenticationService.UnlinkApple:output_type -> google.protobuf.Empty
+	82,  // 126: ultimate.server.api.AuthenticationService.UnlinkGoogle:output_type -> google.protobuf.Empty
+	82,  // 127: ultimate.server.api.AuthenticationService.UnlinkFacebook:output_type -> google.protobuf.Empty
+	82,  // 128: ultimate.server.api.AuthenticationService.UnlinkSteam:output_type -> google.protobuf.Empty
+	82,  // 129: ultimate.server.api.AuthenticationService.UnlinkCustom:output_type -> google.protobuf.Empty
+	82,  // 130: ultimate.server.api.LeaderboardService.CreateLeaderboard:output_type -> google.protobuf.Empty
+	82,  // 131: ultimate.server.api.LeaderboardService.DeleteLeaderboard:output_type -> google.protobuf.Empty
+	19,  // 132: ultimate.server.api.LeaderboardService.ListLeaderboards:output_type -> ultimate.server.api.LeaderboardList
+	22,  // 133: ultimate.server.api.LeaderboardService.WriteLeaderboardRecord:output_type -> ultimate.server.api.LeaderboardRecord
+	25,  // 134: ultimate.server.api.LeaderboardService.ListLeaderboardRecords:output_type -> ultimate.server.api.LeaderboardRecordList
+	25,  // 135: ultimate.server.api.LeaderboardService.ListLeaderboardRecordsAroundOwner:output_type -> ultimate.server.api.LeaderboardRecordList
+	82,  // 136: ultimate.server.api.LeaderboardService.DeleteLeaderboardRecord:output_type -> google.protobuf.Empty
+	82,  // 137: ultimate.server.api.TournamentService.CreateTournament:output_type -> google.protobuf.Empty
+	82,  // 138: ultimate.server.api.TournamentService.DeleteTournament:output_type -> google.protobuf.Empty
+	82,  // 139: ultimate.server.api.TournamentService.JoinTournament:output_type -> google.protobuf.Empty
+	32,  // 140: ultimate.server.api.TournamentService.ListTournaments:output_type -> ultimate.server.api.TournamentList
+	22,  // 141: ultimate.server.api.TournamentService.WriteTournamentRecord:output_type -> ultimate.server.api.LeaderboardRecord
+	25,  // 142: ultimate.server.api.TournamentService.ListTournamentRecords:output_type -> ultimate.server.api.LeaderboardRecordList
+	25,  // 143: ultimate.server.api.TournamentService.ListTournamentRecordsAroundOwner:output_type -> ultimate.server.api.LeaderboardRecordList
+	82,  // 144: ultimate.server.api.TournamentService.DeleteTournamentRecord:output_type -> google.protobuf.Empty
+	82,  // 145: ultimate.server.api.FriendsService.AddFriends:output_type -> google.protobuf.Empty
+	40,  // 146: ultimate.server.api.FriendsService.ListFriends:output_type -> ultimate.server.api.FriendList
+	82,  // 147: ultimate.server.api.FriendsService.DeleteFriends:output_type -> google.protobuf.Empty
+	82,  // 148: ultimate.server.api.FriendsService.BlockFriends:output_type -> google.protobuf.Empty
+	82,  // 149: ultimate.server.api.FriendsService.ImportFacebookFriends:output_type -> google.protobuf.Empty
+	82,  // 150: ultimate.server.api.FriendsService.ImportSteamFriends:output_type -> google.protobuf.Empty
+	46,  // 151: ultimate.server.api.GroupService.CreateGroup:output_type -> ultimate.server.api.Group
+	82,  // 152: ultimate.server.api.GroupService.UpdateGroup:output_type -> google.protobuf.Empty
+	82,  // 153: ultimate.server.api.GroupService.DeleteGroup:output_type -> google.protobuf.Empty
+	50,  // 154: ultimate.server.api.GroupService.ListGroups:output_type -> ultimate.server.api.GroupList
+	82,  // 155: ultimate.server.api.GroupService.JoinGroup:output_type -> google.protobuf.Empty
+	82,  // 156: ultimate.server.api.GroupService.LeaveGroup:output_type -> google.protobuf.Empty
+	82,  // 157: ultimate.server.api.GroupService.AddGroupUsers:output_type -> google.protobuf.Empty
+	82,  // 158: ultimate.server.api.GroupService.KickGroupUsers:output_type -> google.protobuf.Empty
+	82,  // 159: ultimate.server.api.GroupService.PromoteGroupUsers:output_type -> google.protobuf.Empty
+	82,  // 160: ultimate.server.api.GroupService.DemoteGroupUsers:output_type -> google.protobuf.Empty
+	82,  // 161: ultimate.server.api.GroupService.BanGroupUsers:output_type -> google.protobuf.Empty
+	59,  // 162: ultimate.server.api.GroupService.ListGroupUsers:output_type -> ultimate.server.api.GroupUserList
+	61,  // 163: ultimate.server.api.GroupService.ListUserGroups:output_type -> ultimate.server.api.UserGroupList
+	65,  // 164: ultimate.server.api.MatchmakerService.AddMatchmaker:output_type -> ultimate.server.api.MatchmakerTicket
+	82,  // 165: ultimate.server.api.MatchmakerService.RemoveMatchmaker:output_type -> google.protobuf.Empty
+	65,  // 166: ultimate.server.api.MatchmakerService.GetMatchmakerTicket:output_type -> ultimate.server.api.MatchmakerTicket
+	69,  // 167: ultimate.server.api.MatchmakerService.GetQueueStats:output_type -> ultimate.server.api.QueueStats
+	74,  // 168: ultimate.server.api.RealtimeService.CreateMatch:output_type -> ultimate.server.api.Match
+	75,  // 169: ultimate.server.api.RealtimeService.ListMatches:output_type -> ultimate.server.api.MatchList
+	74,  // 170: ultimate.server.api.RealtimeService.GetMatch:output_type -> ultimate.server.api.Match
+	77,  // 171: ultimate.server.api.RealtimeService.MatchSignal:output_type -> ultimate.server.api.MatchSignalResponse
+	103, // [103:172] is the sub-list for method output_type
+	34,  // [34:103] is the sub-list for method input_type
+	34,  // [34:34] is the sub-list for extension type_name
+	34,  // [34:34] is the sub-list for extension extendee
+	0,   // [0:34] is the sub-list for field type_name
 }
 
 func init() { file_api_api_proto_init() }
@@ -4355,9 +6015,9 @@ func file_api_api_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_api_api_proto_rawDesc), len(file_api_api_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   61,
+			NumMessages:   81,
 			NumExtensions: 0,
-			NumServices:   6,
+			NumServices:   7,
 		},
 		GoTypes:           file_api_api_proto_goTypes,
 		DependencyIndexes: file_api_api_proto_depIdxs,

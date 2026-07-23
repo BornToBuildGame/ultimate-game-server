@@ -14,11 +14,15 @@ import (
 	"ultimate-game-server/internal/api/apipb"
 	"ultimate-game-server/internal/api/storagepb"
 	"ultimate-game-server/internal/auth"
+	"ultimate-game-server/internal/leaderboard"
 	"ultimate-game-server/internal/match"
 	"ultimate-game-server/internal/matchmaker"
+	"ultimate-game-server/internal/party"
+	"ultimate-game-server/internal/presence"
 	"ultimate-game-server/internal/runtime"
 	"ultimate-game-server/internal/socket"
 	"ultimate-game-server/internal/storage"
+	"ultimate-game-server/internal/tournament"
 
 	"github.com/dop251/goja"
 	"github.com/google/uuid"
@@ -47,10 +51,13 @@ type Server struct {
 	tokenMgr       *auth.TokenManager
 	sessReg        *auth.SessionRegistry
 	rateLimiter    *IPTokenBucketRateLimiter
+	authRateLimit  *IPTokenBucketRateLimiter
+	loginLockout   *auth.LoginLockout
 	SocketRegistry *socket.ConnectionRegistry
 	SocketGateway  *socket.GatewayHandler
 	MatchRouter    *match.Router
 	Matchmaker     *matchmaker.Matchmaker
+	PartyRegistry  *party.Registry
 	rdb            *redis.Client
 
 	httpServer *http.Server
@@ -59,6 +66,10 @@ type Server struct {
 	RuntimeManager *runtime.GoRuntimeManager
 	LuaVM          *lua.LState
 	JSVM           *goja.Runtime
+
+	TournamentScheduler *tournament.TournamentScheduler
+	lifecycleCancel     context.CancelFunc
+	rankTrimStop        chan struct{}
 }
 
 // SetRuntimeManager configures the runtime manager for hook interceptors.
@@ -73,6 +84,12 @@ func (s *Server) SetRuntimeManager(rm *runtime.GoRuntimeManager) {
 		}
 		if s.Matchmaker != nil {
 			s.Matchmaker.SetDependencies(rm.DB(), rm.NK(), rm.Registry())
+		}
+		if s.SocketGateway != nil {
+			s.SocketGateway.SetHookRegistry(rm.Registry())
+		}
+		if s.TournamentScheduler != nil {
+			s.wireSchedulerHooks()
 		}
 	}
 }
@@ -99,7 +116,37 @@ func NewServer(logger *zap.Logger, cfg Config, dbPool *pgxpool.Pool) (*Server, e
 
 	matchRouter := match.NewRouter()
 	sockRegistry := socket.NewConnectionRegistry()
-	sockGateway := socket.NewGatewayHandler(logger, tm, sockRegistry, nil, nil, matchRouter)
+	presenceTracker := presence.NewPresenceTracker()
+
+	var sockGateway *socket.GatewayHandler
+	onConnect := func(s *socket.Session) {
+		if !s.TrackStatus {
+			return
+		}
+		subs := presenceTracker.SetPresence(presence.PresenceRecord{
+			UserID:    s.UserID,
+			SessionID: s.ID,
+			Username:  s.Username,
+			Status:    "",
+			JoinedAt:  time.Now(),
+		})
+		if sockGateway != nil {
+			sockGateway.NotifyStatusJoin(subs, s.UserID, s.ID, s.Username, "")
+		}
+	}
+	onDisconnect := func(sessionID string) {
+		rec, had := presenceTracker.PeekPresence(sessionID)
+		_, _, subs := presenceTracker.RemovePresence(sessionID)
+		presenceTracker.UnfollowAll(sessionID)
+		if had && sockGateway != nil {
+			sockGateway.NotifyStatusLeave(subs, rec.UserID, rec.SessionID, rec.Username)
+		}
+	}
+	sockGateway = socket.NewGatewayHandler(logger, tm, sockRegistry, onConnect, onDisconnect, matchRouter)
+	sockGateway.SetPresenceTracker(presenceTracker)
+	if dbPool != nil {
+		sockGateway.SetDBPool(dbPool)
+	}
 
 	// Initialize Redis connection for Matchmaker
 	var rdb *redis.Client
@@ -120,18 +167,27 @@ func NewServer(logger *zap.Logger, cfg Config, dbPool *pgxpool.Pool) (*Server, e
 	pingCancel()
 
 	matchRouter.SetSessionRegistry(sockRegistry)
+	nodeID := match.ResolveNodeID()
+	sockGateway.SetNodeID(nodeID)
 	if rdb != nil {
-		matchRouter.SetClusterConfig("node-local", rdb, nil)
+		forwarder := match.NewPubSubForwarder(rdb, nodeID, logger)
+		matchRouter.SetClusterConfig(nodeID, rdb, forwarder)
+		matchRouter.StartClusterInputListener(context.Background())
+		matchRouter.StartClusterSignalListener(context.Background())
 		sockGateway.SetRedisClient(rdb)
+		sockGateway.StartRelayFanoutListener(context.Background())
 	}
 
+	sessStore := auth.NewSessionStoreFromRedis(rdb)
 	s := &Server{
 		logger:         logger,
 		cfg:            cfg,
 		dbPool:         dbPool,
 		tokenMgr:       tm,
-		sessReg:        auth.NewSessionRegistry(),
+		sessReg:        auth.NewSessionRegistryWithStore(sessStore),
 		rateLimiter:    NewIPRateLimiter(cfg.RateLimitMax, cfg.RateLimitRefill),
+		authRateLimit:  NewIPRateLimiter(10, 10.0/60.0), // 10 auth req/min/IP
+		loginLockout:   auth.NewLoginLockout(),
 		SocketRegistry: sockRegistry,
 		SocketGateway:  sockGateway,
 		MatchRouter:    matchRouter,
@@ -146,47 +202,135 @@ func NewServer(logger *zap.Logger, cfg Config, dbPool *pgxpool.Pool) (*Server, e
 			SessionID string `json:"session_id"`
 		}
 
-		presences := make([]WSPresence, len(result.PlayerIDs))
-		for idx, pid := range result.PlayerIDs {
-			sessIDs := s.SocketRegistry.GetUserSessionIDs(pid)
-			sessID := ""
-			if len(sessIDs) > 0 {
-				sessID = sessIDs[0]
+		users := make([]WSPresence, 0, len(result.Users))
+		if len(result.Users) > 0 {
+			for _, u := range result.Users {
+				sessID := u.SessionID
+				if sessID == "" {
+					sessIDs := s.SocketRegistry.GetUserSessionIDs(u.UserID)
+					if len(sessIDs) > 0 {
+						sessID = sessIDs[0]
+					}
+				}
+				users = append(users, WSPresence{
+					UserID:    u.UserID,
+					Username:  u.Username,
+					SessionID: sessID,
+				})
 			}
-			presences[idx] = WSPresence{
-				UserID:    pid,
-				Username:  result.Usernames[idx],
-				SessionID: sessID,
+		} else {
+			for idx, pid := range result.PlayerIDs {
+				sessIDs := s.SocketRegistry.GetUserSessionIDs(pid)
+				sessID := ""
+				if len(sessIDs) > 0 {
+					sessID = sessIDs[0]
+				}
+				uname := ""
+				if idx < len(result.Usernames) {
+					uname = result.Usernames[idx]
+				}
+				users = append(users, WSPresence{UserID: pid, Username: uname, SessionID: sessID})
 			}
 		}
 
-		for idx, pid := range result.PlayerIDs {
-			selfPresence := WSPresence{
-				UserID:    pid,
-				Username:  result.Usernames[idx],
-				SessionID: presences[idx].SessionID,
+		for _, u := range users {
+			ticketID := ""
+			if result.TicketIDs != nil {
+				ticketID = result.TicketIDs[u.UserID]
+			}
+			payload := map[string]interface{}{
+				"ticket_id": ticketID,
+				"match_id":  result.MatchID,
+				"users":     users,
+				"self":      u,
+			}
+			if !result.Authoritative && result.MatchToken != "" {
+				payload["token"] = result.MatchToken
+				payload["match_token"] = result.MatchToken
 			}
 
 			notification := map[string]interface{}{
-				"cid": "",
-				"matchmaker_matched": map[string]interface{}{
-					"ticket_id":   "",
-					"match_id":    result.MatchID,
-					"match_token": result.MatchToken,
-					"presences":   presences,
-					"self":        selfPresence,
-				},
+				"cid":                "",
+				"matchmaker_matched": payload,
 			}
-
 			msgBytes, _ := json.Marshal(notification)
-			s.SocketRegistry.SendToUser(pid, msgBytes)
+			s.SocketRegistry.SendToUser(u.UserID, msgBytes)
 		}
 	}
 
 	s.Matchmaker = matchmaker.NewMatchmaker(logger, rdb, nil, nil, nil, onMatched)
+	s.Matchmaker.SetSpawnMatch(func(result matchmaker.MatchResult) {
+		if s.MatchRouter == nil || !result.Authoritative {
+			return
+		}
+		module := result.Module
+		if module == "" {
+			module = os.Getenv("UGE_DEFAULT_MATCH_HANDLER")
+		}
+		if module == "" {
+			logger.Warn("authoritative matchmaker result missing module; skip spawn")
+			return
+		}
+		matchID := result.MatchID
+		if matchID == "" || !strings.Contains(matchID, ".") {
+			matchID = match.NewAuthoritativeMatchID()
+		}
+		params := map[string]interface{}{}
+		_ = s.MatchRouter.CreateAndRegisterMatch(context.Background(), matchID, module, params)
+	})
 	s.SocketGateway.SetMatchmaker(s.Matchmaker)
+	s.PartyRegistry = party.NewRegistry()
+	s.SocketGateway.SetPartyRegistry(s.PartyRegistry)
+
+	// Leaderboard/tournament background scheduler (hooks connected via SetRuntimeManager / StartLifecycle).
+	s.TournamentScheduler = tournament.NewTournamentScheduler(dbPool, rdb, logger, nil)
+	s.rankTrimStop = make(chan struct{})
 
 	return s, nil
+}
+
+// Redis returns the optional Redis client.
+func (s *Server) Redis() *redis.Client {
+	return s.rdb
+}
+
+// StartLifecycle starts leaderboard invalidation listener, rank trimmer, and tournament scheduler.
+func (s *Server) StartLifecycle(parent context.Context) {
+	ctx, cancel := context.WithCancel(parent)
+	s.lifecycleCancel = cancel
+	leaderboard.StartInvalidationListener(ctx, s.rdb)
+	leaderboard.StartRankCacheTrimmer(s.rankTrimStop)
+
+	if s.RuntimeManager != nil {
+		s.wireSchedulerHooks()
+	}
+	s.TournamentScheduler.Start(30 * time.Second)
+}
+
+func (s *Server) wireSchedulerHooks() {
+	reg := s.RuntimeManager.Registry()
+	if reg == nil {
+		return
+	}
+	nk := s.RuntimeManager.NK()
+	s.TournamentScheduler.SetRewardHook(func(ctx context.Context, pool *pgxpool.Pool, tournamentID string, expiryTime time.Time, topRecords []*leaderboard.LeaderboardRecord) error {
+		if fn := reg.GetTournamentEnd(); fn != nil {
+			return fn(ctx, s.RuntimeManager.Logger(), nil, nk, tournamentID, expiryTime.Unix(), expiryTime.Unix())
+		}
+		return nil
+	})
+	s.TournamentScheduler.SetResetHook(func(ctx context.Context, pool *pgxpool.Pool, tournamentID string, endActive, nextReset int64) error {
+		if fn := reg.GetTournamentReset(); fn != nil {
+			return fn(ctx, s.RuntimeManager.Logger(), nil, nk, tournamentID, endActive, nextReset)
+		}
+		return nil
+	})
+	s.TournamentScheduler.SetLeaderboardResetHook(func(ctx context.Context, pool *pgxpool.Pool, leaderboardID string, resetUnix int64) error {
+		if fn := reg.GetLeaderboardReset(); fn != nil {
+			return fn(ctx, s.RuntimeManager.Logger(), nil, nk, leaderboardID, resetUnix)
+		}
+		return nil
+	})
 }
 
 // Start boots the HTTP and gRPC listeners.
@@ -220,15 +364,19 @@ func (s *Server) Start(ctx context.Context) error {
 	}
 	s.gRPCServer = grpc.NewServer(opts...)
 	storagepb.RegisterStorageServiceServer(s.gRPCServer, NewStorageServer(s.dbPool, s.tokenMgr))
-	apipb.RegisterLeaderboardServiceServer(s.gRPCServer, NewLeaderboardServer(s.dbPool, nil, s.tokenMgr))
-	apipb.RegisterTournamentServiceServer(s.gRPCServer, NewTournamentServer(s.dbPool, nil, s.tokenMgr))
+	apipb.RegisterLeaderboardServiceServer(s.gRPCServer, NewLeaderboardServer(s.dbPool, s.rdb, s.tokenMgr))
+	apipb.RegisterTournamentServiceServer(s.gRPCServer, NewTournamentServer(s.dbPool, s.rdb, s.tokenMgr))
 	apipb.RegisterFriendsServiceServer(s.gRPCServer, NewFriendsServer(s.dbPool, s.tokenMgr))
 	apipb.RegisterGroupServiceServer(s.gRPCServer, NewGroupServer(s.dbPool, s.tokenMgr))
 	apipb.RegisterMatchmakerServiceServer(s.gRPCServer, NewMatchmakerServer(s.Matchmaker, s.tokenMgr))
 	apipb.RegisterRealtimeServiceServer(s.gRPCServer, NewRealtimeServer(s.logger, s.MatchRouter, s.rdb, s.tokenMgr))
+	apipb.RegisterAuthenticationServiceServer(s.gRPCServer, NewAuthServer(s))
 
 	// Start Matchmaker Tick Loop (Ticks every 1 second)
 	s.Matchmaker.Start(ctx, 1000*time.Millisecond)
+
+	// Start leaderboard/tournament lifecycle (scheduler + redis invalidation + rank trim)
+	s.StartLifecycle(ctx)
 
 	// 3. Listen HTTP
 	httpListener, err := net.Listen("tcp", s.cfg.HTTPAddr)
@@ -263,6 +411,16 @@ func (s *Server) Start(ctx context.Context) error {
 func (s *Server) Stop(ctx context.Context) error {
 	s.logger.Info("Shutting down API servers...")
 
+	if s.lifecycleCancel != nil {
+		s.lifecycleCancel()
+	}
+	if s.rankTrimStop != nil {
+		close(s.rankTrimStop)
+	}
+	if s.TournamentScheduler != nil {
+		s.TournamentScheduler.Stop()
+	}
+
 	s.Matchmaker.Stop()
 	s.gRPCServer.GracefulStop()
 
@@ -276,27 +434,36 @@ func (s *Server) Stop(ctx context.Context) error {
 }
 
 type authEmailRequest struct {
-	Email       string `json:"email"`
-	Password    string `json:"password"`
-	Username    string `json:"username"`
-	DisplayName string `json:"display_name"`
-	Register    bool   `json:"register"`
+	Email       string            `json:"email"`
+	Password    string            `json:"password"`
+	Username    string            `json:"username"`
+	DisplayName string            `json:"display_name"`
+	Register    bool              `json:"register"`
+	Create      *bool             `json:"create"`
+	Vars        map[string]string `json:"vars"`
 }
 
 type authCustomRequest struct {
-	CustomID string `json:"custom_id"`
+	CustomID string            `json:"custom_id"`
+	ID       string            `json:"id"`
+	Create   *bool             `json:"create"`
+	Username string            `json:"username"`
+	Vars     map[string]string `json:"vars"`
 }
 
 type authSocialRequest struct {
 	Account struct {
 		Token string `json:"token"`
 	} `json:"account"`
-	Username string `json:"username"`
-	Create   *bool  `json:"create"`
+	Username string            `json:"username"`
+	Create   *bool             `json:"create"`
+	Vars     map[string]string `json:"vars"`
 }
 
 type refreshRequest struct {
-	RefreshToken string `json:"refresh_token"`
+	RefreshToken string            `json:"refresh_token"`
+	Token        string            `json:"token"`
+	Vars         map[string]string `json:"vars"`
 }
 
 type authResponse struct {
@@ -304,23 +471,47 @@ type authResponse struct {
 	RefreshToken string `json:"refresh_token"`
 	UserID       string `json:"user_id"`
 	Username     string `json:"username"`
+	Created      bool   `json:"created,omitempty"`
 }
 
 func (s *Server) registerRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /health", s.handleHealth)
 	mux.HandleFunc("POST /v2/account/authenticate/email", s.handleAuthenticateEmail)
 	mux.HandleFunc("POST /v2/account/authenticate/custom", s.handleAuthenticateCustom)
+	mux.HandleFunc("POST /v2/account/authenticate/device", s.handleAuthenticateDevice)
+	mux.HandleFunc("POST /v2/account/authenticate/apple", s.handleAuthenticateApple)
+	mux.HandleFunc("POST /v2/account/authenticate/google", s.handleAuthenticateGoogle)
+	mux.HandleFunc("POST /v2/account/authenticate/facebook", s.handleAuthenticateFacebook)
+	mux.HandleFunc("POST /v2/account/authenticate/steam", s.handleAuthenticateSteam)
+	mux.HandleFunc("POST /v2/account/authenticate/gamecenter", s.handleAuthenticateGameCenter)
 	mux.HandleFunc("POST /v2/account/session/refresh", s.handleSessionRefresh)
+	mux.HandleFunc("POST /v2/account/session/logout", s.handleSessionLogout)
+	mux.HandleFunc("GET /v2/account", s.handleGetAccount)
+	mux.HandleFunc("PUT /v2/account", s.handleUpdateAccount)
+	mux.HandleFunc("DELETE /v2/account", s.handleDeleteAccount)
+	mux.HandleFunc("POST /v2/account/link/email", s.handleLinkEmail)
+	mux.HandleFunc("POST /v2/account/link/device", s.handleLinkDevice)
+	mux.HandleFunc("POST /v2/account/link/apple", s.handleLinkApple)
+	mux.HandleFunc("POST /v2/account/link/google", s.handleLinkGoogle)
+	mux.HandleFunc("POST /v2/account/link/facebook", s.handleLinkFacebook)
+	mux.HandleFunc("POST /v2/account/link/steam", s.handleLinkSteam)
+	mux.HandleFunc("POST /v2/account/link/custom", s.handleLinkCustom)
+	mux.HandleFunc("POST /v2/account/unlink/email", s.handleUnlinkProvider("email"))
+	mux.HandleFunc("POST /v2/account/unlink/device", s.handleUnlinkDevice)
+	mux.HandleFunc("POST /v2/account/unlink/apple", s.handleUnlinkProvider("apple"))
+	mux.HandleFunc("POST /v2/account/unlink/google", s.handleUnlinkProvider("google"))
+	mux.HandleFunc("POST /v2/account/unlink/facebook", s.handleUnlinkProvider("facebook"))
+	mux.HandleFunc("POST /v2/account/unlink/steam", s.handleUnlinkProvider("steam"))
+	mux.HandleFunc("POST /v2/account/unlink/custom", s.handleUnlinkProvider("custom"))
 	mux.HandleFunc("POST /v2/storage", s.handleWriteStorageObjects)
 	mux.HandleFunc("POST /v2/storage/read", s.handleReadStorageObjects)
 	mux.HandleFunc("POST /v2/storage/delete", s.handleDeleteStorageObjects)
 	mux.HandleFunc("GET /v2/storage/{collection}", s.handleListStorageObjects)
 	mux.HandleFunc("GET /ws", s.SocketGateway.Upgrade)
-	mux.HandleFunc("POST /v2/account/authenticate/apple", s.handleAuthenticateApple)
-	mux.HandleFunc("POST /v2/account/authenticate/google", s.handleAuthenticateGoogle)
-	mux.HandleFunc("POST /v2/account/authenticate/facebook", s.handleAuthenticateFacebook)
+	mux.HandleFunc("GET /v2/stream", s.SocketGateway.Upgrade)
 
 	// Leaderboard Routes
+	mux.HandleFunc("GET /v2/leaderboard", s.handleListLeaderboards)
 	mux.HandleFunc("POST /v2/leaderboard", s.handleCreateLeaderboard)
 	mux.HandleFunc("DELETE /v2/leaderboard/{id}", s.handleDeleteLeaderboard)
 	mux.HandleFunc("POST /v2/leaderboard/{id}", s.handleSubmitScore)
@@ -328,12 +519,19 @@ func (s *Server) registerRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /v2/leaderboard/{id}/owner/{owner_id}", s.handleGetOwnerRecord)
 	mux.HandleFunc("GET /v2/leaderboard/{id}/around/{owner_id}", s.handleAroundPlayerLookup)
 	mux.HandleFunc("DELETE /v2/leaderboard/{id}/owner/{owner_id}", s.handleDeleteRecord)
+	mux.HandleFunc("POST /v2/leaderboard/{id}/reset", s.handleManualLeaderboardReset)
+	mux.HandleFunc("GET /v2/leaderboard/{id}/archive", s.handleListLeaderboardArchive)
 
 	// Tournament Routes
 	mux.HandleFunc("POST /v2/tournament", s.handleCreateTournament)
 	mux.HandleFunc("DELETE /v2/tournament/{id}", s.handleDeleteTournament)
 	mux.HandleFunc("POST /v2/tournament/{id}/join", s.handleJoinTournament)
 	mux.HandleFunc("GET /v2/tournament", s.handleListTournaments)
+	mux.HandleFunc("POST /v2/tournament/{id}", s.handleSubmitTournamentScore)
+	mux.HandleFunc("GET /v2/tournament/{id}", s.handleListTournamentRecords)
+	mux.HandleFunc("GET /v2/tournament/{id}/around/{owner_id}", s.handleTournamentAroundPlayer)
+	mux.HandleFunc("DELETE /v2/tournament/{id}/owner/{owner_id}", s.handleDeleteTournamentRecord)
+	mux.HandleFunc("GET /v2/tournament/{id}/season", s.handleListTournamentSeasons)
 
 	// Friends Routes
 	mux.HandleFunc("POST /v2/friend", s.handleAddFriends)
@@ -372,34 +570,46 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleAuthenticateEmail(w http.ResponseWriter, r *http.Request) {
+	if !s.authRateLimit.Allow(s.clientIP(r)) {
+		http.Error(w, "too many requests", http.StatusTooManyRequests)
+		return
+	}
 	var req authEmailRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "bad request", http.StatusBadRequest)
 		return
 	}
 
-	// Execute Before Hook if registered
-	if s.RuntimeManager != nil && s.RuntimeManager.HasBeforeHook("AuthenticateEmail") {
-		res, err := s.RuntimeManager.InvokeBeforeHook(r.Context(), "AuthenticateEmail", &req)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+	in, err := s.invokeBefore(r.Context(), "AuthenticateEmail", &req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if casted, ok := in.(*authEmailRequest); ok {
+		req = *casted
+	}
+
+	ip := s.clientIP(r)
+	if !req.Register {
+		if err := s.loginLockout.Check(req.Email, ip); err != nil {
+			http.Error(w, err.Error(), http.StatusTooManyRequests)
 			return
-		}
-		if casted, ok := res.(*authEmailRequest); ok {
-			req = *casted
 		}
 	}
 
 	var user *auth.User
-	var err error
-
+	var created bool
 	if req.Register {
 		user, err = auth.RegisterEmail(r.Context(), s.dbPool, req.Username, req.Email, req.Password, req.DisplayName)
+		created = true
 	} else {
 		user, err = auth.AuthenticateEmail(r.Context(), s.dbPool, req.Email, req.Password)
 	}
 
 	if err != nil {
+		if !req.Register {
+			s.loginLockout.RecordFailure(req.Email, ip)
+		}
 		status := http.StatusUnauthorized
 		if req.Register {
 			status = http.StatusBadRequest
@@ -407,180 +617,118 @@ func (s *Server) handleAuthenticateEmail(w http.ResponseWriter, r *http.Request)
 		http.Error(w, err.Error(), status)
 		return
 	}
+	s.loginLockout.ClearSuccess(req.Email, ip)
 
-	accessToken, refreshToken, err := s.tokenMgr.GenerateSession(user.ID.String(), user.Username)
+	accessToken, refreshToken, err := s.tokenMgr.GenerateSessionWithVars(user.ID.String(), user.Username, req.Vars)
 	if err != nil {
 		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
-
 	s.sessReg.RegisterSession(user.ID.String(), refreshToken, "")
-
 	resp := authResponse{
-		AccessToken:  accessToken,
-		RefreshToken: refreshToken,
-		UserID:       user.ID.String(),
-		Username:     user.Username,
+		AccessToken: accessToken, RefreshToken: refreshToken,
+		UserID: user.ID.String(), Username: user.Username, Created: created,
 	}
-
-	// Execute After Hook if registered
-	if s.RuntimeManager != nil && s.RuntimeManager.HasAfterHook("AuthenticateEmail") {
-		go func() {
-			hookErr := s.RuntimeManager.InvokeAfterHook(context.Background(), "AuthenticateEmail", &resp, &req)
-			if hookErr != nil {
-				s.logger.Error("After hook failed", zap.Error(hookErr))
-			}
-		}()
-	}
-
+	s.invokeAfter("AuthenticateEmail", &resp, &req)
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(resp)
+	_ = json.NewEncoder(w).Encode(resp)
 }
 
 func (s *Server) handleAuthenticateCustom(w http.ResponseWriter, r *http.Request) {
+	if !s.authRateLimit.Allow(s.clientIP(r)) {
+		http.Error(w, "too many requests", http.StatusTooManyRequests)
+		return
+	}
 	var req authCustomRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "bad request", http.StatusBadRequest)
 		return
 	}
-
-	user, err := auth.AuthenticateCustom(r.Context(), s.dbPool, req.CustomID)
+	in, err := s.invokeBefore(r.Context(), "AuthenticateCustom", &req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if casted, ok := in.(*authCustomRequest); ok {
+		req = *casted
+	}
+	customID := req.CustomID
+	if customID == "" {
+		customID = req.ID
+	}
+	opts := auth.AuthOptions{Create: createFlag(req.Create), Username: req.Username, Vars: req.Vars}
+	user, created, err := auth.AuthenticateCustomWithOpts(r.Context(), s.dbPool, customID, opts)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
 	}
-
-	accessToken, refreshToken, err := s.tokenMgr.GenerateSession(user.ID.String(), user.Username)
+	accessToken, refreshToken, err := s.tokenMgr.GenerateSessionWithVars(user.ID.String(), user.Username, req.Vars)
 	if err != nil {
 		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
-
 	s.sessReg.RegisterSession(user.ID.String(), refreshToken, "")
-
 	resp := authResponse{
-		AccessToken:  accessToken,
-		RefreshToken: refreshToken,
-		UserID:       user.ID.String(),
-		Username:     user.Username,
+		AccessToken: accessToken, RefreshToken: refreshToken,
+		UserID: user.ID.String(), Username: user.Username, Created: created,
 	}
-
+	s.invokeAfter("AuthenticateCustom", &resp, &req)
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(resp)
+	_ = json.NewEncoder(w).Encode(resp)
+}
+
+func (s *Server) handleSocialAuth(w http.ResponseWriter, r *http.Request, provider string, verify func(context.Context, string) (string, error), hook string) {
+	if !s.authRateLimit.Allow(s.clientIP(r)) {
+		http.Error(w, "too many requests", http.StatusTooManyRequests)
+		return
+	}
+	var req authSocialRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "bad request", http.StatusBadRequest)
+		return
+	}
+	in, err := s.invokeBefore(r.Context(), hook, &req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if casted, ok := in.(*authSocialRequest); ok {
+		req = *casted
+	}
+	providerID, err := verify(r.Context(), req.Account.Token)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+	opts := auth.AuthOptions{Create: createFlag(req.Create), Username: req.Username, Vars: req.Vars}
+	user, created, err := auth.AuthenticateSocialWithOpts(r.Context(), s.dbPool, provider, providerID, opts)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+	accessToken, refreshToken, err := s.tokenMgr.GenerateSessionWithVars(user.ID.String(), user.Username, req.Vars)
+	if err != nil {
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+	s.sessReg.RegisterSession(user.ID.String(), refreshToken, "")
+	resp := authResponse{
+		AccessToken: accessToken, RefreshToken: refreshToken,
+		UserID: user.ID.String(), Username: user.Username, Created: created,
+	}
+	s.invokeAfter(hook, &resp, &req)
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(resp)
 }
 
 func (s *Server) handleAuthenticateApple(w http.ResponseWriter, r *http.Request) {
-	var req authSocialRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "bad request", http.StatusBadRequest)
-		return
-	}
-
-	providerID, err := auth.VerifyAppleToken(r.Context(), req.Account.Token)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusUnauthorized)
-		return
-	}
-
-	user, err := auth.AuthenticateSocial(r.Context(), s.dbPool, "apple", providerID)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusUnauthorized)
-		return
-	}
-
-	accessToken, refreshToken, err := s.tokenMgr.GenerateSession(user.ID.String(), user.Username)
-	if err != nil {
-		http.Error(w, "internal server error", http.StatusInternalServerError)
-		return
-	}
-
-	s.sessReg.RegisterSession(user.ID.String(), refreshToken, "")
-
-	resp := authResponse{
-		AccessToken:  accessToken,
-		RefreshToken: refreshToken,
-		UserID:       user.ID.String(),
-		Username:     user.Username,
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(resp)
+	s.handleSocialAuth(w, r, "apple", auth.VerifyAppleToken, "AuthenticateApple")
 }
-
 func (s *Server) handleAuthenticateGoogle(w http.ResponseWriter, r *http.Request) {
-	var req authSocialRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "bad request", http.StatusBadRequest)
-		return
-	}
-
-	providerID, err := auth.VerifyGoogleToken(r.Context(), req.Account.Token)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusUnauthorized)
-		return
-	}
-
-	user, err := auth.AuthenticateSocial(r.Context(), s.dbPool, "google", providerID)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusUnauthorized)
-		return
-	}
-
-	accessToken, refreshToken, err := s.tokenMgr.GenerateSession(user.ID.String(), user.Username)
-	if err != nil {
-		http.Error(w, "internal server error", http.StatusInternalServerError)
-		return
-	}
-
-	s.sessReg.RegisterSession(user.ID.String(), refreshToken, "")
-
-	resp := authResponse{
-		AccessToken:  accessToken,
-		RefreshToken: refreshToken,
-		UserID:       user.ID.String(),
-		Username:     user.Username,
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(resp)
+	s.handleSocialAuth(w, r, "google", auth.VerifyGoogleToken, "AuthenticateGoogle")
 }
-
 func (s *Server) handleAuthenticateFacebook(w http.ResponseWriter, r *http.Request) {
-	var req authSocialRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "bad request", http.StatusBadRequest)
-		return
-	}
-
-	providerID, err := auth.VerifyFacebookToken(r.Context(), req.Account.Token)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusUnauthorized)
-		return
-	}
-
-	user, err := auth.AuthenticateSocial(r.Context(), s.dbPool, "facebook", providerID)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusUnauthorized)
-		return
-	}
-
-	accessToken, refreshToken, err := s.tokenMgr.GenerateSession(user.ID.String(), user.Username)
-	if err != nil {
-		http.Error(w, "internal server error", http.StatusInternalServerError)
-		return
-	}
-
-	s.sessReg.RegisterSession(user.ID.String(), refreshToken, "")
-
-	resp := authResponse{
-		AccessToken:  accessToken,
-		RefreshToken: refreshToken,
-		UserID:       user.ID.String(),
-		Username:     user.Username,
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(resp)
+	s.handleSocialAuth(w, r, "facebook", auth.VerifyFacebookToken, "AuthenticateFacebook")
 }
 
 func (s *Server) handleSessionRefresh(w http.ResponseWriter, r *http.Request) {
@@ -589,11 +737,21 @@ func (s *Server) handleSessionRefresh(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "bad request", http.StatusBadRequest)
 		return
 	}
+	if req.RefreshToken == "" {
+		req.RefreshToken = req.Token
+	}
+	in, err := s.invokeBefore(r.Context(), "SessionRefresh", &req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if casted, ok := in.(*refreshRequest); ok {
+		req = *casted
+	}
 
 	userID, detected, err := s.sessReg.ValidateAndRotateSession(req.RefreshToken)
 	if err != nil {
 		if detected {
-			// Theft detected! Entire token family revoked.
 			s.logger.Warn("Session token reuse/theft detected! Revoking family.", zap.String("user_id", userID))
 			http.Error(w, "compromised token", http.StatusConflict)
 			return
@@ -602,32 +760,29 @@ func (s *Server) handleSessionRefresh(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// We need to fetch username to generate access token claims
 	var username string
-	query := "SELECT username FROM users WHERE id = $1"
-	err = s.dbPool.QueryRow(r.Context(), query, userID).Scan(&username)
+	var disableTime time.Time
+	err = s.dbPool.QueryRow(r.Context(), `SELECT username, disable_time FROM users WHERE id = $1`, userID).Scan(&username, &disableTime)
 	if err != nil {
 		http.Error(w, "user not found", http.StatusUnauthorized)
 		return
 	}
+	if disableTime.After(time.Unix(0, 0)) {
+		s.sessReg.RevokeAllSessions(userID)
+		http.Error(w, "account disabled", http.StatusUnauthorized)
+		return
+	}
 
-	accessToken, newRefreshToken, err := s.tokenMgr.GenerateSession(userID, username)
+	accessToken, newRefreshToken, err := s.tokenMgr.GenerateSessionWithVars(userID, username, req.Vars)
 	if err != nil {
 		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
-
 	s.sessReg.RegisterSession(userID, newRefreshToken, req.RefreshToken)
-
-	resp := authResponse{
-		AccessToken:  accessToken,
-		RefreshToken: newRefreshToken,
-		UserID:       userID,
-		Username:     username,
-	}
-
+	resp := authResponse{AccessToken: accessToken, RefreshToken: newRefreshToken, UserID: userID, Username: username}
+	s.invokeAfter("SessionRefresh", &resp, &req)
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(resp)
+	_ = json.NewEncoder(w).Encode(resp)
 }
 
 func (s *Server) authenticateREST(r *http.Request) (string, error) {
@@ -639,6 +794,14 @@ func (s *Server) authenticateREST(r *http.Request) (string, error) {
 	claims, err := s.tokenMgr.VerifyToken(tokenStr)
 	if err != nil {
 		return "", fmt.Errorf("invalid token: %w", err)
+	}
+	if claims.ID != "" && s.sessReg != nil {
+		if store := s.sessReg.Store(); store != nil {
+			denied, err := store.IsAccessJTIBlacklisted(r.Context(), claims.ID)
+			if err == nil && denied {
+				return "", errors.New("token revoked")
+			}
+		}
 	}
 	return claims.UserID, nil
 }
@@ -653,9 +816,21 @@ func (s *Server) authenticateRESTWithUsername(r *http.Request) (string, string, 
 	if err != nil {
 		return "", "", fmt.Errorf("invalid token: %w", err)
 	}
+	if claims.ID != "" && s.sessReg != nil {
+		if store := s.sessReg.Store(); store != nil {
+			denied, err := store.IsAccessJTIBlacklisted(r.Context(), claims.ID)
+			if err == nil && denied {
+				return "", "", errors.New("token revoked")
+			}
+		}
+	}
 	return claims.UserID, claims.Username, nil
 }
 
+// SessionRegistry exposes the session registry for console ban revocation.
+func (s *Server) SessionRegistry() *auth.SessionRegistry {
+	return s.sessReg
+}
 
 func (s *Server) handleWriteStorageObjects(w http.ResponseWriter, r *http.Request) {
 	userID, err := s.authenticateREST(r)
@@ -892,6 +1067,7 @@ func (s *Server) handleSubmitMatchmakerTicket(w http.ResponseWriter, r *http.Req
 		ID:                uuid.New().String(),
 		UserID:            userID,
 		Username:          username,
+		SessionID:         userID,
 		Region:            req.StringProperties["region"],
 		CreatedAt:         time.Now(),
 		Query:             req.Query,
@@ -912,6 +1088,18 @@ func (s *Server) handleSubmitMatchmakerTicket(w http.ResponseWriter, r *http.Req
 
 	err = s.Matchmaker.Submit(r.Context(), t)
 	if err != nil {
+		if errors.Is(err, matchmaker.ErrTooManyTickets) {
+			http.Error(w, err.Error(), http.StatusTooManyRequests)
+			return
+		}
+		if errors.Is(err, matchmaker.ErrRateLimited) {
+			http.Error(w, err.Error(), http.StatusTooManyRequests)
+			return
+		}
+		if errors.Is(err, matchmaker.ErrInvalidTicket) {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -983,23 +1171,16 @@ func (s *Server) handleGetQueueStats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	queueName := r.PathValue("queue_name")
-	if queueName == "" {
-		queueName = "default"
-	}
-
-	count, _, err := s.Matchmaker.GetQueueStats(r.Context(), queueName)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+	stats := s.Matchmaker.GetStats(r.Context())
+	oldest := ""
+	if !stats.OldestTicketCreateTime.IsZero() {
+		oldest = stats.OldestTicketCreateTime.Format(time.RFC3339)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
-		"queue_name":       queueName,
-		"ticket_count":     count,
-		"average_wait_sec": 0,
-		"active_matches":   0,
+		"ticket_count":              stats.TicketCount,
+		"oldest_ticket_create_time": oldest,
+		"completions":               stats.Completions,
 	})
 }
-

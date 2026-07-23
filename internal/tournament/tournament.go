@@ -2,32 +2,66 @@ package tournament
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"strconv"
 	"sync"
 	"time"
 
 	"ultimate-game-server/internal/leaderboard"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
-	"github.com/robfig/cron/v3"
 	"go.uber.org/zap"
 )
 
-// RewardHook represents the callback triggered when a tournament ends.
+var (
+	ErrTournamentNotFound       = errors.New("tournament not found")
+	ErrTournamentMaxSizeReached = errors.New("tournament max size reached")
+	ErrTournamentOutsideDuration = errors.New("tournament is outside active duration")
+	ErrTournamentEnded          = errors.New("tournament has already ended")
+)
+
+// RewardHook is triggered when a tournament active window ends.
 type RewardHook func(ctx context.Context, pool *pgxpool.Pool, tournamentID string, expiryTime time.Time, topRecords []*leaderboard.LeaderboardRecord) error
 
-// TournamentScheduler manages active occurrences and reward processing.
+// ResetHook is triggered when a tournament occurrence resets/expires.
+type ResetHook func(ctx context.Context, pool *pgxpool.Pool, tournamentID string, endActive, nextReset int64) error
+
+// LeaderboardResetHook is triggered when a regular leaderboard resets.
+type LeaderboardResetHook func(ctx context.Context, pool *pgxpool.Pool, leaderboardID string, resetUnix int64) error
+
+// TournamentScheduler manages tournament end/reset and leaderboard reset callbacks.
 type TournamentScheduler struct {
-	pool            *pgxpool.Pool
-	rdb             *redis.Client
-	logger          *zap.Logger
-	cronParser      cron.Parser
-	rewardHook      RewardHook
-	localRewarded   map[string]bool
-	localRewardedMu sync.Mutex
-	stopChan        chan struct{}
-	wg              sync.WaitGroup
+	pool             *pgxpool.Pool
+	rdb              *redis.Client
+	logger           *zap.Logger
+	rewardHook       RewardHook
+	resetHook        ResetHook
+	leaderboardReset LeaderboardResetHook
+	localRewarded    map[string]bool
+	localRewardedMu  sync.Mutex
+	localReset       map[string]bool
+	localResetMu     sync.Mutex
+	stopChan         chan struct{}
+	wg               sync.WaitGroup
+
+	mu               sync.Mutex
+	endActiveTimer   *time.Timer
+	expiryTimer      *time.Timer
+	lastEndActive    int64
+	lastExpiry       int64
+	callbackQueue    chan schedulerCallback
+	workers          int
+}
+
+type schedulerCallback struct {
+	kind          string // "tournament_end", "tournament_reset", "leaderboard_reset"
+	id            string
+	endActive     int64
+	expiry        int64
+	expiryTime    time.Time
 }
 
 // NewTournamentScheduler creates a new scheduler.
@@ -36,41 +70,259 @@ func NewTournamentScheduler(pool *pgxpool.Pool, rdb *redis.Client, logger *zap.L
 		pool:          pool,
 		rdb:           rdb,
 		logger:        logger,
-		cronParser:    cron.NewParser(cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow),
 		rewardHook:    hook,
 		localRewarded: make(map[string]bool),
+		localReset:    make(map[string]bool),
 		stopChan:      make(chan struct{}),
+		callbackQueue: make(chan schedulerCallback, 1024),
+		workers:       4,
 	}
 }
 
-// Start runs the background evaluation loop every tick (default 30 seconds).
+// SetRewardHook configures the tournament end/reward callback.
+func (ts *TournamentScheduler) SetRewardHook(hook RewardHook) {
+	ts.rewardHook = hook
+}
+
+// SetResetHook configures the tournament reset callback.
+func (ts *TournamentScheduler) SetResetHook(hook ResetHook) {
+	ts.resetHook = hook
+}
+
+// SetLeaderboardResetHook configures the leaderboard reset callback.
+func (ts *TournamentScheduler) SetLeaderboardResetHook(hook LeaderboardResetHook) {
+	ts.leaderboardReset = hook
+}
+
+// Start runs timer-based end/expiry evaluation with a callback worker queue.
+// tickInterval is retained for compatibility; timers drive precision scheduling.
 func (ts *TournamentScheduler) Start(tickInterval time.Duration) {
+	if tickInterval <= 0 {
+		tickInterval = 30 * time.Second
+	}
+	// Warm config cache.
+	if ts.pool != nil {
+		if lbs, err := leaderboard.LoadAllLeaderboards(context.Background(), ts.pool); err == nil {
+			leaderboard.SharedConfigCache.LoadAll(lbs)
+		}
+	}
+
+	for i := 0; i < ts.workers; i++ {
+		ts.wg.Add(1)
+		go ts.callbackWorker()
+	}
+
 	ts.wg.Add(1)
 	go func() {
 		defer ts.wg.Done()
-		ticker := time.NewTicker(tickInterval)
-		defer ticker.Stop()
-
-		ts.logger.Info("Starting tournament scheduler daemon...")
+		ts.logger.Info("Starting tournament/leaderboard timer scheduler...")
+		ts.Update()
+		safety := time.NewTicker(tickInterval)
+		defer safety.Stop()
+		hourly := time.NewTicker(time.Hour)
+		defer hourly.Stop()
 		for {
 			select {
 			case <-ts.stopChan:
-				ts.logger.Info("Stopping tournament scheduler daemon...")
+				ts.logger.Info("Stopping tournament/leaderboard scheduler daemon...")
 				return
-			case <-ticker.C:
-				ctx, cancel := context.WithTimeout(context.Background(), 25*time.Second)
-				if err := ts.evaluateTournaments(ctx); err != nil {
-					ts.logger.Error("Failed evaluating tournaments", zap.Error(err))
+			case <-safety.C:
+				ts.Update()
+			case t := <-hourly.C:
+				leaderboard.SharedRankCache.TrimExpired(t.Unix())
+				if ts.pool != nil {
+					ctx, cancel := context.WithTimeout(context.Background(), 25*time.Second)
+					_, _ = leaderboard.PruneExpiredRecords(ctx, ts.pool, t.UTC())
+					cancel()
 				}
-				cancel()
 			}
 		}
 	}()
 }
 
+// Update recalculates the next end-active and expiry timers from cached/DB configs.
+func (ts *TournamentScheduler) Update() {
+	if ts.pool == nil {
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+
+	now := time.Now().UTC()
+	var nearestEnd, nearestExpiry int64
+
+	lbs, err := leaderboard.LoadAllLeaderboards(ctx, ts.pool)
+	if err != nil {
+		ts.logger.Warn("scheduler update load failed", zap.Error(err))
+		return
+	}
+	leaderboard.SharedConfigCache.LoadAll(lbs)
+
+	type dueItem struct {
+		kind string
+		id   string
+		end  int64
+		exp  int64
+	}
+	var dueNow []dueItem
+
+	for _, lb := range lbs {
+		if lb.IsTournament() {
+			_, endActive, expiry := leaderboard.ActiveDeadlines(lb, now)
+			if endActive > now.Unix() {
+				if nearestEnd == 0 || endActive < nearestEnd {
+					nearestEnd = endActive
+				}
+			} else if endActive > 0 {
+				dueNow = append(dueNow, dueItem{kind: "tournament_end", id: lb.ID, end: endActive, exp: expiry})
+			}
+			if expiry > now.Unix() {
+				if nearestExpiry == 0 || expiry < nearestExpiry {
+					nearestExpiry = expiry
+				}
+			} else if expiry > 0 {
+				dueNow = append(dueNow, dueItem{kind: "tournament_reset", id: lb.ID, end: endActive, exp: expiry})
+			}
+		} else if lb.ResetSchedule != "" {
+			sched := leaderboard.MustParseResetSchedule(lb.ResetSchedule)
+			if sched == nil {
+				continue
+			}
+			next := sched.Next(now).Unix()
+			if nearestExpiry == 0 || next < nearestExpiry {
+				nearestExpiry = next
+			}
+			prev := leaderboard.CalculatePrevReset(now, lb.StartTime.Unix(), sched)
+			if prev > 0 && now.Unix()-prev <= int64(tickWindowSeconds()) {
+				dueNow = append(dueNow, dueItem{kind: "leaderboard_reset", id: lb.ID, exp: prev})
+			}
+		}
+	}
+
+	for _, d := range dueNow {
+		ts.enqueue(schedulerCallback{
+			kind: d.kind, id: d.id, endActive: d.end, expiry: d.exp,
+			expiryTime: leaderboard.ResolveExpiryTime(d.exp),
+		})
+	}
+
+	ts.mu.Lock()
+	defer ts.mu.Unlock()
+	if nearestEnd > 0 && nearestEnd != ts.lastEndActive {
+		ts.lastEndActive = nearestEnd
+		if ts.endActiveTimer != nil {
+			ts.endActiveTimer.Stop()
+		}
+		delay := time.Until(time.Unix(nearestEnd, 0).UTC())
+		if delay < 0 {
+			delay = 0
+		}
+		ts.endActiveTimer = time.AfterFunc(delay, func() { ts.Update() })
+	}
+	if nearestExpiry > 0 && nearestExpiry != ts.lastExpiry {
+		ts.lastExpiry = nearestExpiry
+		if ts.expiryTimer != nil {
+			ts.expiryTimer.Stop()
+		}
+		delay := time.Until(time.Unix(nearestExpiry, 0).UTC())
+		if delay < 0 {
+			delay = 0
+		}
+		ts.expiryTimer = time.AfterFunc(delay, func() { ts.Update() })
+	}
+}
+
+func tickWindowSeconds() int {
+	return 120
+}
+
+func (ts *TournamentScheduler) enqueue(cb schedulerCallback) {
+	select {
+	case ts.callbackQueue <- cb:
+	default:
+		ts.logger.Warn("scheduler callback queue full", zap.String("kind", cb.kind), zap.String("id", cb.id))
+	}
+}
+
+func (ts *TournamentScheduler) callbackWorker() {
+	defer ts.wg.Done()
+	for {
+		select {
+		case <-ts.stopChan:
+			return
+		case cb, ok := <-ts.callbackQueue:
+			if !ok {
+				return
+			}
+			ctx, cancel := context.WithTimeout(context.Background(), 25*time.Second)
+			ts.invokeCallback(ctx, cb)
+			cancel()
+		}
+	}
+}
+
+func (ts *TournamentScheduler) invokeCallback(ctx context.Context, cb schedulerCallback) {
+	switch cb.kind {
+	case "tournament_end":
+		rewardKey := fmt.Sprintf("tournament:end:%s:%d", cb.id, cb.endActive)
+		if ts.isAlreadyRewarded(ctx, rewardKey) || !ts.tryAcquireRewardLock(ctx, rewardKey) {
+			return
+		}
+		expiryTime := cb.expiryTime
+		if expiryTime.IsZero() || expiryTime.Unix() == 0 {
+			expiryTime = leaderboard.ResolveExpiryTime(cb.endActive)
+		}
+		topRecords, _, err := leaderboard.GetLeaderboardRecords(ctx, ts.pool, ts.rdb, cb.id, 100, "", expiryTime)
+		if err != nil {
+			ts.logger.Error("Failed to fetch top records for tournament reward", zap.String("id", cb.id), zap.Error(err))
+			return
+		}
+		if ts.rewardHook != nil {
+			if err := ts.rewardHook(ctx, ts.pool, cb.id, expiryTime, topRecords); err != nil {
+				ts.logger.Error("Reward hook execution failed", zap.String("id", cb.id), zap.Error(err))
+			}
+		}
+	case "tournament_reset":
+		resetKey := fmt.Sprintf("tournament:reset:%s:%d", cb.id, cb.expiry)
+		if ts.isAlreadyReset(ctx, resetKey) || !ts.tryAcquireResetLock(ctx, resetKey) {
+			return
+		}
+		_, _ = leaderboard.ArchiveRecordsForExpiry(ctx, ts.pool, cb.id, cb.expiryTime, strconv.FormatInt(cb.expiry, 10))
+		if _, err := ts.pool.Exec(ctx, `UPDATE leaderboard SET size = 0 WHERE id = $1`, cb.id); err != nil {
+			ts.logger.Error("Could not reset tournament size", zap.Error(err), zap.String("id", cb.id))
+		}
+		leaderboard.SharedRankCache.EvictPartition(cb.id, cb.expiry)
+		if ts.resetHook != nil {
+			if err := ts.resetHook(ctx, ts.pool, cb.id, cb.endActive, cb.expiry); err != nil {
+				ts.logger.Error("Tournament reset hook failed", zap.String("id", cb.id), zap.Error(err))
+			}
+		}
+	case "leaderboard_reset":
+		resetKey := fmt.Sprintf("leaderboard:reset:%s:%d", cb.id, cb.expiry)
+		if ts.isAlreadyReset(ctx, resetKey) || !ts.tryAcquireResetLock(ctx, resetKey) {
+			return
+		}
+		expiryTime := leaderboard.ResolveExpiryTime(cb.expiry)
+		_, _ = leaderboard.ArchiveRecordsForExpiry(ctx, ts.pool, cb.id, expiryTime, strconv.FormatInt(cb.expiry, 10))
+		if ts.leaderboardReset != nil {
+			if err := ts.leaderboardReset(ctx, ts.pool, cb.id, cb.expiry); err != nil {
+				ts.logger.Error("Leaderboard reset hook failed", zap.String("id", cb.id), zap.Error(err))
+			}
+		}
+	}
+}
+
 // Stop halts the scheduler loop.
 func (ts *TournamentScheduler) Stop() {
 	close(ts.stopChan)
+	ts.mu.Lock()
+	if ts.endActiveTimer != nil {
+		ts.endActiveTimer.Stop()
+	}
+	if ts.expiryTimer != nil {
+		ts.expiryTimer.Stop()
+	}
+	ts.mu.Unlock()
 	ts.wg.Wait()
 }
 
@@ -79,11 +331,10 @@ func (ts *TournamentScheduler) evaluateTournaments(ctx context.Context) error {
 		return nil
 	}
 
-	// 1. Fetch all configured tournaments (duration > 0 and reset_schedule != "")
 	query := `
 		SELECT id, reset_schedule, duration, start_time, end_time 
 		FROM leaderboard 
-		WHERE duration > 0 AND reset_schedule != ''
+		WHERE duration > 0
 	`
 	rows, err := ts.pool.Query(ctx, query)
 	if err != nil {
@@ -92,7 +343,6 @@ func (ts *TournamentScheduler) evaluateTournaments(ctx context.Context) error {
 	defer rows.Close()
 
 	now := time.Now().UTC()
-
 	type tourneyItem struct {
 		id            string
 		resetSchedule string
@@ -104,84 +354,116 @@ func (ts *TournamentScheduler) evaluateTournaments(ctx context.Context) error {
 	var items []tourneyItem
 	for rows.Next() {
 		var item tourneyItem
-		err = rows.Scan(&item.id, &item.resetSchedule, &item.duration, &item.startTime, &item.endTime)
-		if err != nil {
+		if err = rows.Scan(&item.id, &item.resetSchedule, &item.duration, &item.startTime, &item.endTime); err != nil {
 			return err
 		}
 		items = append(items, item)
 	}
 
 	for _, item := range items {
-		sched, err := ts.cronParser.Parse(item.resetSchedule)
-		if err != nil {
-			ts.logger.Warn("Failed parsing reset schedule cron for tournament", zap.String("id", item.id), zap.Error(err))
-			continue
+		lb := &leaderboard.Leaderboard{
+			ID:            item.id,
+			ResetSchedule: item.resetSchedule,
+			Duration:      item.duration,
+			StartTime:     item.startTime,
+			EndTime:       item.endTime,
 		}
+		startActive, endActive, expiry := leaderboard.ActiveDeadlines(lb, now)
 
-		// Calculate the previous fire time relative to now
-		prevFire, nextFire := ts.getPrevAndNextFireTime(sched, now, item.startTime)
+		// Tournament end: active window closed but occurrence not yet fully expired, OR just after endActive.
+		if endActive > 0 && now.Unix() >= endActive {
+			rewardKey := fmt.Sprintf("tournament:end:%s:%d", item.id, endActive)
+			if !ts.isAlreadyRewarded(ctx, rewardKey) && ts.tryAcquireRewardLock(ctx, rewardKey) {
+				ts.logger.Info("Tournament active window ended, processing rewards",
+					zap.String("id", item.id), zap.Int64("end_active", endActive), zap.Int64("expiry", expiry))
 
-		// Calculate occurrence expiry
-		occurrenceExpiry := prevFire.Add(time.Duration(item.duration) * time.Second)
-
-		// Check if the current occurrence has ended
-		if now.After(occurrenceExpiry) {
-			// This occurrence has expired! Trigger reward if not already processed.
-			rewardKey := fmt.Sprintf("tournament:rewarded:%s:%d", item.id, occurrenceExpiry.Unix())
-
-			if ts.isAlreadyRewarded(ctx, rewardKey) {
-				continue
-			}
-
-			// Lock reward check
-			if !ts.tryAcquireRewardLock(ctx, rewardKey) {
-				continue
-			}
-
-			ts.logger.Info("Tournament occurrence expired, processing rewards", zap.String("id", item.id), zap.Time("expiry", occurrenceExpiry))
-
-			// Fetch top records for this expired occurrence partition
-			topRecords, _, err := leaderboard.GetLeaderboardRecords(ctx, ts.pool, ts.rdb, item.id, 100, "", occurrenceExpiry)
-			if err != nil {
-				ts.logger.Error("Failed to fetch top leaderboard records for tournament reward", zap.String("id", item.id), zap.Error(err))
-				continue
-			}
-
-			if ts.rewardHook != nil {
-				err = ts.rewardHook(ctx, ts.pool, item.id, occurrenceExpiry, topRecords)
+				expiryTime := leaderboard.ResolveExpiryTime(expiry)
+				if expiry == 0 {
+					expiryTime = leaderboard.ResolveExpiryTime(endActive)
+				}
+				topRecords, _, err := leaderboard.GetLeaderboardRecords(ctx, ts.pool, ts.rdb, item.id, 100, "", expiryTime)
 				if err != nil {
-					ts.logger.Error("Reward hook execution failed", zap.String("id", item.id), zap.Error(err))
-					continue
+					ts.logger.Error("Failed to fetch top records for tournament reward", zap.String("id", item.id), zap.Error(err))
+				} else if ts.rewardHook != nil {
+					if err = ts.rewardHook(ctx, ts.pool, item.id, expiryTime, topRecords); err != nil {
+						ts.logger.Error("Reward hook execution failed", zap.String("id", item.id), zap.Error(err))
+					}
 				}
 			}
-
-			ts.logger.Info("Successfully rewarded tournament occurrence", zap.String("id", item.id), zap.Time("expiry", occurrenceExpiry))
-		} else {
-			ts.logger.Debug("Tournament occurrence is active", zap.String("id", item.id), zap.Time("ends_at", occurrenceExpiry), zap.Time("next_reset", nextFire))
 		}
-	}
 
+		// Tournament reset at expiry boundary.
+		if expiry > 0 && now.Unix() >= expiry {
+			resetKey := fmt.Sprintf("tournament:reset:%s:%d", item.id, expiry)
+			if !ts.isAlreadyReset(ctx, resetKey) && ts.tryAcquireResetLock(ctx, resetKey) {
+				ts.logger.Info("Tournament occurrence expired, resetting size",
+					zap.String("id", item.id), zap.Int64("expiry", expiry))
+
+				if _, err := ts.pool.Exec(ctx, `UPDATE leaderboard SET size = 0 WHERE id = $1`, item.id); err != nil {
+					ts.logger.Error("Could not reset tournament size", zap.Error(err), zap.String("id", item.id))
+				}
+				leaderboard.SharedRankCache.EvictPartition(item.id, expiry)
+
+				if ts.resetHook != nil {
+					if err := ts.resetHook(ctx, ts.pool, item.id, endActive, expiry); err != nil {
+						ts.logger.Error("Tournament reset hook failed", zap.String("id", item.id), zap.Error(err))
+					}
+				}
+			}
+		}
+
+		_ = startActive
+	}
 	return nil
 }
 
-func (ts *TournamentScheduler) getPrevAndNextFireTime(sched cron.Schedule, now time.Time, startTime time.Time) (time.Time, time.Time) {
-	// Look back in time starting 7 days before now to find the last fire time
-	t := now.Add(-7 * 24 * time.Hour)
-	if t.Before(startTime) {
-		t = startTime
+func (ts *TournamentScheduler) evaluateLeaderboardResets(ctx context.Context) error {
+	if ts.pool == nil {
+		return nil
 	}
+	query := `
+		SELECT id, reset_schedule, start_time
+		FROM leaderboard
+		WHERE duration = 0 AND reset_schedule IS NOT NULL AND reset_schedule != ''
+	`
+	rows, err := ts.pool.Query(ctx, query)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
 
-	prev := startTime
-	next := sched.Next(t)
-	for {
-		if next.After(now) {
-			break
+	now := time.Now().UTC()
+	for rows.Next() {
+		var id, resetSchedule string
+		var startTime time.Time
+		if err := rows.Scan(&id, &resetSchedule, &startTime); err != nil {
+			return err
 		}
-		prev = next
-		next = sched.Next(next)
+		sched := leaderboard.MustParseResetSchedule(resetSchedule)
+		if sched == nil {
+			continue
+		}
+		// Previous reset boundary = last fire; if we just passed a fire second within last tick window, fire hook.
+		prev := leaderboard.CalculatePrevReset(now, startTime.Unix(), sched)
+		if prev == 0 {
+			continue
+		}
+		// Fire once per reset boundary when within the last ~2 minutes (covers 30s poll).
+		if now.Unix()-prev > 120 {
+			continue
+		}
+		resetKey := fmt.Sprintf("leaderboard:reset:%s:%d", id, prev)
+		if ts.isAlreadyReset(ctx, resetKey) || !ts.tryAcquireResetLock(ctx, resetKey) {
+			continue
+		}
+		ts.logger.Info("Leaderboard reset boundary reached", zap.String("id", id), zap.Int64("reset", prev))
+		if ts.leaderboardReset != nil {
+			if err := ts.leaderboardReset(ctx, ts.pool, id, prev); err != nil {
+				ts.logger.Error("Leaderboard reset hook failed", zap.String("id", id), zap.Error(err))
+			}
+		}
 	}
-
-	return prev, next
+	return nil
 }
 
 func (ts *TournamentScheduler) isAlreadyRewarded(ctx context.Context, key string) bool {
@@ -198,14 +480,12 @@ func (ts *TournamentScheduler) isAlreadyRewarded(ctx context.Context, key string
 
 func (ts *TournamentScheduler) tryAcquireRewardLock(ctx context.Context, key string) bool {
 	if ts.rdb != nil {
-		// Set dynamic Redis key with 24 hour expiration to prevent duplicate runs
 		success, err := ts.rdb.SetNX(ctx, key, "1", 24*time.Hour).Result()
 		if err == nil && success {
 			return true
 		}
 		return false
 	}
-
 	ts.localRewardedMu.Lock()
 	defer ts.localRewardedMu.Unlock()
 	if ts.localRewarded[key] {
@@ -215,42 +495,164 @@ func (ts *TournamentScheduler) tryAcquireRewardLock(ctx context.Context, key str
 	return true
 }
 
-// JoinTournament registers a player's intent to participate in a tournament.
-// It inserts an idempotent placeholder record with score=0, subscore=0, and num_score=0.
+func (ts *TournamentScheduler) isAlreadyReset(ctx context.Context, key string) bool {
+	if ts.rdb != nil {
+		exists, err := ts.rdb.Exists(ctx, key).Result()
+		if err == nil && exists > 0 {
+			return true
+		}
+	}
+	ts.localResetMu.Lock()
+	defer ts.localResetMu.Unlock()
+	return ts.localReset[key]
+}
+
+func (ts *TournamentScheduler) tryAcquireResetLock(ctx context.Context, key string) bool {
+	if ts.rdb != nil {
+		success, err := ts.rdb.SetNX(ctx, key, "1", 24*time.Hour).Result()
+		if err == nil && success {
+			return true
+		}
+		return false
+	}
+	ts.localResetMu.Lock()
+	defer ts.localResetMu.Unlock()
+	if ts.localReset[key] {
+		return false
+	}
+	ts.localReset[key] = true
+	return true
+}
+
+// JoinTournament registers a player for the current tournament occurrence.
 func JoinTournament(ctx context.Context, pool *pgxpool.Pool, tournamentID, ownerID, username string) error {
-	var joinRequired bool
-	var endTime, startTime time.Time
-	var duration int
-	query := `SELECT join_required, end_time, start_time, duration FROM leaderboard WHERE id = $1`
-	err := pool.QueryRow(ctx, query, tournamentID).Scan(&joinRequired, &endTime, &startTime, &duration)
+	tx, err := pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	var lb leaderboard.Leaderboard
+	query := `SELECT join_required, end_time, start_time, duration, reset_schedule, max_size, max_num_score, enable_ranks, sort_order
+		FROM leaderboard WHERE id = $1 FOR UPDATE`
+	err = tx.QueryRow(ctx, query, tournamentID).Scan(
+		&lb.JoinRequired, &lb.EndTime, &lb.StartTime, &lb.Duration, &lb.ResetSchedule, &lb.MaxSize, &lb.MaxNumScore, &lb.EnableRanks, &lb.SortOrder,
+	)
+	if err == pgx.ErrNoRows {
+		return ErrTournamentNotFound
+	}
+	if err != nil {
+		return err
+	}
+	lb.ID = tournamentID
+	if !lb.IsTournament() {
+		return ErrTournamentNotFound
+	}
+
+	now := time.Now().UTC()
+	if !lb.EndTime.IsZero() && lb.EndTime.Unix() > 0 && now.After(lb.EndTime) {
+		return ErrTournamentEnded
+	}
+
+	startActive, endActive, expiry := leaderboard.ActiveDeadlines(&lb, now)
+	nowUnix := now.Unix()
+	if startActive > nowUnix || (endActive != 0 && endActive < nowUnix) {
+		return ErrTournamentOutsideDuration
+	}
+
+	expiryTime := leaderboard.ResolveExpiryTime(expiry)
+	maxNumScore := lb.MaxNumScore
+	if maxNumScore <= 0 {
+		maxNumScore = 1000000
+	}
+
+	result, err := tx.Exec(ctx, `
+		INSERT INTO leaderboard_record (
+			leaderboard_id, owner_id, username, score, subscore, num_score, max_num_score, metadata, create_time, update_time, expiry_time
+		) VALUES ($1, $2, $3, 0, 0, 0, $4, '{}', now(), now(), $5)
+		ON CONFLICT (owner_id, leaderboard_id, expiry_time) DO NOTHING
+	`, tournamentID, ownerID, username, maxNumScore, expiryTime)
 	if err != nil {
 		return err
 	}
 
-	if !endTime.IsZero() && endTime.Unix() > 0 && time.Now().After(endTime) {
-		return fmt.Errorf("tournament has already ended")
+	if result.RowsAffected() == 1 {
+		if lb.MaxSize > 0 && lb.MaxSize < 100000000 {
+			upd, err := tx.Exec(ctx, `UPDATE leaderboard SET size = size + 1 WHERE id = $1 AND size < max_size`, tournamentID)
+			if err != nil {
+				return err
+			}
+			if upd.RowsAffected() == 0 {
+				return ErrTournamentMaxSizeReached
+			}
+		} else {
+			_, _ = tx.Exec(ctx, `UPDATE leaderboard SET size = size + 1 WHERE id = $1`, tournamentID)
+		}
 	}
 
-	// Calculate correct expiry time for the score partition (default Epoch if no duration)
-	expiryTime := time.Unix(0, 0).UTC()
-	if duration > 0 {
-		now := time.Now()
-		elapsed := now.Sub(startTime)
-		occIdx := int(elapsed.Seconds() / float64(duration))
-		expiryTime = startTime.Add(time.Duration(occIdx+1) * time.Duration(duration) * time.Second)
+	if err = tx.Commit(ctx); err != nil {
+		return err
 	}
 
-	insertQuery := `
-		INSERT INTO leaderboard_record (
-			leaderboard_id, owner_id, username, score, subscore, num_score, max_num_score, metadata, create_time, update_time, expiry_time
-		) VALUES ($1, $2, $3, 0, 0, 0, 1000000, '{}', now(), now(), $4)
-		ON CONFLICT (owner_id, leaderboard_id, expiry_time) DO NOTHING
-	`
-	_, err = pool.Exec(ctx, insertQuery, tournamentID, ownerID, username, expiryTime)
+	_ = leaderboard.SharedRankCache.Insert(tournamentID, lb.SortOrder, 0, 0, expiry, ownerID, lb.EnableRanks)
+	return nil
+}
+
+// AddAttempt increases max_num_score for a player in the current tournament occurrence.
+func AddAttempt(ctx context.Context, pool *pgxpool.Pool, tournamentID, ownerID string, count int) error {
+	if count == 0 {
+		return nil
+	}
+	lb, err := leaderboard.GetLeaderboard(ctx, pool, tournamentID)
+	if err != nil {
+		return ErrTournamentNotFound
+	}
+	if !lb.IsTournament() {
+		return ErrTournamentNotFound
+	}
+	now := time.Now().UTC()
+	_, endActive, expiry := leaderboard.ActiveDeadlines(lb, now)
+	if endActive <= now.Unix() {
+		return ErrTournamentOutsideDuration
+	}
+	expiryTime := leaderboard.ResolveExpiryTime(expiry)
+	_, err = pool.Exec(ctx, `
+		UPDATE leaderboard_record SET max_num_score = max_num_score + $1
+		WHERE leaderboard_id = $2 AND owner_id = $3 AND expiry_time = $4
+	`, count, tournamentID, ownerID, expiryTime)
 	return err
 }
 
-// ListTournaments retrieves a list of tournaments filterable by category and time boundaries.
+// TournamentView is a list/detail projection with computed active fields.
+type TournamentView struct {
+	*leaderboard.Leaderboard
+	CanEnter    bool  `json:"can_enter"`
+	StartActive int64 `json:"start_active"`
+	EndActive   int64 `json:"end_active"`
+	PrevReset   int64 `json:"prev_reset"`
+	NextReset   int64 `json:"next_reset"`
+}
+
+// ToView computes active-state fields for a tournament leaderboard.
+func ToView(lb *leaderboard.Leaderboard, now time.Time) *TournamentView {
+	startActive, endActive, expiry := leaderboard.ActiveDeadlines(lb, now)
+	canEnter := true
+	nowUnix := now.Unix()
+	if startActive > nowUnix || (endActive != 0 && endActive < nowUnix) {
+		canEnter = false
+	}
+	prevReset := leaderboard.CalculatePrevReset(now, lb.StartTime.Unix(), leaderboard.MustParseResetSchedule(lb.ResetSchedule))
+	return &TournamentView{
+		Leaderboard: lb,
+		CanEnter:    canEnter,
+		StartActive: startActive,
+		EndActive:   endActive,
+		PrevReset:   prevReset,
+		NextReset:   expiry,
+	}
+}
+
+// ListTournaments retrieves tournaments filterable by category, time, and active flag.
 func ListTournaments(
 	ctx context.Context,
 	pool *pgxpool.Pool,
@@ -258,12 +660,16 @@ func ListTournaments(
 	startTime, endTime time.Time,
 	limit int,
 	cursor string,
-) ([]*leaderboard.Leaderboard, string, error) {
+	activeOnly bool,
+) ([]*TournamentView, string, error) {
 	if limit <= 0 {
 		limit = 10
 	}
 	if limit > 100 {
 		limit = 100
+	}
+	if categoryEnd == 0 {
+		categoryEnd = 1<<31 - 1
 	}
 
 	query := `
@@ -286,55 +692,73 @@ func ListTournaments(
 		args = append(args, endTime)
 		argIdx++
 	}
-
-	// Simple pagination by ID ordering
+	if cursor != "" {
+		query += fmt.Sprintf(" AND id > $%d", argIdx)
+		args = append(args, cursor)
+		argIdx++
+	}
 	query += " ORDER BY id ASC"
-	
+
 	rows, err := pool.Query(ctx, query, args...)
 	if err != nil {
 		return nil, "", err
 	}
 	defer rows.Close()
 
-	var tList []*leaderboard.Leaderboard
+	now := time.Now().UTC()
+	var views []*TournamentView
 	for rows.Next() {
 		lb := &leaderboard.Leaderboard{}
-		err = rows.Scan(
+		if err = rows.Scan(
 			&lb.ID, &lb.Authoritative, &lb.SortOrder, &lb.Operator, &lb.ResetSchedule, &lb.Metadata, &lb.CreateTime,
 			&lb.Category, &lb.Description, &lb.Duration, &lb.EndTime, &lb.JoinRequired, &lb.MaxSize, &lb.MaxNumScore,
 			&lb.Title, &lb.Size, &lb.StartTime, &lb.EnableRanks,
-		)
-		if err != nil {
+		); err != nil {
 			return nil, "", err
 		}
-		tList = append(tList, lb)
-	}
-
-	startIdx := 0
-	if cursor != "" {
-		for i, lb := range tList {
-			if lb.ID == cursor {
-				startIdx = i + 1
-				break
-			}
+		v := ToView(lb, now)
+		if activeOnly && !v.CanEnter {
+			continue
 		}
+		views = append(views, v)
 	}
 
-	if startIdx >= len(tList) {
-		return []*leaderboard.Leaderboard{}, "", nil
+	if len(views) > limit {
+		next := views[limit-1].ID
+		return views[:limit], next, nil
 	}
-
-	endIdx := startIdx + limit
-	if endIdx > len(tList) {
-		endIdx = len(tList)
-	}
-
-	nextCursor := ""
-	if endIdx < len(tList) {
-		nextCursor = tList[endIdx-1].ID
-	}
-
-	out := tList[startIdx:endIdx]
-	return out, nextCursor, nil
+	return views, "", nil
 }
 
+// GetTournaments fetches tournaments by ID.
+func GetTournaments(ctx context.Context, pool *pgxpool.Pool, ids []string) ([]*TournamentView, error) {
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	rows, err := pool.Query(ctx, `
+		SELECT id, authoritative, sort_order, operator, reset_schedule, metadata, create_time,
+		       category, description, duration, end_time, join_required, max_size, max_num_score,
+		       title, size, start_time, enable_ranks
+		FROM leaderboard
+		WHERE id = ANY($1::text[]) AND duration > 0
+	`, ids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	now := time.Now().UTC()
+	var out []*TournamentView
+	for rows.Next() {
+		lb := &leaderboard.Leaderboard{}
+		if err = rows.Scan(
+			&lb.ID, &lb.Authoritative, &lb.SortOrder, &lb.Operator, &lb.ResetSchedule, &lb.Metadata, &lb.CreateTime,
+			&lb.Category, &lb.Description, &lb.Duration, &lb.EndTime, &lb.JoinRequired, &lb.MaxSize, &lb.MaxNumScore,
+			&lb.Title, &lb.Size, &lb.StartTime, &lb.EnableRanks,
+		); err != nil {
+			return nil, err
+		}
+		out = append(out, ToView(lb, now))
+	}
+	return out, nil
+}
