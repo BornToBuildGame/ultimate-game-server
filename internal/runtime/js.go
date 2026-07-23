@@ -258,6 +258,35 @@ func MapJSNK(vm *goja.Runtime, nk RuntimeModule, timeout time.Duration, registry
 		return vm.ToValue(map[string]interface{}{"parties": rows, "cursor": next})
 	})
 
+	_ = nkObj.Set("group_create", func(call goja.FunctionCall) goja.Value {
+		g, err := nk.GroupCreate(context.Background(),
+			call.Argument(0).String(), call.Argument(1).String(), call.Argument(2).String(),
+			call.Argument(3).String(), call.Argument(4).String(), call.Argument(5).String(),
+			call.Argument(6).ToBoolean(), int(call.Argument(7).ToInteger()))
+		if err != nil {
+			panic(vm.NewGoError(err))
+		}
+		return vm.ToValue(map[string]interface{}{"id": g.ID, "name": g.Name, "open": g.Open})
+	})
+
+	_ = nkObj.Set("groups_list", func(call goja.FunctionCall) goja.Value {
+		var openPtr *bool
+		if !goja.IsUndefined(call.Argument(2)) && !goja.IsNull(call.Argument(2)) {
+			b := call.Argument(2).ToBoolean()
+			openPtr = &b
+		}
+		list, next, err := nk.GroupsList(context.Background(), call.Argument(0).String(), call.Argument(1).String(), openPtr,
+			int(call.Argument(3).ToInteger()), int(call.Argument(4).ToInteger()), call.Argument(5).String())
+		if err != nil {
+			panic(vm.NewGoError(err))
+		}
+		rows := make([]map[string]interface{}, len(list))
+		for i, g := range list {
+			rows[i] = map[string]interface{}{"id": g.ID, "name": g.Name, "open": g.Open}
+		}
+		return vm.ToValue(map[string]interface{}{"groups": rows, "cursor": next})
+	})
+
 	_ = nkObj.Set("friends_add", func(call goja.FunctionCall) goja.Value {
 		userID := call.Argument(0).String()
 		ids := jsStringSlice(call.Argument(1).Export())

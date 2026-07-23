@@ -187,7 +187,7 @@ func TestSocial_Integration(t *testing.T) {
 	}
 
 	// 7. User B joins Group
-	err = JoinGroup(ctx, pool, userBID, group.ID)
+	err = JoinGroup(ctx, pool, userBID, group.ID, nil)
 	if err != nil {
 		t.Fatalf("failed to join group: %v", err)
 	}
@@ -235,5 +235,54 @@ func TestSocial_Integration(t *testing.T) {
 	}
 	if finalCount != 1 {
 		t.Errorf("expected group size 1 post-kick, got: %d", finalCount)
+	}
+
+	// 10. Closed join-request → AddGroupUsers accept
+	closed, err := CreateGroupWithParams(ctx, pool, userAID, CreateGroupParams{
+		Name: "Closed Guild", Open: false, MaxCount: 10, Metadata: "{}",
+	})
+	if err != nil {
+		t.Fatalf("create closed: %v", err)
+	}
+	if err = JoinGroup(ctx, pool, userBID, closed.ID, nil); err != nil {
+		t.Fatalf("closed join request: %v", err)
+	}
+	roleB, err = GetUserRole(ctx, pool, userBID, closed.ID)
+	if err != nil || roleB != RoleJoinRequest {
+		t.Fatalf("expected join request role, got %d err=%v", roleB, err)
+	}
+	var closedCount int
+	_ = pool.QueryRow(ctx, `SELECT edge_count FROM groups WHERE id = $1`, closed.ID).Scan(&closedCount)
+	if closedCount != 1 {
+		t.Fatalf("join request must not bump edge_count, got %d", closedCount)
+	}
+	if err = AddGroupUsers(ctx, pool, userAID, closed.ID, []string{userBID}, nil); err != nil {
+		t.Fatalf("accept: %v", err)
+	}
+	roleB, _ = GetUserRole(ctx, pool, userBID, closed.ID)
+	if roleB != RoleMember {
+		t.Fatalf("expected member after accept, got %d", roleB)
+	}
+
+	// 11. Ban blocks rejoin
+	if err = BanGroupUsers(ctx, pool, userAID, closed.ID, []string{userBID}); err != nil {
+		t.Fatalf("ban: %v", err)
+	}
+	if err = JoinGroup(ctx, pool, userBID, closed.ID, nil); err == nil {
+		t.Fatal("banned user should not rejoin")
+	}
+
+	// 12. Soft-delete excludes from list
+	if err = DeleteGroup(ctx, pool, userAID, closed.ID); err != nil {
+		t.Fatalf("delete: %v", err)
+	}
+	list, _, err := ListGroups(ctx, pool, "Closed", "", nil, 0, 10, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, g := range list {
+		if g.ID == closed.ID {
+			t.Fatal("soft-deleted group should not appear in list")
+		}
 	}
 }

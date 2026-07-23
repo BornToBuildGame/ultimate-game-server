@@ -3819,9 +3819,10 @@ type ListGroupsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 	LangTag       string                 `protobuf:"bytes,2,opt,name=lang_tag,json=langTag,proto3" json:"lang_tag,omitempty"`
-	Open          bool                   `protobuf:"varint,3,opt,name=open,proto3" json:"open,omitempty"`
+	Open          *bool                  `protobuf:"varint,3,opt,name=open,proto3,oneof" json:"open,omitempty"`
 	Limit         int32                  `protobuf:"varint,4,opt,name=limit,proto3" json:"limit,omitempty"`
 	Cursor        string                 `protobuf:"bytes,5,opt,name=cursor,proto3" json:"cursor,omitempty"`
+	Members       int32                  `protobuf:"varint,6,opt,name=members,proto3" json:"members,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -3871,8 +3872,8 @@ func (x *ListGroupsRequest) GetLangTag() string {
 }
 
 func (x *ListGroupsRequest) GetOpen() bool {
-	if x != nil {
-		return x.Open
+	if x != nil && x.Open != nil {
+		return *x.Open
 	}
 	return false
 }
@@ -3889,6 +3890,13 @@ func (x *ListGroupsRequest) GetCursor() string {
 		return x.Cursor
 	}
 	return ""
+}
+
+func (x *ListGroupsRequest) GetMembers() int32 {
+	if x != nil {
+		return x.Members
+	}
+	return 0
 }
 
 type GroupList struct {
@@ -5980,13 +5988,15 @@ const file_api_api_proto_rawDesc = "" +
 	"\x04open\x18\x06 \x01(\bR\x04open\x12\x1a\n" +
 	"\bmetadata\x18\a \x01(\tR\bmetadata\"$\n" +
 	"\x12DeleteGroupRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"\x84\x01\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"\xac\x01\n" +
 	"\x11ListGroupsRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x19\n" +
-	"\blang_tag\x18\x02 \x01(\tR\alangTag\x12\x12\n" +
-	"\x04open\x18\x03 \x01(\bR\x04open\x12\x14\n" +
+	"\blang_tag\x18\x02 \x01(\tR\alangTag\x12\x17\n" +
+	"\x04open\x18\x03 \x01(\bH\x00R\x04open\x88\x01\x01\x12\x14\n" +
 	"\x05limit\x18\x04 \x01(\x05R\x05limit\x12\x16\n" +
-	"\x06cursor\x18\x05 \x01(\tR\x06cursor\"`\n" +
+	"\x06cursor\x18\x05 \x01(\tR\x06cursor\x12\x18\n" +
+	"\amembers\x18\x06 \x01(\x05R\amembersB\a\n" +
+	"\x05_open\"`\n" +
 	"\tGroupList\x122\n" +
 	"\x06groups\x18\x01 \x03(\v2\x1a.ultimate.server.api.GroupR\x06groups\x12\x1f\n" +
 	"\vnext_cursor\x18\x02 \x01(\tR\n" +
@@ -6513,6 +6523,7 @@ func file_api_api_proto_init() {
 	if File_api_api_proto != nil {
 		return
 	}
+	file_api_api_proto_msgTypes[52].OneofWrappers = []any{}
 	file_api_api_proto_msgTypes[81].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{

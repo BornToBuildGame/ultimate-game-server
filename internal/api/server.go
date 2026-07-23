@@ -570,10 +570,13 @@ func (s *Server) registerRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /v2/group", s.handleListGroups)
 	mux.HandleFunc("POST /v2/group/{id}/join", s.handleJoinGroup)
 	mux.HandleFunc("POST /v2/group/{id}/leave", s.handleLeaveGroup)
+	mux.HandleFunc("POST /v2/group/{id}/add", s.handleAddGroupUsers)
 	mux.HandleFunc("POST /v2/group/{id}/kick", s.handleKickGroupUsers)
+	mux.HandleFunc("POST /v2/group/{id}/ban", s.handleBanGroupUsers)
 	mux.HandleFunc("POST /v2/group/{id}/promote", s.handlePromoteGroupUsers)
 	mux.HandleFunc("POST /v2/group/{id}/demote", s.handleDemoteGroupUsers)
 	mux.HandleFunc("GET /v2/group/{id}/user", s.handleListGroupMembers)
+	mux.HandleFunc("GET /v2/user/{user_id}/group", s.handleListUserGroups)
 
 	// Realtime / Match Routes
 	mux.HandleFunc("POST /v2/match", s.handleCreateMatch)

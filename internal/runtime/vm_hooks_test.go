@@ -141,6 +141,44 @@ func (m *mockRuntimeModule) PartyList(ctx context.Context, limit int, open *bool
 	return nil, "", nil
 }
 
+func (m *mockRuntimeModule) GroupsGetId(ctx context.Context, groupIDs []string) ([]*GroupView, error) {
+	return nil, nil
+}
+func (m *mockRuntimeModule) GroupCreate(ctx context.Context, userID, name, description, avatarURL, langTag, metadata string, open bool, maxCount int) (*GroupView, error) {
+	return &GroupView{ID: "g1", Name: name, Open: open}, nil
+}
+func (m *mockRuntimeModule) GroupUpdate(ctx context.Context, groupID, userID, name, description, avatarURL, langTag, metadata string, open bool, maxCount int) error {
+	return nil
+}
+func (m *mockRuntimeModule) GroupDelete(ctx context.Context, groupID, userID string) error { return nil }
+func (m *mockRuntimeModule) GroupUsersAdd(ctx context.Context, groupID, callerID string, userIDs []string) error {
+	return nil
+}
+func (m *mockRuntimeModule) GroupUsersBan(ctx context.Context, groupID, callerID string, userIDs []string) error {
+	return nil
+}
+func (m *mockRuntimeModule) GroupUsersKick(ctx context.Context, groupID, callerID string, userIDs []string) error {
+	return nil
+}
+func (m *mockRuntimeModule) GroupUsersPromote(ctx context.Context, groupID, callerID string, userIDs []string) error {
+	return nil
+}
+func (m *mockRuntimeModule) GroupUsersDemote(ctx context.Context, groupID, callerID string, userIDs []string) error {
+	return nil
+}
+func (m *mockRuntimeModule) GroupUsersList(ctx context.Context, groupID string, limit int, cursor string) ([]*GroupUserView, string, error) {
+	return nil, "", nil
+}
+func (m *mockRuntimeModule) GroupsList(ctx context.Context, name, langTag string, open *bool, members, limit int, cursor string) ([]*GroupView, string, error) {
+	return nil, "", nil
+}
+func (m *mockRuntimeModule) UserGroupsList(ctx context.Context, userID string, limit int, cursor string) ([]*UserGroupView, string, error) {
+	return nil, "", nil
+}
+func (m *mockRuntimeModule) GroupsGetRandom(ctx context.Context, count int) ([]*GroupView, error) {
+	return nil, nil
+}
+
 func (m *mockRuntimeModule) MatchCreate(ctx context.Context, module string, params map[string]interface{}) (string, error) {
 	return "match_12345", nil
 }

@@ -492,6 +492,137 @@ func (m *GoRuntimeModule) PartyList(ctx context.Context, limit int, open *bool, 
 	return m.partyLister.List(limit, open, showHidden, query, cursor)
 }
 
+func toGroupView(g *social.Group) *GroupView {
+	if g == nil {
+		return nil
+	}
+	return &GroupView{
+		ID: g.ID, CreatorID: g.CreatorID, Name: g.Name, Description: g.Description,
+		AvatarURL: g.AvatarURL, LangTag: g.LangTag, Metadata: g.Metadata,
+		Open: g.State == social.GroupStateOpen, EdgeCount: g.EdgeCount, MaxCount: g.MaxCount,
+	}
+}
+
+func (m *GoRuntimeModule) GroupsGetId(ctx context.Context, groupIDs []string) ([]*GroupView, error) {
+	list, err := social.GroupsGetID(ctx, m.dbPool, groupIDs)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]*GroupView, len(list))
+	for i, g := range list {
+		out[i] = toGroupView(g)
+	}
+	return out, nil
+}
+
+func (m *GoRuntimeModule) GroupCreate(ctx context.Context, userID, name, description, avatarURL, langTag, metadata string, open bool, maxCount int) (*GroupView, error) {
+	g, err := social.CreateGroupWithParams(ctx, m.dbPool, userID, social.CreateGroupParams{
+		Name: name, Description: description, AvatarURL: avatarURL, LangTag: langTag,
+		Metadata: metadata, Open: open, MaxCount: maxCount,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return toGroupView(g), nil
+}
+
+func (m *GoRuntimeModule) GroupUpdate(ctx context.Context, groupID, userID, name, description, avatarURL, langTag, metadata string, open bool, maxCount int) error {
+	if err := social.UpdateGroup(ctx, m.dbPool, userID, groupID, name, description, avatarURL, langTag, open, metadata); err != nil {
+		return err
+	}
+	if maxCount > 0 {
+		return social.UpdateGroupMaxCount(ctx, m.dbPool, groupID, maxCount)
+	}
+	return nil
+}
+
+func (m *GoRuntimeModule) GroupDelete(ctx context.Context, groupID, userID string) error {
+	return social.DeleteGroup(ctx, m.dbPool, userID, groupID)
+}
+
+func (m *GoRuntimeModule) GroupUsersAdd(ctx context.Context, groupID, callerID string, userIDs []string) error {
+	return social.AddGroupUsers(ctx, m.dbPool, callerID, groupID, userIDs, nil)
+}
+
+func (m *GoRuntimeModule) GroupUsersBan(ctx context.Context, groupID, callerID string, userIDs []string) error {
+	return social.BanGroupUsers(ctx, m.dbPool, callerID, groupID, userIDs)
+}
+
+func (m *GoRuntimeModule) GroupUsersKick(ctx context.Context, groupID, callerID string, userIDs []string) error {
+	for _, uid := range userIDs {
+		if err := social.KickMember(ctx, m.dbPool, callerID, uid, groupID); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (m *GoRuntimeModule) GroupUsersPromote(ctx context.Context, groupID, callerID string, userIDs []string) error {
+	for _, uid := range userIDs {
+		if err := social.PromoteMember(ctx, m.dbPool, callerID, uid, groupID); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (m *GoRuntimeModule) GroupUsersDemote(ctx context.Context, groupID, callerID string, userIDs []string) error {
+	for _, uid := range userIDs {
+		if err := social.DemoteMember(ctx, m.dbPool, callerID, uid, groupID); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (m *GoRuntimeModule) GroupUsersList(ctx context.Context, groupID string, limit int, cursor string) ([]*GroupUserView, string, error) {
+	list, next, err := social.ListGroupMembers(ctx, m.dbPool, groupID, limit, cursor)
+	if err != nil {
+		return nil, "", err
+	}
+	out := make([]*GroupUserView, len(list))
+	for i, mbr := range list {
+		out[i] = &GroupUserView{UserID: mbr.UserID, Username: mbr.Username, State: mbr.Role}
+	}
+	return out, next, nil
+}
+
+func (m *GoRuntimeModule) GroupsList(ctx context.Context, name, langTag string, open *bool, members, limit int, cursor string) ([]*GroupView, string, error) {
+	list, next, err := social.ListGroups(ctx, m.dbPool, name, langTag, open, members, limit, cursor)
+	if err != nil {
+		return nil, "", err
+	}
+	out := make([]*GroupView, len(list))
+	for i, g := range list {
+		out[i] = toGroupView(g)
+	}
+	return out, next, nil
+}
+
+func (m *GoRuntimeModule) UserGroupsList(ctx context.Context, userID string, limit int, cursor string) ([]*UserGroupView, string, error) {
+	list, next, err := social.ListUserGroups(ctx, m.dbPool, userID, limit, cursor)
+	if err != nil {
+		return nil, "", err
+	}
+	out := make([]*UserGroupView, len(list))
+	for i, r := range list {
+		out[i] = &UserGroupView{Group: toGroupView(r.Group), State: r.Role}
+	}
+	return out, next, nil
+}
+
+func (m *GoRuntimeModule) GroupsGetRandom(ctx context.Context, count int) ([]*GroupView, error) {
+	list, err := social.GroupsGetRandom(ctx, m.dbPool, count)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]*GroupView, len(list))
+	for i, g := range list {
+		out[i] = toGroupView(g)
+	}
+	return out, nil
+}
+
 type apiFriendNotifier struct {
 	m *GoRuntimeModule
 }

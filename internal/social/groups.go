@@ -2,6 +2,7 @@ package social
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strconv"
@@ -27,6 +28,14 @@ const (
 	RoleBanned      = 4
 )
 
+// Group notification codes (reference-engine aligned).
+const (
+	NotificationCodeGroupAdd         = -4
+	NotificationCodeGroupJoinRequest = -5
+)
+
+var epochDisable = time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC)
+
 // Group represents a guild/clan record.
 type Group struct {
 	ID          string
@@ -35,13 +44,57 @@ type Group struct {
 	Description string
 	AvatarURL   string
 	LangTag     string
+	Metadata    string
 	State       int
 	EdgeCount   int
+	MaxCount    int
+	CreateTime  time.Time
+	UpdateTime  time.Time
+	DisableTime time.Time
+}
+
+// CreateGroupParams configures group creation.
+type CreateGroupParams struct {
+	Name        string
+	Description string
+	AvatarURL   string
+	LangTag     string
+	Metadata    string
+	Open        bool
 	MaxCount    int
 }
 
 // CreateGroup creates a new group and designates the creator as SuperAdmin.
+// Legacy helper: open=true, max_count=100.
 func CreateGroup(ctx context.Context, pool *pgxpool.Pool, creatorID, name, description, avatarURL, langTag string) (*Group, error) {
+	return CreateGroupWithParams(ctx, pool, creatorID, CreateGroupParams{
+		Name: name, Description: description, AvatarURL: avatarURL, LangTag: langTag,
+		Open: true, MaxCount: 100, Metadata: "{}",
+	})
+}
+
+// CreateGroupWithParams creates a group with full options.
+func CreateGroupWithParams(ctx context.Context, pool *pgxpool.Pool, creatorID string, p CreateGroupParams) (*Group, error) {
+	if p.Name == "" {
+		return nil, errors.New("group name required")
+	}
+	if p.LangTag == "" {
+		p.LangTag = "en"
+	}
+	if p.MaxCount <= 0 {
+		p.MaxCount = 100
+	}
+	if p.Metadata == "" {
+		p.Metadata = "{}"
+	}
+	if !json.Valid([]byte(p.Metadata)) {
+		return nil, errors.New("invalid metadata json")
+	}
+	state := GroupStateClosed
+	if p.Open {
+		state = GroupStateOpen
+	}
+
 	groupID := uuid.New().String()
 	position := time.Now().UnixNano() / int64(time.Millisecond)
 
@@ -51,39 +104,53 @@ func CreateGroup(ctx context.Context, pool *pgxpool.Pool, creatorID, name, descr
 	}
 	defer tx.Rollback(ctx)
 
-	// Insert groups record
-	groupQuery := `INSERT INTO groups (id, creator_id, name, description, avatar_url, lang_tag, state, edge_count, max_count) 
-	               VALUES ($1, $2, $3, $4, $5, $6, $7, 1, 100) RETURNING id, creator_id, name, description, avatar_url, lang_tag, state, edge_count, max_count`
-	
+	groupQuery := `INSERT INTO groups (id, creator_id, name, description, avatar_url, lang_tag, metadata, state, edge_count, max_count)
+	               VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, 1, $9)
+	               RETURNING id, creator_id, name, description, avatar_url, lang_tag, metadata::text, state, edge_count, max_count, create_time, update_time, disable_time`
 	g := &Group{}
-	err = tx.QueryRow(ctx, groupQuery, groupID, creatorID, name, description, avatarURL, langTag, GroupStateOpen).
-		Scan(&g.ID, &g.CreatorID, &g.Name, &g.Description, &g.AvatarURL, &g.LangTag, &g.State, &g.EdgeCount, &g.MaxCount)
+	err = tx.QueryRow(ctx, groupQuery, groupID, creatorID, p.Name, p.Description, p.AvatarURL, p.LangTag, p.Metadata, state, p.MaxCount).
+		Scan(&g.ID, &g.CreatorID, &g.Name, &g.Description, &g.AvatarURL, &g.LangTag, &g.Metadata, &g.State, &g.EdgeCount, &g.MaxCount, &g.CreateTime, &g.UpdateTime, &g.DisableTime)
 	if err != nil {
 		return nil, err
 	}
 
-	// Insert bidirectional edges (Group -> Creator and Creator -> Group)
 	edgeQuery := `INSERT INTO group_edge (source_id, position, destination_id, state) VALUES ($1, $2, $3, $4)`
-	_, err = tx.Exec(ctx, edgeQuery, groupID, position, creatorID, RoleSuperAdmin)
-	if err != nil {
+	if _, err = tx.Exec(ctx, edgeQuery, groupID, position, creatorID, RoleSuperAdmin); err != nil {
 		return nil, err
 	}
-
-	_, err = tx.Exec(ctx, edgeQuery, creatorID, position, groupID, RoleSuperAdmin)
-	if err != nil {
+	if _, err = tx.Exec(ctx, edgeQuery, creatorID, position, groupID, RoleSuperAdmin); err != nil {
 		return nil, err
 	}
-
-	err = tx.Commit(ctx)
-	if err != nil {
+	if err = tx.Commit(ctx); err != nil {
 		return nil, err
 	}
-
 	return g, nil
 }
 
-// JoinGroup joins an open group, adding membership edges and updating the count.
-func JoinGroup(ctx context.Context, pool *pgxpool.Pool, userID, groupID string) error {
+// GroupsGetID returns groups by IDs (active only).
+func GroupsGetID(ctx context.Context, pool *pgxpool.Pool, ids []string) ([]*Group, error) {
+	if len(ids) == 0 {
+		return []*Group{}, nil
+	}
+	rows, err := pool.Query(ctx, `SELECT id, creator_id, name, description, avatar_url, lang_tag, metadata::text, state, edge_count, max_count, create_time, update_time, disable_time
+		FROM groups WHERE id = ANY($1) AND disable_time = $2`, ids, epochDisable)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []*Group
+	for rows.Next() {
+		g := &Group{}
+		if err := rows.Scan(&g.ID, &g.CreatorID, &g.Name, &g.Description, &g.AvatarURL, &g.LangTag, &g.Metadata, &g.State, &g.EdgeCount, &g.MaxCount, &g.CreateTime, &g.UpdateTime, &g.DisableTime); err != nil {
+			return nil, err
+		}
+		out = append(out, g)
+	}
+	return out, nil
+}
+
+// JoinGroup joins an open group or queues a join request for a closed group.
+func JoinGroup(ctx context.Context, pool *pgxpool.Pool, userID, groupID string, notifier FriendNotifier) error {
 	position := time.Now().UnixNano() / int64(time.Millisecond)
 
 	tx, err := pool.Begin(ctx)
@@ -92,25 +159,19 @@ func JoinGroup(ctx context.Context, pool *pgxpool.Pool, userID, groupID string) 
 	}
 	defer tx.Rollback(ctx)
 
-	// 1. Lock and fetch group state/size
 	var state, edgeCount, maxCount int
-	groupQuery := `SELECT state, edge_count, max_count FROM groups WHERE id = $1 FOR UPDATE`
-	err = tx.QueryRow(ctx, groupQuery, groupID).Scan(&state, &edgeCount, &maxCount)
+	var name string
+	err = tx.QueryRow(ctx, `SELECT state, edge_count, max_count, name FROM groups WHERE id = $1 AND disable_time = $2 FOR UPDATE`,
+		groupID, epochDisable).Scan(&state, &edgeCount, &maxCount, &name)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return errors.New("group not found")
+		}
 		return err
 	}
 
-	if state == GroupStateClosed {
-		return errors.New("group is closed")
-	}
-	if edgeCount >= maxCount {
-		return errors.New("group is full")
-	}
-
-	// 2. Check if already member
 	var role int
-	checkQuery := `SELECT state FROM group_edge WHERE source_id = $1 AND destination_id = $2`
-	err = tx.QueryRow(ctx, checkQuery, groupID, userID).Scan(&role)
+	err = tx.QueryRow(ctx, `SELECT state FROM group_edge WHERE source_id = $1 AND destination_id = $2`, groupID, userID).Scan(&role)
 	if err == nil {
 		if role <= RoleMember {
 			return errors.New("already member of this group")
@@ -118,35 +179,65 @@ func JoinGroup(ctx context.Context, pool *pgxpool.Pool, userID, groupID string) 
 		if role == RoleBanned {
 			return errors.New("banned from this group")
 		}
+		if role == RoleJoinRequest {
+			return errors.New("join request already pending")
+		}
+	} else if !errors.Is(err, pgx.ErrNoRows) {
+		return err
 	}
 
-	// 3. Insert membership edges
 	edgeQuery := `INSERT INTO group_edge (source_id, position, destination_id, state) VALUES ($1, $2, $3, $4)
 	              ON CONFLICT (source_id, destination_id) DO UPDATE SET state = $4, position = $2, update_time = now()`
-	_, err = tx.Exec(ctx, edgeQuery, groupID, position, userID, RoleMember)
-	if err != nil {
+
+	if state == GroupStateOpen {
+		if edgeCount >= maxCount {
+			return errors.New("group is full")
+		}
+		if _, err = tx.Exec(ctx, edgeQuery, groupID, position, userID, RoleMember); err != nil {
+			return err
+		}
+		if _, err = tx.Exec(ctx, edgeQuery, userID, position, groupID, RoleMember); err != nil {
+			return err
+		}
+		if _, err = tx.Exec(ctx, `UPDATE groups SET edge_count = edge_count + 1, update_time = now() WHERE id = $1`, groupID); err != nil {
+			return err
+		}
+		return tx.Commit(ctx)
+	}
+
+	// Closed: join request (no edge_count bump)
+	if _, err = tx.Exec(ctx, edgeQuery, groupID, position, userID, RoleJoinRequest); err != nil {
 		return err
 	}
-	_, err = tx.Exec(ctx, edgeQuery, userID, position, groupID, RoleMember)
-	if err != nil {
+	if _, err = tx.Exec(ctx, edgeQuery, userID, position, groupID, RoleJoinRequest); err != nil {
+		return err
+	}
+	if err = tx.Commit(ctx); err != nil {
 		return err
 	}
 
-	// 4. Update edge count
-	updateQuery := `UPDATE groups SET edge_count = edge_count + 1, update_time = now() WHERE id = $1`
-	_, err = tx.Exec(ctx, updateQuery, groupID)
-	if err != nil {
-		return err
+	if notifier != nil {
+		var username string
+		_ = pool.QueryRow(ctx, `SELECT username FROM users WHERE id = $1`, userID).Scan(&username)
+		contentBytes, _ := json.Marshal(map[string]string{"group_id": groupID, "username": username})
+		rows, qerr := pool.Query(ctx, `SELECT destination_id FROM group_edge WHERE source_id = $1 AND state <= $2`, groupID, RoleAdmin)
+		if qerr == nil {
+			defer rows.Close()
+			for rows.Next() {
+				var adminID string
+				if rows.Scan(&adminID) == nil {
+					_ = notifier.Notify(ctx, adminID, "Group join request", string(contentBytes), int16(NotificationCodeGroupJoinRequest), userID)
+				}
+			}
+		}
 	}
-
-	return tx.Commit(ctx)
+	return nil
 }
 
 // GetUserRole retrieves the role of a user in a group.
 func GetUserRole(ctx context.Context, pool *pgxpool.Pool, userID, groupID string) (int, error) {
 	var role int
-	query := `SELECT state FROM group_edge WHERE source_id = $1 AND destination_id = $2`
-	err := pool.QueryRow(ctx, query, groupID, userID).Scan(&role)
+	err := pool.QueryRow(ctx, `SELECT state FROM group_edge WHERE source_id = $1 AND destination_id = $2`, groupID, userID).Scan(&role)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return -1, errors.New("not a member")
@@ -156,7 +247,95 @@ func GetUserRole(ctx context.Context, pool *pgxpool.Pool, userID, groupID string
 	return role, nil
 }
 
+// IsGroupMember reports whether user has membership state <= RoleMember.
+func IsGroupMember(ctx context.Context, pool *pgxpool.Pool, userID, groupID string) (bool, error) {
+	var role int
+	err := pool.QueryRow(ctx, `SELECT state FROM group_edge WHERE source_id = $1 AND destination_id = $2`, groupID, userID).Scan(&role)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return role <= RoleMember, nil
+}
+
+// AddGroupUsers adds users as members or accepts join requests (admin+). Empty callerID = authoritative.
+func AddGroupUsers(ctx context.Context, pool *pgxpool.Pool, callerID, groupID string, userIDs []string, notifier FriendNotifier) error {
+	tx, err := pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	var edgeCount, maxCount int
+	var name string
+	err = tx.QueryRow(ctx, `SELECT edge_count, max_count, name FROM groups WHERE id = $1 AND disable_time = $2 FOR UPDATE`,
+		groupID, epochDisable).Scan(&edgeCount, &maxCount, &name)
+	if err != nil {
+		return errors.New("group not found")
+	}
+
+	if callerID != "" {
+		var callerRole int
+		err = tx.QueryRow(ctx, `SELECT state FROM group_edge WHERE source_id = $1 AND destination_id = $2`, groupID, callerID).Scan(&callerRole)
+		if err != nil || callerRole > RoleAdmin {
+			return errors.New("insufficient permissions")
+		}
+	}
+
+	edgeQuery := `INSERT INTO group_edge (source_id, position, destination_id, state) VALUES ($1, $2, $3, $4)
+	              ON CONFLICT (source_id, destination_id) DO UPDATE SET state = $4, position = $2, update_time = now()`
+	added := 0
+	for _, uid := range userIDs {
+		if uid == "" {
+			continue
+		}
+		position := time.Now().UnixNano() / int64(time.Millisecond)
+		var existing int
+		err = tx.QueryRow(ctx, `SELECT state FROM group_edge WHERE source_id = $1 AND destination_id = $2`, groupID, uid).Scan(&existing)
+		if err == nil {
+			if existing <= RoleMember {
+				continue
+			}
+			if existing == RoleBanned {
+				continue
+			}
+			// join request or other → promote to member
+		} else if !errors.Is(err, pgx.ErrNoRows) {
+			return err
+		}
+		if edgeCount+added >= maxCount {
+			return errors.New("group is full")
+		}
+		if _, err = tx.Exec(ctx, edgeQuery, groupID, position, uid, RoleMember); err != nil {
+			return err
+		}
+		if _, err = tx.Exec(ctx, edgeQuery, uid, position, groupID, RoleMember); err != nil {
+			return err
+		}
+		added++
+	}
+	if added > 0 {
+		if _, err = tx.Exec(ctx, `UPDATE groups SET edge_count = edge_count + $1, update_time = now() WHERE id = $2`, added, groupID); err != nil {
+			return err
+		}
+	}
+	if err = tx.Commit(ctx); err != nil {
+		return err
+	}
+	if notifier != nil && added > 0 {
+		contentBytes, _ := json.Marshal(map[string]string{"group_id": groupID, "name": name})
+		sender := callerID
+		for _, uid := range userIDs {
+			_ = notifier.Notify(ctx, uid, "You've been added to a group", string(contentBytes), int16(NotificationCodeGroupAdd), sender)
+		}
+	}
+	return nil
+}
+
 // KickMember removes a user from a group if kicker has proper authority.
+// Also used to reject join requests (state 3) without changing edge_count.
 func KickMember(ctx context.Context, pool *pgxpool.Pool, kickerID, userID, groupID string) error {
 	if kickerID == userID {
 		return errors.New("cannot kick yourself")
@@ -168,92 +347,143 @@ func KickMember(ctx context.Context, pool *pgxpool.Pool, kickerID, userID, group
 	}
 	defer tx.Rollback(ctx)
 
-	// Fetch kicker role
 	var kickerRole int
-	queryRole := `SELECT state FROM group_edge WHERE source_id = $1 AND destination_id = $2`
-	err = tx.QueryRow(ctx, queryRole, groupID, kickerID).Scan(&kickerRole)
+	err = tx.QueryRow(ctx, `SELECT state FROM group_edge WHERE source_id = $1 AND destination_id = $2`, groupID, kickerID).Scan(&kickerRole)
 	if err != nil {
 		return errors.New("kicker is not a member of the group")
 	}
-
-	// Kicker must be superadmin or admin
 	if kickerRole > RoleAdmin {
 		return errors.New("insufficient permissions to kick")
 	}
 
-	// Fetch target role
 	var targetRole int
-	err = tx.QueryRow(ctx, queryRole, groupID, userID).Scan(&targetRole)
+	err = tx.QueryRow(ctx, `SELECT state FROM group_edge WHERE source_id = $1 AND destination_id = $2`, groupID, userID).Scan(&targetRole)
 	if err != nil {
 		return errors.New("target is not a member of the group")
 	}
-
-	// Kicker role must be strictly higher than target role
-	if kickerRole >= targetRole {
+	if kickerRole >= targetRole && targetRole <= RoleMember {
 		return errors.New("cannot kick equal or higher ranking members")
 	}
+	// Admin can kick join requests (state 3)
+	if targetRole == RoleJoinRequest && kickerRole > RoleAdmin {
+		return errors.New("insufficient permissions to kick")
+	}
 
-	// Delete bidirectional edges
-	deleteQuery := `DELETE FROM group_edge WHERE (source_id = $1 AND destination_id = $2) OR (source_id = $2 AND destination_id = $1)`
-	_, err = tx.Exec(ctx, deleteQuery, groupID, userID)
+	_, err = tx.Exec(ctx, `DELETE FROM group_edge WHERE (source_id = $1 AND destination_id = $2) OR (source_id = $2 AND destination_id = $1)`, groupID, userID)
 	if err != nil {
 		return err
 	}
-
-	// Update edge count
-	updateQuery := `UPDATE groups SET edge_count = edge_count - 1, update_time = now() WHERE id = $1`
-	_, err = tx.Exec(ctx, updateQuery, groupID)
-	if err != nil {
-		return err
+	if targetRole <= RoleMember {
+		if _, err = tx.Exec(ctx, `UPDATE groups SET edge_count = GREATEST(edge_count - 1, 0), update_time = now() WHERE id = $1`, groupID); err != nil {
+			return err
+		}
 	}
-
 	return tx.Commit(ctx)
 }
 
-// UpdateGroup updates group metadata and details.
-func UpdateGroup(ctx context.Context, pool *pgxpool.Pool, id, name, description, avatarURL, langTag string, open bool, metadata string) error {
-	state := GroupStateOpen
-	if !open {
-		state = GroupStateClosed
-	}
-	query := `UPDATE groups SET name = $1, description = $2, avatar_url = $3, lang_tag = $4, state = $5, metadata = $6, update_time = now() WHERE id = $7`
-	_, err := pool.Exec(ctx, query, name, description, avatarURL, langTag, state, metadata, id)
-	return err
-}
-
-// DeleteGroup deletes a group and all its edges.
-func DeleteGroup(ctx context.Context, pool *pgxpool.Pool, kickerID, id string) error {
-	// Kicker must be SuperAdmin
-	var role int
-	err := pool.QueryRow(ctx, "SELECT state FROM group_edge WHERE source_id = $1 AND destination_id = $2", id, kickerID).Scan(&role)
-	if err != nil {
-		return errors.New("kicker is not a member of the group")
-	}
-	if role != RoleSuperAdmin {
-		return errors.New("only SuperAdmin can delete group")
-	}
-
+// BanGroupUsers bans users: remove membership edges; insert unidirectional group→user state 4.
+func BanGroupUsers(ctx context.Context, pool *pgxpool.Pool, callerID, groupID string, userIDs []string) error {
 	tx, err := pool.Begin(ctx)
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback(ctx)
 
-	_, err = tx.Exec(ctx, "DELETE FROM group_edge WHERE source_id = $1 OR destination_id = $1", id)
-	if err != nil {
-		return err
+	if callerID != "" {
+		var callerRole int
+		err = tx.QueryRow(ctx, `SELECT state FROM group_edge WHERE source_id = $1 AND destination_id = $2`, groupID, callerID).Scan(&callerRole)
+		if err != nil || callerRole > RoleAdmin {
+			return errors.New("insufficient permissions to ban")
+		}
 	}
 
-	_, err = tx.Exec(ctx, "DELETE FROM groups WHERE id = $1", id)
-	if err != nil {
-		return err
+	for _, uid := range userIDs {
+		if uid == "" || uid == callerID {
+			continue
+		}
+		var targetRole int
+		err = tx.QueryRow(ctx, `SELECT state FROM group_edge WHERE source_id = $1 AND destination_id = $2`, groupID, uid).Scan(&targetRole)
+		wasMember := err == nil && targetRole <= RoleMember
+		if err == nil && callerID != "" {
+			var callerRole int
+			_ = tx.QueryRow(ctx, `SELECT state FROM group_edge WHERE source_id = $1 AND destination_id = $2`, groupID, callerID).Scan(&callerRole)
+			if targetRole <= callerRole && targetRole <= RoleMember {
+				continue
+			}
+		}
+		_, _ = tx.Exec(ctx, `DELETE FROM group_edge WHERE (source_id = $1 AND destination_id = $2) OR (source_id = $2 AND destination_id = $1)`, groupID, uid)
+		if wasMember {
+			_, _ = tx.Exec(ctx, `UPDATE groups SET edge_count = GREATEST(edge_count - 1, 0), update_time = now() WHERE id = $1`, groupID)
+		}
+		pos := time.Now().UnixNano() / int64(time.Millisecond)
+		_, err = tx.Exec(ctx, `INSERT INTO group_edge (source_id, position, destination_id, state) VALUES ($1, $2, $3, $4)
+			ON CONFLICT (source_id, destination_id) DO UPDATE SET state = $4, position = $2, update_time = now()`,
+			groupID, pos, uid, RoleBanned)
+		if err != nil {
+			return err
+		}
 	}
-
 	return tx.Commit(ctx)
 }
 
-// ListGroups searches groups with filters and pagination.
-func ListGroups(ctx context.Context, pool *pgxpool.Pool, name, langTag string, open *bool, limit int, cursor string) ([]*Group, string, error) {
+// UpdateGroup updates group metadata; callerID empty = authoritative.
+func UpdateGroup(ctx context.Context, pool *pgxpool.Pool, callerID, id, name, description, avatarURL, langTag string, open bool, metadata string) error {
+	if callerID != "" {
+		role, err := GetUserRole(ctx, pool, callerID, id)
+		if err != nil || role > RoleAdmin {
+			return errors.New("insufficient permissions to update group")
+		}
+	}
+	if metadata == "" {
+		metadata = "{}"
+	}
+	if !json.Valid([]byte(metadata)) {
+		return errors.New("invalid metadata json")
+	}
+	state := GroupStateOpen
+	if !open {
+		state = GroupStateClosed
+	}
+	_, err := pool.Exec(ctx, `UPDATE groups SET name = $1, description = $2, avatar_url = $3, lang_tag = $4, state = $5, metadata = $6::jsonb, update_time = now()
+		WHERE id = $7 AND disable_time = $8`, name, description, avatarURL, langTag, state, metadata, id, epochDisable)
+	return err
+}
+
+// UpdateGroupMaxCount sets max_count (runtime/console).
+func UpdateGroupMaxCount(ctx context.Context, pool *pgxpool.Pool, id string, maxCount int) error {
+	if maxCount < 1 {
+		return errors.New("invalid max_count")
+	}
+	_, err := pool.Exec(ctx, `UPDATE groups SET max_count = $1, update_time = now() WHERE id = $2 AND disable_time = $3`, maxCount, id, epochDisable)
+	return err
+}
+
+// DeleteGroup soft-disables a group (superadmin). Empty callerID = authoritative hard cleanup of edges + disable.
+func DeleteGroup(ctx context.Context, pool *pgxpool.Pool, callerID, id string) error {
+	if callerID != "" {
+		role, err := GetUserRole(ctx, pool, callerID, id)
+		if err != nil || role != RoleSuperAdmin {
+			return errors.New("only SuperAdmin can delete group")
+		}
+	}
+	tx, err := pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+	_, err = tx.Exec(ctx, `DELETE FROM group_edge WHERE source_id = $1 OR destination_id = $1`, id)
+	if err != nil {
+		return err
+	}
+	_, err = tx.Exec(ctx, `UPDATE groups SET disable_time = now(), update_time = now(), edge_count = 0 WHERE id = $1`, id)
+	if err != nil {
+		return err
+	}
+	return tx.Commit(ctx)
+}
+
+// ListGroups searches active groups with filters and pagination.
+func ListGroups(ctx context.Context, pool *pgxpool.Pool, name, langTag string, open *bool, members int, limit int, cursor string) ([]*Group, string, error) {
 	if limit <= 0 {
 		limit = 10
 	}
@@ -261,9 +491,10 @@ func ListGroups(ctx context.Context, pool *pgxpool.Pool, name, langTag string, o
 		limit = 100
 	}
 
-	query := `SELECT id, creator_id, name, description, avatar_url, lang_tag, state, edge_count, max_count FROM groups WHERE 1=1`
-	args := []interface{}{}
-	argIdx := 1
+	query := `SELECT id, creator_id, name, description, avatar_url, lang_tag, metadata::text, state, edge_count, max_count, create_time, update_time, disable_time
+		FROM groups WHERE disable_time = $1`
+	args := []interface{}{epochDisable}
+	argIdx := 2
 
 	if name != "" {
 		query += fmt.Sprintf(" AND name ILIKE $%d", argIdx)
@@ -284,9 +515,13 @@ func ListGroups(ctx context.Context, pool *pgxpool.Pool, name, langTag string, o
 		args = append(args, stateVal)
 		argIdx++
 	}
+	if members > 0 {
+		query += fmt.Sprintf(" AND edge_count <= $%d", argIdx)
+		args = append(args, members)
+		argIdx++
+	}
 
 	query += " ORDER BY id ASC"
-
 	rows, err := pool.Query(ctx, query, args...)
 	if err != nil {
 		return nil, "", err
@@ -296,8 +531,7 @@ func ListGroups(ctx context.Context, pool *pgxpool.Pool, name, langTag string, o
 	var list []*Group
 	for rows.Next() {
 		g := &Group{}
-		err = rows.Scan(&g.ID, &g.CreatorID, &g.Name, &g.Description, &g.AvatarURL, &g.LangTag, &g.State, &g.EdgeCount, &g.MaxCount)
-		if err != nil {
+		if err = rows.Scan(&g.ID, &g.CreatorID, &g.Name, &g.Description, &g.AvatarURL, &g.LangTag, &g.Metadata, &g.State, &g.EdgeCount, &g.MaxCount, &g.CreateTime, &g.UpdateTime, &g.DisableTime); err != nil {
 			return nil, "", err
 		}
 		list = append(list, g)
@@ -312,22 +546,43 @@ func ListGroups(ctx context.Context, pool *pgxpool.Pool, name, langTag string, o
 			}
 		}
 	}
-
 	if startIdx >= len(list) {
 		return []*Group{}, "", nil
 	}
-
 	endIdx := startIdx + limit
 	if endIdx > len(list) {
 		endIdx = len(list)
 	}
-
 	nextCursor := ""
 	if endIdx < len(list) {
 		nextCursor = list[endIdx-1].ID
 	}
-
 	return list[startIdx:endIdx], nextCursor, nil
+}
+
+// GroupsGetRandom returns up to count random active groups.
+func GroupsGetRandom(ctx context.Context, pool *pgxpool.Pool, count int) ([]*Group, error) {
+	if count <= 0 {
+		count = 1
+	}
+	if count > 100 {
+		count = 100
+	}
+	rows, err := pool.Query(ctx, `SELECT id, creator_id, name, description, avatar_url, lang_tag, metadata::text, state, edge_count, max_count, create_time, update_time, disable_time
+		FROM groups WHERE disable_time = $1 ORDER BY random() LIMIT $2`, epochDisable, count)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []*Group
+	for rows.Next() {
+		g := &Group{}
+		if err := rows.Scan(&g.ID, &g.CreatorID, &g.Name, &g.Description, &g.AvatarURL, &g.LangTag, &g.Metadata, &g.State, &g.EdgeCount, &g.MaxCount, &g.CreateTime, &g.UpdateTime, &g.DisableTime); err != nil {
+			return nil, err
+		}
+		out = append(out, g)
+	}
+	return out, nil
 }
 
 // LeaveGroup removes a member from a group.
@@ -338,41 +593,50 @@ func LeaveGroup(ctx context.Context, pool *pgxpool.Pool, userID, groupID string)
 	}
 	defer tx.Rollback(ctx)
 
-	// Fetch role
 	var role int
-	err = tx.QueryRow(ctx, "SELECT state FROM group_edge WHERE source_id = $1 AND destination_id = $2", groupID, userID).Scan(&role)
+	err = tx.QueryRow(ctx, `SELECT state FROM group_edge WHERE source_id = $1 AND destination_id = $2`, groupID, userID).Scan(&role)
 	if err != nil {
 		return errors.New("user is not a member of the group")
 	}
+	if role == RoleBanned {
+		return nil
+	}
+	if role == RoleJoinRequest {
+		_, err = tx.Exec(ctx, `DELETE FROM group_edge WHERE (source_id = $1 AND destination_id = $2) OR (source_id = $2 AND destination_id = $1)`, groupID, userID)
+		if err != nil {
+			return err
+		}
+		return tx.Commit(ctx)
+	}
 
 	if role == RoleSuperAdmin {
-		var nextAdmin string
-		errAdmin := tx.QueryRow(ctx, "SELECT destination_id FROM group_edge WHERE source_id = $1 AND destination_id <> $2 AND state = $3 LIMIT 1", groupID, userID, RoleAdmin).Scan(&nextAdmin)
-		if errAdmin != nil {
-			errAdmin = tx.QueryRow(ctx, "SELECT destination_id FROM group_edge WHERE source_id = $1 AND destination_id <> $2 AND state = $3 LIMIT 1", groupID, userID, RoleMember).Scan(&nextAdmin)
-		}
-		if errAdmin == nil {
-			_, err = tx.Exec(ctx, "UPDATE group_edge SET state = $1 WHERE (source_id = $2 AND destination_id = $3) OR (source_id = $3 AND destination_id = $2)", RoleSuperAdmin, groupID, nextAdmin)
-			if err != nil {
-				return err
+		var superCount int
+		_ = tx.QueryRow(ctx, `SELECT COUNT(*) FROM group_edge WHERE source_id = $1 AND state = $2`, groupID, RoleSuperAdmin).Scan(&superCount)
+		if superCount <= 1 {
+			var otherCount int
+			_ = tx.QueryRow(ctx, `SELECT COUNT(*) FROM group_edge WHERE source_id = $1 AND state <= $2 AND destination_id <> $3`, groupID, RoleMember, userID).Scan(&otherCount)
+			if otherCount > 0 {
+				return errors.New("cannot leave as last superadmin while others remain")
 			}
+			// last member: soft-delete group
+			_, _ = tx.Exec(ctx, `DELETE FROM group_edge WHERE source_id = $1 OR destination_id = $1`, groupID)
+			_, err = tx.Exec(ctx, `UPDATE groups SET disable_time = now(), edge_count = 0, update_time = now() WHERE id = $1`, groupID)
+			return tx.Commit(ctx)
 		}
 	}
 
-	_, err = tx.Exec(ctx, "DELETE FROM group_edge WHERE (source_id = $1 AND destination_id = $2) OR (source_id = $2 AND destination_id = $1)", groupID, userID)
+	_, err = tx.Exec(ctx, `DELETE FROM group_edge WHERE (source_id = $1 AND destination_id = $2) OR (source_id = $2 AND destination_id = $1)`, groupID, userID)
 	if err != nil {
 		return err
 	}
-
-	_, err = tx.Exec(ctx, "UPDATE groups SET edge_count = edge_count - 1 WHERE id = $1", groupID)
+	_, err = tx.Exec(ctx, `UPDATE groups SET edge_count = GREATEST(edge_count - 1, 0) WHERE id = $1`, groupID)
 	if err != nil {
 		return err
 	}
-
 	return tx.Commit(ctx)
 }
 
-// PromoteMember raises a user's role in the group.
+// PromoteMember raises a user's role (member→admin→superadmin) one step.
 func PromoteMember(ctx context.Context, pool *pgxpool.Pool, kickerID, userID, groupID string) error {
 	tx, err := pool.Begin(ctx)
 	if err != nil {
@@ -381,32 +645,32 @@ func PromoteMember(ctx context.Context, pool *pgxpool.Pool, kickerID, userID, gr
 	defer tx.Rollback(ctx)
 
 	var kickerRole, targetRole int
-	err = tx.QueryRow(ctx, "SELECT state FROM group_edge WHERE source_id = $1 AND destination_id = $2", groupID, kickerID).Scan(&kickerRole)
+	err = tx.QueryRow(ctx, `SELECT state FROM group_edge WHERE source_id = $1 AND destination_id = $2`, groupID, kickerID).Scan(&kickerRole)
 	if err != nil {
 		return errors.New("kicker is not a member")
 	}
 	if kickerRole > RoleAdmin {
 		return errors.New("insufficient permissions to promote")
 	}
-
-	err = tx.QueryRow(ctx, "SELECT state FROM group_edge WHERE source_id = $1 AND destination_id = $2", groupID, userID).Scan(&targetRole)
+	err = tx.QueryRow(ctx, `SELECT state FROM group_edge WHERE source_id = $1 AND destination_id = $2`, groupID, userID).Scan(&targetRole)
 	if err != nil {
 		return errors.New("target is not a member")
 	}
-
-	if targetRole <= RoleAdmin {
-		return errors.New("target is already admin or superadmin")
+	if targetRole > RoleMember || targetRole <= RoleSuperAdmin {
+		return errors.New("cannot promote target")
 	}
-
-	_, err = tx.Exec(ctx, "UPDATE group_edge SET state = $1 WHERE (source_id = $2 AND destination_id = $3) OR (source_id = $3 AND destination_id = $2)", RoleAdmin, groupID, userID)
+	if targetRole <= kickerRole {
+		return errors.New("cannot promote equal or higher ranking members")
+	}
+	newRole := targetRole - 1
+	_, err = tx.Exec(ctx, `UPDATE group_edge SET state = $1 WHERE (source_id = $2 AND destination_id = $3) OR (source_id = $3 AND destination_id = $2)`, newRole, groupID, userID)
 	if err != nil {
 		return err
 	}
-
 	return tx.Commit(ctx)
 }
 
-// DemoteMember lowers a user's role in the group.
+// DemoteMember lowers a user's role one step toward member.
 func DemoteMember(ctx context.Context, pool *pgxpool.Pool, kickerID, userID, groupID string) error {
 	tx, err := pool.Begin(ctx)
 	if err != nil {
@@ -415,28 +679,35 @@ func DemoteMember(ctx context.Context, pool *pgxpool.Pool, kickerID, userID, gro
 	defer tx.Rollback(ctx)
 
 	var kickerRole, targetRole int
-	err = tx.QueryRow(ctx, "SELECT state FROM group_edge WHERE source_id = $1 AND destination_id = $2", groupID, kickerID).Scan(&kickerRole)
+	err = tx.QueryRow(ctx, `SELECT state FROM group_edge WHERE source_id = $1 AND destination_id = $2`, groupID, kickerID).Scan(&kickerRole)
 	if err != nil {
 		return errors.New("kicker is not a member")
 	}
-	if kickerRole != RoleSuperAdmin {
-		return errors.New("only SuperAdmin can demote admins")
+	if kickerRole > RoleAdmin {
+		return errors.New("insufficient permissions to demote")
 	}
-
-	err = tx.QueryRow(ctx, "SELECT state FROM group_edge WHERE source_id = $1 AND destination_id = $2", groupID, userID).Scan(&targetRole)
+	err = tx.QueryRow(ctx, `SELECT state FROM group_edge WHERE source_id = $1 AND destination_id = $2`, groupID, userID).Scan(&targetRole)
 	if err != nil {
 		return errors.New("target is not a member")
 	}
-
-	if targetRole != RoleAdmin {
-		return errors.New("target is not an admin")
+	if targetRole >= RoleMember || targetRole < RoleSuperAdmin {
+		return errors.New("cannot demote target")
 	}
-
-	_, err = tx.Exec(ctx, "UPDATE group_edge SET state = $1 WHERE (source_id = $2 AND destination_id = $3) OR (source_id = $3 AND destination_id = $2)", RoleMember, groupID, userID)
+	if kickerRole >= targetRole {
+		return errors.New("cannot demote equal or higher ranking members")
+	}
+	if targetRole == RoleSuperAdmin {
+		var superCount int
+		_ = tx.QueryRow(ctx, `SELECT COUNT(*) FROM group_edge WHERE source_id = $1 AND state = $2`, groupID, RoleSuperAdmin).Scan(&superCount)
+		if superCount <= 1 {
+			return errors.New("cannot demote last superadmin")
+		}
+	}
+	newRole := targetRole + 1
+	_, err = tx.Exec(ctx, `UPDATE group_edge SET state = $1 WHERE (source_id = $2 AND destination_id = $3) OR (source_id = $3 AND destination_id = $2)`, newRole, groupID, userID)
 	if err != nil {
 		return err
 	}
-
 	return tx.Commit(ctx)
 }
 
@@ -446,7 +717,7 @@ type GroupMember struct {
 	Role     int
 }
 
-// ListGroupMembers lists all users belonging to a group.
+// ListGroupMembers lists users belonging to a group (members only by default; includeRequests adds state 3).
 func ListGroupMembers(ctx context.Context, pool *pgxpool.Pool, groupID string, limit int, cursor string) ([]GroupMember, string, error) {
 	if limit <= 0 {
 		limit = 10
@@ -490,21 +761,17 @@ func ListGroupMembers(ctx context.Context, pool *pgxpool.Pool, groupID string, l
 			}
 		}
 	}
-
 	if startIdx >= len(members) {
 		return []GroupMember{}, "", nil
 	}
-
 	endIdx := startIdx + limit
 	if endIdx > len(members) {
 		endIdx = len(members)
 	}
-
 	nextCursor := ""
 	if endIdx < len(members) {
 		nextCursor = strconv.FormatInt(positions[endIdx], 10)
 	}
-
 	return members[startIdx:endIdx], nextCursor, nil
 }
 
@@ -522,13 +789,13 @@ func ListUserGroups(ctx context.Context, pool *pgxpool.Pool, userID string, limi
 		limit = 100
 	}
 
-	query := `SELECT g.id, g.creator_id, g.name, g.description, g.avatar_url, g.lang_tag, g.state, g.edge_count, g.max_count, e.state, e.position
+	query := `SELECT g.id, g.creator_id, g.name, g.description, g.avatar_url, g.lang_tag, g.metadata::text, g.state, g.edge_count, g.max_count, g.create_time, g.update_time, g.disable_time, e.state, e.position
 	          FROM group_edge e
 	          JOIN groups g ON e.destination_id = g.id
-	          WHERE e.source_id = $1 AND e.state <= $2
+	          WHERE e.source_id = $1 AND e.state <= $2 AND g.disable_time = $3
 	          ORDER BY e.position DESC`
 
-	rows, err := pool.Query(ctx, query, userID, RoleMember)
+	rows, err := pool.Query(ctx, query, userID, RoleMember, epochDisable)
 	if err != nil {
 		return nil, "", err
 	}
@@ -541,7 +808,7 @@ func ListUserGroups(ctx context.Context, pool *pgxpool.Pool, userID string, limi
 		r.Group = &Group{}
 		var pos int64
 		err = rows.Scan(
-			&r.Group.ID, &r.Group.CreatorID, &r.Group.Name, &r.Group.Description, &r.Group.AvatarURL, &r.Group.LangTag, &r.Group.State, &r.Group.EdgeCount, &r.Group.MaxCount,
+			&r.Group.ID, &r.Group.CreatorID, &r.Group.Name, &r.Group.Description, &r.Group.AvatarURL, &r.Group.LangTag, &r.Group.Metadata, &r.Group.State, &r.Group.EdgeCount, &r.Group.MaxCount, &r.Group.CreateTime, &r.Group.UpdateTime, &r.Group.DisableTime,
 			&r.Role, &pos,
 		)
 		if err != nil {
@@ -562,21 +829,16 @@ func ListUserGroups(ctx context.Context, pool *pgxpool.Pool, userID string, limi
 			}
 		}
 	}
-
 	if startIdx >= len(rels) {
 		return []UserGroupRelation{}, "", nil
 	}
-
 	endIdx := startIdx + limit
 	if endIdx > len(rels) {
 		endIdx = len(rels)
 	}
-
 	nextCursor := ""
 	if endIdx < len(rels) {
 		nextCursor = strconv.FormatInt(positions[endIdx], 10)
 	}
-
 	return rels[startIdx:endIdx], nextCursor, nil
 }
-

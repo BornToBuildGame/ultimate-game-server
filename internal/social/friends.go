@@ -27,8 +27,8 @@ const (
 const (
 	NotificationCodeFriendRequest = -2
 	NotificationCodeFriendAccept  = -3
-	NotificationCodeFriendRemove  = -4
-	NotificationCodeFriendImport  = -6
+	NotificationCodeFriendImport  = -6 // UGE extension (Facebook/Steam import)
+	NotificationCodeFriendRemove  = -9
 )
 
 // Default limits (PRD-07).

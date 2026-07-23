@@ -7,6 +7,8 @@ import (
 	"strings"
 
 	"ultimate-game-server/internal/chat"
+	"ultimate-game-server/internal/presence"
+	"ultimate-game-server/internal/social"
 
 	"github.com/google/uuid"
 )
@@ -43,6 +45,18 @@ func (gh *GatewayHandler) handleChannelJoin(s *Session, cid string, req *Channel
 		res, _ := json.Marshal(map[string]interface{}{"cid": cid, "error": err.Error()})
 		s.TrySend(res)
 		return
+	}
+
+	if req.Type == channelTypeGroup && gh.dbPool != nil {
+		ok, merr := social.IsGroupMember(context.Background(), gh.dbPool, s.UserID, req.Target)
+		if merr != nil || !ok {
+			res, _ := json.Marshal(map[string]interface{}{"cid": cid, "error": "not a group member"})
+			s.TrySend(res)
+			return
+		}
+		if gh.StreamTracker != nil {
+			gh.StreamTracker.Track(s.ID, presence.StreamKey{Mode: presence.StreamModeGroup, Label: req.Target})
+		}
 	}
 
 	gh.mu.Lock()

@@ -72,6 +72,21 @@ type RuntimeModule interface {
 	// Party operations
 	PartyList(ctx context.Context, limit int, open *bool, showHidden bool, query, cursor string) ([]*PartyListEntry, string, error)
 
+	// Group operations
+	GroupsGetId(ctx context.Context, groupIDs []string) ([]*GroupView, error)
+	GroupCreate(ctx context.Context, userID, name, description, avatarURL, langTag, metadata string, open bool, maxCount int) (*GroupView, error)
+	GroupUpdate(ctx context.Context, groupID, userID, name, description, avatarURL, langTag, metadata string, open bool, maxCount int) error
+	GroupDelete(ctx context.Context, groupID, userID string) error
+	GroupUsersAdd(ctx context.Context, groupID, callerID string, userIDs []string) error
+	GroupUsersBan(ctx context.Context, groupID, callerID string, userIDs []string) error
+	GroupUsersKick(ctx context.Context, groupID, callerID string, userIDs []string) error
+	GroupUsersPromote(ctx context.Context, groupID, callerID string, userIDs []string) error
+	GroupUsersDemote(ctx context.Context, groupID, callerID string, userIDs []string) error
+	GroupUsersList(ctx context.Context, groupID string, limit int, cursor string) ([]*GroupUserView, string, error)
+	GroupsList(ctx context.Context, name, langTag string, open *bool, members, limit int, cursor string) ([]*GroupView, string, error)
+	UserGroupsList(ctx context.Context, userID string, limit int, cursor string) ([]*UserGroupView, string, error)
+	GroupsGetRandom(ctx context.Context, count int) ([]*GroupView, error)
+
 	// Match operations
 	MatchCreate(ctx context.Context, module string, params map[string]interface{}) (string, error)
 }
@@ -221,6 +236,33 @@ type PartyListEntry struct {
 	Hidden  bool   `json:"hidden"`
 	MaxSize int    `json:"max_size"`
 	Label   string `json:"label"`
+}
+
+// GroupView is a runtime group record.
+type GroupView struct {
+	ID          string `json:"id"`
+	CreatorID   string `json:"creator_id"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	AvatarURL   string `json:"avatar_url"`
+	LangTag     string `json:"lang_tag"`
+	Metadata    string `json:"metadata"`
+	Open        bool   `json:"open"`
+	EdgeCount   int    `json:"edge_count"`
+	MaxCount    int    `json:"max_count"`
+}
+
+// GroupUserView is a runtime group member row.
+type GroupUserView struct {
+	UserID   string `json:"user_id"`
+	Username string `json:"username"`
+	State    int    `json:"state"`
+}
+
+// UserGroupView is a runtime user→group relation.
+type UserGroupView struct {
+	Group *GroupView `json:"group"`
+	State int        `json:"state"`
 }
 
 type JoinGroupRequest struct {

@@ -262,6 +262,65 @@ func MapLuaNK(L *lua.LState, nk RuntimeModule, registry ...*HookRegistry) {
 		return 2
 	}))
 
+	L.SetField(nkTable, "group_create", L.NewFunction(func(L *lua.LState) int {
+		g, err := nk.GroupCreate(L.Context(), L.CheckString(1), L.CheckString(2), L.OptString(3, ""), L.OptString(4, ""), L.OptString(5, "en"), L.OptString(6, "{}"), L.OptBool(7, true), L.OptInt(8, 100))
+		if err != nil {
+			L.RaiseError("group_create failed: %v", err)
+			return 0
+		}
+		row := L.NewTable()
+		L.SetField(row, "id", lua.LString(g.ID))
+		L.SetField(row, "name", lua.LString(g.Name))
+		L.SetField(row, "open", lua.LBool(g.Open))
+		L.Push(row)
+		return 1
+	}))
+
+	L.SetField(nkTable, "groups_list", L.NewFunction(func(L *lua.LState) int {
+		var openPtr *bool
+		if L.GetTop() >= 3 && L.Get(3).Type() != lua.LTNil {
+			b := L.CheckBool(3)
+			openPtr = &b
+		}
+		list, next, err := nk.GroupsList(L.Context(), L.OptString(1, ""), L.OptString(2, ""), openPtr, L.OptInt(4, 0), L.OptInt(5, 10), L.OptString(6, ""))
+		if err != nil {
+			L.RaiseError("groups_list failed: %v", err)
+			return 0
+		}
+		tbl := L.CreateTable(len(list), 0)
+		for i, g := range list {
+			row := L.NewTable()
+			L.SetField(row, "id", lua.LString(g.ID))
+			L.SetField(row, "name", lua.LString(g.Name))
+			L.SetField(row, "open", lua.LBool(g.Open))
+			tbl.RawSetInt(i+1, row)
+		}
+		L.Push(tbl)
+		L.Push(lua.LString(next))
+		return 2
+	}))
+
+	L.SetField(nkTable, "user_groups_list", L.NewFunction(func(L *lua.LState) int {
+		list, next, err := nk.UserGroupsList(L.Context(), L.CheckString(1), L.OptInt(2, 10), L.OptString(3, ""))
+		if err != nil {
+			L.RaiseError("user_groups_list failed: %v", err)
+			return 0
+		}
+		tbl := L.CreateTable(len(list), 0)
+		for i, ug := range list {
+			row := L.NewTable()
+			if ug.Group != nil {
+				L.SetField(row, "group_id", lua.LString(ug.Group.ID))
+				L.SetField(row, "name", lua.LString(ug.Group.Name))
+			}
+			L.SetField(row, "state", lua.LNumber(ug.State))
+			tbl.RawSetInt(i+1, row)
+		}
+		L.Push(tbl)
+		L.Push(lua.LString(next))
+		return 2
+	}))
+
 	L.SetField(nkTable, "friends_add", L.NewFunction(func(L *lua.LState) int {
 		userID := L.CheckString(1)
 		idsTbl := L.OptTable(2, nil)
