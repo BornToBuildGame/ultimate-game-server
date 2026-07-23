@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"ultimate-game-server/internal/auth"
+	"ultimate-game-server/internal/economy"
 	"ultimate-game-server/internal/leaderboard"
 
 	"github.com/google/uuid"
@@ -300,6 +301,8 @@ func (s *Server) handleGetAccount(w http.ResponseWriter, r *http.Request) {
 		devices = append(devices, map[string]string{"id": d})
 	}
 	lbRecords, _ := leaderboard.RecordsReadAll(r.Context(), s.dbPool, userID)
+	walletMap, _ := economy.GetWallet(r.Context(), s.dbPool, userID)
+	walletJSON, _ := json.Marshal(walletMap)
 	resp := map[string]interface{}{
 		"user": map[string]interface{}{
 			"id": acct.ID.String(), "username": acct.Username, "display_name": acct.DisplayName,
@@ -310,6 +313,7 @@ func (s *Server) handleGetAccount(w http.ResponseWriter, r *http.Request) {
 		"devices":             devices,
 		"email":               email,
 		"custom_id":           custom,
+		"wallet":              string(walletJSON),
 		"leaderboard_records": lbRecords,
 	}
 	s.invokeAfter("GetAccount", resp, nil)

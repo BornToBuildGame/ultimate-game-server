@@ -150,6 +150,7 @@ message Account {
   string email = 3;
   string custom_id = 4;
   google.protobuf.Timestamp verify_time = 5;
+  string wallet = 6; // JSON string of currency balances
 }
 
 message UpdateAccountRequest {
@@ -769,6 +770,132 @@ message NotificationList {
 
 message DeleteNotificationsRequest {
   repeated string ids = 1;
+}
+
+// --- Economy Service ---
+
+service EconomyService {
+  rpc GetWallet(google.protobuf.Empty) returns (Wallet);
+  rpc ListWalletLedger(ListWalletLedgerRequest) returns (WalletLedgerList);
+}
+
+message Wallet {
+  string wallet = 1; // JSON string of balances
+}
+
+message ListWalletLedgerRequest {
+  int32 limit = 1;
+  string cursor = 2;
+}
+
+message WalletLedgerItem {
+  string id = 1;
+  string user_id = 2;
+  string changeset = 3;
+  string metadata = 4;
+  google.protobuf.Timestamp create_time = 5;
+  google.protobuf.Timestamp update_time = 6;
+}
+
+message WalletLedgerList {
+  repeated WalletLedgerItem items = 1;
+  string next_cursor = 2;
+}
+
+// --- IAP Service ---
+
+service IAPService {
+  rpc ValidatePurchaseApple(ValidatePurchaseAppleRequest) returns (ValidatePurchaseResponse);
+  rpc ValidatePurchaseGoogle(ValidatePurchaseGoogleRequest) returns (ValidatePurchaseResponse);
+  rpc ValidatePurchaseHuawei(ValidatePurchaseHuaweiRequest) returns (ValidatePurchaseResponse);
+  rpc ValidatePurchaseFacebookInstant(ValidatePurchaseFacebookInstantRequest) returns (ValidatePurchaseResponse);
+  rpc ValidatePurchaseSamsung(ValidatePurchaseSamsungRequest) returns (ValidatePurchaseResponse);
+  rpc ValidateSubscriptionApple(ValidateSubscriptionAppleRequest) returns (ValidateSubscriptionResponse);
+  rpc ValidateSubscriptionGoogle(ValidateSubscriptionGoogleRequest) returns (ValidateSubscriptionResponse);
+  rpc ListSubscriptions(ListSubscriptionsRequest) returns (SubscriptionList);
+  rpc GetSubscription(GetSubscriptionRequest) returns (ValidatedSubscription);
+}
+
+message ValidatePurchaseAppleRequest {
+  string receipt = 1;
+  optional bool persist = 2;
+}
+
+message ValidatePurchaseGoogleRequest {
+  string product_id = 1;
+  string purchase_token = 2;
+  optional bool persist = 3;
+}
+
+message ValidatePurchaseHuaweiRequest {
+  string purchase_data = 1;
+  string signature = 2;
+  optional bool persist = 3;
+}
+
+message ValidatePurchaseFacebookInstantRequest {
+  string signed_request = 1;
+  optional bool persist = 2;
+}
+
+message ValidatePurchaseSamsungRequest {
+  string purchase_id = 1;
+  optional bool persist = 2;
+}
+
+message ValidatedPurchase {
+  string user_id = 1;
+  string product_id = 2;
+  string transaction_id = 3;
+  int32 store = 4;
+  google.protobuf.Timestamp purchase_time = 5;
+  bool seen_before = 6;
+  int32 environment = 7;
+}
+
+message ValidatePurchaseResponse {
+  repeated ValidatedPurchase validated_purchases = 1;
+}
+
+message ValidateSubscriptionAppleRequest {
+  string receipt = 1;
+  optional bool persist = 2;
+}
+
+message ValidateSubscriptionGoogleRequest {
+  string product_id = 1;
+  string purchase_token = 2;
+  optional bool persist = 3;
+}
+
+message ValidateSubscriptionResponse {
+  ValidatedSubscription validated_subscription = 1;
+}
+
+message ValidatedSubscription {
+  string user_id = 1;
+  string product_id = 2;
+  string original_transaction_id = 3;
+  int32 store = 4;
+  google.protobuf.Timestamp purchase_time = 5;
+  google.protobuf.Timestamp expire_time = 6;
+  bool active = 7;
+  bool seen_before = 8;
+  int32 environment = 9;
+}
+
+message ListSubscriptionsRequest {
+  int32 limit = 1;
+  string cursor = 2;
+}
+
+message SubscriptionList {
+  repeated ValidatedSubscription validated_subscriptions = 1;
+  string cursor = 2;
+}
+
+message GetSubscriptionRequest {
+  string product_id = 1;
 }
 
 

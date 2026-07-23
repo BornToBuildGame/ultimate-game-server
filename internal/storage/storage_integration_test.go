@@ -87,7 +87,7 @@ func TestStorage_Integration(t *testing.T) {
 		Write:      1,
 	}
 
-	err = WriteStorageObjects(ctx, pool, []*StorageObject{obj})
+	_, err = WriteStorageObjects(ctx, pool, true, []*StorageObject{obj})
 	if err != nil {
 		t.Fatalf("initial write failed: %v", err)
 	}
@@ -108,7 +108,7 @@ func TestStorage_Integration(t *testing.T) {
 		Write:      1,
 	}
 
-	err = WriteStorageObjects(ctx, pool, []*StorageObject{objConflict})
+	_, err = WriteStorageObjects(ctx, pool, true, []*StorageObject{objConflict})
 	if !errors.Is(err, ErrOCCConflict) {
 		t.Errorf("expected ErrOCCConflict on version mismatch, got: %v", err)
 	}
@@ -124,7 +124,7 @@ func TestStorage_Integration(t *testing.T) {
 		Write:      1,
 	}
 
-	err = WriteStorageObjects(ctx, pool, []*StorageObject{objSuccess})
+	_, err = WriteStorageObjects(ctx, pool, true, []*StorageObject{objSuccess})
 	if err != nil {
 		t.Fatalf("write with correct version failed: %v", err)
 	}
@@ -133,7 +133,7 @@ func TestStorage_Integration(t *testing.T) {
 	readReqs := []ReadRequest{
 		{Collection: "progress", Key: "save_data", UserID: userID},
 	}
-	results, err := ReadStorageObjects(ctx, pool, readReqs)
+	results, err := ReadStorageObjects(ctx, pool, uuid.Nil, readReqs)
 	if err != nil {
 		t.Fatalf("read failed: %v", err)
 	}
@@ -166,7 +166,7 @@ func TestStorage_Integration(t *testing.T) {
 	}
 
 	// First write with version "*" (does not exist) -> should succeed
-	err = WriteStorageObjects(ctx, pool, []*StorageObject{wildcardObj1})
+	_, err = WriteStorageObjects(ctx, pool, true, []*StorageObject{wildcardObj1})
 	if err != nil {
 		t.Fatalf("wildcard initial write failed: %v", err)
 	}
@@ -181,7 +181,7 @@ func TestStorage_Integration(t *testing.T) {
 		Read:       1,
 		Write:      1,
 	}
-	err = WriteStorageObjects(ctx, pool, []*StorageObject{wildcardObj2})
+	_, err = WriteStorageObjects(ctx, pool, true, []*StorageObject{wildcardObj2})
 	if !errors.Is(err, ErrOCCConflict) {
 		t.Errorf("expected ErrOCCConflict on wildcard overwrite, got: %v", err)
 	}
@@ -194,7 +194,7 @@ func TestStorage_Integration(t *testing.T) {
 		UserID:     userID,
 		Version:    "wrong_version",
 	}
-	err = DeleteStorageObjects(ctx, pool, []DeleteRequest{deleteReqConflict})
+	err = DeleteStorageObjects(ctx, pool, true, []DeleteRequest{deleteReqConflict})
 	if !errors.Is(err, ErrOCCConflict) {
 		t.Errorf("expected ErrOCCConflict on conditional delete version mismatch, got: %v", err)
 	}
@@ -206,13 +206,13 @@ func TestStorage_Integration(t *testing.T) {
 		UserID:     userID,
 		Version:    objSuccess.Version,
 	}
-	err = DeleteStorageObjects(ctx, pool, []DeleteRequest{deleteReqSuccess})
+	err = DeleteStorageObjects(ctx, pool, true, []DeleteRequest{deleteReqSuccess})
 	if err != nil {
 		t.Fatalf("conditional delete failed: %v", err)
 	}
 
 	// Verify actually deleted
-	checkResults, err := ReadStorageObjects(ctx, pool, []ReadRequest{{Collection: "progress", Key: "save_data", UserID: userID}})
+	checkResults, err := ReadStorageObjects(ctx, pool, uuid.Nil, []ReadRequest{{Collection: "progress", Key: "save_data", UserID: userID}})
 	if err != nil {
 		t.Fatalf("read failed: %v", err)
 	}
@@ -226,7 +226,7 @@ func TestStorage_Integration(t *testing.T) {
 		Key:        "wildcard_key",
 		UserID:     userID,
 	}
-	err = DeleteStorageObjects(ctx, pool, []DeleteRequest{deleteUnconditional})
+	err = DeleteStorageObjects(ctx, pool, true, []DeleteRequest{deleteUnconditional})
 	if err != nil {
 		t.Fatalf("unconditional delete failed: %v", err)
 	}
@@ -242,46 +242,45 @@ func TestStorage_Integration(t *testing.T) {
 			Read:       1,
 			Write:      1,
 		}
-		err = WriteStorageObjects(ctx, pool, []*StorageObject{o})
+		_, err = WriteStorageObjects(ctx, pool, true, []*StorageObject{o})
 		if err != nil {
 			t.Fatalf("failed to write list test object %d: %v", i, err)
 		}
 	}
 
 	// Page 1: limit = 2
-	listRes1, cursor1, err := ListStorageObjects(ctx, pool, userID, "list_test", 2, "")
+	ownerUUID, _ := uuid.Parse(userID)
+	list1, err := ListStorageObjects(ctx, pool, uuid.Nil, &ownerUUID, "list_test", 2, "")
 	if err != nil {
 		t.Fatalf("List page 1 failed: %v", err)
 	}
-	if len(listRes1) != 2 {
-		t.Errorf("expected 2 list results, got %d", len(listRes1))
+	if len(list1.Objects) != 2 {
+		t.Errorf("expected 2 list results, got %d", len(list1.Objects))
 	}
-	if cursor1 == "" {
+	if list1.Cursor == "" {
 		t.Error("expected non-empty pagination cursor for next page")
 	}
 
-	// Page 2: limit = 2 with cursor1
-	listRes2, cursor2, err := ListStorageObjects(ctx, pool, userID, "list_test", 2, cursor1)
+	list2, err := ListStorageObjects(ctx, pool, uuid.Nil, &ownerUUID, "list_test", 2, list1.Cursor)
 	if err != nil {
 		t.Fatalf("List page 2 failed: %v", err)
 	}
-	if len(listRes2) != 2 {
-		t.Errorf("expected 2 list results on page 2, got %d", len(listRes2))
+	if len(list2.Objects) != 2 {
+		t.Errorf("expected 2 list results on page 2, got %d", len(list2.Objects))
 	}
-	if cursor2 == "" {
+	if list2.Cursor == "" {
 		t.Error("expected non-empty pagination cursor on page 2")
 	}
 
-	// Page 3: limit = 2 with cursor2
-	listRes3, cursor3, err := ListStorageObjects(ctx, pool, userID, "list_test", 2, cursor2)
+	list3, err := ListStorageObjects(ctx, pool, uuid.Nil, &ownerUUID, "list_test", 2, list2.Cursor)
 	if err != nil {
 		t.Fatalf("List page 3 failed: %v", err)
 	}
-	if len(listRes3) != 1 {
-		t.Errorf("expected 1 list result on page 3 (last element), got %d", len(listRes3))
+	if len(list3.Objects) != 1 {
+		t.Errorf("expected 1 list result on page 3 (last element), got %d", len(list3.Objects))
 	}
-	if cursor3 != "" {
-		t.Errorf("expected empty cursor for last page, got %q", cursor3)
+	if list3.Cursor != "" {
+		t.Errorf("expected empty cursor for last page, got %q", list3.Cursor)
 	}
 
 	// 10. List public objects across multiple users (empty user_id)
@@ -319,20 +318,21 @@ func TestStorage_Integration(t *testing.T) {
 		Write:      1,
 	}
 
-	err = WriteStorageObjects(ctx, pool, []*StorageObject{oPub1, oPub2, oPriv})
+	_, err = WriteStorageObjects(ctx, pool, true, []*StorageObject{oPub1, oPub2, oPriv})
 	if err != nil {
 		t.Fatalf("failed to write public/private test objects: %v", err)
 	}
 
 	// List with empty user_id -> should return public records key1 (user1) and key2 (user2)
-	pubList, _, err := ListStorageObjects(ctx, pool, "", "pub_test", 10, "")
+	callerUUID, _ := uuid.Parse(userID)
+	pubList, err := ListStorageObjects(ctx, pool, callerUUID, nil, "pub_test", 10, "")
 	if err != nil {
 		t.Fatalf("list public storage objects failed: %v", err)
 	}
-	if len(pubList) != 2 {
-		t.Errorf("expected 2 public records, got %d", len(pubList))
+	if len(pubList.Objects) != 2 {
+		t.Errorf("expected 2 public records, got %d", len(pubList.Objects))
 	}
-	for _, o := range pubList {
+	for _, o := range pubList.Objects {
 		if o.Read != 2 {
 			t.Errorf("expected public record only, got object with read = %d", o.Read)
 		}
@@ -361,7 +361,7 @@ func TestStorage_Integration(t *testing.T) {
 		Write:      1,
 	}
 
-	err = WriteStorageObjects(ctx, pool, []*StorageObject{searchObj1, searchObj2})
+	_, err = WriteStorageObjects(ctx, pool, true, []*StorageObject{searchObj1, searchObj2})
 	if err != nil {
 		t.Fatalf("failed to write search test objects: %v", err)
 	}

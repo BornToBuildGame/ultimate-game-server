@@ -124,7 +124,7 @@ func TestStorageAPI_Integration(t *testing.T) {
 		},
 	}
 	writeBytes, _ := json.Marshal(writeBody)
-	req, err := http.NewRequest("POST", "http://127.0.0.1:17360/v2/storage", bytes.NewBuffer(writeBytes))
+	req, err := http.NewRequest("PUT", "http://127.0.0.1:17360/v2/storage", bytes.NewBuffer(writeBytes))
 	require.NoError(t, err)
 	req.Header.Set("Authorization", "Bearer "+bearerToken)
 	req.Header.Set("Content-Type", "application/json")
@@ -185,7 +185,7 @@ func TestStorageAPI_Integration(t *testing.T) {
 	assert.Equal(t, version, readRes.Objects[0].Version)
 
 	// List objects
-	req, err = http.NewRequest("GET", "http://127.0.0.1:17360/v2/storage/inventory?user_id="+authResp.UserID, nil)
+	req, err = http.NewRequest("GET", "http://127.0.0.1:17360/v2/storage/inventory/"+authResp.UserID+"?limit=100", nil)
 	require.NoError(t, err)
 	req.Header.Set("Authorization", "Bearer "+bearerToken)
 
@@ -215,14 +215,14 @@ func TestStorageAPI_Integration(t *testing.T) {
 		},
 	}
 	deleteBytesConflict, _ := json.Marshal(deleteBodyConflict)
-	req, err = http.NewRequest("POST", "http://127.0.0.1:17360/v2/storage/delete", bytes.NewBuffer(deleteBytesConflict))
+	req, err = http.NewRequest("PUT", "http://127.0.0.1:17360/v2/storage/delete", bytes.NewBuffer(deleteBytesConflict))
 	require.NoError(t, err)
 	req.Header.Set("Authorization", "Bearer "+bearerToken)
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err = client.Do(req)
 	require.NoError(t, err)
-	assert.Equal(t, http.StatusConflict, resp.StatusCode)
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 	resp.Body.Close()
 
 	// Delete objects (success)
@@ -236,7 +236,7 @@ func TestStorageAPI_Integration(t *testing.T) {
 		},
 	}
 	deleteBytes, _ := json.Marshal(deleteBody)
-	req, err = http.NewRequest("POST", "http://127.0.0.1:17360/v2/storage/delete", bytes.NewBuffer(deleteBytes))
+	req, err = http.NewRequest("PUT", "http://127.0.0.1:17360/v2/storage/delete", bytes.NewBuffer(deleteBytes))
 	require.NoError(t, err)
 	req.Header.Set("Authorization", "Bearer "+bearerToken)
 	req.Header.Set("Content-Type", "application/json")

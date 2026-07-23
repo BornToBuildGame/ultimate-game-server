@@ -23,9 +23,26 @@ type RuntimeModule interface {
 	StorageRead(ctx context.Context, reads []*StorageRead) ([]*StorageObject, error)
 	StorageWrite(ctx context.Context, writes []*StorageWrite) ([]*StorageObjectAck, error)
 	StorageDelete(ctx context.Context, deletes []*StorageDelete) error
+	StorageList(ctx context.Context, callerID, userID, collection string, limit int, cursor string) ([]*StorageObject, string, error)
+	StorageWriteRetry(ctx context.Context, reads []*StorageRead, updateFn func([]*StorageObject) ([]*StorageWrite, error), maxRetries int) ([]*StorageObjectAck, error)
 
 	// Wallet operations
-	WalletUpdate(ctx context.Context, userID string, changeset map[string]int64, metadata map[string]interface{}, updateLedger bool) (map[string]int64, error)
+	WalletUpdate(ctx context.Context, userID string, changeset map[string]int64, metadata map[string]interface{}, updateLedger bool) (updated, previous map[string]int64, err error)
+	WalletsUpdate(ctx context.Context, updates []*WalletUpdateParams, updateLedger bool) ([]*WalletUpdateResultView, error)
+	WalletLedgerList(ctx context.Context, userID string, limit int, cursor string) ([]*WalletLedgerView, string, error)
+	WalletLedgerUpdate(ctx context.Context, ledgerID, userID string, metadata map[string]interface{}) error
+
+	// IAP operations
+	PurchaseValidateApple(ctx context.Context, userID, receipt string, persist bool) (*ValidatedPurchaseView, error)
+	PurchaseValidateGoogle(ctx context.Context, userID, productID, purchaseToken string, persist bool) (*ValidatedPurchaseView, error)
+	PurchaseValidateHuawei(ctx context.Context, userID, purchaseData, signature string, persist bool) (*ValidatedPurchaseView, error)
+	PurchaseValidateFacebookInstant(ctx context.Context, userID, signedRequest string, persist bool) (*ValidatedPurchaseView, error)
+	PurchaseValidateSamsung(ctx context.Context, userID, purchaseID string, persist bool) (*ValidatedPurchaseView, error)
+	PurchasesList(ctx context.Context, userID string, limit int) ([]*ValidatedPurchaseView, error)
+	SubscriptionValidateApple(ctx context.Context, userID, receipt string, persist bool) (*ValidatedSubscriptionView, error)
+	SubscriptionValidateGoogle(ctx context.Context, userID, productID, purchaseToken string, persist bool) (*ValidatedSubscriptionView, error)
+	SubscriptionsList(ctx context.Context, userID string, limit int) ([]*ValidatedSubscriptionView, error)
+	SubscriptionGetProductID(ctx context.Context, userID, productID string) (*ValidatedSubscriptionView, error)
 
 	// Account operations
 	AccountGetId(ctx context.Context, userID string) (*Account, error)
@@ -126,6 +143,54 @@ type StorageDelete struct {
 	Key        string `json:"key"`
 	UserID     string `json:"user_id"`
 	Version    string `json:"version"`
+}
+
+// WalletUpdateParams is a batch wallet mutation for runtime WalletsUpdate.
+type WalletUpdateParams struct {
+	UserID    string                 `json:"user_id"`
+	Changeset map[string]int64       `json:"changeset"`
+	Metadata  map[string]interface{} `json:"metadata"`
+}
+
+// WalletUpdateResultView is returned from WalletsUpdate.
+type WalletUpdateResultView struct {
+	UserID   string           `json:"user_id"`
+	Updated  map[string]int64 `json:"updated"`
+	Previous map[string]int64 `json:"previous"`
+}
+
+// WalletLedgerView is a ledger row for runtime.
+type WalletLedgerView struct {
+	ID         string                 `json:"id"`
+	UserID     string                 `json:"user_id"`
+	Changeset  map[string]int64       `json:"changeset"`
+	Metadata   map[string]interface{} `json:"metadata"`
+	CreateTime time.Time              `json:"create_time"`
+	UpdateTime time.Time              `json:"update_time"`
+}
+
+// ValidatedPurchaseView is a runtime IAP purchase result.
+type ValidatedPurchaseView struct {
+	UserID        string    `json:"user_id"`
+	ProductID     string    `json:"product_id"`
+	TransactionID string    `json:"transaction_id"`
+	Store         int       `json:"store"`
+	PurchaseTime  time.Time `json:"purchase_time"`
+	SeenBefore    bool      `json:"seen_before"`
+	Environment   int       `json:"environment"`
+}
+
+// ValidatedSubscriptionView is a runtime IAP subscription result.
+type ValidatedSubscriptionView struct {
+	UserID                string    `json:"user_id"`
+	ProductID             string    `json:"product_id"`
+	OriginalTransactionID string    `json:"original_transaction_id"`
+	Store                 int       `json:"store"`
+	PurchaseTime          time.Time `json:"purchase_time"`
+	ExpireTime            time.Time `json:"expire_time"`
+	Active                bool      `json:"active"`
+	SeenBefore            bool      `json:"seen_before"`
+	Environment           int       `json:"environment"`
 }
 
 type StorageObject struct {

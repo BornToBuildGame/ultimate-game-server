@@ -1,6 +1,7 @@
 package api
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -8,6 +9,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -15,6 +17,7 @@ import (
 	"ultimate-game-server/internal/api/storagepb"
 	"ultimate-game-server/internal/auth"
 	"ultimate-game-server/internal/chat"
+	"ultimate-game-server/internal/economy"
 	"ultimate-game-server/internal/leaderboard"
 	"ultimate-game-server/internal/match"
 	"ultimate-game-server/internal/matchmaker"
@@ -76,6 +79,8 @@ type Server struct {
 	rankTrimStop        chan struct{}
 
 	notificationServer *NotificationServer
+	economyServer      *EconomyServer
+	iapServer          *IAPServer
 }
 
 // SetRuntimeManager configures the runtime manager for hook interceptors.
@@ -99,6 +104,12 @@ func (s *Server) SetRuntimeManager(rm *runtime.GoRuntimeManager) {
 		}
 		if s.notificationServer != nil {
 			s.notificationServer.SetHooks(rm.Registry())
+		}
+		if s.economyServer != nil {
+			s.economyServer.SetHooks(rm.Registry())
+		}
+		if s.iapServer != nil {
+			s.iapServer.SetHooks(rm.Registry())
 		}
 		if s.TournamentScheduler != nil {
 			s.wireSchedulerHooks()
@@ -403,10 +414,16 @@ func (s *Server) Start(ctx context.Context) error {
 	apipb.RegisterPartyServiceServer(s.gRPCServer, NewPartyServer(s.PartyRegistry, s.tokenMgr))
 	apipb.RegisterChatServiceServer(s.gRPCServer, NewChannelServer(s.dbPool, s.tokenMgr, nil))
 	s.notificationServer = NewNotificationServer(s.dbPool, s.tokenMgr, nil)
+	s.economyServer = NewEconomyServer(s.dbPool, s.tokenMgr, nil)
+	s.iapServer = NewIAPServer(s.dbPool, s.tokenMgr, nil, economy.DefaultIAPConfig)
 	if s.RuntimeManager != nil {
 		s.notificationServer.SetHooks(s.RuntimeManager.Registry())
+		s.economyServer.SetHooks(s.RuntimeManager.Registry())
+		s.iapServer.SetHooks(s.RuntimeManager.Registry())
 	}
 	apipb.RegisterNotificationServiceServer(s.gRPCServer, s.notificationServer)
+	apipb.RegisterEconomyServiceServer(s.gRPCServer, s.economyServer)
+	apipb.RegisterIAPServiceServer(s.gRPCServer, s.iapServer)
 	apipb.RegisterAuthenticationServiceServer(s.gRPCServer, NewAuthServer(s))
 
 	// Start Matchmaker Tick Loop (Ticks every 1 second)
@@ -540,9 +557,11 @@ func (s *Server) registerRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /v2/account/unlink/facebook", s.handleUnlinkProvider("facebook"))
 	mux.HandleFunc("POST /v2/account/unlink/steam", s.handleUnlinkProvider("steam"))
 	mux.HandleFunc("POST /v2/account/unlink/custom", s.handleUnlinkProvider("custom"))
-	mux.HandleFunc("POST /v2/storage", s.handleWriteStorageObjects)
+	mux.HandleFunc("PUT /v2/storage", s.handleWriteStorageObjects)
+	mux.HandleFunc("POST /v2/storage", s.handleReadStorageObjects)
 	mux.HandleFunc("POST /v2/storage/read", s.handleReadStorageObjects)
-	mux.HandleFunc("POST /v2/storage/delete", s.handleDeleteStorageObjects)
+	mux.HandleFunc("PUT /v2/storage/delete", s.handleDeleteStorageObjects)
+	mux.HandleFunc("GET /v2/storage/{collection}/{user_id}", s.handleListStorageObjects)
 	mux.HandleFunc("GET /v2/storage/{collection}", s.handleListStorageObjects)
 	mux.HandleFunc("GET /ws", s.SocketGateway.Upgrade)
 	mux.HandleFunc("GET /v2/stream", s.SocketGateway.Upgrade)
@@ -602,6 +621,17 @@ func (s *Server) registerRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /v2/channel/{channel_id}", s.handleListChannelMessages)
 	mux.HandleFunc("GET /v2/notification", s.handleListNotifications)
 	mux.HandleFunc("DELETE /v2/notification", s.handleDeleteNotifications)
+	mux.HandleFunc("GET /v2/wallet", s.handleGetWallet)
+	mux.HandleFunc("GET /v2/wallet/ledger", s.handleListWalletLedger)
+	mux.HandleFunc("POST /v2/iap/purchase/apple", s.handleValidatePurchaseApple)
+	mux.HandleFunc("POST /v2/iap/purchase/google", s.handleValidatePurchaseGoogle)
+	mux.HandleFunc("POST /v2/iap/purchase/huawei", s.handleValidatePurchaseHuawei)
+	mux.HandleFunc("POST /v2/iap/purchase/facebookinstant", s.handleValidatePurchaseFacebookInstant)
+	mux.HandleFunc("POST /v2/iap/purchase/samsung", s.handleValidatePurchaseSamsung)
+	mux.HandleFunc("POST /v2/iap/subscription/apple", s.handleValidateSubscriptionApple)
+	mux.HandleFunc("POST /v2/iap/subscription/google", s.handleValidateSubscriptionGoogle)
+	mux.HandleFunc("POST /v2/iap/subscription", s.handleListSubscriptions)
+	mux.HandleFunc("GET /v2/iap/subscription/{product_id}", s.handleGetSubscription)
 	mux.HandleFunc("GET /v2/match/{match_id}", s.handleGetMatch)
 	mux.HandleFunc("POST /v2/match/{match_id}/signal", s.handleMatchSignal)
 
@@ -888,12 +918,12 @@ func (s *Server) handleWriteStorageObjects(w http.ResponseWriter, r *http.Reques
 	}
 	var req struct {
 		Objects []struct {
-			Collection      string      `json:"collection"`
-			Key             string      `json:"key"`
-			Value           interface{} `json:"value"`
-			Version         string      `json:"version"`
-			PermissionRead  int16       `json:"permission_read"`
-			PermissionWrite int16       `json:"permission_write"`
+			Collection      string          `json:"collection"`
+			Key             string          `json:"key"`
+			Value           json.RawMessage `json:"value"`
+			Version         string          `json:"version"`
+			PermissionRead  *int16          `json:"permission_read"`
+			PermissionWrite *int16          `json:"permission_write"`
 		} `json:"objects"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -901,52 +931,73 @@ func (s *Server) handleWriteStorageObjects(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	objs := make([]*storage.StorageObject, len(req.Objects))
-	for i, obj := range req.Objects {
-		valBytes, err := json.Marshal(obj.Value)
-		if err != nil {
-			http.Error(w, "invalid json value", http.StatusBadRequest)
+	objs := make([]*storage.StorageObject, 0, len(req.Objects))
+	for _, obj := range req.Objects {
+		if obj.Collection == "" || obj.Key == "" {
+			http.Error(w, "collection and key required", http.StatusBadRequest)
 			return
 		}
-		objs[i] = &storage.StorageObject{
+		trim := bytes.TrimSpace(obj.Value)
+		if len(trim) == 0 || trim[0] != '{' || !json.Valid(trim) {
+			http.Error(w, "value must be a JSON-encoded object", http.StatusBadRequest)
+			return
+		}
+		read, write := int16(1), int16(1)
+		if obj.PermissionRead != nil {
+			read = *obj.PermissionRead
+		}
+		if obj.PermissionWrite != nil {
+			write = *obj.PermissionWrite
+		}
+		if read < 0 || read > 2 || write < 0 || write > 1 {
+			http.Error(w, "invalid permission", http.StatusBadRequest)
+			return
+		}
+		objs = append(objs, &storage.StorageObject{
 			Collection: obj.Collection,
 			Key:        obj.Key,
 			UserID:     userID,
-			Value:      string(valBytes),
+			Value:      string(trim),
 			Version:    obj.Version,
-			Read:       obj.PermissionRead,
-			Write:      obj.PermissionWrite,
-		}
+			Read:       read,
+			Write:      write,
+		})
 	}
 
-	err = storage.WriteStorageObjects(r.Context(), s.dbPool, objs)
+	acks, err := storage.WriteStorageObjects(r.Context(), s.dbPool, false, objs)
 	if err != nil {
-		if errors.Is(err, storage.ErrOCCConflict) {
-			http.Error(w, err.Error(), http.StatusConflict)
+		if errors.Is(err, storage.ErrStorageRejectedVersion) || errors.Is(err, storage.ErrStorageRejectedPermission) {
+			http.Error(w, "Storage write rejected.", http.StatusBadRequest)
 			return
 		}
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	acks := make([]map[string]interface{}, len(objs))
-	for i, o := range objs {
-		acks[i] = map[string]interface{}{
-			"collection":  o.Collection,
-			"key":         o.Key,
-			"user_id":     o.UserID,
-			"version":     o.Version,
-			"create_time": time.Now().Format(time.RFC3339),
-			"update_time": time.Now().Format(time.RFC3339),
+	out := make([]map[string]interface{}, len(acks))
+	for i, a := range acks {
+		out[i] = map[string]interface{}{
+			"collection":  a.Collection,
+			"key":         a.Key,
+			"user_id":     a.UserID,
+			"version":     a.Version,
+			"create_time": a.CreateTime.UTC().Format(time.RFC3339Nano),
+			"update_time": a.UpdateTime.UTC().Format(time.RFC3339Nano),
 		}
 	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{"acks": acks})
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{"acks": out})
 }
 
 func (s *Server) handleReadStorageObjects(w http.ResponseWriter, r *http.Request) {
-	if _, err := s.authenticateREST(r); err != nil {
+	callerStr, err := s.authenticateREST(r)
+	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+	caller, err := uuid.Parse(callerStr)
+	if err != nil {
+		http.Error(w, "invalid user", http.StatusUnauthorized)
 		return
 	}
 	var req struct {
@@ -961,16 +1012,23 @@ func (s *Server) handleReadStorageObjects(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	reqs := make([]storage.ReadRequest, len(req.ObjectIDs))
-	for i, obj := range req.ObjectIDs {
-		reqs[i] = storage.ReadRequest{
-			Collection: obj.Collection,
-			Key:        obj.Key,
-			UserID:     obj.UserID,
+	reqs := make([]storage.ReadRequest, 0, len(req.ObjectIDs))
+	for _, obj := range req.ObjectIDs {
+		if obj.Collection == "" || obj.Key == "" {
+			http.Error(w, "collection and key required", http.StatusBadRequest)
+			return
 		}
+		if obj.UserID != "" {
+			parsed, err := uuid.Parse(obj.UserID)
+			if err != nil || parsed == uuid.Nil {
+				http.Error(w, "invalid user_id", http.StatusBadRequest)
+				return
+			}
+		}
+		reqs = append(reqs, storage.ReadRequest{Collection: obj.Collection, Key: obj.Key, UserID: obj.UserID})
 	}
 
-	objs, err := storage.ReadStorageObjects(r.Context(), s.dbPool, reqs)
+	objs, err := storage.ReadStorageObjects(r.Context(), s.dbPool, caller, reqs)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -988,12 +1046,12 @@ func (s *Server) handleReadStorageObjects(w http.ResponseWriter, r *http.Request
 			"version":          o.Version,
 			"permission_read":  o.Read,
 			"permission_write": o.Write,
-			"create_time":      time.Now().Format(time.RFC3339),
-			"update_time":      time.Now().Format(time.RFC3339),
+			"create_time":      o.CreateTime.UTC().Format(time.RFC3339Nano),
+			"update_time":      o.UpdateTime.UTC().Format(time.RFC3339Nano),
 		}
 	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{"objects": res})
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{"objects": res})
 }
 
 func (s *Server) handleDeleteStorageObjects(w http.ResponseWriter, r *http.Request) {
@@ -1024,10 +1082,10 @@ func (s *Server) handleDeleteStorageObjects(w http.ResponseWriter, r *http.Reque
 		}
 	}
 
-	err = storage.DeleteStorageObjects(r.Context(), s.dbPool, reqs)
+	err = storage.DeleteStorageObjects(r.Context(), s.dbPool, false, reqs)
 	if err != nil {
-		if errors.Is(err, storage.ErrOCCConflict) {
-			http.Error(w, err.Error(), http.StatusConflict)
+		if errors.Is(err, storage.ErrStorageRejectedVersion) || errors.Is(err, storage.ErrStorageRejectedPermission) {
+			http.Error(w, "Storage write rejected.", http.StatusBadRequest)
 			return
 		}
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -1037,31 +1095,53 @@ func (s *Server) handleDeleteStorageObjects(w http.ResponseWriter, r *http.Reque
 }
 
 func (s *Server) handleListStorageObjects(w http.ResponseWriter, r *http.Request) {
-	if _, err := s.authenticateREST(r); err != nil {
+	callerStr, err := s.authenticateREST(r)
+	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
 	}
+	caller, err := uuid.Parse(callerStr)
+	if err != nil {
+		http.Error(w, "invalid user", http.StatusUnauthorized)
+		return
+	}
 	collection := r.PathValue("collection")
-	userID := r.URL.Query().Get("user_id")
+	userID := r.PathValue("user_id")
+	if userID == "" {
+		userID = r.URL.Query().Get("user_id")
+	}
 	limitStr := r.URL.Query().Get("limit")
 	cursor := r.URL.Query().Get("cursor")
 
-	limit := 20
+	limit := 1
 	if limitStr != "" {
-		var l int
-		if _, err := fmt.Sscanf(limitStr, "%d", &l); err == nil && l > 0 {
+		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 {
 			limit = l
 		}
 	}
 
-	objs, nextCursor, err := storage.ListStorageObjects(r.Context(), s.dbPool, userID, collection, limit, cursor)
+	var owner *uuid.UUID
+	if userID != "" {
+		parsed, err := uuid.Parse(userID)
+		if err != nil {
+			http.Error(w, "invalid user_id", http.StatusBadRequest)
+			return
+		}
+		owner = &parsed
+	}
+
+	list, err := storage.ListStorageObjects(r.Context(), s.dbPool, caller, owner, collection, limit, cursor)
 	if err != nil {
+		if errors.Is(err, storage.ErrListCursorInvalid) {
+			http.Error(w, "cursor is invalid", http.StatusBadRequest)
+			return
+		}
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	res := make([]map[string]interface{}, len(objs))
-	for i, o := range objs {
+	res := make([]map[string]interface{}, len(list.Objects))
+	for i, o := range list.Objects {
 		var valRaw interface{}
 		_ = json.Unmarshal([]byte(o.Value), &valRaw)
 		res[i] = map[string]interface{}{
@@ -1072,14 +1152,15 @@ func (s *Server) handleListStorageObjects(w http.ResponseWriter, r *http.Request
 			"version":          o.Version,
 			"permission_read":  o.Read,
 			"permission_write": o.Write,
-			"create_time":      time.Now().Format(time.RFC3339),
-			"update_time":      time.Now().Format(time.RFC3339),
+			"create_time":      o.CreateTime.UTC().Format(time.RFC3339Nano),
+			"update_time":      o.UpdateTime.UTC().Format(time.RFC3339Nano),
 		}
 	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
 		"objects":     res,
-		"next_cursor": nextCursor,
+		"next_cursor": list.Cursor,
+		"cursor":      list.Cursor,
 	})
 }
 

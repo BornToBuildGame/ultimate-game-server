@@ -978,6 +978,7 @@ type Account struct {
 	Email         string                 `protobuf:"bytes,3,opt,name=email,proto3" json:"email,omitempty"`
 	CustomId      string                 `protobuf:"bytes,4,opt,name=custom_id,json=customId,proto3" json:"custom_id,omitempty"`
 	VerifyTime    *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=verify_time,json=verifyTime,proto3" json:"verify_time,omitempty"`
+	Wallet        string                 `protobuf:"bytes,6,opt,name=wallet,proto3" json:"wallet,omitempty"` // JSON string of currency balances
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1045,6 +1046,13 @@ func (x *Account) GetVerifyTime() *timestamppb.Timestamp {
 		return x.VerifyTime
 	}
 	return nil
+}
+
+func (x *Account) GetWallet() string {
+	if x != nil {
+		return x.Wallet
+	}
+	return ""
 }
 
 type UpdateAccountRequest struct {
@@ -6171,6 +6179,1062 @@ func (x *DeleteNotificationsRequest) GetIds() []string {
 	return nil
 }
 
+type Wallet struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Wallet        string                 `protobuf:"bytes,1,opt,name=wallet,proto3" json:"wallet,omitempty"` // JSON string of balances
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Wallet) Reset() {
+	*x = Wallet{}
+	mi := &file_api_api_proto_msgTypes[91]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Wallet) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Wallet) ProtoMessage() {}
+
+func (x *Wallet) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[91]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Wallet.ProtoReflect.Descriptor instead.
+func (*Wallet) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{91}
+}
+
+func (x *Wallet) GetWallet() string {
+	if x != nil {
+		return x.Wallet
+	}
+	return ""
+}
+
+type ListWalletLedgerRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Limit         int32                  `protobuf:"varint,1,opt,name=limit,proto3" json:"limit,omitempty"`
+	Cursor        string                 `protobuf:"bytes,2,opt,name=cursor,proto3" json:"cursor,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListWalletLedgerRequest) Reset() {
+	*x = ListWalletLedgerRequest{}
+	mi := &file_api_api_proto_msgTypes[92]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListWalletLedgerRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListWalletLedgerRequest) ProtoMessage() {}
+
+func (x *ListWalletLedgerRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[92]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListWalletLedgerRequest.ProtoReflect.Descriptor instead.
+func (*ListWalletLedgerRequest) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{92}
+}
+
+func (x *ListWalletLedgerRequest) GetLimit() int32 {
+	if x != nil {
+		return x.Limit
+	}
+	return 0
+}
+
+func (x *ListWalletLedgerRequest) GetCursor() string {
+	if x != nil {
+		return x.Cursor
+	}
+	return ""
+}
+
+type WalletLedgerItem struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	UserId        string                 `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	Changeset     string                 `protobuf:"bytes,3,opt,name=changeset,proto3" json:"changeset,omitempty"`
+	Metadata      string                 `protobuf:"bytes,4,opt,name=metadata,proto3" json:"metadata,omitempty"`
+	CreateTime    *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=create_time,json=createTime,proto3" json:"create_time,omitempty"`
+	UpdateTime    *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=update_time,json=updateTime,proto3" json:"update_time,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *WalletLedgerItem) Reset() {
+	*x = WalletLedgerItem{}
+	mi := &file_api_api_proto_msgTypes[93]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WalletLedgerItem) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WalletLedgerItem) ProtoMessage() {}
+
+func (x *WalletLedgerItem) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[93]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WalletLedgerItem.ProtoReflect.Descriptor instead.
+func (*WalletLedgerItem) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{93}
+}
+
+func (x *WalletLedgerItem) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *WalletLedgerItem) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *WalletLedgerItem) GetChangeset() string {
+	if x != nil {
+		return x.Changeset
+	}
+	return ""
+}
+
+func (x *WalletLedgerItem) GetMetadata() string {
+	if x != nil {
+		return x.Metadata
+	}
+	return ""
+}
+
+func (x *WalletLedgerItem) GetCreateTime() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreateTime
+	}
+	return nil
+}
+
+func (x *WalletLedgerItem) GetUpdateTime() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdateTime
+	}
+	return nil
+}
+
+type WalletLedgerList struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Items         []*WalletLedgerItem    `protobuf:"bytes,1,rep,name=items,proto3" json:"items,omitempty"`
+	NextCursor    string                 `protobuf:"bytes,2,opt,name=next_cursor,json=nextCursor,proto3" json:"next_cursor,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *WalletLedgerList) Reset() {
+	*x = WalletLedgerList{}
+	mi := &file_api_api_proto_msgTypes[94]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WalletLedgerList) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WalletLedgerList) ProtoMessage() {}
+
+func (x *WalletLedgerList) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[94]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WalletLedgerList.ProtoReflect.Descriptor instead.
+func (*WalletLedgerList) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{94}
+}
+
+func (x *WalletLedgerList) GetItems() []*WalletLedgerItem {
+	if x != nil {
+		return x.Items
+	}
+	return nil
+}
+
+func (x *WalletLedgerList) GetNextCursor() string {
+	if x != nil {
+		return x.NextCursor
+	}
+	return ""
+}
+
+type ValidatePurchaseAppleRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Receipt       string                 `protobuf:"bytes,1,opt,name=receipt,proto3" json:"receipt,omitempty"`
+	Persist       *bool                  `protobuf:"varint,2,opt,name=persist,proto3,oneof" json:"persist,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ValidatePurchaseAppleRequest) Reset() {
+	*x = ValidatePurchaseAppleRequest{}
+	mi := &file_api_api_proto_msgTypes[95]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ValidatePurchaseAppleRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ValidatePurchaseAppleRequest) ProtoMessage() {}
+
+func (x *ValidatePurchaseAppleRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[95]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ValidatePurchaseAppleRequest.ProtoReflect.Descriptor instead.
+func (*ValidatePurchaseAppleRequest) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{95}
+}
+
+func (x *ValidatePurchaseAppleRequest) GetReceipt() string {
+	if x != nil {
+		return x.Receipt
+	}
+	return ""
+}
+
+func (x *ValidatePurchaseAppleRequest) GetPersist() bool {
+	if x != nil && x.Persist != nil {
+		return *x.Persist
+	}
+	return false
+}
+
+type ValidatePurchaseGoogleRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ProductId     string                 `protobuf:"bytes,1,opt,name=product_id,json=productId,proto3" json:"product_id,omitempty"`
+	PurchaseToken string                 `protobuf:"bytes,2,opt,name=purchase_token,json=purchaseToken,proto3" json:"purchase_token,omitempty"`
+	Persist       *bool                  `protobuf:"varint,3,opt,name=persist,proto3,oneof" json:"persist,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ValidatePurchaseGoogleRequest) Reset() {
+	*x = ValidatePurchaseGoogleRequest{}
+	mi := &file_api_api_proto_msgTypes[96]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ValidatePurchaseGoogleRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ValidatePurchaseGoogleRequest) ProtoMessage() {}
+
+func (x *ValidatePurchaseGoogleRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[96]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ValidatePurchaseGoogleRequest.ProtoReflect.Descriptor instead.
+func (*ValidatePurchaseGoogleRequest) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{96}
+}
+
+func (x *ValidatePurchaseGoogleRequest) GetProductId() string {
+	if x != nil {
+		return x.ProductId
+	}
+	return ""
+}
+
+func (x *ValidatePurchaseGoogleRequest) GetPurchaseToken() string {
+	if x != nil {
+		return x.PurchaseToken
+	}
+	return ""
+}
+
+func (x *ValidatePurchaseGoogleRequest) GetPersist() bool {
+	if x != nil && x.Persist != nil {
+		return *x.Persist
+	}
+	return false
+}
+
+type ValidatePurchaseHuaweiRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	PurchaseData  string                 `protobuf:"bytes,1,opt,name=purchase_data,json=purchaseData,proto3" json:"purchase_data,omitempty"`
+	Signature     string                 `protobuf:"bytes,2,opt,name=signature,proto3" json:"signature,omitempty"`
+	Persist       *bool                  `protobuf:"varint,3,opt,name=persist,proto3,oneof" json:"persist,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ValidatePurchaseHuaweiRequest) Reset() {
+	*x = ValidatePurchaseHuaweiRequest{}
+	mi := &file_api_api_proto_msgTypes[97]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ValidatePurchaseHuaweiRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ValidatePurchaseHuaweiRequest) ProtoMessage() {}
+
+func (x *ValidatePurchaseHuaweiRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[97]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ValidatePurchaseHuaweiRequest.ProtoReflect.Descriptor instead.
+func (*ValidatePurchaseHuaweiRequest) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{97}
+}
+
+func (x *ValidatePurchaseHuaweiRequest) GetPurchaseData() string {
+	if x != nil {
+		return x.PurchaseData
+	}
+	return ""
+}
+
+func (x *ValidatePurchaseHuaweiRequest) GetSignature() string {
+	if x != nil {
+		return x.Signature
+	}
+	return ""
+}
+
+func (x *ValidatePurchaseHuaweiRequest) GetPersist() bool {
+	if x != nil && x.Persist != nil {
+		return *x.Persist
+	}
+	return false
+}
+
+type ValidatePurchaseFacebookInstantRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	SignedRequest string                 `protobuf:"bytes,1,opt,name=signed_request,json=signedRequest,proto3" json:"signed_request,omitempty"`
+	Persist       *bool                  `protobuf:"varint,2,opt,name=persist,proto3,oneof" json:"persist,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ValidatePurchaseFacebookInstantRequest) Reset() {
+	*x = ValidatePurchaseFacebookInstantRequest{}
+	mi := &file_api_api_proto_msgTypes[98]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ValidatePurchaseFacebookInstantRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ValidatePurchaseFacebookInstantRequest) ProtoMessage() {}
+
+func (x *ValidatePurchaseFacebookInstantRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[98]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ValidatePurchaseFacebookInstantRequest.ProtoReflect.Descriptor instead.
+func (*ValidatePurchaseFacebookInstantRequest) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{98}
+}
+
+func (x *ValidatePurchaseFacebookInstantRequest) GetSignedRequest() string {
+	if x != nil {
+		return x.SignedRequest
+	}
+	return ""
+}
+
+func (x *ValidatePurchaseFacebookInstantRequest) GetPersist() bool {
+	if x != nil && x.Persist != nil {
+		return *x.Persist
+	}
+	return false
+}
+
+type ValidatePurchaseSamsungRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	PurchaseId    string                 `protobuf:"bytes,1,opt,name=purchase_id,json=purchaseId,proto3" json:"purchase_id,omitempty"`
+	Persist       *bool                  `protobuf:"varint,2,opt,name=persist,proto3,oneof" json:"persist,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ValidatePurchaseSamsungRequest) Reset() {
+	*x = ValidatePurchaseSamsungRequest{}
+	mi := &file_api_api_proto_msgTypes[99]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ValidatePurchaseSamsungRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ValidatePurchaseSamsungRequest) ProtoMessage() {}
+
+func (x *ValidatePurchaseSamsungRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[99]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ValidatePurchaseSamsungRequest.ProtoReflect.Descriptor instead.
+func (*ValidatePurchaseSamsungRequest) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{99}
+}
+
+func (x *ValidatePurchaseSamsungRequest) GetPurchaseId() string {
+	if x != nil {
+		return x.PurchaseId
+	}
+	return ""
+}
+
+func (x *ValidatePurchaseSamsungRequest) GetPersist() bool {
+	if x != nil && x.Persist != nil {
+		return *x.Persist
+	}
+	return false
+}
+
+type ValidatedPurchase struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	ProductId     string                 `protobuf:"bytes,2,opt,name=product_id,json=productId,proto3" json:"product_id,omitempty"`
+	TransactionId string                 `protobuf:"bytes,3,opt,name=transaction_id,json=transactionId,proto3" json:"transaction_id,omitempty"`
+	Store         int32                  `protobuf:"varint,4,opt,name=store,proto3" json:"store,omitempty"`
+	PurchaseTime  *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=purchase_time,json=purchaseTime,proto3" json:"purchase_time,omitempty"`
+	SeenBefore    bool                   `protobuf:"varint,6,opt,name=seen_before,json=seenBefore,proto3" json:"seen_before,omitempty"`
+	Environment   int32                  `protobuf:"varint,7,opt,name=environment,proto3" json:"environment,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ValidatedPurchase) Reset() {
+	*x = ValidatedPurchase{}
+	mi := &file_api_api_proto_msgTypes[100]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ValidatedPurchase) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ValidatedPurchase) ProtoMessage() {}
+
+func (x *ValidatedPurchase) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[100]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ValidatedPurchase.ProtoReflect.Descriptor instead.
+func (*ValidatedPurchase) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{100}
+}
+
+func (x *ValidatedPurchase) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *ValidatedPurchase) GetProductId() string {
+	if x != nil {
+		return x.ProductId
+	}
+	return ""
+}
+
+func (x *ValidatedPurchase) GetTransactionId() string {
+	if x != nil {
+		return x.TransactionId
+	}
+	return ""
+}
+
+func (x *ValidatedPurchase) GetStore() int32 {
+	if x != nil {
+		return x.Store
+	}
+	return 0
+}
+
+func (x *ValidatedPurchase) GetPurchaseTime() *timestamppb.Timestamp {
+	if x != nil {
+		return x.PurchaseTime
+	}
+	return nil
+}
+
+func (x *ValidatedPurchase) GetSeenBefore() bool {
+	if x != nil {
+		return x.SeenBefore
+	}
+	return false
+}
+
+func (x *ValidatedPurchase) GetEnvironment() int32 {
+	if x != nil {
+		return x.Environment
+	}
+	return 0
+}
+
+type ValidatePurchaseResponse struct {
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	ValidatedPurchases []*ValidatedPurchase   `protobuf:"bytes,1,rep,name=validated_purchases,json=validatedPurchases,proto3" json:"validated_purchases,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
+}
+
+func (x *ValidatePurchaseResponse) Reset() {
+	*x = ValidatePurchaseResponse{}
+	mi := &file_api_api_proto_msgTypes[101]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ValidatePurchaseResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ValidatePurchaseResponse) ProtoMessage() {}
+
+func (x *ValidatePurchaseResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[101]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ValidatePurchaseResponse.ProtoReflect.Descriptor instead.
+func (*ValidatePurchaseResponse) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{101}
+}
+
+func (x *ValidatePurchaseResponse) GetValidatedPurchases() []*ValidatedPurchase {
+	if x != nil {
+		return x.ValidatedPurchases
+	}
+	return nil
+}
+
+type ValidateSubscriptionAppleRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Receipt       string                 `protobuf:"bytes,1,opt,name=receipt,proto3" json:"receipt,omitempty"`
+	Persist       *bool                  `protobuf:"varint,2,opt,name=persist,proto3,oneof" json:"persist,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ValidateSubscriptionAppleRequest) Reset() {
+	*x = ValidateSubscriptionAppleRequest{}
+	mi := &file_api_api_proto_msgTypes[102]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ValidateSubscriptionAppleRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ValidateSubscriptionAppleRequest) ProtoMessage() {}
+
+func (x *ValidateSubscriptionAppleRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[102]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ValidateSubscriptionAppleRequest.ProtoReflect.Descriptor instead.
+func (*ValidateSubscriptionAppleRequest) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{102}
+}
+
+func (x *ValidateSubscriptionAppleRequest) GetReceipt() string {
+	if x != nil {
+		return x.Receipt
+	}
+	return ""
+}
+
+func (x *ValidateSubscriptionAppleRequest) GetPersist() bool {
+	if x != nil && x.Persist != nil {
+		return *x.Persist
+	}
+	return false
+}
+
+type ValidateSubscriptionGoogleRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ProductId     string                 `protobuf:"bytes,1,opt,name=product_id,json=productId,proto3" json:"product_id,omitempty"`
+	PurchaseToken string                 `protobuf:"bytes,2,opt,name=purchase_token,json=purchaseToken,proto3" json:"purchase_token,omitempty"`
+	Persist       *bool                  `protobuf:"varint,3,opt,name=persist,proto3,oneof" json:"persist,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ValidateSubscriptionGoogleRequest) Reset() {
+	*x = ValidateSubscriptionGoogleRequest{}
+	mi := &file_api_api_proto_msgTypes[103]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ValidateSubscriptionGoogleRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ValidateSubscriptionGoogleRequest) ProtoMessage() {}
+
+func (x *ValidateSubscriptionGoogleRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[103]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ValidateSubscriptionGoogleRequest.ProtoReflect.Descriptor instead.
+func (*ValidateSubscriptionGoogleRequest) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{103}
+}
+
+func (x *ValidateSubscriptionGoogleRequest) GetProductId() string {
+	if x != nil {
+		return x.ProductId
+	}
+	return ""
+}
+
+func (x *ValidateSubscriptionGoogleRequest) GetPurchaseToken() string {
+	if x != nil {
+		return x.PurchaseToken
+	}
+	return ""
+}
+
+func (x *ValidateSubscriptionGoogleRequest) GetPersist() bool {
+	if x != nil && x.Persist != nil {
+		return *x.Persist
+	}
+	return false
+}
+
+type ValidateSubscriptionResponse struct {
+	state                 protoimpl.MessageState `protogen:"open.v1"`
+	ValidatedSubscription *ValidatedSubscription `protobuf:"bytes,1,opt,name=validated_subscription,json=validatedSubscription,proto3" json:"validated_subscription,omitempty"`
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
+}
+
+func (x *ValidateSubscriptionResponse) Reset() {
+	*x = ValidateSubscriptionResponse{}
+	mi := &file_api_api_proto_msgTypes[104]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ValidateSubscriptionResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ValidateSubscriptionResponse) ProtoMessage() {}
+
+func (x *ValidateSubscriptionResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[104]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ValidateSubscriptionResponse.ProtoReflect.Descriptor instead.
+func (*ValidateSubscriptionResponse) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{104}
+}
+
+func (x *ValidateSubscriptionResponse) GetValidatedSubscription() *ValidatedSubscription {
+	if x != nil {
+		return x.ValidatedSubscription
+	}
+	return nil
+}
+
+type ValidatedSubscription struct {
+	state                 protoimpl.MessageState `protogen:"open.v1"`
+	UserId                string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	ProductId             string                 `protobuf:"bytes,2,opt,name=product_id,json=productId,proto3" json:"product_id,omitempty"`
+	OriginalTransactionId string                 `protobuf:"bytes,3,opt,name=original_transaction_id,json=originalTransactionId,proto3" json:"original_transaction_id,omitempty"`
+	Store                 int32                  `protobuf:"varint,4,opt,name=store,proto3" json:"store,omitempty"`
+	PurchaseTime          *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=purchase_time,json=purchaseTime,proto3" json:"purchase_time,omitempty"`
+	ExpireTime            *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=expire_time,json=expireTime,proto3" json:"expire_time,omitempty"`
+	Active                bool                   `protobuf:"varint,7,opt,name=active,proto3" json:"active,omitempty"`
+	SeenBefore            bool                   `protobuf:"varint,8,opt,name=seen_before,json=seenBefore,proto3" json:"seen_before,omitempty"`
+	Environment           int32                  `protobuf:"varint,9,opt,name=environment,proto3" json:"environment,omitempty"`
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
+}
+
+func (x *ValidatedSubscription) Reset() {
+	*x = ValidatedSubscription{}
+	mi := &file_api_api_proto_msgTypes[105]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ValidatedSubscription) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ValidatedSubscription) ProtoMessage() {}
+
+func (x *ValidatedSubscription) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[105]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ValidatedSubscription.ProtoReflect.Descriptor instead.
+func (*ValidatedSubscription) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{105}
+}
+
+func (x *ValidatedSubscription) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *ValidatedSubscription) GetProductId() string {
+	if x != nil {
+		return x.ProductId
+	}
+	return ""
+}
+
+func (x *ValidatedSubscription) GetOriginalTransactionId() string {
+	if x != nil {
+		return x.OriginalTransactionId
+	}
+	return ""
+}
+
+func (x *ValidatedSubscription) GetStore() int32 {
+	if x != nil {
+		return x.Store
+	}
+	return 0
+}
+
+func (x *ValidatedSubscription) GetPurchaseTime() *timestamppb.Timestamp {
+	if x != nil {
+		return x.PurchaseTime
+	}
+	return nil
+}
+
+func (x *ValidatedSubscription) GetExpireTime() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ExpireTime
+	}
+	return nil
+}
+
+func (x *ValidatedSubscription) GetActive() bool {
+	if x != nil {
+		return x.Active
+	}
+	return false
+}
+
+func (x *ValidatedSubscription) GetSeenBefore() bool {
+	if x != nil {
+		return x.SeenBefore
+	}
+	return false
+}
+
+func (x *ValidatedSubscription) GetEnvironment() int32 {
+	if x != nil {
+		return x.Environment
+	}
+	return 0
+}
+
+type ListSubscriptionsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Limit         int32                  `protobuf:"varint,1,opt,name=limit,proto3" json:"limit,omitempty"`
+	Cursor        string                 `protobuf:"bytes,2,opt,name=cursor,proto3" json:"cursor,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListSubscriptionsRequest) Reset() {
+	*x = ListSubscriptionsRequest{}
+	mi := &file_api_api_proto_msgTypes[106]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListSubscriptionsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListSubscriptionsRequest) ProtoMessage() {}
+
+func (x *ListSubscriptionsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[106]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListSubscriptionsRequest.ProtoReflect.Descriptor instead.
+func (*ListSubscriptionsRequest) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{106}
+}
+
+func (x *ListSubscriptionsRequest) GetLimit() int32 {
+	if x != nil {
+		return x.Limit
+	}
+	return 0
+}
+
+func (x *ListSubscriptionsRequest) GetCursor() string {
+	if x != nil {
+		return x.Cursor
+	}
+	return ""
+}
+
+type SubscriptionList struct {
+	state                  protoimpl.MessageState   `protogen:"open.v1"`
+	ValidatedSubscriptions []*ValidatedSubscription `protobuf:"bytes,1,rep,name=validated_subscriptions,json=validatedSubscriptions,proto3" json:"validated_subscriptions,omitempty"`
+	Cursor                 string                   `protobuf:"bytes,2,opt,name=cursor,proto3" json:"cursor,omitempty"`
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
+}
+
+func (x *SubscriptionList) Reset() {
+	*x = SubscriptionList{}
+	mi := &file_api_api_proto_msgTypes[107]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SubscriptionList) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SubscriptionList) ProtoMessage() {}
+
+func (x *SubscriptionList) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[107]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SubscriptionList.ProtoReflect.Descriptor instead.
+func (*SubscriptionList) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{107}
+}
+
+func (x *SubscriptionList) GetValidatedSubscriptions() []*ValidatedSubscription {
+	if x != nil {
+		return x.ValidatedSubscriptions
+	}
+	return nil
+}
+
+func (x *SubscriptionList) GetCursor() string {
+	if x != nil {
+		return x.Cursor
+	}
+	return ""
+}
+
+type GetSubscriptionRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ProductId     string                 `protobuf:"bytes,1,opt,name=product_id,json=productId,proto3" json:"product_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetSubscriptionRequest) Reset() {
+	*x = GetSubscriptionRequest{}
+	mi := &file_api_api_proto_msgTypes[108]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetSubscriptionRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetSubscriptionRequest) ProtoMessage() {}
+
+func (x *GetSubscriptionRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[108]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetSubscriptionRequest.ProtoReflect.Descriptor instead.
+func (*GetSubscriptionRequest) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{108}
+}
+
+func (x *GetSubscriptionRequest) GetProductId() string {
+	if x != nil {
+		return x.ProductId
+	}
+	return ""
+}
+
 var File_api_api_proto protoreflect.FileDescriptor
 
 const file_api_api_proto_rawDesc = "" +
@@ -6246,14 +7310,15 @@ const file_api_api_proto_rawDesc = "" +
 	"\auser_id\x18\x04 \x01(\tR\x06userId\x12\x1a\n" +
 	"\busername\x18\x05 \x01(\tR\busername\"\x18\n" +
 	"\x06Device\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"\xdf\x01\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"\xf7\x01\n" +
 	"\aAccount\x12-\n" +
 	"\x04user\x18\x01 \x01(\v2\x19.ultimate.server.api.UserR\x04user\x125\n" +
 	"\adevices\x18\x02 \x03(\v2\x1b.ultimate.server.api.DeviceR\adevices\x12\x14\n" +
 	"\x05email\x18\x03 \x01(\tR\x05email\x12\x1b\n" +
 	"\tcustom_id\x18\x04 \x01(\tR\bcustomId\x12;\n" +
 	"\vverify_time\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"verifyTime\"\xe3\x01\n" +
+	"verifyTime\x12\x16\n" +
+	"\x06wallet\x18\x06 \x01(\tR\x06wallet\"\xe3\x01\n" +
 	"\x14UpdateAccountRequest\x12!\n" +
 	"\fdisplay_name\x18\x01 \x01(\tR\vdisplayName\x12\x1d\n" +
 	"\n" +
@@ -6700,7 +7765,102 @@ const file_api_api_proto_rawDesc = "" +
 	"\rnotifications\x18\x01 \x03(\v2$.ultimate.server.api.ApiNotificationR\rnotifications\x12)\n" +
 	"\x10cacheable_cursor\x18\x02 \x01(\tR\x0fcacheableCursor\".\n" +
 	"\x1aDeleteNotificationsRequest\x12\x10\n" +
-	"\x03ids\x18\x01 \x03(\tR\x03ids*L\n" +
+	"\x03ids\x18\x01 \x03(\tR\x03ids\" \n" +
+	"\x06Wallet\x12\x16\n" +
+	"\x06wallet\x18\x01 \x01(\tR\x06wallet\"G\n" +
+	"\x17ListWalletLedgerRequest\x12\x14\n" +
+	"\x05limit\x18\x01 \x01(\x05R\x05limit\x12\x16\n" +
+	"\x06cursor\x18\x02 \x01(\tR\x06cursor\"\xef\x01\n" +
+	"\x10WalletLedgerItem\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
+	"\auser_id\x18\x02 \x01(\tR\x06userId\x12\x1c\n" +
+	"\tchangeset\x18\x03 \x01(\tR\tchangeset\x12\x1a\n" +
+	"\bmetadata\x18\x04 \x01(\tR\bmetadata\x12;\n" +
+	"\vcreate_time\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"createTime\x12;\n" +
+	"\vupdate_time\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"updateTime\"p\n" +
+	"\x10WalletLedgerList\x12;\n" +
+	"\x05items\x18\x01 \x03(\v2%.ultimate.server.api.WalletLedgerItemR\x05items\x12\x1f\n" +
+	"\vnext_cursor\x18\x02 \x01(\tR\n" +
+	"nextCursor\"c\n" +
+	"\x1cValidatePurchaseAppleRequest\x12\x18\n" +
+	"\areceipt\x18\x01 \x01(\tR\areceipt\x12\x1d\n" +
+	"\apersist\x18\x02 \x01(\bH\x00R\apersist\x88\x01\x01B\n" +
+	"\n" +
+	"\b_persist\"\x90\x01\n" +
+	"\x1dValidatePurchaseGoogleRequest\x12\x1d\n" +
+	"\n" +
+	"product_id\x18\x01 \x01(\tR\tproductId\x12%\n" +
+	"\x0epurchase_token\x18\x02 \x01(\tR\rpurchaseToken\x12\x1d\n" +
+	"\apersist\x18\x03 \x01(\bH\x00R\apersist\x88\x01\x01B\n" +
+	"\n" +
+	"\b_persist\"\x8d\x01\n" +
+	"\x1dValidatePurchaseHuaweiRequest\x12#\n" +
+	"\rpurchase_data\x18\x01 \x01(\tR\fpurchaseData\x12\x1c\n" +
+	"\tsignature\x18\x02 \x01(\tR\tsignature\x12\x1d\n" +
+	"\apersist\x18\x03 \x01(\bH\x00R\apersist\x88\x01\x01B\n" +
+	"\n" +
+	"\b_persist\"z\n" +
+	"&ValidatePurchaseFacebookInstantRequest\x12%\n" +
+	"\x0esigned_request\x18\x01 \x01(\tR\rsignedRequest\x12\x1d\n" +
+	"\apersist\x18\x02 \x01(\bH\x00R\apersist\x88\x01\x01B\n" +
+	"\n" +
+	"\b_persist\"l\n" +
+	"\x1eValidatePurchaseSamsungRequest\x12\x1f\n" +
+	"\vpurchase_id\x18\x01 \x01(\tR\n" +
+	"purchaseId\x12\x1d\n" +
+	"\apersist\x18\x02 \x01(\bH\x00R\apersist\x88\x01\x01B\n" +
+	"\n" +
+	"\b_persist\"\x8c\x02\n" +
+	"\x11ValidatedPurchase\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x1d\n" +
+	"\n" +
+	"product_id\x18\x02 \x01(\tR\tproductId\x12%\n" +
+	"\x0etransaction_id\x18\x03 \x01(\tR\rtransactionId\x12\x14\n" +
+	"\x05store\x18\x04 \x01(\x05R\x05store\x12?\n" +
+	"\rpurchase_time\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\fpurchaseTime\x12\x1f\n" +
+	"\vseen_before\x18\x06 \x01(\bR\n" +
+	"seenBefore\x12 \n" +
+	"\venvironment\x18\a \x01(\x05R\venvironment\"s\n" +
+	"\x18ValidatePurchaseResponse\x12W\n" +
+	"\x13validated_purchases\x18\x01 \x03(\v2&.ultimate.server.api.ValidatedPurchaseR\x12validatedPurchases\"g\n" +
+	" ValidateSubscriptionAppleRequest\x12\x18\n" +
+	"\areceipt\x18\x01 \x01(\tR\areceipt\x12\x1d\n" +
+	"\apersist\x18\x02 \x01(\bH\x00R\apersist\x88\x01\x01B\n" +
+	"\n" +
+	"\b_persist\"\x94\x01\n" +
+	"!ValidateSubscriptionGoogleRequest\x12\x1d\n" +
+	"\n" +
+	"product_id\x18\x01 \x01(\tR\tproductId\x12%\n" +
+	"\x0epurchase_token\x18\x02 \x01(\tR\rpurchaseToken\x12\x1d\n" +
+	"\apersist\x18\x03 \x01(\bH\x00R\apersist\x88\x01\x01B\n" +
+	"\n" +
+	"\b_persist\"\x81\x01\n" +
+	"\x1cValidateSubscriptionResponse\x12a\n" +
+	"\x16validated_subscription\x18\x01 \x01(\v2*.ultimate.server.api.ValidatedSubscriptionR\x15validatedSubscription\"\xf6\x02\n" +
+	"\x15ValidatedSubscription\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x1d\n" +
+	"\n" +
+	"product_id\x18\x02 \x01(\tR\tproductId\x126\n" +
+	"\x17original_transaction_id\x18\x03 \x01(\tR\x15originalTransactionId\x12\x14\n" +
+	"\x05store\x18\x04 \x01(\x05R\x05store\x12?\n" +
+	"\rpurchase_time\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\fpurchaseTime\x12;\n" +
+	"\vexpire_time\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"expireTime\x12\x16\n" +
+	"\x06active\x18\a \x01(\bR\x06active\x12\x1f\n" +
+	"\vseen_before\x18\b \x01(\bR\n" +
+	"seenBefore\x12 \n" +
+	"\venvironment\x18\t \x01(\x05R\venvironment\"H\n" +
+	"\x18ListSubscriptionsRequest\x12\x14\n" +
+	"\x05limit\x18\x01 \x01(\x05R\x05limit\x12\x16\n" +
+	"\x06cursor\x18\x02 \x01(\tR\x06cursor\"\x8f\x01\n" +
+	"\x10SubscriptionList\x12c\n" +
+	"\x17validated_subscriptions\x18\x01 \x03(\v2*.ultimate.server.api.ValidatedSubscriptionR\x16validatedSubscriptions\x12\x16\n" +
+	"\x06cursor\x18\x02 \x01(\tR\x06cursor\"7\n" +
+	"\x16GetSubscriptionRequest\x12\x1d\n" +
+	"\n" +
+	"product_id\x18\x01 \x01(\tR\tproductId*L\n" +
 	"\bOperator\x12\x0f\n" +
 	"\vNO_OVERRIDE\x10\x00\x12\b\n" +
 	"\x04BEST\x10\x01\x12\a\n" +
@@ -6797,7 +7957,21 @@ const file_api_api_proto_rawDesc = "" +
 	"\x13ListChannelMessages\x12/.ultimate.server.api.ListChannelMessagesRequest\x1a'.ultimate.server.api.ChannelMessageList2\xe0\x01\n" +
 	"\x13NotificationService\x12i\n" +
 	"\x11ListNotifications\x12-.ultimate.server.api.ListNotificationsRequest\x1a%.ultimate.server.api.NotificationList\x12^\n" +
-	"\x13DeleteNotifications\x12/.ultimate.server.api.DeleteNotificationsRequest\x1a\x16.google.protobuf.EmptyB)Z'ultimate-game-server/internal/api/apipbb\x06proto3"
+	"\x13DeleteNotifications\x12/.ultimate.server.api.DeleteNotificationsRequest\x1a\x16.google.protobuf.Empty2\xbb\x01\n" +
+	"\x0eEconomyService\x12@\n" +
+	"\tGetWallet\x12\x16.google.protobuf.Empty\x1a\x1b.ultimate.server.api.Wallet\x12g\n" +
+	"\x10ListWalletLedger\x12,.ultimate.server.api.ListWalletLedgerRequest\x1a%.ultimate.server.api.WalletLedgerList2\xf9\b\n" +
+	"\n" +
+	"IAPService\x12y\n" +
+	"\x15ValidatePurchaseApple\x121.ultimate.server.api.ValidatePurchaseAppleRequest\x1a-.ultimate.server.api.ValidatePurchaseResponse\x12{\n" +
+	"\x16ValidatePurchaseGoogle\x122.ultimate.server.api.ValidatePurchaseGoogleRequest\x1a-.ultimate.server.api.ValidatePurchaseResponse\x12{\n" +
+	"\x16ValidatePurchaseHuawei\x122.ultimate.server.api.ValidatePurchaseHuaweiRequest\x1a-.ultimate.server.api.ValidatePurchaseResponse\x12\x8d\x01\n" +
+	"\x1fValidatePurchaseFacebookInstant\x12;.ultimate.server.api.ValidatePurchaseFacebookInstantRequest\x1a-.ultimate.server.api.ValidatePurchaseResponse\x12}\n" +
+	"\x17ValidatePurchaseSamsung\x123.ultimate.server.api.ValidatePurchaseSamsungRequest\x1a-.ultimate.server.api.ValidatePurchaseResponse\x12\x85\x01\n" +
+	"\x19ValidateSubscriptionApple\x125.ultimate.server.api.ValidateSubscriptionAppleRequest\x1a1.ultimate.server.api.ValidateSubscriptionResponse\x12\x87\x01\n" +
+	"\x1aValidateSubscriptionGoogle\x126.ultimate.server.api.ValidateSubscriptionGoogleRequest\x1a1.ultimate.server.api.ValidateSubscriptionResponse\x12i\n" +
+	"\x11ListSubscriptions\x12-.ultimate.server.api.ListSubscriptionsRequest\x1a%.ultimate.server.api.SubscriptionList\x12j\n" +
+	"\x0fGetSubscription\x12+.ultimate.server.api.GetSubscriptionRequest\x1a*.ultimate.server.api.ValidatedSubscriptionB)Z'ultimate-game-server/internal/api/apipbb\x06proto3"
 
 var (
 	file_api_api_proto_rawDescOnce sync.Once
@@ -6812,7 +7986,7 @@ func file_api_api_proto_rawDescGZIP() []byte {
 }
 
 var file_api_api_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_api_api_proto_msgTypes = make([]protoimpl.MessageInfo, 94)
+var file_api_api_proto_msgTypes = make([]protoimpl.MessageInfo, 112)
 var file_api_api_proto_goTypes = []any{
 	(Operator)(0),                                    // 0: ultimate.server.api.Operator
 	(*User)(nil),                                     // 1: ultimate.server.api.User
@@ -6906,210 +8080,259 @@ var file_api_api_proto_goTypes = []any{
 	(*ApiNotification)(nil),                          // 89: ultimate.server.api.ApiNotification
 	(*NotificationList)(nil),                         // 90: ultimate.server.api.NotificationList
 	(*DeleteNotificationsRequest)(nil),               // 91: ultimate.server.api.DeleteNotificationsRequest
-	nil,                                              // 92: ultimate.server.api.AddMatchmakerRequest.StringPropertiesEntry
-	nil,                                              // 93: ultimate.server.api.AddMatchmakerRequest.NumericPropertiesEntry
-	nil,                                              // 94: ultimate.server.api.CreateMatchRequest.ParamsEntry
-	(*timestamppb.Timestamp)(nil),                    // 95: google.protobuf.Timestamp
-	(*emptypb.Empty)(nil),                            // 96: google.protobuf.Empty
+	(*Wallet)(nil),                                   // 92: ultimate.server.api.Wallet
+	(*ListWalletLedgerRequest)(nil),                  // 93: ultimate.server.api.ListWalletLedgerRequest
+	(*WalletLedgerItem)(nil),                         // 94: ultimate.server.api.WalletLedgerItem
+	(*WalletLedgerList)(nil),                         // 95: ultimate.server.api.WalletLedgerList
+	(*ValidatePurchaseAppleRequest)(nil),             // 96: ultimate.server.api.ValidatePurchaseAppleRequest
+	(*ValidatePurchaseGoogleRequest)(nil),            // 97: ultimate.server.api.ValidatePurchaseGoogleRequest
+	(*ValidatePurchaseHuaweiRequest)(nil),            // 98: ultimate.server.api.ValidatePurchaseHuaweiRequest
+	(*ValidatePurchaseFacebookInstantRequest)(nil),   // 99: ultimate.server.api.ValidatePurchaseFacebookInstantRequest
+	(*ValidatePurchaseSamsungRequest)(nil),           // 100: ultimate.server.api.ValidatePurchaseSamsungRequest
+	(*ValidatedPurchase)(nil),                        // 101: ultimate.server.api.ValidatedPurchase
+	(*ValidatePurchaseResponse)(nil),                 // 102: ultimate.server.api.ValidatePurchaseResponse
+	(*ValidateSubscriptionAppleRequest)(nil),         // 103: ultimate.server.api.ValidateSubscriptionAppleRequest
+	(*ValidateSubscriptionGoogleRequest)(nil),        // 104: ultimate.server.api.ValidateSubscriptionGoogleRequest
+	(*ValidateSubscriptionResponse)(nil),             // 105: ultimate.server.api.ValidateSubscriptionResponse
+	(*ValidatedSubscription)(nil),                    // 106: ultimate.server.api.ValidatedSubscription
+	(*ListSubscriptionsRequest)(nil),                 // 107: ultimate.server.api.ListSubscriptionsRequest
+	(*SubscriptionList)(nil),                         // 108: ultimate.server.api.SubscriptionList
+	(*GetSubscriptionRequest)(nil),                   // 109: ultimate.server.api.GetSubscriptionRequest
+	nil,                                              // 110: ultimate.server.api.AddMatchmakerRequest.StringPropertiesEntry
+	nil,                                              // 111: ultimate.server.api.AddMatchmakerRequest.NumericPropertiesEntry
+	nil,                                              // 112: ultimate.server.api.CreateMatchRequest.ParamsEntry
+	(*timestamppb.Timestamp)(nil),                    // 113: google.protobuf.Timestamp
+	(*emptypb.Empty)(nil),                            // 114: google.protobuf.Empty
 }
 var file_api_api_proto_depIdxs = []int32{
-	95,  // 0: ultimate.server.api.User.create_time:type_name -> google.protobuf.Timestamp
-	95,  // 1: ultimate.server.api.User.update_time:type_name -> google.protobuf.Timestamp
+	113, // 0: ultimate.server.api.User.create_time:type_name -> google.protobuf.Timestamp
+	113, // 1: ultimate.server.api.User.update_time:type_name -> google.protobuf.Timestamp
 	1,   // 2: ultimate.server.api.Account.user:type_name -> ultimate.server.api.User
 	13,  // 3: ultimate.server.api.Account.devices:type_name -> ultimate.server.api.Device
-	95,  // 4: ultimate.server.api.Account.verify_time:type_name -> google.protobuf.Timestamp
-	95,  // 5: ultimate.server.api.Leaderboard.create_time:type_name -> google.protobuf.Timestamp
+	113, // 4: ultimate.server.api.Account.verify_time:type_name -> google.protobuf.Timestamp
+	113, // 5: ultimate.server.api.Leaderboard.create_time:type_name -> google.protobuf.Timestamp
 	19,  // 6: ultimate.server.api.LeaderboardList.leaderboards:type_name -> ultimate.server.api.Leaderboard
 	0,   // 7: ultimate.server.api.WriteLeaderboardRecordRequest.override_operator:type_name -> ultimate.server.api.Operator
-	95,  // 8: ultimate.server.api.LeaderboardRecord.create_time:type_name -> google.protobuf.Timestamp
-	95,  // 9: ultimate.server.api.LeaderboardRecord.update_time:type_name -> google.protobuf.Timestamp
-	95,  // 10: ultimate.server.api.LeaderboardRecord.expiry_time:type_name -> google.protobuf.Timestamp
+	113, // 8: ultimate.server.api.LeaderboardRecord.create_time:type_name -> google.protobuf.Timestamp
+	113, // 9: ultimate.server.api.LeaderboardRecord.update_time:type_name -> google.protobuf.Timestamp
+	113, // 10: ultimate.server.api.LeaderboardRecord.expiry_time:type_name -> google.protobuf.Timestamp
 	23,  // 11: ultimate.server.api.LeaderboardRecordList.records:type_name -> ultimate.server.api.LeaderboardRecord
 	23,  // 12: ultimate.server.api.LeaderboardRecordList.owner_records:type_name -> ultimate.server.api.LeaderboardRecord
-	95,  // 13: ultimate.server.api.CreateTournamentRequest.end_time:type_name -> google.protobuf.Timestamp
-	95,  // 14: ultimate.server.api.CreateTournamentRequest.start_time:type_name -> google.protobuf.Timestamp
-	95,  // 15: ultimate.server.api.ListTournamentsRequest.start_time:type_name -> google.protobuf.Timestamp
-	95,  // 16: ultimate.server.api.ListTournamentsRequest.end_time:type_name -> google.protobuf.Timestamp
-	95,  // 17: ultimate.server.api.Tournament.end_time:type_name -> google.protobuf.Timestamp
-	95,  // 18: ultimate.server.api.Tournament.start_time:type_name -> google.protobuf.Timestamp
+	113, // 13: ultimate.server.api.CreateTournamentRequest.end_time:type_name -> google.protobuf.Timestamp
+	113, // 14: ultimate.server.api.CreateTournamentRequest.start_time:type_name -> google.protobuf.Timestamp
+	113, // 15: ultimate.server.api.ListTournamentsRequest.start_time:type_name -> google.protobuf.Timestamp
+	113, // 16: ultimate.server.api.ListTournamentsRequest.end_time:type_name -> google.protobuf.Timestamp
+	113, // 17: ultimate.server.api.Tournament.end_time:type_name -> google.protobuf.Timestamp
+	113, // 18: ultimate.server.api.Tournament.start_time:type_name -> google.protobuf.Timestamp
 	32,  // 19: ultimate.server.api.TournamentList.tournaments:type_name -> ultimate.server.api.Tournament
 	0,   // 20: ultimate.server.api.WriteTournamentRecordRequest.override_operator:type_name -> ultimate.server.api.Operator
 	1,   // 21: ultimate.server.api.Friend.user:type_name -> ultimate.server.api.User
-	95,  // 22: ultimate.server.api.Friend.update_time:type_name -> google.protobuf.Timestamp
+	113, // 22: ultimate.server.api.Friend.update_time:type_name -> google.protobuf.Timestamp
 	41,  // 23: ultimate.server.api.FriendList.friends:type_name -> ultimate.server.api.Friend
 	1,   // 24: ultimate.server.api.FriendOfFriend.user:type_name -> ultimate.server.api.User
 	43,  // 25: ultimate.server.api.FriendsOfFriendsList.friends_of_friends:type_name -> ultimate.server.api.FriendOfFriend
-	95,  // 26: ultimate.server.api.Group.create_time:type_name -> google.protobuf.Timestamp
-	95,  // 27: ultimate.server.api.Group.update_time:type_name -> google.protobuf.Timestamp
+	113, // 26: ultimate.server.api.Group.create_time:type_name -> google.protobuf.Timestamp
+	113, // 27: ultimate.server.api.Group.update_time:type_name -> google.protobuf.Timestamp
 	50,  // 28: ultimate.server.api.GroupList.groups:type_name -> ultimate.server.api.Group
 	1,   // 29: ultimate.server.api.GroupUser.user:type_name -> ultimate.server.api.User
 	62,  // 30: ultimate.server.api.GroupUserList.group_users:type_name -> ultimate.server.api.GroupUser
 	50,  // 31: ultimate.server.api.UserGroup.group:type_name -> ultimate.server.api.Group
 	64,  // 32: ultimate.server.api.UserGroupList.user_groups:type_name -> ultimate.server.api.UserGroup
-	92,  // 33: ultimate.server.api.AddMatchmakerRequest.string_properties:type_name -> ultimate.server.api.AddMatchmakerRequest.StringPropertiesEntry
-	93,  // 34: ultimate.server.api.AddMatchmakerRequest.numeric_properties:type_name -> ultimate.server.api.AddMatchmakerRequest.NumericPropertiesEntry
-	94,  // 35: ultimate.server.api.CreateMatchRequest.params:type_name -> ultimate.server.api.CreateMatchRequest.ParamsEntry
+	110, // 33: ultimate.server.api.AddMatchmakerRequest.string_properties:type_name -> ultimate.server.api.AddMatchmakerRequest.StringPropertiesEntry
+	111, // 34: ultimate.server.api.AddMatchmakerRequest.numeric_properties:type_name -> ultimate.server.api.AddMatchmakerRequest.NumericPropertiesEntry
+	112, // 35: ultimate.server.api.CreateMatchRequest.params:type_name -> ultimate.server.api.CreateMatchRequest.ParamsEntry
 	77,  // 36: ultimate.server.api.Match.presences:type_name -> ultimate.server.api.MatchPresence
 	78,  // 37: ultimate.server.api.MatchList.matches:type_name -> ultimate.server.api.Match
 	83,  // 38: ultimate.server.api.PartyList.parties:type_name -> ultimate.server.api.Party
-	95,  // 39: ultimate.server.api.ChannelMessage.create_time:type_name -> google.protobuf.Timestamp
-	95,  // 40: ultimate.server.api.ChannelMessage.update_time:type_name -> google.protobuf.Timestamp
+	113, // 39: ultimate.server.api.ChannelMessage.create_time:type_name -> google.protobuf.Timestamp
+	113, // 40: ultimate.server.api.ChannelMessage.update_time:type_name -> google.protobuf.Timestamp
 	86,  // 41: ultimate.server.api.ChannelMessageList.messages:type_name -> ultimate.server.api.ChannelMessage
-	95,  // 42: ultimate.server.api.ApiNotification.create_time:type_name -> google.protobuf.Timestamp
+	113, // 42: ultimate.server.api.ApiNotification.create_time:type_name -> google.protobuf.Timestamp
 	89,  // 43: ultimate.server.api.NotificationList.notifications:type_name -> ultimate.server.api.ApiNotification
-	2,   // 44: ultimate.server.api.AuthenticationService.AuthenticateEmail:input_type -> ultimate.server.api.AuthenticateEmailRequest
-	3,   // 45: ultimate.server.api.AuthenticationService.AuthenticateDevice:input_type -> ultimate.server.api.AuthenticateDeviceRequest
-	4,   // 46: ultimate.server.api.AuthenticationService.AuthenticateApple:input_type -> ultimate.server.api.AuthenticateAppleRequest
-	5,   // 47: ultimate.server.api.AuthenticationService.AuthenticateGoogle:input_type -> ultimate.server.api.AuthenticateGoogleRequest
-	6,   // 48: ultimate.server.api.AuthenticationService.AuthenticateFacebook:input_type -> ultimate.server.api.AuthenticateFacebookRequest
-	7,   // 49: ultimate.server.api.AuthenticationService.AuthenticateSteam:input_type -> ultimate.server.api.AuthenticateSteamRequest
-	8,   // 50: ultimate.server.api.AuthenticationService.AuthenticateGameCenter:input_type -> ultimate.server.api.AuthenticateGameCenterRequest
-	9,   // 51: ultimate.server.api.AuthenticationService.AuthenticateCustom:input_type -> ultimate.server.api.AuthenticateCustomRequest
-	10,  // 52: ultimate.server.api.AuthenticationService.SessionRefresh:input_type -> ultimate.server.api.SessionRefreshRequest
-	11,  // 53: ultimate.server.api.AuthenticationService.SessionLogout:input_type -> ultimate.server.api.SessionLogoutRequest
-	96,  // 54: ultimate.server.api.AuthenticationService.GetAccount:input_type -> google.protobuf.Empty
-	15,  // 55: ultimate.server.api.AuthenticationService.UpdateAccount:input_type -> ultimate.server.api.UpdateAccountRequest
-	96,  // 56: ultimate.server.api.AuthenticationService.DeleteAccount:input_type -> google.protobuf.Empty
-	2,   // 57: ultimate.server.api.AuthenticationService.LinkEmail:input_type -> ultimate.server.api.AuthenticateEmailRequest
-	3,   // 58: ultimate.server.api.AuthenticationService.LinkDevice:input_type -> ultimate.server.api.AuthenticateDeviceRequest
-	4,   // 59: ultimate.server.api.AuthenticationService.LinkApple:input_type -> ultimate.server.api.AuthenticateAppleRequest
-	5,   // 60: ultimate.server.api.AuthenticationService.LinkGoogle:input_type -> ultimate.server.api.AuthenticateGoogleRequest
-	6,   // 61: ultimate.server.api.AuthenticationService.LinkFacebook:input_type -> ultimate.server.api.AuthenticateFacebookRequest
-	7,   // 62: ultimate.server.api.AuthenticationService.LinkSteam:input_type -> ultimate.server.api.AuthenticateSteamRequest
-	9,   // 63: ultimate.server.api.AuthenticationService.LinkCustom:input_type -> ultimate.server.api.AuthenticateCustomRequest
-	16,  // 64: ultimate.server.api.AuthenticationService.UnlinkEmail:input_type -> ultimate.server.api.UnlinkRequest
-	16,  // 65: ultimate.server.api.AuthenticationService.UnlinkDevice:input_type -> ultimate.server.api.UnlinkRequest
-	16,  // 66: ultimate.server.api.AuthenticationService.UnlinkApple:input_type -> ultimate.server.api.UnlinkRequest
-	16,  // 67: ultimate.server.api.AuthenticationService.UnlinkGoogle:input_type -> ultimate.server.api.UnlinkRequest
-	16,  // 68: ultimate.server.api.AuthenticationService.UnlinkFacebook:input_type -> ultimate.server.api.UnlinkRequest
-	16,  // 69: ultimate.server.api.AuthenticationService.UnlinkSteam:input_type -> ultimate.server.api.UnlinkRequest
-	16,  // 70: ultimate.server.api.AuthenticationService.UnlinkCustom:input_type -> ultimate.server.api.UnlinkRequest
-	17,  // 71: ultimate.server.api.LeaderboardService.CreateLeaderboard:input_type -> ultimate.server.api.CreateLeaderboardRequest
-	21,  // 72: ultimate.server.api.LeaderboardService.DeleteLeaderboard:input_type -> ultimate.server.api.DeleteLeaderboardRequest
-	18,  // 73: ultimate.server.api.LeaderboardService.ListLeaderboards:input_type -> ultimate.server.api.ListLeaderboardsRequest
-	22,  // 74: ultimate.server.api.LeaderboardService.WriteLeaderboardRecord:input_type -> ultimate.server.api.WriteLeaderboardRecordRequest
-	24,  // 75: ultimate.server.api.LeaderboardService.ListLeaderboardRecords:input_type -> ultimate.server.api.ListLeaderboardRecordsRequest
-	25,  // 76: ultimate.server.api.LeaderboardService.ListLeaderboardRecordsAroundOwner:input_type -> ultimate.server.api.ListLeaderboardRecordsAroundOwnerRequest
-	27,  // 77: ultimate.server.api.LeaderboardService.DeleteLeaderboardRecord:input_type -> ultimate.server.api.DeleteLeaderboardRecordRequest
-	28,  // 78: ultimate.server.api.TournamentService.CreateTournament:input_type -> ultimate.server.api.CreateTournamentRequest
-	29,  // 79: ultimate.server.api.TournamentService.DeleteTournament:input_type -> ultimate.server.api.DeleteTournamentRequest
-	30,  // 80: ultimate.server.api.TournamentService.JoinTournament:input_type -> ultimate.server.api.JoinTournamentRequest
-	31,  // 81: ultimate.server.api.TournamentService.ListTournaments:input_type -> ultimate.server.api.ListTournamentsRequest
-	34,  // 82: ultimate.server.api.TournamentService.WriteTournamentRecord:input_type -> ultimate.server.api.WriteTournamentRecordRequest
-	35,  // 83: ultimate.server.api.TournamentService.ListTournamentRecords:input_type -> ultimate.server.api.ListTournamentRecordsRequest
-	36,  // 84: ultimate.server.api.TournamentService.ListTournamentRecordsAroundOwner:input_type -> ultimate.server.api.ListTournamentRecordsAroundOwnerRequest
-	37,  // 85: ultimate.server.api.TournamentService.DeleteTournamentRecord:input_type -> ultimate.server.api.DeleteTournamentRecordRequest
-	38,  // 86: ultimate.server.api.FriendsService.AddFriends:input_type -> ultimate.server.api.AddFriendsRequest
-	39,  // 87: ultimate.server.api.FriendsService.ListFriends:input_type -> ultimate.server.api.ListFriendsRequest
-	40,  // 88: ultimate.server.api.FriendsService.ListFriendsOfFriends:input_type -> ultimate.server.api.ListFriendsOfFriendsRequest
-	45,  // 89: ultimate.server.api.FriendsService.DeleteFriends:input_type -> ultimate.server.api.DeleteFriendsRequest
-	46,  // 90: ultimate.server.api.FriendsService.BlockFriends:input_type -> ultimate.server.api.BlockFriendsRequest
-	47,  // 91: ultimate.server.api.FriendsService.ImportFacebookFriends:input_type -> ultimate.server.api.ImportFacebookFriendsRequest
-	48,  // 92: ultimate.server.api.FriendsService.ImportSteamFriends:input_type -> ultimate.server.api.ImportSteamFriendsRequest
-	49,  // 93: ultimate.server.api.GroupService.CreateGroup:input_type -> ultimate.server.api.CreateGroupRequest
-	51,  // 94: ultimate.server.api.GroupService.UpdateGroup:input_type -> ultimate.server.api.UpdateGroupRequest
-	52,  // 95: ultimate.server.api.GroupService.DeleteGroup:input_type -> ultimate.server.api.DeleteGroupRequest
-	53,  // 96: ultimate.server.api.GroupService.ListGroups:input_type -> ultimate.server.api.ListGroupsRequest
-	55,  // 97: ultimate.server.api.GroupService.JoinGroup:input_type -> ultimate.server.api.JoinGroupRequest
-	56,  // 98: ultimate.server.api.GroupService.LeaveGroup:input_type -> ultimate.server.api.LeaveGroupRequest
-	57,  // 99: ultimate.server.api.GroupService.AddGroupUsers:input_type -> ultimate.server.api.AddGroupUsersRequest
-	58,  // 100: ultimate.server.api.GroupService.KickGroupUsers:input_type -> ultimate.server.api.KickGroupUsersRequest
-	59,  // 101: ultimate.server.api.GroupService.PromoteGroupUsers:input_type -> ultimate.server.api.PromoteGroupUsersRequest
-	60,  // 102: ultimate.server.api.GroupService.DemoteGroupUsers:input_type -> ultimate.server.api.DemoteGroupUsersRequest
-	61,  // 103: ultimate.server.api.GroupService.BanGroupUsers:input_type -> ultimate.server.api.BanGroupUsersRequest
-	66,  // 104: ultimate.server.api.GroupService.ListGroupUsers:input_type -> ultimate.server.api.ListGroupUsersRequest
-	67,  // 105: ultimate.server.api.GroupService.ListUserGroups:input_type -> ultimate.server.api.ListUserGroupsRequest
-	68,  // 106: ultimate.server.api.MatchmakerService.AddMatchmaker:input_type -> ultimate.server.api.AddMatchmakerRequest
-	70,  // 107: ultimate.server.api.MatchmakerService.RemoveMatchmaker:input_type -> ultimate.server.api.RemoveMatchmakerRequest
-	71,  // 108: ultimate.server.api.MatchmakerService.GetMatchmakerTicket:input_type -> ultimate.server.api.GetMatchmakerTicketRequest
-	72,  // 109: ultimate.server.api.MatchmakerService.GetQueueStats:input_type -> ultimate.server.api.GetQueueStatsRequest
-	74,  // 110: ultimate.server.api.RealtimeService.CreateMatch:input_type -> ultimate.server.api.CreateMatchRequest
-	75,  // 111: ultimate.server.api.RealtimeService.ListMatches:input_type -> ultimate.server.api.ListMatchesRequest
-	76,  // 112: ultimate.server.api.RealtimeService.GetMatch:input_type -> ultimate.server.api.GetMatchRequest
-	80,  // 113: ultimate.server.api.RealtimeService.MatchSignal:input_type -> ultimate.server.api.MatchSignalRequest
-	82,  // 114: ultimate.server.api.PartyService.ListParties:input_type -> ultimate.server.api.ListPartiesRequest
-	85,  // 115: ultimate.server.api.ChatService.ListChannelMessages:input_type -> ultimate.server.api.ListChannelMessagesRequest
-	88,  // 116: ultimate.server.api.NotificationService.ListNotifications:input_type -> ultimate.server.api.ListNotificationsRequest
-	91,  // 117: ultimate.server.api.NotificationService.DeleteNotifications:input_type -> ultimate.server.api.DeleteNotificationsRequest
-	12,  // 118: ultimate.server.api.AuthenticationService.AuthenticateEmail:output_type -> ultimate.server.api.Session
-	12,  // 119: ultimate.server.api.AuthenticationService.AuthenticateDevice:output_type -> ultimate.server.api.Session
-	12,  // 120: ultimate.server.api.AuthenticationService.AuthenticateApple:output_type -> ultimate.server.api.Session
-	12,  // 121: ultimate.server.api.AuthenticationService.AuthenticateGoogle:output_type -> ultimate.server.api.Session
-	12,  // 122: ultimate.server.api.AuthenticationService.AuthenticateFacebook:output_type -> ultimate.server.api.Session
-	12,  // 123: ultimate.server.api.AuthenticationService.AuthenticateSteam:output_type -> ultimate.server.api.Session
-	12,  // 124: ultimate.server.api.AuthenticationService.AuthenticateGameCenter:output_type -> ultimate.server.api.Session
-	12,  // 125: ultimate.server.api.AuthenticationService.AuthenticateCustom:output_type -> ultimate.server.api.Session
-	12,  // 126: ultimate.server.api.AuthenticationService.SessionRefresh:output_type -> ultimate.server.api.Session
-	96,  // 127: ultimate.server.api.AuthenticationService.SessionLogout:output_type -> google.protobuf.Empty
-	14,  // 128: ultimate.server.api.AuthenticationService.GetAccount:output_type -> ultimate.server.api.Account
-	96,  // 129: ultimate.server.api.AuthenticationService.UpdateAccount:output_type -> google.protobuf.Empty
-	96,  // 130: ultimate.server.api.AuthenticationService.DeleteAccount:output_type -> google.protobuf.Empty
-	96,  // 131: ultimate.server.api.AuthenticationService.LinkEmail:output_type -> google.protobuf.Empty
-	96,  // 132: ultimate.server.api.AuthenticationService.LinkDevice:output_type -> google.protobuf.Empty
-	96,  // 133: ultimate.server.api.AuthenticationService.LinkApple:output_type -> google.protobuf.Empty
-	96,  // 134: ultimate.server.api.AuthenticationService.LinkGoogle:output_type -> google.protobuf.Empty
-	96,  // 135: ultimate.server.api.AuthenticationService.LinkFacebook:output_type -> google.protobuf.Empty
-	96,  // 136: ultimate.server.api.AuthenticationService.LinkSteam:output_type -> google.protobuf.Empty
-	96,  // 137: ultimate.server.api.AuthenticationService.LinkCustom:output_type -> google.protobuf.Empty
-	96,  // 138: ultimate.server.api.AuthenticationService.UnlinkEmail:output_type -> google.protobuf.Empty
-	96,  // 139: ultimate.server.api.AuthenticationService.UnlinkDevice:output_type -> google.protobuf.Empty
-	96,  // 140: ultimate.server.api.AuthenticationService.UnlinkApple:output_type -> google.protobuf.Empty
-	96,  // 141: ultimate.server.api.AuthenticationService.UnlinkGoogle:output_type -> google.protobuf.Empty
-	96,  // 142: ultimate.server.api.AuthenticationService.UnlinkFacebook:output_type -> google.protobuf.Empty
-	96,  // 143: ultimate.server.api.AuthenticationService.UnlinkSteam:output_type -> google.protobuf.Empty
-	96,  // 144: ultimate.server.api.AuthenticationService.UnlinkCustom:output_type -> google.protobuf.Empty
-	96,  // 145: ultimate.server.api.LeaderboardService.CreateLeaderboard:output_type -> google.protobuf.Empty
-	96,  // 146: ultimate.server.api.LeaderboardService.DeleteLeaderboard:output_type -> google.protobuf.Empty
-	20,  // 147: ultimate.server.api.LeaderboardService.ListLeaderboards:output_type -> ultimate.server.api.LeaderboardList
-	23,  // 148: ultimate.server.api.LeaderboardService.WriteLeaderboardRecord:output_type -> ultimate.server.api.LeaderboardRecord
-	26,  // 149: ultimate.server.api.LeaderboardService.ListLeaderboardRecords:output_type -> ultimate.server.api.LeaderboardRecordList
-	26,  // 150: ultimate.server.api.LeaderboardService.ListLeaderboardRecordsAroundOwner:output_type -> ultimate.server.api.LeaderboardRecordList
-	96,  // 151: ultimate.server.api.LeaderboardService.DeleteLeaderboardRecord:output_type -> google.protobuf.Empty
-	96,  // 152: ultimate.server.api.TournamentService.CreateTournament:output_type -> google.protobuf.Empty
-	96,  // 153: ultimate.server.api.TournamentService.DeleteTournament:output_type -> google.protobuf.Empty
-	96,  // 154: ultimate.server.api.TournamentService.JoinTournament:output_type -> google.protobuf.Empty
-	33,  // 155: ultimate.server.api.TournamentService.ListTournaments:output_type -> ultimate.server.api.TournamentList
-	23,  // 156: ultimate.server.api.TournamentService.WriteTournamentRecord:output_type -> ultimate.server.api.LeaderboardRecord
-	26,  // 157: ultimate.server.api.TournamentService.ListTournamentRecords:output_type -> ultimate.server.api.LeaderboardRecordList
-	26,  // 158: ultimate.server.api.TournamentService.ListTournamentRecordsAroundOwner:output_type -> ultimate.server.api.LeaderboardRecordList
-	96,  // 159: ultimate.server.api.TournamentService.DeleteTournamentRecord:output_type -> google.protobuf.Empty
-	96,  // 160: ultimate.server.api.FriendsService.AddFriends:output_type -> google.protobuf.Empty
-	42,  // 161: ultimate.server.api.FriendsService.ListFriends:output_type -> ultimate.server.api.FriendList
-	44,  // 162: ultimate.server.api.FriendsService.ListFriendsOfFriends:output_type -> ultimate.server.api.FriendsOfFriendsList
-	96,  // 163: ultimate.server.api.FriendsService.DeleteFriends:output_type -> google.protobuf.Empty
-	96,  // 164: ultimate.server.api.FriendsService.BlockFriends:output_type -> google.protobuf.Empty
-	96,  // 165: ultimate.server.api.FriendsService.ImportFacebookFriends:output_type -> google.protobuf.Empty
-	96,  // 166: ultimate.server.api.FriendsService.ImportSteamFriends:output_type -> google.protobuf.Empty
-	50,  // 167: ultimate.server.api.GroupService.CreateGroup:output_type -> ultimate.server.api.Group
-	96,  // 168: ultimate.server.api.GroupService.UpdateGroup:output_type -> google.protobuf.Empty
-	96,  // 169: ultimate.server.api.GroupService.DeleteGroup:output_type -> google.protobuf.Empty
-	54,  // 170: ultimate.server.api.GroupService.ListGroups:output_type -> ultimate.server.api.GroupList
-	96,  // 171: ultimate.server.api.GroupService.JoinGroup:output_type -> google.protobuf.Empty
-	96,  // 172: ultimate.server.api.GroupService.LeaveGroup:output_type -> google.protobuf.Empty
-	96,  // 173: ultimate.server.api.GroupService.AddGroupUsers:output_type -> google.protobuf.Empty
-	96,  // 174: ultimate.server.api.GroupService.KickGroupUsers:output_type -> google.protobuf.Empty
-	96,  // 175: ultimate.server.api.GroupService.PromoteGroupUsers:output_type -> google.protobuf.Empty
-	96,  // 176: ultimate.server.api.GroupService.DemoteGroupUsers:output_type -> google.protobuf.Empty
-	96,  // 177: ultimate.server.api.GroupService.BanGroupUsers:output_type -> google.protobuf.Empty
-	63,  // 178: ultimate.server.api.GroupService.ListGroupUsers:output_type -> ultimate.server.api.GroupUserList
-	65,  // 179: ultimate.server.api.GroupService.ListUserGroups:output_type -> ultimate.server.api.UserGroupList
-	69,  // 180: ultimate.server.api.MatchmakerService.AddMatchmaker:output_type -> ultimate.server.api.MatchmakerTicket
-	96,  // 181: ultimate.server.api.MatchmakerService.RemoveMatchmaker:output_type -> google.protobuf.Empty
-	69,  // 182: ultimate.server.api.MatchmakerService.GetMatchmakerTicket:output_type -> ultimate.server.api.MatchmakerTicket
-	73,  // 183: ultimate.server.api.MatchmakerService.GetQueueStats:output_type -> ultimate.server.api.QueueStats
-	78,  // 184: ultimate.server.api.RealtimeService.CreateMatch:output_type -> ultimate.server.api.Match
-	79,  // 185: ultimate.server.api.RealtimeService.ListMatches:output_type -> ultimate.server.api.MatchList
-	78,  // 186: ultimate.server.api.RealtimeService.GetMatch:output_type -> ultimate.server.api.Match
-	81,  // 187: ultimate.server.api.RealtimeService.MatchSignal:output_type -> ultimate.server.api.MatchSignalResponse
-	84,  // 188: ultimate.server.api.PartyService.ListParties:output_type -> ultimate.server.api.PartyList
-	87,  // 189: ultimate.server.api.ChatService.ListChannelMessages:output_type -> ultimate.server.api.ChannelMessageList
-	90,  // 190: ultimate.server.api.NotificationService.ListNotifications:output_type -> ultimate.server.api.NotificationList
-	96,  // 191: ultimate.server.api.NotificationService.DeleteNotifications:output_type -> google.protobuf.Empty
-	118, // [118:192] is the sub-list for method output_type
-	44,  // [44:118] is the sub-list for method input_type
-	44,  // [44:44] is the sub-list for extension type_name
-	44,  // [44:44] is the sub-list for extension extendee
-	0,   // [0:44] is the sub-list for field type_name
+	113, // 44: ultimate.server.api.WalletLedgerItem.create_time:type_name -> google.protobuf.Timestamp
+	113, // 45: ultimate.server.api.WalletLedgerItem.update_time:type_name -> google.protobuf.Timestamp
+	94,  // 46: ultimate.server.api.WalletLedgerList.items:type_name -> ultimate.server.api.WalletLedgerItem
+	113, // 47: ultimate.server.api.ValidatedPurchase.purchase_time:type_name -> google.protobuf.Timestamp
+	101, // 48: ultimate.server.api.ValidatePurchaseResponse.validated_purchases:type_name -> ultimate.server.api.ValidatedPurchase
+	106, // 49: ultimate.server.api.ValidateSubscriptionResponse.validated_subscription:type_name -> ultimate.server.api.ValidatedSubscription
+	113, // 50: ultimate.server.api.ValidatedSubscription.purchase_time:type_name -> google.protobuf.Timestamp
+	113, // 51: ultimate.server.api.ValidatedSubscription.expire_time:type_name -> google.protobuf.Timestamp
+	106, // 52: ultimate.server.api.SubscriptionList.validated_subscriptions:type_name -> ultimate.server.api.ValidatedSubscription
+	2,   // 53: ultimate.server.api.AuthenticationService.AuthenticateEmail:input_type -> ultimate.server.api.AuthenticateEmailRequest
+	3,   // 54: ultimate.server.api.AuthenticationService.AuthenticateDevice:input_type -> ultimate.server.api.AuthenticateDeviceRequest
+	4,   // 55: ultimate.server.api.AuthenticationService.AuthenticateApple:input_type -> ultimate.server.api.AuthenticateAppleRequest
+	5,   // 56: ultimate.server.api.AuthenticationService.AuthenticateGoogle:input_type -> ultimate.server.api.AuthenticateGoogleRequest
+	6,   // 57: ultimate.server.api.AuthenticationService.AuthenticateFacebook:input_type -> ultimate.server.api.AuthenticateFacebookRequest
+	7,   // 58: ultimate.server.api.AuthenticationService.AuthenticateSteam:input_type -> ultimate.server.api.AuthenticateSteamRequest
+	8,   // 59: ultimate.server.api.AuthenticationService.AuthenticateGameCenter:input_type -> ultimate.server.api.AuthenticateGameCenterRequest
+	9,   // 60: ultimate.server.api.AuthenticationService.AuthenticateCustom:input_type -> ultimate.server.api.AuthenticateCustomRequest
+	10,  // 61: ultimate.server.api.AuthenticationService.SessionRefresh:input_type -> ultimate.server.api.SessionRefreshRequest
+	11,  // 62: ultimate.server.api.AuthenticationService.SessionLogout:input_type -> ultimate.server.api.SessionLogoutRequest
+	114, // 63: ultimate.server.api.AuthenticationService.GetAccount:input_type -> google.protobuf.Empty
+	15,  // 64: ultimate.server.api.AuthenticationService.UpdateAccount:input_type -> ultimate.server.api.UpdateAccountRequest
+	114, // 65: ultimate.server.api.AuthenticationService.DeleteAccount:input_type -> google.protobuf.Empty
+	2,   // 66: ultimate.server.api.AuthenticationService.LinkEmail:input_type -> ultimate.server.api.AuthenticateEmailRequest
+	3,   // 67: ultimate.server.api.AuthenticationService.LinkDevice:input_type -> ultimate.server.api.AuthenticateDeviceRequest
+	4,   // 68: ultimate.server.api.AuthenticationService.LinkApple:input_type -> ultimate.server.api.AuthenticateAppleRequest
+	5,   // 69: ultimate.server.api.AuthenticationService.LinkGoogle:input_type -> ultimate.server.api.AuthenticateGoogleRequest
+	6,   // 70: ultimate.server.api.AuthenticationService.LinkFacebook:input_type -> ultimate.server.api.AuthenticateFacebookRequest
+	7,   // 71: ultimate.server.api.AuthenticationService.LinkSteam:input_type -> ultimate.server.api.AuthenticateSteamRequest
+	9,   // 72: ultimate.server.api.AuthenticationService.LinkCustom:input_type -> ultimate.server.api.AuthenticateCustomRequest
+	16,  // 73: ultimate.server.api.AuthenticationService.UnlinkEmail:input_type -> ultimate.server.api.UnlinkRequest
+	16,  // 74: ultimate.server.api.AuthenticationService.UnlinkDevice:input_type -> ultimate.server.api.UnlinkRequest
+	16,  // 75: ultimate.server.api.AuthenticationService.UnlinkApple:input_type -> ultimate.server.api.UnlinkRequest
+	16,  // 76: ultimate.server.api.AuthenticationService.UnlinkGoogle:input_type -> ultimate.server.api.UnlinkRequest
+	16,  // 77: ultimate.server.api.AuthenticationService.UnlinkFacebook:input_type -> ultimate.server.api.UnlinkRequest
+	16,  // 78: ultimate.server.api.AuthenticationService.UnlinkSteam:input_type -> ultimate.server.api.UnlinkRequest
+	16,  // 79: ultimate.server.api.AuthenticationService.UnlinkCustom:input_type -> ultimate.server.api.UnlinkRequest
+	17,  // 80: ultimate.server.api.LeaderboardService.CreateLeaderboard:input_type -> ultimate.server.api.CreateLeaderboardRequest
+	21,  // 81: ultimate.server.api.LeaderboardService.DeleteLeaderboard:input_type -> ultimate.server.api.DeleteLeaderboardRequest
+	18,  // 82: ultimate.server.api.LeaderboardService.ListLeaderboards:input_type -> ultimate.server.api.ListLeaderboardsRequest
+	22,  // 83: ultimate.server.api.LeaderboardService.WriteLeaderboardRecord:input_type -> ultimate.server.api.WriteLeaderboardRecordRequest
+	24,  // 84: ultimate.server.api.LeaderboardService.ListLeaderboardRecords:input_type -> ultimate.server.api.ListLeaderboardRecordsRequest
+	25,  // 85: ultimate.server.api.LeaderboardService.ListLeaderboardRecordsAroundOwner:input_type -> ultimate.server.api.ListLeaderboardRecordsAroundOwnerRequest
+	27,  // 86: ultimate.server.api.LeaderboardService.DeleteLeaderboardRecord:input_type -> ultimate.server.api.DeleteLeaderboardRecordRequest
+	28,  // 87: ultimate.server.api.TournamentService.CreateTournament:input_type -> ultimate.server.api.CreateTournamentRequest
+	29,  // 88: ultimate.server.api.TournamentService.DeleteTournament:input_type -> ultimate.server.api.DeleteTournamentRequest
+	30,  // 89: ultimate.server.api.TournamentService.JoinTournament:input_type -> ultimate.server.api.JoinTournamentRequest
+	31,  // 90: ultimate.server.api.TournamentService.ListTournaments:input_type -> ultimate.server.api.ListTournamentsRequest
+	34,  // 91: ultimate.server.api.TournamentService.WriteTournamentRecord:input_type -> ultimate.server.api.WriteTournamentRecordRequest
+	35,  // 92: ultimate.server.api.TournamentService.ListTournamentRecords:input_type -> ultimate.server.api.ListTournamentRecordsRequest
+	36,  // 93: ultimate.server.api.TournamentService.ListTournamentRecordsAroundOwner:input_type -> ultimate.server.api.ListTournamentRecordsAroundOwnerRequest
+	37,  // 94: ultimate.server.api.TournamentService.DeleteTournamentRecord:input_type -> ultimate.server.api.DeleteTournamentRecordRequest
+	38,  // 95: ultimate.server.api.FriendsService.AddFriends:input_type -> ultimate.server.api.AddFriendsRequest
+	39,  // 96: ultimate.server.api.FriendsService.ListFriends:input_type -> ultimate.server.api.ListFriendsRequest
+	40,  // 97: ultimate.server.api.FriendsService.ListFriendsOfFriends:input_type -> ultimate.server.api.ListFriendsOfFriendsRequest
+	45,  // 98: ultimate.server.api.FriendsService.DeleteFriends:input_type -> ultimate.server.api.DeleteFriendsRequest
+	46,  // 99: ultimate.server.api.FriendsService.BlockFriends:input_type -> ultimate.server.api.BlockFriendsRequest
+	47,  // 100: ultimate.server.api.FriendsService.ImportFacebookFriends:input_type -> ultimate.server.api.ImportFacebookFriendsRequest
+	48,  // 101: ultimate.server.api.FriendsService.ImportSteamFriends:input_type -> ultimate.server.api.ImportSteamFriendsRequest
+	49,  // 102: ultimate.server.api.GroupService.CreateGroup:input_type -> ultimate.server.api.CreateGroupRequest
+	51,  // 103: ultimate.server.api.GroupService.UpdateGroup:input_type -> ultimate.server.api.UpdateGroupRequest
+	52,  // 104: ultimate.server.api.GroupService.DeleteGroup:input_type -> ultimate.server.api.DeleteGroupRequest
+	53,  // 105: ultimate.server.api.GroupService.ListGroups:input_type -> ultimate.server.api.ListGroupsRequest
+	55,  // 106: ultimate.server.api.GroupService.JoinGroup:input_type -> ultimate.server.api.JoinGroupRequest
+	56,  // 107: ultimate.server.api.GroupService.LeaveGroup:input_type -> ultimate.server.api.LeaveGroupRequest
+	57,  // 108: ultimate.server.api.GroupService.AddGroupUsers:input_type -> ultimate.server.api.AddGroupUsersRequest
+	58,  // 109: ultimate.server.api.GroupService.KickGroupUsers:input_type -> ultimate.server.api.KickGroupUsersRequest
+	59,  // 110: ultimate.server.api.GroupService.PromoteGroupUsers:input_type -> ultimate.server.api.PromoteGroupUsersRequest
+	60,  // 111: ultimate.server.api.GroupService.DemoteGroupUsers:input_type -> ultimate.server.api.DemoteGroupUsersRequest
+	61,  // 112: ultimate.server.api.GroupService.BanGroupUsers:input_type -> ultimate.server.api.BanGroupUsersRequest
+	66,  // 113: ultimate.server.api.GroupService.ListGroupUsers:input_type -> ultimate.server.api.ListGroupUsersRequest
+	67,  // 114: ultimate.server.api.GroupService.ListUserGroups:input_type -> ultimate.server.api.ListUserGroupsRequest
+	68,  // 115: ultimate.server.api.MatchmakerService.AddMatchmaker:input_type -> ultimate.server.api.AddMatchmakerRequest
+	70,  // 116: ultimate.server.api.MatchmakerService.RemoveMatchmaker:input_type -> ultimate.server.api.RemoveMatchmakerRequest
+	71,  // 117: ultimate.server.api.MatchmakerService.GetMatchmakerTicket:input_type -> ultimate.server.api.GetMatchmakerTicketRequest
+	72,  // 118: ultimate.server.api.MatchmakerService.GetQueueStats:input_type -> ultimate.server.api.GetQueueStatsRequest
+	74,  // 119: ultimate.server.api.RealtimeService.CreateMatch:input_type -> ultimate.server.api.CreateMatchRequest
+	75,  // 120: ultimate.server.api.RealtimeService.ListMatches:input_type -> ultimate.server.api.ListMatchesRequest
+	76,  // 121: ultimate.server.api.RealtimeService.GetMatch:input_type -> ultimate.server.api.GetMatchRequest
+	80,  // 122: ultimate.server.api.RealtimeService.MatchSignal:input_type -> ultimate.server.api.MatchSignalRequest
+	82,  // 123: ultimate.server.api.PartyService.ListParties:input_type -> ultimate.server.api.ListPartiesRequest
+	85,  // 124: ultimate.server.api.ChatService.ListChannelMessages:input_type -> ultimate.server.api.ListChannelMessagesRequest
+	88,  // 125: ultimate.server.api.NotificationService.ListNotifications:input_type -> ultimate.server.api.ListNotificationsRequest
+	91,  // 126: ultimate.server.api.NotificationService.DeleteNotifications:input_type -> ultimate.server.api.DeleteNotificationsRequest
+	114, // 127: ultimate.server.api.EconomyService.GetWallet:input_type -> google.protobuf.Empty
+	93,  // 128: ultimate.server.api.EconomyService.ListWalletLedger:input_type -> ultimate.server.api.ListWalletLedgerRequest
+	96,  // 129: ultimate.server.api.IAPService.ValidatePurchaseApple:input_type -> ultimate.server.api.ValidatePurchaseAppleRequest
+	97,  // 130: ultimate.server.api.IAPService.ValidatePurchaseGoogle:input_type -> ultimate.server.api.ValidatePurchaseGoogleRequest
+	98,  // 131: ultimate.server.api.IAPService.ValidatePurchaseHuawei:input_type -> ultimate.server.api.ValidatePurchaseHuaweiRequest
+	99,  // 132: ultimate.server.api.IAPService.ValidatePurchaseFacebookInstant:input_type -> ultimate.server.api.ValidatePurchaseFacebookInstantRequest
+	100, // 133: ultimate.server.api.IAPService.ValidatePurchaseSamsung:input_type -> ultimate.server.api.ValidatePurchaseSamsungRequest
+	103, // 134: ultimate.server.api.IAPService.ValidateSubscriptionApple:input_type -> ultimate.server.api.ValidateSubscriptionAppleRequest
+	104, // 135: ultimate.server.api.IAPService.ValidateSubscriptionGoogle:input_type -> ultimate.server.api.ValidateSubscriptionGoogleRequest
+	107, // 136: ultimate.server.api.IAPService.ListSubscriptions:input_type -> ultimate.server.api.ListSubscriptionsRequest
+	109, // 137: ultimate.server.api.IAPService.GetSubscription:input_type -> ultimate.server.api.GetSubscriptionRequest
+	12,  // 138: ultimate.server.api.AuthenticationService.AuthenticateEmail:output_type -> ultimate.server.api.Session
+	12,  // 139: ultimate.server.api.AuthenticationService.AuthenticateDevice:output_type -> ultimate.server.api.Session
+	12,  // 140: ultimate.server.api.AuthenticationService.AuthenticateApple:output_type -> ultimate.server.api.Session
+	12,  // 141: ultimate.server.api.AuthenticationService.AuthenticateGoogle:output_type -> ultimate.server.api.Session
+	12,  // 142: ultimate.server.api.AuthenticationService.AuthenticateFacebook:output_type -> ultimate.server.api.Session
+	12,  // 143: ultimate.server.api.AuthenticationService.AuthenticateSteam:output_type -> ultimate.server.api.Session
+	12,  // 144: ultimate.server.api.AuthenticationService.AuthenticateGameCenter:output_type -> ultimate.server.api.Session
+	12,  // 145: ultimate.server.api.AuthenticationService.AuthenticateCustom:output_type -> ultimate.server.api.Session
+	12,  // 146: ultimate.server.api.AuthenticationService.SessionRefresh:output_type -> ultimate.server.api.Session
+	114, // 147: ultimate.server.api.AuthenticationService.SessionLogout:output_type -> google.protobuf.Empty
+	14,  // 148: ultimate.server.api.AuthenticationService.GetAccount:output_type -> ultimate.server.api.Account
+	114, // 149: ultimate.server.api.AuthenticationService.UpdateAccount:output_type -> google.protobuf.Empty
+	114, // 150: ultimate.server.api.AuthenticationService.DeleteAccount:output_type -> google.protobuf.Empty
+	114, // 151: ultimate.server.api.AuthenticationService.LinkEmail:output_type -> google.protobuf.Empty
+	114, // 152: ultimate.server.api.AuthenticationService.LinkDevice:output_type -> google.protobuf.Empty
+	114, // 153: ultimate.server.api.AuthenticationService.LinkApple:output_type -> google.protobuf.Empty
+	114, // 154: ultimate.server.api.AuthenticationService.LinkGoogle:output_type -> google.protobuf.Empty
+	114, // 155: ultimate.server.api.AuthenticationService.LinkFacebook:output_type -> google.protobuf.Empty
+	114, // 156: ultimate.server.api.AuthenticationService.LinkSteam:output_type -> google.protobuf.Empty
+	114, // 157: ultimate.server.api.AuthenticationService.LinkCustom:output_type -> google.protobuf.Empty
+	114, // 158: ultimate.server.api.AuthenticationService.UnlinkEmail:output_type -> google.protobuf.Empty
+	114, // 159: ultimate.server.api.AuthenticationService.UnlinkDevice:output_type -> google.protobuf.Empty
+	114, // 160: ultimate.server.api.AuthenticationService.UnlinkApple:output_type -> google.protobuf.Empty
+	114, // 161: ultimate.server.api.AuthenticationService.UnlinkGoogle:output_type -> google.protobuf.Empty
+	114, // 162: ultimate.server.api.AuthenticationService.UnlinkFacebook:output_type -> google.protobuf.Empty
+	114, // 163: ultimate.server.api.AuthenticationService.UnlinkSteam:output_type -> google.protobuf.Empty
+	114, // 164: ultimate.server.api.AuthenticationService.UnlinkCustom:output_type -> google.protobuf.Empty
+	114, // 165: ultimate.server.api.LeaderboardService.CreateLeaderboard:output_type -> google.protobuf.Empty
+	114, // 166: ultimate.server.api.LeaderboardService.DeleteLeaderboard:output_type -> google.protobuf.Empty
+	20,  // 167: ultimate.server.api.LeaderboardService.ListLeaderboards:output_type -> ultimate.server.api.LeaderboardList
+	23,  // 168: ultimate.server.api.LeaderboardService.WriteLeaderboardRecord:output_type -> ultimate.server.api.LeaderboardRecord
+	26,  // 169: ultimate.server.api.LeaderboardService.ListLeaderboardRecords:output_type -> ultimate.server.api.LeaderboardRecordList
+	26,  // 170: ultimate.server.api.LeaderboardService.ListLeaderboardRecordsAroundOwner:output_type -> ultimate.server.api.LeaderboardRecordList
+	114, // 171: ultimate.server.api.LeaderboardService.DeleteLeaderboardRecord:output_type -> google.protobuf.Empty
+	114, // 172: ultimate.server.api.TournamentService.CreateTournament:output_type -> google.protobuf.Empty
+	114, // 173: ultimate.server.api.TournamentService.DeleteTournament:output_type -> google.protobuf.Empty
+	114, // 174: ultimate.server.api.TournamentService.JoinTournament:output_type -> google.protobuf.Empty
+	33,  // 175: ultimate.server.api.TournamentService.ListTournaments:output_type -> ultimate.server.api.TournamentList
+	23,  // 176: ultimate.server.api.TournamentService.WriteTournamentRecord:output_type -> ultimate.server.api.LeaderboardRecord
+	26,  // 177: ultimate.server.api.TournamentService.ListTournamentRecords:output_type -> ultimate.server.api.LeaderboardRecordList
+	26,  // 178: ultimate.server.api.TournamentService.ListTournamentRecordsAroundOwner:output_type -> ultimate.server.api.LeaderboardRecordList
+	114, // 179: ultimate.server.api.TournamentService.DeleteTournamentRecord:output_type -> google.protobuf.Empty
+	114, // 180: ultimate.server.api.FriendsService.AddFriends:output_type -> google.protobuf.Empty
+	42,  // 181: ultimate.server.api.FriendsService.ListFriends:output_type -> ultimate.server.api.FriendList
+	44,  // 182: ultimate.server.api.FriendsService.ListFriendsOfFriends:output_type -> ultimate.server.api.FriendsOfFriendsList
+	114, // 183: ultimate.server.api.FriendsService.DeleteFriends:output_type -> google.protobuf.Empty
+	114, // 184: ultimate.server.api.FriendsService.BlockFriends:output_type -> google.protobuf.Empty
+	114, // 185: ultimate.server.api.FriendsService.ImportFacebookFriends:output_type -> google.protobuf.Empty
+	114, // 186: ultimate.server.api.FriendsService.ImportSteamFriends:output_type -> google.protobuf.Empty
+	50,  // 187: ultimate.server.api.GroupService.CreateGroup:output_type -> ultimate.server.api.Group
+	114, // 188: ultimate.server.api.GroupService.UpdateGroup:output_type -> google.protobuf.Empty
+	114, // 189: ultimate.server.api.GroupService.DeleteGroup:output_type -> google.protobuf.Empty
+	54,  // 190: ultimate.server.api.GroupService.ListGroups:output_type -> ultimate.server.api.GroupList
+	114, // 191: ultimate.server.api.GroupService.JoinGroup:output_type -> google.protobuf.Empty
+	114, // 192: ultimate.server.api.GroupService.LeaveGroup:output_type -> google.protobuf.Empty
+	114, // 193: ultimate.server.api.GroupService.AddGroupUsers:output_type -> google.protobuf.Empty
+	114, // 194: ultimate.server.api.GroupService.KickGroupUsers:output_type -> google.protobuf.Empty
+	114, // 195: ultimate.server.api.GroupService.PromoteGroupUsers:output_type -> google.protobuf.Empty
+	114, // 196: ultimate.server.api.GroupService.DemoteGroupUsers:output_type -> google.protobuf.Empty
+	114, // 197: ultimate.server.api.GroupService.BanGroupUsers:output_type -> google.protobuf.Empty
+	63,  // 198: ultimate.server.api.GroupService.ListGroupUsers:output_type -> ultimate.server.api.GroupUserList
+	65,  // 199: ultimate.server.api.GroupService.ListUserGroups:output_type -> ultimate.server.api.UserGroupList
+	69,  // 200: ultimate.server.api.MatchmakerService.AddMatchmaker:output_type -> ultimate.server.api.MatchmakerTicket
+	114, // 201: ultimate.server.api.MatchmakerService.RemoveMatchmaker:output_type -> google.protobuf.Empty
+	69,  // 202: ultimate.server.api.MatchmakerService.GetMatchmakerTicket:output_type -> ultimate.server.api.MatchmakerTicket
+	73,  // 203: ultimate.server.api.MatchmakerService.GetQueueStats:output_type -> ultimate.server.api.QueueStats
+	78,  // 204: ultimate.server.api.RealtimeService.CreateMatch:output_type -> ultimate.server.api.Match
+	79,  // 205: ultimate.server.api.RealtimeService.ListMatches:output_type -> ultimate.server.api.MatchList
+	78,  // 206: ultimate.server.api.RealtimeService.GetMatch:output_type -> ultimate.server.api.Match
+	81,  // 207: ultimate.server.api.RealtimeService.MatchSignal:output_type -> ultimate.server.api.MatchSignalResponse
+	84,  // 208: ultimate.server.api.PartyService.ListParties:output_type -> ultimate.server.api.PartyList
+	87,  // 209: ultimate.server.api.ChatService.ListChannelMessages:output_type -> ultimate.server.api.ChannelMessageList
+	90,  // 210: ultimate.server.api.NotificationService.ListNotifications:output_type -> ultimate.server.api.NotificationList
+	114, // 211: ultimate.server.api.NotificationService.DeleteNotifications:output_type -> google.protobuf.Empty
+	92,  // 212: ultimate.server.api.EconomyService.GetWallet:output_type -> ultimate.server.api.Wallet
+	95,  // 213: ultimate.server.api.EconomyService.ListWalletLedger:output_type -> ultimate.server.api.WalletLedgerList
+	102, // 214: ultimate.server.api.IAPService.ValidatePurchaseApple:output_type -> ultimate.server.api.ValidatePurchaseResponse
+	102, // 215: ultimate.server.api.IAPService.ValidatePurchaseGoogle:output_type -> ultimate.server.api.ValidatePurchaseResponse
+	102, // 216: ultimate.server.api.IAPService.ValidatePurchaseHuawei:output_type -> ultimate.server.api.ValidatePurchaseResponse
+	102, // 217: ultimate.server.api.IAPService.ValidatePurchaseFacebookInstant:output_type -> ultimate.server.api.ValidatePurchaseResponse
+	102, // 218: ultimate.server.api.IAPService.ValidatePurchaseSamsung:output_type -> ultimate.server.api.ValidatePurchaseResponse
+	105, // 219: ultimate.server.api.IAPService.ValidateSubscriptionApple:output_type -> ultimate.server.api.ValidateSubscriptionResponse
+	105, // 220: ultimate.server.api.IAPService.ValidateSubscriptionGoogle:output_type -> ultimate.server.api.ValidateSubscriptionResponse
+	108, // 221: ultimate.server.api.IAPService.ListSubscriptions:output_type -> ultimate.server.api.SubscriptionList
+	106, // 222: ultimate.server.api.IAPService.GetSubscription:output_type -> ultimate.server.api.ValidatedSubscription
+	138, // [138:223] is the sub-list for method output_type
+	53,  // [53:138] is the sub-list for method input_type
+	53,  // [53:53] is the sub-list for extension type_name
+	53,  // [53:53] is the sub-list for extension extendee
+	0,   // [0:53] is the sub-list for field type_name
 }
 
 func init() { file_api_api_proto_init() }
@@ -7120,15 +8343,22 @@ func file_api_api_proto_init() {
 	file_api_api_proto_msgTypes[52].OneofWrappers = []any{}
 	file_api_api_proto_msgTypes[81].OneofWrappers = []any{}
 	file_api_api_proto_msgTypes[84].OneofWrappers = []any{}
+	file_api_api_proto_msgTypes[95].OneofWrappers = []any{}
+	file_api_api_proto_msgTypes[96].OneofWrappers = []any{}
+	file_api_api_proto_msgTypes[97].OneofWrappers = []any{}
+	file_api_api_proto_msgTypes[98].OneofWrappers = []any{}
+	file_api_api_proto_msgTypes[99].OneofWrappers = []any{}
+	file_api_api_proto_msgTypes[102].OneofWrappers = []any{}
+	file_api_api_proto_msgTypes[103].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_api_api_proto_rawDesc), len(file_api_api_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   94,
+			NumMessages:   112,
 			NumExtensions: 0,
-			NumServices:   10,
+			NumServices:   12,
 		},
 		GoTypes:           file_api_api_proto_goTypes,
 		DependencyIndexes: file_api_api_proto_depIdxs,

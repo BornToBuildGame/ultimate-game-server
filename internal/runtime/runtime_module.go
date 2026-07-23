@@ -60,7 +60,7 @@ func (m *GoRuntimeModule) StorageRead(ctx context.Context, reads []*StorageRead)
 		}
 	}
 
-	objs, err := storage.ReadStorageObjects(ctx, m.dbPool, reqs)
+	objs, err := storage.ReadStorageObjects(ctx, m.dbPool, uuid.Nil, reqs)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read storage objects: %w", err)
 	}
@@ -75,8 +75,8 @@ func (m *GoRuntimeModule) StorageRead(ctx context.Context, reads []*StorageRead)
 			Version:         o.Version,
 			PermissionRead:  int32(o.Read),
 			PermissionWrite: int32(o.Write),
-			CreateTime:      time.Now(),
-			UpdateTime:      time.Now(),
+			CreateTime:      o.CreateTime,
+			UpdateTime:      o.UpdateTime,
 		}
 	}
 	return res, nil
@@ -85,10 +85,14 @@ func (m *GoRuntimeModule) StorageRead(ctx context.Context, reads []*StorageRead)
 func (m *GoRuntimeModule) StorageWrite(ctx context.Context, writes []*StorageWrite) ([]*StorageObjectAck, error) {
 	objs := make([]*storage.StorageObject, len(writes))
 	for i, w := range writes {
+		uid := w.UserID
+		if uid == "" {
+			uid = uuid.Nil.String()
+		}
 		objs[i] = &storage.StorageObject{
 			Collection: w.Collection,
 			Key:        w.Key,
-			UserID:     w.UserID,
+			UserID:     uid,
 			Value:      w.Value,
 			Version:    w.Version,
 			Read:       int16(w.PermissionRead),
@@ -96,20 +100,20 @@ func (m *GoRuntimeModule) StorageWrite(ctx context.Context, writes []*StorageWri
 		}
 	}
 
-	err := storage.WriteStorageObjects(ctx, m.dbPool, objs)
+	acks, err := storage.WriteStorageObjects(ctx, m.dbPool, true, objs)
 	if err != nil {
 		return nil, fmt.Errorf("failed to write storage objects: %w", err)
 	}
 
-	res := make([]*StorageObjectAck, len(objs))
-	for i, o := range objs {
+	res := make([]*StorageObjectAck, len(acks))
+	for i, a := range acks {
 		res[i] = &StorageObjectAck{
-			Collection: o.Collection,
-			Key:        o.Key,
-			UserID:     o.UserID,
-			Version:    o.Version,
-			CreateTime: time.Now(),
-			UpdateTime: time.Now(),
+			Collection: a.Collection,
+			Key:        a.Key,
+			UserID:     a.UserID,
+			Version:    a.Version,
+			CreateTime: a.CreateTime,
+			UpdateTime: a.UpdateTime,
 		}
 	}
 	return res, nil
@@ -118,25 +122,231 @@ func (m *GoRuntimeModule) StorageWrite(ctx context.Context, writes []*StorageWri
 func (m *GoRuntimeModule) StorageDelete(ctx context.Context, deletes []*StorageDelete) error {
 	reqs := make([]storage.DeleteRequest, len(deletes))
 	for i, d := range deletes {
+		uid := d.UserID
+		if uid == "" {
+			uid = uuid.Nil.String()
+		}
 		reqs[i] = storage.DeleteRequest{
 			Collection: d.Collection,
 			Key:        d.Key,
-			UserID:     d.UserID,
+			UserID:     uid,
 			Version:    d.Version,
 		}
 	}
 
-	err := storage.DeleteStorageObjects(ctx, m.dbPool, reqs)
+	err := storage.DeleteStorageObjects(ctx, m.dbPool, true, reqs)
 	if err != nil {
 		return fmt.Errorf("failed to delete storage objects: %w", err)
 	}
 	return nil
 }
 
+func (m *GoRuntimeModule) StorageList(ctx context.Context, callerID, userID, collection string, limit int, cursor string) ([]*StorageObject, string, error) {
+	caller := uuid.Nil
+	if callerID != "" {
+		parsed, err := uuid.Parse(callerID)
+		if err != nil {
+			return nil, "", fmt.Errorf("invalid caller id: %w", err)
+		}
+		caller = parsed
+	}
+	var owner *uuid.UUID
+	if userID != "" {
+		parsed, err := uuid.Parse(userID)
+		if err != nil {
+			return nil, "", fmt.Errorf("invalid user id: %w", err)
+		}
+		owner = &parsed
+	}
+	if limit <= 0 {
+		limit = 100
+	}
+	list, err := storage.ListStorageObjects(ctx, m.dbPool, caller, owner, collection, limit, cursor)
+	if err != nil {
+		return nil, "", err
+	}
+	res := make([]*StorageObject, len(list.Objects))
+	for i, o := range list.Objects {
+		res[i] = &StorageObject{
+			Collection: o.Collection, Key: o.Key, UserID: o.UserID, Value: o.Value, Version: o.Version,
+			PermissionRead: int32(o.Read), PermissionWrite: int32(o.Write),
+			CreateTime: o.CreateTime, UpdateTime: o.UpdateTime,
+		}
+	}
+	return res, list.Cursor, nil
+}
+
+func (m *GoRuntimeModule) StorageWriteRetry(ctx context.Context, reads []*StorageRead, updateFn func([]*StorageObject) ([]*StorageWrite, error), maxRetries int) ([]*StorageObjectAck, error) {
+	reqs := make([]storage.ReadRequest, len(reads))
+	for i, r := range reads {
+		reqs[i] = storage.ReadRequest{Collection: r.Collection, Key: r.Key, UserID: r.UserID}
+	}
+	acks, err := storage.WriteStorageObjectsRetry(ctx, m.dbPool, reqs, func(objs []*storage.StorageObject) ([]*storage.StorageObject, error) {
+		views := make([]*StorageObject, len(objs))
+		for i, o := range objs {
+			views[i] = &StorageObject{
+				Collection: o.Collection, Key: o.Key, UserID: o.UserID, Value: o.Value, Version: o.Version,
+				PermissionRead: int32(o.Read), PermissionWrite: int32(o.Write),
+				CreateTime: o.CreateTime, UpdateTime: o.UpdateTime,
+			}
+		}
+		writes, err := updateFn(views)
+		if err != nil {
+			return nil, err
+		}
+		out := make([]*storage.StorageObject, len(writes))
+		for i, w := range writes {
+			uid := w.UserID
+			if uid == "" {
+				uid = uuid.Nil.String()
+			}
+			out[i] = &storage.StorageObject{
+				Collection: w.Collection, Key: w.Key, UserID: uid, Value: w.Value, Version: w.Version,
+				Read: int16(w.PermissionRead), Write: int16(w.PermissionWrite),
+			}
+		}
+		return out, nil
+	}, maxRetries)
+	if err != nil {
+		return nil, err
+	}
+	res := make([]*StorageObjectAck, len(acks))
+	for i, a := range acks {
+		res[i] = &StorageObjectAck{
+			Collection: a.Collection, Key: a.Key, UserID: a.UserID, Version: a.Version,
+			CreateTime: a.CreateTime, UpdateTime: a.UpdateTime,
+		}
+	}
+	return res, nil
+}
+
 // Unimplemented operations returning error/default
 
-func (m *GoRuntimeModule) WalletUpdate(ctx context.Context, userID string, changeset map[string]int64, metadata map[string]interface{}, updateLedger bool) (map[string]int64, error) {
-	return economy.UpdateWallet(ctx, m.dbPool, userID, changeset, metadata)
+func (m *GoRuntimeModule) WalletUpdate(ctx context.Context, userID string, changeset map[string]int64, metadata map[string]interface{}, updateLedger bool) (map[string]int64, map[string]int64, error) {
+	return economy.UpdateWallet(ctx, m.dbPool, userID, changeset, metadata, updateLedger)
+}
+
+func (m *GoRuntimeModule) WalletsUpdate(ctx context.Context, updates []*WalletUpdateParams, updateLedger bool) ([]*WalletUpdateResultView, error) {
+	in := make([]economy.WalletUpdate, 0, len(updates))
+	for _, u := range updates {
+		if u == nil {
+			continue
+		}
+		in = append(in, economy.WalletUpdate{UserID: u.UserID, Changeset: u.Changeset, Metadata: u.Metadata})
+	}
+	results, err := economy.UpdateWallets(ctx, m.dbPool, in, updateLedger)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]*WalletUpdateResultView, 0, len(results))
+	for _, r := range results {
+		out = append(out, &WalletUpdateResultView{UserID: r.UserID, Updated: r.Updated, Previous: r.Previous})
+	}
+	return out, nil
+}
+
+func (m *GoRuntimeModule) WalletLedgerList(ctx context.Context, userID string, limit int, cursor string) ([]*WalletLedgerView, string, error) {
+	list, err := economy.ListWalletLedger(ctx, m.dbPool, userID, limit, cursor)
+	if err != nil {
+		return nil, "", err
+	}
+	out := make([]*WalletLedgerView, 0, len(list.Items))
+	for _, item := range list.Items {
+		out = append(out, &WalletLedgerView{
+			ID: item.ID, UserID: item.UserID, Changeset: item.Changeset, Metadata: item.Metadata,
+			CreateTime: item.CreateTime, UpdateTime: item.UpdateTime,
+		})
+	}
+	return out, list.NextCursor, nil
+}
+
+func (m *GoRuntimeModule) WalletLedgerUpdate(ctx context.Context, ledgerID, userID string, metadata map[string]interface{}) error {
+	return economy.UpdateWalletLedgerMetadata(ctx, m.dbPool, ledgerID, userID, metadata)
+}
+
+func purchaseView(vp *economy.ValidatedPurchase) *ValidatedPurchaseView {
+	if vp == nil {
+		return nil
+	}
+	return &ValidatedPurchaseView{
+		UserID: vp.UserID, ProductID: vp.ProductID, TransactionID: vp.TransactionID,
+		Store: vp.Store, PurchaseTime: vp.PurchaseTime, SeenBefore: vp.SeenBefore, Environment: vp.Environment,
+	}
+}
+
+func subView(sub *economy.ValidatedSubscription) *ValidatedSubscriptionView {
+	if sub == nil {
+		return nil
+	}
+	return &ValidatedSubscriptionView{
+		UserID: sub.UserID, ProductID: sub.ProductID, OriginalTransactionID: sub.OriginalTransactionID,
+		Store: sub.Store, PurchaseTime: sub.PurchaseTime, ExpireTime: sub.ExpireTime,
+		Active: sub.Active, SeenBefore: sub.SeenBefore, Environment: sub.Environment,
+	}
+}
+
+func (m *GoRuntimeModule) PurchaseValidateApple(ctx context.Context, userID, receipt string, persist bool) (*ValidatedPurchaseView, error) {
+	vp, err := economy.ValidatePurchaseApple(ctx, m.dbPool, economy.DefaultIAPConfig, userID, receipt, persist)
+	return purchaseView(vp), err
+}
+
+func (m *GoRuntimeModule) PurchaseValidateGoogle(ctx context.Context, userID, productID, purchaseToken string, persist bool) (*ValidatedPurchaseView, error) {
+	vp, err := economy.ValidatePurchaseGoogle(ctx, m.dbPool, economy.DefaultIAPConfig, userID, productID, purchaseToken, persist)
+	return purchaseView(vp), err
+}
+
+func (m *GoRuntimeModule) PurchaseValidateHuawei(ctx context.Context, userID, purchaseData, signature string, persist bool) (*ValidatedPurchaseView, error) {
+	vp, err := economy.ValidatePurchaseHuawei(ctx, m.dbPool, economy.DefaultIAPConfig, userID, purchaseData, signature, persist)
+	return purchaseView(vp), err
+}
+
+func (m *GoRuntimeModule) PurchaseValidateFacebookInstant(ctx context.Context, userID, signedRequest string, persist bool) (*ValidatedPurchaseView, error) {
+	vp, err := economy.ValidatePurchaseFacebookInstant(ctx, m.dbPool, economy.DefaultIAPConfig, userID, signedRequest, persist)
+	return purchaseView(vp), err
+}
+
+func (m *GoRuntimeModule) PurchaseValidateSamsung(ctx context.Context, userID, purchaseID string, persist bool) (*ValidatedPurchaseView, error) {
+	vp, err := economy.ValidatePurchaseSamsung(ctx, m.dbPool, economy.DefaultIAPConfig, userID, purchaseID, persist)
+	return purchaseView(vp), err
+}
+
+func (m *GoRuntimeModule) PurchasesList(ctx context.Context, userID string, limit int) ([]*ValidatedPurchaseView, error) {
+	list, err := economy.ListPurchases(ctx, m.dbPool, userID, limit)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]*ValidatedPurchaseView, 0, len(list))
+	for _, vp := range list {
+		out = append(out, purchaseView(vp))
+	}
+	return out, nil
+}
+
+func (m *GoRuntimeModule) SubscriptionValidateApple(ctx context.Context, userID, receipt string, persist bool) (*ValidatedSubscriptionView, error) {
+	sub, err := economy.ValidateSubscriptionApple(ctx, m.dbPool, economy.DefaultIAPConfig, userID, receipt, persist)
+	return subView(sub), err
+}
+
+func (m *GoRuntimeModule) SubscriptionValidateGoogle(ctx context.Context, userID, productID, purchaseToken string, persist bool) (*ValidatedSubscriptionView, error) {
+	sub, err := economy.ValidateSubscriptionGoogle(ctx, m.dbPool, economy.DefaultIAPConfig, userID, productID, purchaseToken, persist)
+	return subView(sub), err
+}
+
+func (m *GoRuntimeModule) SubscriptionsList(ctx context.Context, userID string, limit int) ([]*ValidatedSubscriptionView, error) {
+	list, err := economy.ListSubscriptions(ctx, m.dbPool, userID, limit)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]*ValidatedSubscriptionView, 0, len(list))
+	for _, sub := range list {
+		out = append(out, subView(sub))
+	}
+	return out, nil
+}
+
+func (m *GoRuntimeModule) SubscriptionGetProductID(ctx context.Context, userID, productID string) (*ValidatedSubscriptionView, error) {
+	sub, err := economy.GetSubscriptionByProductID(ctx, m.dbPool, userID, productID)
+	return subView(sub), err
 }
 
 func (m *GoRuntimeModule) AccountGetId(ctx context.Context, userID string) (*Account, error) {

@@ -109,8 +109,27 @@ func MapJSNK(vm *goja.Runtime, nk RuntimeModule, timeout time.Duration, registry
 		return goja.Undefined()
 	})
 
+	_ = nkObj.Set("storage_list", func(call goja.FunctionCall) goja.Value {
+		callerID := call.Argument(0).String()
+		userID := call.Argument(1).String()
+		collection := call.Argument(2).String()
+		limit := int(call.Argument(3).ToInteger())
+		if limit == 0 {
+			limit = 100
+		}
+		cursor := ""
+		if !goja.IsUndefined(call.Argument(4)) {
+			cursor = call.Argument(4).String()
+		}
+		list, next, err := nk.StorageList(context.Background(), callerID, userID, collection, limit, cursor)
+		if err != nil {
+			panic(vm.NewGoError(err))
+		}
+		return vm.ToValue(map[string]interface{}{"objects": list, "cursor": next})
+	})
+
 	// 4. Wallet Update
-	_ = nkObj.Set("wallet_update", func(call goja.FunctionCall) goja.Value {
+	walletUpdateFn := func(call goja.FunctionCall) goja.Value {
 		userID := call.Argument(0).String()
 
 		var changeset map[string]int64
@@ -136,13 +155,195 @@ func MapJSNK(vm *goja.Runtime, nk RuntimeModule, timeout time.Duration, registry
 				metadata = m
 			}
 		}
+		updateLedger := true
+		if !goja.IsUndefined(call.Argument(3)) && !goja.IsNull(call.Argument(3)) {
+			updateLedger = call.Argument(3).ToBoolean()
+		}
 
-		newWallet, err := nk.WalletUpdate(context.Background(), userID, changeset, metadata, true)
+		updated, previous, err := nk.WalletUpdate(context.Background(), userID, changeset, metadata, updateLedger)
 		if err != nil {
 			panic(vm.NewGoError(err))
 		}
+		_ = previous
+		return vm.ToValue(updated)
+	}
+	_ = nkObj.Set("wallet_update", walletUpdateFn)
+	_ = nkObj.Set("walletUpdate", walletUpdateFn)
 
-		return vm.ToValue(newWallet)
+	_ = nkObj.Set("wallets_update", func(call goja.FunctionCall) goja.Value {
+		updateLedger := true
+		if !goja.IsUndefined(call.Argument(1)) && !goja.IsNull(call.Argument(1)) {
+			updateLedger = call.Argument(1).ToBoolean()
+		}
+		var updates []*WalletUpdateParams
+		if raw := call.Argument(0).Export(); raw != nil {
+			if arr, ok := raw.([]interface{}); ok {
+				for _, item := range arr {
+					m, ok := item.(map[string]interface{})
+					if !ok {
+						continue
+					}
+					u := &WalletUpdateParams{UserID: fmt.Sprint(m["user_id"])}
+					if cs, ok := m["changeset"].(map[string]interface{}); ok {
+						u.Changeset = make(map[string]int64)
+						for k, v := range cs {
+							if f, ok := v.(float64); ok {
+								u.Changeset[k] = int64(f)
+							}
+						}
+					}
+					if meta, ok := m["metadata"].(map[string]interface{}); ok {
+						u.Metadata = meta
+					}
+					updates = append(updates, u)
+				}
+			}
+		}
+		results, err := nk.WalletsUpdate(context.Background(), updates, updateLedger)
+		if err != nil {
+			panic(vm.NewGoError(err))
+		}
+		return vm.ToValue(results)
+	})
+	_ = nkObj.Set("walletsUpdate", nkObj.Get("wallets_update"))
+
+	_ = nkObj.Set("wallet_ledger_list", func(call goja.FunctionCall) goja.Value {
+		userID := call.Argument(0).String()
+		limit := int(call.Argument(1).ToInteger())
+		if limit == 0 {
+			limit = 100
+		}
+		cursor := ""
+		if !goja.IsUndefined(call.Argument(2)) {
+			cursor = call.Argument(2).String()
+		}
+		items, next, err := nk.WalletLedgerList(context.Background(), userID, limit, cursor)
+		if err != nil {
+			panic(vm.NewGoError(err))
+		}
+		return vm.ToValue(map[string]interface{}{"items": items, "cursor": next})
+	})
+	_ = nkObj.Set("walletLedgerList", nkObj.Get("wallet_ledger_list"))
+
+	_ = nkObj.Set("wallet_ledger_update", func(call goja.FunctionCall) goja.Value {
+		ledgerID := call.Argument(0).String()
+		userID := call.Argument(1).String()
+		var metadata map[string]interface{}
+		if m, ok := call.Argument(2).Export().(map[string]interface{}); ok {
+			metadata = m
+		}
+		if err := nk.WalletLedgerUpdate(context.Background(), ledgerID, userID, metadata); err != nil {
+			panic(vm.NewGoError(err))
+		}
+		return goja.Undefined()
+	})
+	_ = nkObj.Set("walletLedgerUpdate", nkObj.Get("wallet_ledger_update"))
+
+	_ = nkObj.Set("purchase_validate_apple", func(call goja.FunctionCall) goja.Value {
+		persist := true
+		if !goja.IsUndefined(call.Argument(2)) {
+			persist = call.Argument(2).ToBoolean()
+		}
+		vp, err := nk.PurchaseValidateApple(context.Background(), call.Argument(0).String(), call.Argument(1).String(), persist)
+		if err != nil {
+			panic(vm.NewGoError(err))
+		}
+		return vm.ToValue(vp)
+	})
+	_ = nkObj.Set("purchase_validate_google", func(call goja.FunctionCall) goja.Value {
+		persist := true
+		if !goja.IsUndefined(call.Argument(3)) {
+			persist = call.Argument(3).ToBoolean()
+		}
+		vp, err := nk.PurchaseValidateGoogle(context.Background(), call.Argument(0).String(), call.Argument(1).String(), call.Argument(2).String(), persist)
+		if err != nil {
+			panic(vm.NewGoError(err))
+		}
+		return vm.ToValue(vp)
+	})
+	_ = nkObj.Set("purchase_validate_huawei", func(call goja.FunctionCall) goja.Value {
+		persist := true
+		if !goja.IsUndefined(call.Argument(3)) {
+			persist = call.Argument(3).ToBoolean()
+		}
+		vp, err := nk.PurchaseValidateHuawei(context.Background(), call.Argument(0).String(), call.Argument(1).String(), call.Argument(2).String(), persist)
+		if err != nil {
+			panic(vm.NewGoError(err))
+		}
+		return vm.ToValue(vp)
+	})
+	_ = nkObj.Set("purchase_validate_facebook_instant", func(call goja.FunctionCall) goja.Value {
+		persist := true
+		if !goja.IsUndefined(call.Argument(2)) {
+			persist = call.Argument(2).ToBoolean()
+		}
+		vp, err := nk.PurchaseValidateFacebookInstant(context.Background(), call.Argument(0).String(), call.Argument(1).String(), persist)
+		if err != nil {
+			panic(vm.NewGoError(err))
+		}
+		return vm.ToValue(vp)
+	})
+	_ = nkObj.Set("purchase_validate_samsung", func(call goja.FunctionCall) goja.Value {
+		persist := true
+		if !goja.IsUndefined(call.Argument(2)) {
+			persist = call.Argument(2).ToBoolean()
+		}
+		vp, err := nk.PurchaseValidateSamsung(context.Background(), call.Argument(0).String(), call.Argument(1).String(), persist)
+		if err != nil {
+			panic(vm.NewGoError(err))
+		}
+		return vm.ToValue(vp)
+	})
+	_ = nkObj.Set("purchases_list", func(call goja.FunctionCall) goja.Value {
+		limit := int(call.Argument(1).ToInteger())
+		if limit == 0 {
+			limit = 100
+		}
+		list, err := nk.PurchasesList(context.Background(), call.Argument(0).String(), limit)
+		if err != nil {
+			panic(vm.NewGoError(err))
+		}
+		return vm.ToValue(list)
+	})
+	_ = nkObj.Set("subscription_validate_apple", func(call goja.FunctionCall) goja.Value {
+		persist := true
+		if !goja.IsUndefined(call.Argument(2)) {
+			persist = call.Argument(2).ToBoolean()
+		}
+		sub, err := nk.SubscriptionValidateApple(context.Background(), call.Argument(0).String(), call.Argument(1).String(), persist)
+		if err != nil {
+			panic(vm.NewGoError(err))
+		}
+		return vm.ToValue(sub)
+	})
+	_ = nkObj.Set("subscription_validate_google", func(call goja.FunctionCall) goja.Value {
+		persist := true
+		if !goja.IsUndefined(call.Argument(3)) {
+			persist = call.Argument(3).ToBoolean()
+		}
+		sub, err := nk.SubscriptionValidateGoogle(context.Background(), call.Argument(0).String(), call.Argument(1).String(), call.Argument(2).String(), persist)
+		if err != nil {
+			panic(vm.NewGoError(err))
+		}
+		return vm.ToValue(sub)
+	})
+	_ = nkObj.Set("subscriptions_list", func(call goja.FunctionCall) goja.Value {
+		limit := int(call.Argument(1).ToInteger())
+		if limit == 0 {
+			limit = 100
+		}
+		list, err := nk.SubscriptionsList(context.Background(), call.Argument(0).String(), limit)
+		if err != nil {
+			panic(vm.NewGoError(err))
+		}
+		return vm.ToValue(list)
+	})
+	_ = nkObj.Set("subscription_get_product_id", func(call goja.FunctionCall) goja.Value {
+		sub, err := nk.SubscriptionGetProductID(context.Background(), call.Argument(0).String(), call.Argument(1).String())
+		if err != nil {
+			panic(vm.NewGoError(err))
+		}
+		return vm.ToValue(sub)
 	})
 
 	// 5. Leaderboard Record Write

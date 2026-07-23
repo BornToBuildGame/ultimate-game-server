@@ -82,12 +82,77 @@ func (m *mockRuntimeModule) StorageDelete(ctx context.Context, deletes []*Storag
 	return nil
 }
 
-func (m *mockRuntimeModule) WalletUpdate(ctx context.Context, userID string, changeset map[string]int64, metadata map[string]interface{}, updateLedger bool) (map[string]int64, error) {
-	newWallet := map[string]int64{"gold": 100, "gems": 50}
-	for k, v := range changeset {
-		newWallet[k] += v
+func (m *mockRuntimeModule) StorageList(ctx context.Context, callerID, userID, collection string, limit int, cursor string) ([]*StorageObject, string, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	var res []*StorageObject
+	for _, obj := range m.storage {
+		if obj.Collection == collection && (userID == "" || obj.UserID == userID) {
+			res = append(res, obj)
+		}
 	}
-	return newWallet, nil
+	return res, "", nil
+}
+
+func (m *mockRuntimeModule) StorageWriteRetry(ctx context.Context, reads []*StorageRead, updateFn func([]*StorageObject) ([]*StorageWrite, error), maxRetries int) ([]*StorageObjectAck, error) {
+	objs, err := m.StorageRead(ctx, reads)
+	if err != nil {
+		return nil, err
+	}
+	writes, err := updateFn(objs)
+	if err != nil {
+		return nil, err
+	}
+	return m.StorageWrite(ctx, writes)
+}
+
+func (m *mockRuntimeModule) WalletUpdate(ctx context.Context, userID string, changeset map[string]int64, metadata map[string]interface{}, updateLedger bool) (map[string]int64, map[string]int64, error) {
+	previous := map[string]int64{"gold": 100, "gems": 50}
+	updated := map[string]int64{"gold": 100, "gems": 50}
+	for k, v := range changeset {
+		updated[k] += v
+	}
+	return updated, previous, nil
+}
+
+func (m *mockRuntimeModule) WalletsUpdate(ctx context.Context, updates []*WalletUpdateParams, updateLedger bool) ([]*WalletUpdateResultView, error) {
+	return nil, nil
+}
+func (m *mockRuntimeModule) WalletLedgerList(ctx context.Context, userID string, limit int, cursor string) ([]*WalletLedgerView, string, error) {
+	return nil, "", nil
+}
+func (m *mockRuntimeModule) WalletLedgerUpdate(ctx context.Context, ledgerID, userID string, metadata map[string]interface{}) error {
+	return nil
+}
+func (m *mockRuntimeModule) PurchaseValidateApple(ctx context.Context, userID, receipt string, persist bool) (*ValidatedPurchaseView, error) {
+	return &ValidatedPurchaseView{UserID: userID, ProductID: "test", TransactionID: "tx"}, nil
+}
+func (m *mockRuntimeModule) PurchaseValidateGoogle(ctx context.Context, userID, productID, purchaseToken string, persist bool) (*ValidatedPurchaseView, error) {
+	return &ValidatedPurchaseView{UserID: userID, ProductID: productID, TransactionID: purchaseToken}, nil
+}
+func (m *mockRuntimeModule) PurchaseValidateHuawei(ctx context.Context, userID, purchaseData, signature string, persist bool) (*ValidatedPurchaseView, error) {
+	return &ValidatedPurchaseView{UserID: userID}, nil
+}
+func (m *mockRuntimeModule) PurchaseValidateFacebookInstant(ctx context.Context, userID, signedRequest string, persist bool) (*ValidatedPurchaseView, error) {
+	return &ValidatedPurchaseView{UserID: userID}, nil
+}
+func (m *mockRuntimeModule) PurchaseValidateSamsung(ctx context.Context, userID, purchaseID string, persist bool) (*ValidatedPurchaseView, error) {
+	return &ValidatedPurchaseView{UserID: userID, TransactionID: purchaseID}, nil
+}
+func (m *mockRuntimeModule) PurchasesList(ctx context.Context, userID string, limit int) ([]*ValidatedPurchaseView, error) {
+	return nil, nil
+}
+func (m *mockRuntimeModule) SubscriptionValidateApple(ctx context.Context, userID, receipt string, persist bool) (*ValidatedSubscriptionView, error) {
+	return &ValidatedSubscriptionView{UserID: userID, Active: true}, nil
+}
+func (m *mockRuntimeModule) SubscriptionValidateGoogle(ctx context.Context, userID, productID, purchaseToken string, persist bool) (*ValidatedSubscriptionView, error) {
+	return &ValidatedSubscriptionView{UserID: userID, ProductID: productID, Active: true}, nil
+}
+func (m *mockRuntimeModule) SubscriptionsList(ctx context.Context, userID string, limit int) ([]*ValidatedSubscriptionView, error) {
+	return nil, nil
+}
+func (m *mockRuntimeModule) SubscriptionGetProductID(ctx context.Context, userID, productID string) (*ValidatedSubscriptionView, error) {
+	return &ValidatedSubscriptionView{UserID: userID, ProductID: productID}, nil
 }
 
 func (m *mockRuntimeModule) AccountGetId(ctx context.Context, userID string) (*Account, error) {

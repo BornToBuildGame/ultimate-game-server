@@ -112,11 +112,38 @@ func MapLuaNK(L *lua.LState, nk RuntimeModule, registry ...*HookRegistry) {
 		return 0
 	}))
 
+	L.SetField(nkTable, "storage_list", L.NewFunction(func(L *lua.LState) int {
+		callerID := L.OptString(1, "")
+		userID := L.OptString(2, "")
+		collection := L.CheckString(3)
+		limit := L.OptInt(4, 100)
+		cursor := L.OptString(5, "")
+		list, next, err := nk.StorageList(L.Context(), callerID, userID, collection, limit, cursor)
+		if err != nil {
+			L.RaiseError("storage_list failed: %v", err)
+			return 0
+		}
+		resTable := L.NewTable()
+		for _, o := range list {
+			oTbl := L.NewTable()
+			L.SetField(oTbl, "collection", lua.LString(o.Collection))
+			L.SetField(oTbl, "key", lua.LString(o.Key))
+			L.SetField(oTbl, "user_id", lua.LString(o.UserID))
+			L.SetField(oTbl, "value", lua.LString(o.Value))
+			L.SetField(oTbl, "version", lua.LString(o.Version))
+			resTable.Append(oTbl)
+		}
+		L.Push(resTable)
+		L.Push(lua.LString(next))
+		return 2
+	}))
+
 	// 4. Wallet Update
 	L.SetField(nkTable, "wallet_update", L.NewFunction(func(L *lua.LState) int {
 		userID := L.CheckString(1)
 		changesetTbl := L.CheckTable(2)
 		metadataTbl := L.OptTable(3, nil)
+		updateLedger := L.OptBool(4, true)
 
 		changesetVal := ToGoValue(changesetTbl)
 		var changeset map[string]int64
@@ -136,13 +163,198 @@ func MapLuaNK(L *lua.LState, nk RuntimeModule, registry ...*HookRegistry) {
 			}
 		}
 
-		newWallet, err := nk.WalletUpdate(L.Context(), userID, changeset, metadata, true)
+		updated, previous, err := nk.WalletUpdate(L.Context(), userID, changeset, metadata, updateLedger)
 		if err != nil {
 			L.RaiseError("wallet_update failed: %v", err)
 			return 0
 		}
 
-		L.Push(ToLuaValue(L, newWallet))
+		L.Push(ToLuaValue(L, updated))
+		L.Push(ToLuaValue(L, previous))
+		return 2
+	}))
+
+	L.SetField(nkTable, "wallets_update", L.NewFunction(func(L *lua.LState) int {
+		updatesTbl := L.CheckTable(1)
+		updateLedger := L.OptBool(2, true)
+		raw := ToGoValue(updatesTbl)
+		arr, _ := raw.([]interface{})
+		updates := make([]*WalletUpdateParams, 0, len(arr))
+		for _, item := range arr {
+			m, ok := item.(map[string]interface{})
+			if !ok {
+				continue
+			}
+			u := &WalletUpdateParams{UserID: fmt.Sprint(m["user_id"])}
+			if cs, ok := m["changeset"].(map[string]interface{}); ok {
+				u.Changeset = make(map[string]int64)
+				for k, v := range cs {
+					if f, ok := v.(float64); ok {
+						u.Changeset[k] = int64(f)
+					}
+				}
+			}
+			if meta, ok := m["metadata"].(map[string]interface{}); ok {
+				u.Metadata = meta
+			}
+			updates = append(updates, u)
+		}
+		results, err := nk.WalletsUpdate(L.Context(), updates, updateLedger)
+		if err != nil {
+			L.RaiseError("wallets_update failed: %v", err)
+			return 0
+		}
+		L.Push(ToLuaValue(L, results))
+		return 1
+	}))
+
+	L.SetField(nkTable, "wallet_ledger_list", L.NewFunction(func(L *lua.LState) int {
+		userID := L.CheckString(1)
+		limit := L.OptInt(2, 100)
+		cursor := L.OptString(3, "")
+		items, next, err := nk.WalletLedgerList(L.Context(), userID, limit, cursor)
+		if err != nil {
+			L.RaiseError("wallet_ledger_list failed: %v", err)
+			return 0
+		}
+		L.Push(ToLuaValue(L, items))
+		L.Push(lua.LString(next))
+		return 2
+	}))
+
+	L.SetField(nkTable, "wallet_ledger_update", L.NewFunction(func(L *lua.LState) int {
+		ledgerID := L.CheckString(1)
+		userID := L.CheckString(2)
+		metadataTbl := L.CheckTable(3)
+		var metadata map[string]interface{}
+		if m, ok := ToGoValue(metadataTbl).(map[string]interface{}); ok {
+			metadata = m
+		}
+		if err := nk.WalletLedgerUpdate(L.Context(), ledgerID, userID, metadata); err != nil {
+			L.RaiseError("wallet_ledger_update failed: %v", err)
+			return 0
+		}
+		return 0
+	}))
+
+	L.SetField(nkTable, "purchase_validate_apple", L.NewFunction(func(L *lua.LState) int {
+		userID := L.CheckString(1)
+		receipt := L.CheckString(2)
+		persist := L.OptBool(3, true)
+		vp, err := nk.PurchaseValidateApple(L.Context(), userID, receipt, persist)
+		if err != nil {
+			L.RaiseError("purchase_validate_apple failed: %v", err)
+			return 0
+		}
+		L.Push(ToLuaValue(L, vp))
+		return 1
+	}))
+	L.SetField(nkTable, "purchase_validate_google", L.NewFunction(func(L *lua.LState) int {
+		userID := L.CheckString(1)
+		productID := L.CheckString(2)
+		token := L.CheckString(3)
+		persist := L.OptBool(4, true)
+		vp, err := nk.PurchaseValidateGoogle(L.Context(), userID, productID, token, persist)
+		if err != nil {
+			L.RaiseError("purchase_validate_google failed: %v", err)
+			return 0
+		}
+		L.Push(ToLuaValue(L, vp))
+		return 1
+	}))
+	L.SetField(nkTable, "purchase_validate_huawei", L.NewFunction(func(L *lua.LState) int {
+		userID := L.CheckString(1)
+		data := L.CheckString(2)
+		sig := L.OptString(3, "")
+		persist := L.OptBool(4, true)
+		vp, err := nk.PurchaseValidateHuawei(L.Context(), userID, data, sig, persist)
+		if err != nil {
+			L.RaiseError("purchase_validate_huawei failed: %v", err)
+			return 0
+		}
+		L.Push(ToLuaValue(L, vp))
+		return 1
+	}))
+	L.SetField(nkTable, "purchase_validate_facebook_instant", L.NewFunction(func(L *lua.LState) int {
+		userID := L.CheckString(1)
+		signed := L.CheckString(2)
+		persist := L.OptBool(3, true)
+		vp, err := nk.PurchaseValidateFacebookInstant(L.Context(), userID, signed, persist)
+		if err != nil {
+			L.RaiseError("purchase_validate_facebook_instant failed: %v", err)
+			return 0
+		}
+		L.Push(ToLuaValue(L, vp))
+		return 1
+	}))
+	L.SetField(nkTable, "purchase_validate_samsung", L.NewFunction(func(L *lua.LState) int {
+		userID := L.CheckString(1)
+		purchaseID := L.CheckString(2)
+		persist := L.OptBool(3, true)
+		vp, err := nk.PurchaseValidateSamsung(L.Context(), userID, purchaseID, persist)
+		if err != nil {
+			L.RaiseError("purchase_validate_samsung failed: %v", err)
+			return 0
+		}
+		L.Push(ToLuaValue(L, vp))
+		return 1
+	}))
+	L.SetField(nkTable, "purchases_list", L.NewFunction(func(L *lua.LState) int {
+		userID := L.CheckString(1)
+		limit := L.OptInt(2, 100)
+		list, err := nk.PurchasesList(L.Context(), userID, limit)
+		if err != nil {
+			L.RaiseError("purchases_list failed: %v", err)
+			return 0
+		}
+		L.Push(ToLuaValue(L, list))
+		return 1
+	}))
+	L.SetField(nkTable, "subscription_validate_apple", L.NewFunction(func(L *lua.LState) int {
+		userID := L.CheckString(1)
+		receipt := L.CheckString(2)
+		persist := L.OptBool(3, true)
+		sub, err := nk.SubscriptionValidateApple(L.Context(), userID, receipt, persist)
+		if err != nil {
+			L.RaiseError("subscription_validate_apple failed: %v", err)
+			return 0
+		}
+		L.Push(ToLuaValue(L, sub))
+		return 1
+	}))
+	L.SetField(nkTable, "subscription_validate_google", L.NewFunction(func(L *lua.LState) int {
+		userID := L.CheckString(1)
+		productID := L.CheckString(2)
+		token := L.CheckString(3)
+		persist := L.OptBool(4, true)
+		sub, err := nk.SubscriptionValidateGoogle(L.Context(), userID, productID, token, persist)
+		if err != nil {
+			L.RaiseError("subscription_validate_google failed: %v", err)
+			return 0
+		}
+		L.Push(ToLuaValue(L, sub))
+		return 1
+	}))
+	L.SetField(nkTable, "subscriptions_list", L.NewFunction(func(L *lua.LState) int {
+		userID := L.CheckString(1)
+		limit := L.OptInt(2, 100)
+		list, err := nk.SubscriptionsList(L.Context(), userID, limit)
+		if err != nil {
+			L.RaiseError("subscriptions_list failed: %v", err)
+			return 0
+		}
+		L.Push(ToLuaValue(L, list))
+		return 1
+	}))
+	L.SetField(nkTable, "subscription_get_product_id", L.NewFunction(func(L *lua.LState) int {
+		userID := L.CheckString(1)
+		productID := L.CheckString(2)
+		sub, err := nk.SubscriptionGetProductID(L.Context(), userID, productID)
+		if err != nil {
+			L.RaiseError("subscription_get_product_id failed: %v", err)
+			return 0
+		}
+		L.Push(ToLuaValue(L, sub))
 		return 1
 	}))
 

@@ -3470,3 +3470,549 @@ var NotificationService_ServiceDesc = grpc.ServiceDesc{
 	Streams:  []grpc.StreamDesc{},
 	Metadata: "api/api.proto",
 }
+
+const (
+	EconomyService_GetWallet_FullMethodName        = "/ultimate.server.api.EconomyService/GetWallet"
+	EconomyService_ListWalletLedger_FullMethodName = "/ultimate.server.api.EconomyService/ListWalletLedger"
+)
+
+// EconomyServiceClient is the client API for EconomyService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type EconomyServiceClient interface {
+	GetWallet(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*Wallet, error)
+	ListWalletLedger(ctx context.Context, in *ListWalletLedgerRequest, opts ...grpc.CallOption) (*WalletLedgerList, error)
+}
+
+type economyServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewEconomyServiceClient(cc grpc.ClientConnInterface) EconomyServiceClient {
+	return &economyServiceClient{cc}
+}
+
+func (c *economyServiceClient) GetWallet(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*Wallet, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Wallet)
+	err := c.cc.Invoke(ctx, EconomyService_GetWallet_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *economyServiceClient) ListWalletLedger(ctx context.Context, in *ListWalletLedgerRequest, opts ...grpc.CallOption) (*WalletLedgerList, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(WalletLedgerList)
+	err := c.cc.Invoke(ctx, EconomyService_ListWalletLedger_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// EconomyServiceServer is the server API for EconomyService service.
+// All implementations must embed UnimplementedEconomyServiceServer
+// for forward compatibility.
+type EconomyServiceServer interface {
+	GetWallet(context.Context, *emptypb.Empty) (*Wallet, error)
+	ListWalletLedger(context.Context, *ListWalletLedgerRequest) (*WalletLedgerList, error)
+	mustEmbedUnimplementedEconomyServiceServer()
+}
+
+// UnimplementedEconomyServiceServer must be embedded to have
+// forward compatible implementations.
+//
+// NOTE: this should be embedded by value instead of pointer to avoid a nil
+// pointer dereference when methods are called.
+type UnimplementedEconomyServiceServer struct{}
+
+func (UnimplementedEconomyServiceServer) GetWallet(context.Context, *emptypb.Empty) (*Wallet, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetWallet not implemented")
+}
+func (UnimplementedEconomyServiceServer) ListWalletLedger(context.Context, *ListWalletLedgerRequest) (*WalletLedgerList, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListWalletLedger not implemented")
+}
+func (UnimplementedEconomyServiceServer) mustEmbedUnimplementedEconomyServiceServer() {}
+func (UnimplementedEconomyServiceServer) testEmbeddedByValue()                        {}
+
+// UnsafeEconomyServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to EconomyServiceServer will
+// result in compilation errors.
+type UnsafeEconomyServiceServer interface {
+	mustEmbedUnimplementedEconomyServiceServer()
+}
+
+func RegisterEconomyServiceServer(s grpc.ServiceRegistrar, srv EconomyServiceServer) {
+	// If the following call pancis, it indicates UnimplementedEconomyServiceServer was
+	// embedded by pointer and is nil.  This will cause panics if an
+	// unimplemented method is ever invoked, so we test this at initialization
+	// time to prevent it from happening at runtime later due to I/O.
+	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
+		t.testEmbeddedByValue()
+	}
+	s.RegisterService(&EconomyService_ServiceDesc, srv)
+}
+
+func _EconomyService_GetWallet_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EconomyServiceServer).GetWallet(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: EconomyService_GetWallet_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EconomyServiceServer).GetWallet(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _EconomyService_ListWalletLedger_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListWalletLedgerRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EconomyServiceServer).ListWalletLedger(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: EconomyService_ListWalletLedger_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EconomyServiceServer).ListWalletLedger(ctx, req.(*ListWalletLedgerRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// EconomyService_ServiceDesc is the grpc.ServiceDesc for EconomyService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var EconomyService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "ultimate.server.api.EconomyService",
+	HandlerType: (*EconomyServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "GetWallet",
+			Handler:    _EconomyService_GetWallet_Handler,
+		},
+		{
+			MethodName: "ListWalletLedger",
+			Handler:    _EconomyService_ListWalletLedger_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "api/api.proto",
+}
+
+const (
+	IAPService_ValidatePurchaseApple_FullMethodName           = "/ultimate.server.api.IAPService/ValidatePurchaseApple"
+	IAPService_ValidatePurchaseGoogle_FullMethodName          = "/ultimate.server.api.IAPService/ValidatePurchaseGoogle"
+	IAPService_ValidatePurchaseHuawei_FullMethodName          = "/ultimate.server.api.IAPService/ValidatePurchaseHuawei"
+	IAPService_ValidatePurchaseFacebookInstant_FullMethodName = "/ultimate.server.api.IAPService/ValidatePurchaseFacebookInstant"
+	IAPService_ValidatePurchaseSamsung_FullMethodName         = "/ultimate.server.api.IAPService/ValidatePurchaseSamsung"
+	IAPService_ValidateSubscriptionApple_FullMethodName       = "/ultimate.server.api.IAPService/ValidateSubscriptionApple"
+	IAPService_ValidateSubscriptionGoogle_FullMethodName      = "/ultimate.server.api.IAPService/ValidateSubscriptionGoogle"
+	IAPService_ListSubscriptions_FullMethodName               = "/ultimate.server.api.IAPService/ListSubscriptions"
+	IAPService_GetSubscription_FullMethodName                 = "/ultimate.server.api.IAPService/GetSubscription"
+)
+
+// IAPServiceClient is the client API for IAPService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type IAPServiceClient interface {
+	ValidatePurchaseApple(ctx context.Context, in *ValidatePurchaseAppleRequest, opts ...grpc.CallOption) (*ValidatePurchaseResponse, error)
+	ValidatePurchaseGoogle(ctx context.Context, in *ValidatePurchaseGoogleRequest, opts ...grpc.CallOption) (*ValidatePurchaseResponse, error)
+	ValidatePurchaseHuawei(ctx context.Context, in *ValidatePurchaseHuaweiRequest, opts ...grpc.CallOption) (*ValidatePurchaseResponse, error)
+	ValidatePurchaseFacebookInstant(ctx context.Context, in *ValidatePurchaseFacebookInstantRequest, opts ...grpc.CallOption) (*ValidatePurchaseResponse, error)
+	ValidatePurchaseSamsung(ctx context.Context, in *ValidatePurchaseSamsungRequest, opts ...grpc.CallOption) (*ValidatePurchaseResponse, error)
+	ValidateSubscriptionApple(ctx context.Context, in *ValidateSubscriptionAppleRequest, opts ...grpc.CallOption) (*ValidateSubscriptionResponse, error)
+	ValidateSubscriptionGoogle(ctx context.Context, in *ValidateSubscriptionGoogleRequest, opts ...grpc.CallOption) (*ValidateSubscriptionResponse, error)
+	ListSubscriptions(ctx context.Context, in *ListSubscriptionsRequest, opts ...grpc.CallOption) (*SubscriptionList, error)
+	GetSubscription(ctx context.Context, in *GetSubscriptionRequest, opts ...grpc.CallOption) (*ValidatedSubscription, error)
+}
+
+type iAPServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewIAPServiceClient(cc grpc.ClientConnInterface) IAPServiceClient {
+	return &iAPServiceClient{cc}
+}
+
+func (c *iAPServiceClient) ValidatePurchaseApple(ctx context.Context, in *ValidatePurchaseAppleRequest, opts ...grpc.CallOption) (*ValidatePurchaseResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ValidatePurchaseResponse)
+	err := c.cc.Invoke(ctx, IAPService_ValidatePurchaseApple_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *iAPServiceClient) ValidatePurchaseGoogle(ctx context.Context, in *ValidatePurchaseGoogleRequest, opts ...grpc.CallOption) (*ValidatePurchaseResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ValidatePurchaseResponse)
+	err := c.cc.Invoke(ctx, IAPService_ValidatePurchaseGoogle_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *iAPServiceClient) ValidatePurchaseHuawei(ctx context.Context, in *ValidatePurchaseHuaweiRequest, opts ...grpc.CallOption) (*ValidatePurchaseResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ValidatePurchaseResponse)
+	err := c.cc.Invoke(ctx, IAPService_ValidatePurchaseHuawei_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *iAPServiceClient) ValidatePurchaseFacebookInstant(ctx context.Context, in *ValidatePurchaseFacebookInstantRequest, opts ...grpc.CallOption) (*ValidatePurchaseResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ValidatePurchaseResponse)
+	err := c.cc.Invoke(ctx, IAPService_ValidatePurchaseFacebookInstant_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *iAPServiceClient) ValidatePurchaseSamsung(ctx context.Context, in *ValidatePurchaseSamsungRequest, opts ...grpc.CallOption) (*ValidatePurchaseResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ValidatePurchaseResponse)
+	err := c.cc.Invoke(ctx, IAPService_ValidatePurchaseSamsung_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *iAPServiceClient) ValidateSubscriptionApple(ctx context.Context, in *ValidateSubscriptionAppleRequest, opts ...grpc.CallOption) (*ValidateSubscriptionResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ValidateSubscriptionResponse)
+	err := c.cc.Invoke(ctx, IAPService_ValidateSubscriptionApple_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *iAPServiceClient) ValidateSubscriptionGoogle(ctx context.Context, in *ValidateSubscriptionGoogleRequest, opts ...grpc.CallOption) (*ValidateSubscriptionResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ValidateSubscriptionResponse)
+	err := c.cc.Invoke(ctx, IAPService_ValidateSubscriptionGoogle_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *iAPServiceClient) ListSubscriptions(ctx context.Context, in *ListSubscriptionsRequest, opts ...grpc.CallOption) (*SubscriptionList, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SubscriptionList)
+	err := c.cc.Invoke(ctx, IAPService_ListSubscriptions_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *iAPServiceClient) GetSubscription(ctx context.Context, in *GetSubscriptionRequest, opts ...grpc.CallOption) (*ValidatedSubscription, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ValidatedSubscription)
+	err := c.cc.Invoke(ctx, IAPService_GetSubscription_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// IAPServiceServer is the server API for IAPService service.
+// All implementations must embed UnimplementedIAPServiceServer
+// for forward compatibility.
+type IAPServiceServer interface {
+	ValidatePurchaseApple(context.Context, *ValidatePurchaseAppleRequest) (*ValidatePurchaseResponse, error)
+	ValidatePurchaseGoogle(context.Context, *ValidatePurchaseGoogleRequest) (*ValidatePurchaseResponse, error)
+	ValidatePurchaseHuawei(context.Context, *ValidatePurchaseHuaweiRequest) (*ValidatePurchaseResponse, error)
+	ValidatePurchaseFacebookInstant(context.Context, *ValidatePurchaseFacebookInstantRequest) (*ValidatePurchaseResponse, error)
+	ValidatePurchaseSamsung(context.Context, *ValidatePurchaseSamsungRequest) (*ValidatePurchaseResponse, error)
+	ValidateSubscriptionApple(context.Context, *ValidateSubscriptionAppleRequest) (*ValidateSubscriptionResponse, error)
+	ValidateSubscriptionGoogle(context.Context, *ValidateSubscriptionGoogleRequest) (*ValidateSubscriptionResponse, error)
+	ListSubscriptions(context.Context, *ListSubscriptionsRequest) (*SubscriptionList, error)
+	GetSubscription(context.Context, *GetSubscriptionRequest) (*ValidatedSubscription, error)
+	mustEmbedUnimplementedIAPServiceServer()
+}
+
+// UnimplementedIAPServiceServer must be embedded to have
+// forward compatible implementations.
+//
+// NOTE: this should be embedded by value instead of pointer to avoid a nil
+// pointer dereference when methods are called.
+type UnimplementedIAPServiceServer struct{}
+
+func (UnimplementedIAPServiceServer) ValidatePurchaseApple(context.Context, *ValidatePurchaseAppleRequest) (*ValidatePurchaseResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ValidatePurchaseApple not implemented")
+}
+func (UnimplementedIAPServiceServer) ValidatePurchaseGoogle(context.Context, *ValidatePurchaseGoogleRequest) (*ValidatePurchaseResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ValidatePurchaseGoogle not implemented")
+}
+func (UnimplementedIAPServiceServer) ValidatePurchaseHuawei(context.Context, *ValidatePurchaseHuaweiRequest) (*ValidatePurchaseResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ValidatePurchaseHuawei not implemented")
+}
+func (UnimplementedIAPServiceServer) ValidatePurchaseFacebookInstant(context.Context, *ValidatePurchaseFacebookInstantRequest) (*ValidatePurchaseResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ValidatePurchaseFacebookInstant not implemented")
+}
+func (UnimplementedIAPServiceServer) ValidatePurchaseSamsung(context.Context, *ValidatePurchaseSamsungRequest) (*ValidatePurchaseResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ValidatePurchaseSamsung not implemented")
+}
+func (UnimplementedIAPServiceServer) ValidateSubscriptionApple(context.Context, *ValidateSubscriptionAppleRequest) (*ValidateSubscriptionResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ValidateSubscriptionApple not implemented")
+}
+func (UnimplementedIAPServiceServer) ValidateSubscriptionGoogle(context.Context, *ValidateSubscriptionGoogleRequest) (*ValidateSubscriptionResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ValidateSubscriptionGoogle not implemented")
+}
+func (UnimplementedIAPServiceServer) ListSubscriptions(context.Context, *ListSubscriptionsRequest) (*SubscriptionList, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListSubscriptions not implemented")
+}
+func (UnimplementedIAPServiceServer) GetSubscription(context.Context, *GetSubscriptionRequest) (*ValidatedSubscription, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetSubscription not implemented")
+}
+func (UnimplementedIAPServiceServer) mustEmbedUnimplementedIAPServiceServer() {}
+func (UnimplementedIAPServiceServer) testEmbeddedByValue()                    {}
+
+// UnsafeIAPServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to IAPServiceServer will
+// result in compilation errors.
+type UnsafeIAPServiceServer interface {
+	mustEmbedUnimplementedIAPServiceServer()
+}
+
+func RegisterIAPServiceServer(s grpc.ServiceRegistrar, srv IAPServiceServer) {
+	// If the following call pancis, it indicates UnimplementedIAPServiceServer was
+	// embedded by pointer and is nil.  This will cause panics if an
+	// unimplemented method is ever invoked, so we test this at initialization
+	// time to prevent it from happening at runtime later due to I/O.
+	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
+		t.testEmbeddedByValue()
+	}
+	s.RegisterService(&IAPService_ServiceDesc, srv)
+}
+
+func _IAPService_ValidatePurchaseApple_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ValidatePurchaseAppleRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(IAPServiceServer).ValidatePurchaseApple(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: IAPService_ValidatePurchaseApple_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(IAPServiceServer).ValidatePurchaseApple(ctx, req.(*ValidatePurchaseAppleRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _IAPService_ValidatePurchaseGoogle_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ValidatePurchaseGoogleRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(IAPServiceServer).ValidatePurchaseGoogle(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: IAPService_ValidatePurchaseGoogle_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(IAPServiceServer).ValidatePurchaseGoogle(ctx, req.(*ValidatePurchaseGoogleRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _IAPService_ValidatePurchaseHuawei_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ValidatePurchaseHuaweiRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(IAPServiceServer).ValidatePurchaseHuawei(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: IAPService_ValidatePurchaseHuawei_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(IAPServiceServer).ValidatePurchaseHuawei(ctx, req.(*ValidatePurchaseHuaweiRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _IAPService_ValidatePurchaseFacebookInstant_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ValidatePurchaseFacebookInstantRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(IAPServiceServer).ValidatePurchaseFacebookInstant(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: IAPService_ValidatePurchaseFacebookInstant_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(IAPServiceServer).ValidatePurchaseFacebookInstant(ctx, req.(*ValidatePurchaseFacebookInstantRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _IAPService_ValidatePurchaseSamsung_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ValidatePurchaseSamsungRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(IAPServiceServer).ValidatePurchaseSamsung(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: IAPService_ValidatePurchaseSamsung_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(IAPServiceServer).ValidatePurchaseSamsung(ctx, req.(*ValidatePurchaseSamsungRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _IAPService_ValidateSubscriptionApple_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ValidateSubscriptionAppleRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(IAPServiceServer).ValidateSubscriptionApple(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: IAPService_ValidateSubscriptionApple_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(IAPServiceServer).ValidateSubscriptionApple(ctx, req.(*ValidateSubscriptionAppleRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _IAPService_ValidateSubscriptionGoogle_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ValidateSubscriptionGoogleRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(IAPServiceServer).ValidateSubscriptionGoogle(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: IAPService_ValidateSubscriptionGoogle_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(IAPServiceServer).ValidateSubscriptionGoogle(ctx, req.(*ValidateSubscriptionGoogleRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _IAPService_ListSubscriptions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListSubscriptionsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(IAPServiceServer).ListSubscriptions(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: IAPService_ListSubscriptions_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(IAPServiceServer).ListSubscriptions(ctx, req.(*ListSubscriptionsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _IAPService_GetSubscription_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetSubscriptionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(IAPServiceServer).GetSubscription(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: IAPService_GetSubscription_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(IAPServiceServer).GetSubscription(ctx, req.(*GetSubscriptionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// IAPService_ServiceDesc is the grpc.ServiceDesc for IAPService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var IAPService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "ultimate.server.api.IAPService",
+	HandlerType: (*IAPServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "ValidatePurchaseApple",
+			Handler:    _IAPService_ValidatePurchaseApple_Handler,
+		},
+		{
+			MethodName: "ValidatePurchaseGoogle",
+			Handler:    _IAPService_ValidatePurchaseGoogle_Handler,
+		},
+		{
+			MethodName: "ValidatePurchaseHuawei",
+			Handler:    _IAPService_ValidatePurchaseHuawei_Handler,
+		},
+		{
+			MethodName: "ValidatePurchaseFacebookInstant",
+			Handler:    _IAPService_ValidatePurchaseFacebookInstant_Handler,
+		},
+		{
+			MethodName: "ValidatePurchaseSamsung",
+			Handler:    _IAPService_ValidatePurchaseSamsung_Handler,
+		},
+		{
+			MethodName: "ValidateSubscriptionApple",
+			Handler:    _IAPService_ValidateSubscriptionApple_Handler,
+		},
+		{
+			MethodName: "ValidateSubscriptionGoogle",
+			Handler:    _IAPService_ValidateSubscriptionGoogle_Handler,
+		},
+		{
+			MethodName: "ListSubscriptions",
+			Handler:    _IAPService_ListSubscriptions_Handler,
+		},
+		{
+			MethodName: "GetSubscription",
+			Handler:    _IAPService_GetSubscription_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "api/api.proto",
+}
