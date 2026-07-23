@@ -15,8 +15,10 @@ const (
 
 // StreamKey identifies a realtime stream.
 type StreamKey struct {
-	Mode  int16
-	Label string // e.g. party ID
+	Mode       int16
+	Subject    string // group ID or DM user A
+	Subcontext string // DM user B
+	Label      string // room name or party ID
 }
 
 // StreamTracker tracks session membership on named streams (Local-first).
@@ -143,4 +145,19 @@ func (t *StreamTracker) Count(key StreamKey) int {
 // PartyStream returns the stream key for a party ID.
 func PartyStream(partyID string) StreamKey {
 	return StreamKey{Mode: StreamModeParty, Label: partyID}
+}
+
+// ChannelStream returns the stream key for a room channel label.
+func ChannelStream(label string) StreamKey {
+	return StreamKey{Mode: StreamModeChannel, Label: label}
+}
+
+// GroupStream returns the stream key for a group channel.
+func GroupStream(groupID string) StreamKey {
+	return StreamKey{Mode: StreamModeGroup, Subject: groupID}
+}
+
+// DMStream returns the stream key for a DM channel (subject/subcontext already sorted).
+func DMStream(subject, subcontext string) StreamKey {
+	return StreamKey{Mode: StreamModeDM, Subject: subject, Subcontext: subcontext}
 }

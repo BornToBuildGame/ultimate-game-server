@@ -37,11 +37,12 @@ type DBNotifier struct {
 
 func (n DBNotifier) Notify(ctx context.Context, userID, subject, content string, code int16, senderID string) error {
 	return notification.CreateNotification(ctx, n.Pool, &notification.Notification{
-		UserID:   userID,
-		Subject:  subject,
-		Content:  content,
-		Code:     code,
-		SenderID: senderID,
+		UserID:     userID,
+		Subject:    subject,
+		Content:    content,
+		Code:       code,
+		SenderID:   senderID,
+		Persistent: true,
 	})
 }
 

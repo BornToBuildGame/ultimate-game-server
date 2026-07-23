@@ -3228,3 +3228,245 @@ var PartyService_ServiceDesc = grpc.ServiceDesc{
 	Streams:  []grpc.StreamDesc{},
 	Metadata: "api/api.proto",
 }
+
+const (
+	ChatService_ListChannelMessages_FullMethodName = "/ultimate.server.api.ChatService/ListChannelMessages"
+)
+
+// ChatServiceClient is the client API for ChatService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type ChatServiceClient interface {
+	ListChannelMessages(ctx context.Context, in *ListChannelMessagesRequest, opts ...grpc.CallOption) (*ChannelMessageList, error)
+}
+
+type chatServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewChatServiceClient(cc grpc.ClientConnInterface) ChatServiceClient {
+	return &chatServiceClient{cc}
+}
+
+func (c *chatServiceClient) ListChannelMessages(ctx context.Context, in *ListChannelMessagesRequest, opts ...grpc.CallOption) (*ChannelMessageList, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ChannelMessageList)
+	err := c.cc.Invoke(ctx, ChatService_ListChannelMessages_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// ChatServiceServer is the server API for ChatService service.
+// All implementations must embed UnimplementedChatServiceServer
+// for forward compatibility.
+type ChatServiceServer interface {
+	ListChannelMessages(context.Context, *ListChannelMessagesRequest) (*ChannelMessageList, error)
+	mustEmbedUnimplementedChatServiceServer()
+}
+
+// UnimplementedChatServiceServer must be embedded to have
+// forward compatible implementations.
+//
+// NOTE: this should be embedded by value instead of pointer to avoid a nil
+// pointer dereference when methods are called.
+type UnimplementedChatServiceServer struct{}
+
+func (UnimplementedChatServiceServer) ListChannelMessages(context.Context, *ListChannelMessagesRequest) (*ChannelMessageList, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListChannelMessages not implemented")
+}
+func (UnimplementedChatServiceServer) mustEmbedUnimplementedChatServiceServer() {}
+func (UnimplementedChatServiceServer) testEmbeddedByValue()                     {}
+
+// UnsafeChatServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to ChatServiceServer will
+// result in compilation errors.
+type UnsafeChatServiceServer interface {
+	mustEmbedUnimplementedChatServiceServer()
+}
+
+func RegisterChatServiceServer(s grpc.ServiceRegistrar, srv ChatServiceServer) {
+	// If the following call pancis, it indicates UnimplementedChatServiceServer was
+	// embedded by pointer and is nil.  This will cause panics if an
+	// unimplemented method is ever invoked, so we test this at initialization
+	// time to prevent it from happening at runtime later due to I/O.
+	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
+		t.testEmbeddedByValue()
+	}
+	s.RegisterService(&ChatService_ServiceDesc, srv)
+}
+
+func _ChatService_ListChannelMessages_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListChannelMessagesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ChatServiceServer).ListChannelMessages(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ChatService_ListChannelMessages_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChatServiceServer).ListChannelMessages(ctx, req.(*ListChannelMessagesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// ChatService_ServiceDesc is the grpc.ServiceDesc for ChatService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var ChatService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "ultimate.server.api.ChatService",
+	HandlerType: (*ChatServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "ListChannelMessages",
+			Handler:    _ChatService_ListChannelMessages_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "api/api.proto",
+}
+
+const (
+	NotificationService_ListNotifications_FullMethodName   = "/ultimate.server.api.NotificationService/ListNotifications"
+	NotificationService_DeleteNotifications_FullMethodName = "/ultimate.server.api.NotificationService/DeleteNotifications"
+)
+
+// NotificationServiceClient is the client API for NotificationService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type NotificationServiceClient interface {
+	ListNotifications(ctx context.Context, in *ListNotificationsRequest, opts ...grpc.CallOption) (*NotificationList, error)
+	DeleteNotifications(ctx context.Context, in *DeleteNotificationsRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+}
+
+type notificationServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewNotificationServiceClient(cc grpc.ClientConnInterface) NotificationServiceClient {
+	return &notificationServiceClient{cc}
+}
+
+func (c *notificationServiceClient) ListNotifications(ctx context.Context, in *ListNotificationsRequest, opts ...grpc.CallOption) (*NotificationList, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(NotificationList)
+	err := c.cc.Invoke(ctx, NotificationService_ListNotifications_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *notificationServiceClient) DeleteNotifications(ctx context.Context, in *DeleteNotificationsRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, NotificationService_DeleteNotifications_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// NotificationServiceServer is the server API for NotificationService service.
+// All implementations must embed UnimplementedNotificationServiceServer
+// for forward compatibility.
+type NotificationServiceServer interface {
+	ListNotifications(context.Context, *ListNotificationsRequest) (*NotificationList, error)
+	DeleteNotifications(context.Context, *DeleteNotificationsRequest) (*emptypb.Empty, error)
+	mustEmbedUnimplementedNotificationServiceServer()
+}
+
+// UnimplementedNotificationServiceServer must be embedded to have
+// forward compatible implementations.
+//
+// NOTE: this should be embedded by value instead of pointer to avoid a nil
+// pointer dereference when methods are called.
+type UnimplementedNotificationServiceServer struct{}
+
+func (UnimplementedNotificationServiceServer) ListNotifications(context.Context, *ListNotificationsRequest) (*NotificationList, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListNotifications not implemented")
+}
+func (UnimplementedNotificationServiceServer) DeleteNotifications(context.Context, *DeleteNotificationsRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteNotifications not implemented")
+}
+func (UnimplementedNotificationServiceServer) mustEmbedUnimplementedNotificationServiceServer() {}
+func (UnimplementedNotificationServiceServer) testEmbeddedByValue()                             {}
+
+// UnsafeNotificationServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to NotificationServiceServer will
+// result in compilation errors.
+type UnsafeNotificationServiceServer interface {
+	mustEmbedUnimplementedNotificationServiceServer()
+}
+
+func RegisterNotificationServiceServer(s grpc.ServiceRegistrar, srv NotificationServiceServer) {
+	// If the following call pancis, it indicates UnimplementedNotificationServiceServer was
+	// embedded by pointer and is nil.  This will cause panics if an
+	// unimplemented method is ever invoked, so we test this at initialization
+	// time to prevent it from happening at runtime later due to I/O.
+	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
+		t.testEmbeddedByValue()
+	}
+	s.RegisterService(&NotificationService_ServiceDesc, srv)
+}
+
+func _NotificationService_ListNotifications_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListNotificationsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NotificationServiceServer).ListNotifications(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: NotificationService_ListNotifications_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NotificationServiceServer).ListNotifications(ctx, req.(*ListNotificationsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _NotificationService_DeleteNotifications_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteNotificationsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NotificationServiceServer).DeleteNotifications(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: NotificationService_DeleteNotifications_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NotificationServiceServer).DeleteNotifications(ctx, req.(*DeleteNotificationsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// NotificationService_ServiceDesc is the grpc.ServiceDesc for NotificationService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var NotificationService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "ultimate.server.api.NotificationService",
+	HandlerType: (*NotificationServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "ListNotifications",
+			Handler:    _NotificationService_ListNotifications_Handler,
+		},
+		{
+			MethodName: "DeleteNotifications",
+			Handler:    _NotificationService_DeleteNotifications_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "api/api.proto",
+}

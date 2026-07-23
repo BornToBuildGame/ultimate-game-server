@@ -216,6 +216,36 @@ func (cr *ConnectionRegistry) GetUserSessionIDs(userID string) []string {
 	return sessionIDs
 }
 
+// GetUserSessions returns active sessions for a user.
+func (cr *ConnectionRegistry) GetUserSessions(userID string) []*Session {
+	cr.mu.RLock()
+	defer cr.mu.RUnlock()
+	userMap, exists := cr.userSessions[userID]
+	if !exists {
+		return nil
+	}
+	out := make([]*Session, 0, len(userMap))
+	for _, sess := range userMap {
+		if sess != nil && sess.IsActive {
+			out = append(out, sess)
+		}
+	}
+	return out
+}
+
+// AllSessions returns a snapshot of all active sessions.
+func (cr *ConnectionRegistry) AllSessions() []*Session {
+	cr.mu.RLock()
+	defer cr.mu.RUnlock()
+	out := make([]*Session, 0, len(cr.sessions))
+	for _, sess := range cr.sessions {
+		if sess != nil && sess.IsActive {
+			out = append(out, sess)
+		}
+	}
+	return out
+}
+
 // SendToSession sends a message to a specific active session.
 // When the send buffer is full the session is closed (backpressure).
 func (cr *ConnectionRegistry) SendToSession(sessionID string, payload []byte) {
@@ -270,6 +300,7 @@ type GatewayHandler struct {
 	sendBufSize     int
 	relayedMatches  map[string]*RelayedMatch
 	channels        map[string]map[string]*Session // channelID -> sessionID -> Session
+	channelMeta     map[string]map[string]channelMemberMeta
 	rdb             *redis.Client
 	nodeID          string
 	relayCancel     context.CancelFunc
@@ -515,6 +546,7 @@ func (gh *GatewayHandler) Upgrade(w http.ResponseWriter, r *http.Request) {
 	}
 
 	gh.registry.Add(session)
+	gh.trackNotifications(session)
 
 	// Re-attach reconnecting session to live relayed matches.
 	if len(matchIDs) > 0 {
@@ -706,6 +738,8 @@ type Envelope struct {
 	ChannelJoin            *ChannelJoinPayload            `json:"channel_join,omitempty"`
 	ChannelLeave           *ChannelLeavePayload           `json:"channel_leave,omitempty"`
 	ChannelMessageSend     *ChannelMessageSendPayload     `json:"channel_message_send,omitempty"`
+	ChannelMessageUpdate   *ChannelMessageUpdatePayload   `json:"channel_message_update,omitempty"`
+	ChannelMessageRemove   *ChannelMessageRemovePayload   `json:"channel_message_remove,omitempty"`
 }
 
 type MatchCreatePayload struct{}
@@ -831,8 +865,10 @@ type StatusUpdatePayload struct {
 type PingPayload struct{}
 
 type ChannelJoinPayload struct {
-	Target string `json:"target"`
-	Type   int    `json:"type"` // 1=ROOM, 2=DM, 3=GROUP
+	Target      string `json:"target"`
+	Type        int    `json:"type"` // 1=ROOM, 2=DM, 3=GROUP
+	Persistence *bool  `json:"persistence,omitempty"`
+	Hidden      *bool  `json:"hidden,omitempty"`
 }
 
 type ChannelLeavePayload struct {
@@ -842,6 +878,17 @@ type ChannelLeavePayload struct {
 type ChannelMessageSendPayload struct {
 	ChannelID string          `json:"channel_id"`
 	Content   json.RawMessage `json:"content"`
+}
+
+type ChannelMessageUpdatePayload struct {
+	ChannelID string          `json:"channel_id"`
+	MessageID string          `json:"message_id"`
+	Content   json.RawMessage `json:"content"`
+}
+
+type ChannelMessageRemovePayload struct {
+	ChannelID string `json:"channel_id"`
+	MessageID string `json:"message_id"`
 }
 
 func (gh *GatewayHandler) RouteMessage(s *Session, payload []byte) {
@@ -1340,6 +1387,10 @@ func (gh *GatewayHandler) RouteMessage(s *Session, payload []byte) {
 		gh.handleChannelLeave(s, env.Cid, env.ChannelLeave)
 	} else if env.ChannelMessageSend != nil {
 		gh.handleChannelMessageSend(s, env.Cid, env.ChannelMessageSend)
+	} else if env.ChannelMessageUpdate != nil {
+		gh.handleChannelMessageUpdate(s, env.Cid, env.ChannelMessageUpdate)
+	} else if env.ChannelMessageRemove != nil {
+		gh.handleChannelMessageRemove(s, env.Cid, env.ChannelMessageRemove)
 	}
 }
 

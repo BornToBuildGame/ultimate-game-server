@@ -182,14 +182,14 @@ func MapLuaNK(L *lua.LState, nk RuntimeModule, registry ...*HookRegistry) {
 		return 1
 	}))
 
-	// 6. Notification Send
+	// 6. Notification APIs
 	L.SetField(nkTable, "notification_send", L.NewFunction(func(L *lua.LState) int {
 		userID := L.CheckString(1)
 		subject := L.CheckString(2)
 		contentTbl := L.CheckTable(3)
 		code := L.CheckInt(4)
 		senderID := L.OptString(5, "")
-		persistent := L.OptBool(6, true)
+		persistent := L.OptBool(6, false)
 
 		var content map[string]interface{}
 		if m, ok := ToGoValue(contentTbl).(map[string]interface{}); ok {
@@ -199,6 +199,91 @@ func MapLuaNK(L *lua.LState, nk RuntimeModule, registry ...*HookRegistry) {
 		err := nk.NotificationSend(L.Context(), userID, subject, content, code, senderID, persistent)
 		if err != nil {
 			L.RaiseError("notification_send failed: %v", err)
+			return 0
+		}
+		return 0
+	}))
+
+	L.SetField(nkTable, "notifications_list", L.NewFunction(func(L *lua.LState) int {
+		list, cursor, err := nk.NotificationsList(L.Context(), L.CheckString(1), L.OptInt(2, 100), L.OptString(3, ""))
+		if err != nil {
+			L.RaiseError("notifications_list failed: %v", err)
+			return 0
+		}
+		tbl := L.CreateTable(len(list), 0)
+		for i, n := range list {
+			row := L.NewTable()
+			L.SetField(row, "id", lua.LString(n.ID))
+			L.SetField(row, "subject", lua.LString(n.Subject))
+			L.SetField(row, "content", lua.LString(n.Content))
+			L.SetField(row, "code", lua.LNumber(n.Code))
+			L.SetField(row, "sender_id", lua.LString(n.SenderID))
+			L.SetField(row, "persistent", lua.LBool(n.Persistent))
+			tbl.RawSetInt(i+1, row)
+		}
+		L.Push(tbl)
+		L.Push(lua.LString(cursor))
+		return 2
+	}))
+
+	L.SetField(nkTable, "notifications_delete", L.NewFunction(func(L *lua.LState) int {
+		ids := luaStringSlice(L.CheckTable(2))
+		if err := nk.NotificationsDelete(L.Context(), L.CheckString(1), ids); err != nil {
+			L.RaiseError("notifications_delete failed: %v", err)
+			return 0
+		}
+		return 0
+	}))
+
+	L.SetField(nkTable, "notification_send_all", L.NewFunction(func(L *lua.LState) int {
+		subject := L.CheckString(1)
+		contentTbl := L.CheckTable(2)
+		code := L.CheckInt(3)
+		persistent := L.OptBool(4, false)
+		var content map[string]interface{}
+		if m, ok := ToGoValue(contentTbl).(map[string]interface{}); ok {
+			content = m
+		}
+		if err := nk.NotificationSendAll(L.Context(), subject, content, code, persistent); err != nil {
+			L.RaiseError("notification_send_all failed: %v", err)
+			return 0
+		}
+		return 0
+	}))
+
+	L.SetField(nkTable, "notifications_send", L.NewFunction(func(L *lua.LState) int {
+		tbl := L.CheckTable(1)
+		var params []*NotificationSendParams
+		tbl.ForEach(func(_, v lua.LValue) {
+			row, ok := v.(*lua.LTable)
+			if !ok {
+				return
+			}
+			p := &NotificationSendParams{}
+			if s, ok := row.RawGetString("user_id").(lua.LString); ok {
+				p.UserID = string(s)
+			}
+			if s, ok := row.RawGetString("subject").(lua.LString); ok {
+				p.Subject = string(s)
+			}
+			if n, ok := row.RawGetString("code").(lua.LNumber); ok {
+				p.Code = int(n)
+			}
+			if s, ok := row.RawGetString("sender_id").(lua.LString); ok {
+				p.SenderID = string(s)
+			}
+			if b, ok := row.RawGetString("persistent").(lua.LBool); ok {
+				p.Persistent = bool(b)
+			}
+			if c := row.RawGetString("content"); c != lua.LNil {
+				if m, ok := ToGoValue(c).(map[string]interface{}); ok {
+					p.Content = m
+				}
+			}
+			params = append(params, p)
+		})
+		if err := nk.NotificationsSend(L.Context(), params); err != nil {
+			L.RaiseError("notifications_send failed: %v", err)
 			return 0
 		}
 		return 0
@@ -260,6 +345,92 @@ func MapLuaNK(L *lua.LState, nk RuntimeModule, registry ...*HookRegistry) {
 		L.Push(tbl)
 		L.Push(lua.LString(next))
 		return 2
+	}))
+
+	L.SetField(nkTable, "channel_id_build", L.NewFunction(func(L *lua.LState) int {
+		id, err := nk.ChannelIdBuild(L.Context(), L.CheckString(1), L.CheckString(2), L.OptInt(3, 1))
+		if err != nil {
+			L.RaiseError("channel_id_build failed: %v", err)
+			return 0
+		}
+		L.Push(lua.LString(id))
+		return 1
+	}))
+
+	L.SetField(nkTable, "channel_message_send", L.NewFunction(func(L *lua.LState) int {
+		channelID := L.CheckString(1)
+		contentTbl := L.CheckTable(2)
+		var content map[string]interface{}
+		if m, ok := ToGoValue(contentTbl).(map[string]interface{}); ok {
+			content = m
+		}
+		ack, err := nk.ChannelMessageSend(L.Context(), channelID, content, L.OptString(3, ""), L.OptString(4, ""), L.OptBool(5, true))
+		if err != nil {
+			L.RaiseError("channel_message_send failed: %v", err)
+			return 0
+		}
+		row := L.NewTable()
+		L.SetField(row, "channel_id", lua.LString(ack.ChannelID))
+		L.SetField(row, "message_id", lua.LString(ack.MessageID))
+		L.SetField(row, "code", lua.LNumber(ack.Code))
+		L.SetField(row, "persistent", lua.LBool(ack.Persistent))
+		L.Push(row)
+		return 1
+	}))
+
+	L.SetField(nkTable, "channel_message_update", L.NewFunction(func(L *lua.LState) int {
+		var content map[string]interface{}
+		if m, ok := ToGoValue(L.CheckTable(3)).(map[string]interface{}); ok {
+			content = m
+		}
+		ack, err := nk.ChannelMessageUpdate(L.Context(), L.CheckString(1), L.CheckString(2), content, L.OptString(4, ""), L.OptString(5, ""), L.OptBool(6, true))
+		if err != nil {
+			L.RaiseError("channel_message_update failed: %v", err)
+			return 0
+		}
+		row := L.NewTable()
+		L.SetField(row, "message_id", lua.LString(ack.MessageID))
+		L.SetField(row, "code", lua.LNumber(ack.Code))
+		L.Push(row)
+		return 1
+	}))
+
+	L.SetField(nkTable, "channel_message_remove", L.NewFunction(func(L *lua.LState) int {
+		ack, err := nk.ChannelMessageRemove(L.Context(), L.CheckString(1), L.CheckString(2), L.OptString(3, ""), L.OptString(4, ""), L.OptBool(5, true))
+		if err != nil {
+			L.RaiseError("channel_message_remove failed: %v", err)
+			return 0
+		}
+		row := L.NewTable()
+		L.SetField(row, "message_id", lua.LString(ack.MessageID))
+		L.SetField(row, "code", lua.LNumber(ack.Code))
+		L.Push(row)
+		return 1
+	}))
+
+	L.SetField(nkTable, "channel_messages_list", L.NewFunction(func(L *lua.LState) int {
+		list, next, prev, cacheable, err := nk.ChannelMessagesList(L.Context(), L.CheckString(1), L.OptInt(2, 20), L.OptBool(3, true), L.OptString(4, ""))
+		if err != nil {
+			L.RaiseError("channel_messages_list failed: %v", err)
+			return 0
+		}
+		tbl := L.CreateTable(len(list), 0)
+		for i, m := range list {
+			row := L.NewTable()
+			L.SetField(row, "channel_id", lua.LString(m.ChannelID))
+			L.SetField(row, "message_id", lua.LString(m.MessageID))
+			L.SetField(row, "code", lua.LNumber(m.Code))
+			L.SetField(row, "sender_id", lua.LString(m.SenderID))
+			L.SetField(row, "username", lua.LString(m.Username))
+			L.SetField(row, "content", lua.LString(m.Content))
+			L.SetField(row, "persistent", lua.LBool(m.Persistent))
+			tbl.RawSetInt(i+1, row)
+		}
+		L.Push(tbl)
+		L.Push(lua.LString(next))
+		L.Push(lua.LString(prev))
+		L.Push(lua.LString(cacheable))
+		return 4
 	}))
 
 	L.SetField(nkTable, "group_create", L.NewFunction(func(L *lua.LState) int {

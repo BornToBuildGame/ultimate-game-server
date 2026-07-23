@@ -17,7 +17,6 @@ import (
 func TestChat_Integration(t *testing.T) {
 	ctx := context.Background()
 
-	// 1. Spin up PostgreSQL container
 	postgresContainer, err := postgres.Run(ctx, "postgres:16-alpine",
 		postgres.WithDatabase("ultimate_game_db"),
 		postgres.WithUsername("game_admin"),
@@ -38,67 +37,84 @@ func TestChat_Integration(t *testing.T) {
 	}
 
 	logger := zap.NewNop()
-	dbCfg := database.Config{
-		DSN:             dsn,
-		MaxOpenConns:    5,
-		MaxRetries:      5,
-		RetryDelay:      500 * time.Millisecond,
-	}
-
-	pool, err := database.ConnectWithBackoff(ctx, logger, dbCfg)
+	pool, err := database.ConnectWithBackoff(ctx, logger, database.Config{
+		DSN: dsn, MaxOpenConns: 5, MaxRetries: 5, RetryDelay: 500 * time.Millisecond,
+	})
 	if err != nil {
 		t.Fatalf("failed to connect to database: %v", err)
 	}
 	defer pool.Close()
 
-	// Run migrations
-	err = database.RunMigrations(ctx, logger, pool)
-	if err != nil {
+	if err = database.RunMigrations(ctx, logger, pool); err != nil {
 		t.Fatalf("failed to run database migrations: %v", err)
 	}
 
-	// 2. Insert test user
 	userID := uuid.New().String()
-	insertUser := `INSERT INTO users (id, username, email, password, display_name) VALUES ($1, $2, $3, $4, $5)`
-	_, err = pool.Exec(ctx, insertUser, userID, "chat_user", "chat@test.com", []byte("hash"), "Chat User")
+	_, err = pool.Exec(ctx, `INSERT INTO users (id, username, email, password, display_name) VALUES ($1, $2, $3, $4, $5)`,
+		userID, "chat_user", "chat@test.com", []byte("hash"), "Chat User")
 	if err != nil {
 		t.Fatalf("failed to insert user: %v", err)
 	}
 
-	// 3. Save Message
-	subjectID := uuid.New().String()
-	descriptorID := uuid.New().String()
-
-	msg := &Message{
-		SenderID:         userID,
-		Username:         "chat_user",
-		StreamMode:       StreamModeRoom,
-		StreamSubject:    subjectID,
-		StreamDescriptor: descriptorID,
-		StreamLabel:      "global_lobby",
-		Content:          `{"text": "Hello world!"}`,
-	}
-
-	err = SaveMessage(ctx, pool, msg)
+	// Room channel with uuid.Nil subject/descriptor
+	channelID, stream, err := BuildChannelId(ctx, pool, userID, "global_lobby", ChannelJoinRoom)
 	if err != nil {
-		t.Fatalf("failed to save message: %v", err)
+		t.Fatal(err)
+	}
+	if channelID != "2...global_lobby" {
+		t.Fatalf("channelID=%q", channelID)
 	}
 
-	// 4. List Messages and verify
-	list, err := ListMessages(ctx, pool, StreamModeRoom, subjectID, descriptorID, "global_lobby", 10)
+	ack, msg, err := ChannelMessageSend(ctx, pool, stream, channelID, `{"text":"Hello world!"}`, userID, "chat_user", true)
 	if err != nil {
-		t.Fatalf("failed to list messages: %v", err)
+		t.Fatalf("send: %v", err)
+	}
+	if !ack.Persistent || msg.MessageID == "" {
+		t.Fatalf("ack=%+v", ack)
 	}
 
-	if len(list) != 1 {
-		t.Fatalf("expected 1 message in history, got: %d", len(list))
+	list, err := ChannelMessagesList(ctx, pool, "", stream, channelID, 10, true, "")
+	if err != nil {
+		t.Fatalf("list: %v", err)
+	}
+	if len(list.Messages) != 1 {
+		t.Fatalf("expected 1 message, got %d", len(list.Messages))
+	}
+	if list.Messages[0].Content != `{"text":"Hello world!"}` {
+		t.Errorf("content=%s", list.Messages[0].Content)
 	}
 
-	m := list[0]
-	if m.SenderID != userID {
-		t.Errorf("expected sender %s, got %s", userID, m.SenderID)
+	_, _, err = ChannelMessageUpdate(ctx, pool, stream, channelID, msg.MessageID, `{"text":"Edited"}`, userID, "chat_user", true)
+	if err != nil {
+		t.Fatalf("update: %v", err)
 	}
-	if m.Content != `{"text": "Hello world!"}` {
-		t.Errorf("expected message content match, got: %s", m.Content)
+	list2, err := ChannelMessagesList(ctx, pool, "", stream, channelID, 10, true, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if list2.Messages[0].Content != `{"text":"Edited"}` {
+		t.Errorf("after update content=%s", list2.Messages[0].Content)
+	}
+
+	_, _, err = ChannelMessageRemove(ctx, pool, stream, channelID, msg.MessageID, userID, "chat_user", true)
+	if err != nil {
+		t.Fatalf("remove: %v", err)
+	}
+	list3, err := ChannelMessagesList(ctx, pool, "", stream, channelID, 10, true, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(list3.Messages) != 0 {
+		t.Fatalf("expected 0 after remove, got %d", len(list3.Messages))
+	}
+
+	// Persist=false should not write
+	_, _, err = ChannelMessageSend(ctx, pool, stream, channelID, `{"text":"ephemeral"}`, userID, "chat_user", false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	list4, _ := ChannelMessagesList(ctx, pool, "", stream, channelID, 10, true, "")
+	if len(list4.Messages) != 0 {
+		t.Fatalf("persist=false should leave DB empty, got %d", len(list4.Messages))
 	}
 }

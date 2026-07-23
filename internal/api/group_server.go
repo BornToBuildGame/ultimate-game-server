@@ -30,7 +30,7 @@ func NewGroupServer(dbPool *pgxpool.Pool, tokenMgr *auth.TokenManager) *GroupSer
 	return &GroupServer{
 		dbPool:   dbPool,
 		tokenMgr: tokenMgr,
-		notifier: social.NoopNotifier{},
+		notifier: DBNotifier{Pool: dbPool},
 	}
 }
 
@@ -380,7 +380,7 @@ func (s *Server) handleJoinGroup(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
 	}
-	if err = social.JoinGroup(r.Context(), s.dbPool, userID, r.PathValue("id"), social.NoopNotifier{}); err != nil {
+	if err = social.JoinGroup(r.Context(), s.dbPool, userID, r.PathValue("id"), DBNotifier{Pool: s.dbPool}); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -415,7 +415,7 @@ func (s *Server) handleAddGroupUsers(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "bad request", http.StatusBadRequest)
 		return
 	}
-	if err = social.AddGroupUsers(r.Context(), s.dbPool, callerID, r.PathValue("id"), req.UserIDs, social.NoopNotifier{}); err != nil {
+	if err = social.AddGroupUsers(r.Context(), s.dbPool, callerID, r.PathValue("id"), req.UserIDs, DBNotifier{Pool: s.dbPool}); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}

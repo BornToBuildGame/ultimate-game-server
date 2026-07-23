@@ -108,6 +108,27 @@ func (m *mockRuntimeModule) LeaderboardRecordWrite(ctx context.Context, id, owne
 func (m *mockRuntimeModule) NotificationSend(ctx context.Context, userID, subject string, content map[string]interface{}, code int, senderID string, persistent bool) error {
 	return nil
 }
+func (m *mockRuntimeModule) NotificationsSend(ctx context.Context, notifications []*NotificationSendParams) error {
+	return nil
+}
+func (m *mockRuntimeModule) NotificationSendAll(ctx context.Context, subject string, content map[string]interface{}, code int, persistent bool) error {
+	return nil
+}
+func (m *mockRuntimeModule) NotificationsList(ctx context.Context, userID string, limit int, cursor string) ([]*NotificationView, string, error) {
+	return nil, "", nil
+}
+func (m *mockRuntimeModule) NotificationsDelete(ctx context.Context, userID string, ids []string) error {
+	return nil
+}
+func (m *mockRuntimeModule) NotificationsUpdate(ctx context.Context, updates []*NotificationUpdateParams) error {
+	return nil
+}
+func (m *mockRuntimeModule) NotificationsGetId(ctx context.Context, userID string, ids []string) ([]*NotificationView, error) {
+	return nil, nil
+}
+func (m *mockRuntimeModule) NotificationsDeleteId(ctx context.Context, userID string, ids []string) error {
+	return nil
+}
 
 func (m *mockRuntimeModule) FriendsList(ctx context.Context, userID string, limit int, state *int, cursor string) ([]*FriendEdge, string, error) {
 	return nil, "", nil
@@ -177,6 +198,22 @@ func (m *mockRuntimeModule) UserGroupsList(ctx context.Context, userID string, l
 }
 func (m *mockRuntimeModule) GroupsGetRandom(ctx context.Context, count int) ([]*GroupView, error) {
 	return nil, nil
+}
+
+func (m *mockRuntimeModule) ChannelIdBuild(ctx context.Context, userID, target string, chanType int) (string, error) {
+	return "2..test", nil
+}
+func (m *mockRuntimeModule) ChannelMessageSend(ctx context.Context, channelID string, content map[string]interface{}, senderID, senderUsername string, persist bool) (*ChannelMessageAckView, error) {
+	return &ChannelMessageAckView{ChannelID: channelID, MessageID: "m1", Persistent: persist}, nil
+}
+func (m *mockRuntimeModule) ChannelMessageUpdate(ctx context.Context, channelID, messageID string, content map[string]interface{}, senderID, senderUsername string, persist bool) (*ChannelMessageAckView, error) {
+	return &ChannelMessageAckView{ChannelID: channelID, MessageID: messageID}, nil
+}
+func (m *mockRuntimeModule) ChannelMessageRemove(ctx context.Context, channelID, messageID, senderID, senderUsername string, persist bool) (*ChannelMessageAckView, error) {
+	return &ChannelMessageAckView{ChannelID: channelID, MessageID: messageID, Code: 2}, nil
+}
+func (m *mockRuntimeModule) ChannelMessagesList(ctx context.Context, channelID string, limit int, forward bool, cursor string) ([]*ChannelMessageView, string, string, string, error) {
+	return nil, "", "", "", nil
 }
 
 func (m *mockRuntimeModule) MatchCreate(ctx context.Context, module string, params map[string]interface{}) (string, error) {

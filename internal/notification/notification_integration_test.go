@@ -4,7 +4,6 @@ package notification
 
 import (
 	"context"
-	"sync/atomic"
 	"testing"
 	"time"
 
@@ -18,7 +17,6 @@ import (
 func TestNotification_Integration(t *testing.T) {
 	ctx := context.Background()
 
-	// 1. Spin up PostgreSQL container
 	postgresContainer, err := postgres.Run(ctx, "postgres:16-alpine",
 		postgres.WithDatabase("ultimate_game_db"),
 		postgres.WithUsername("game_admin"),
@@ -39,72 +37,97 @@ func TestNotification_Integration(t *testing.T) {
 	}
 
 	logger := zap.NewNop()
-	dbCfg := database.Config{
-		DSN:             dsn,
-		MaxOpenConns:    5,
-		MaxRetries:      5,
-		RetryDelay:      500 * time.Millisecond,
-	}
-
-	pool, err := database.ConnectWithBackoff(ctx, logger, dbCfg)
+	pool, err := database.ConnectWithBackoff(ctx, logger, database.Config{
+		DSN: dsn, MaxOpenConns: 5, MaxRetries: 5, RetryDelay: 500 * time.Millisecond,
+	})
 	if err != nil {
 		t.Fatalf("failed to connect to database: %v", err)
 	}
 	defer pool.Close()
 
-	// Run migrations
-	err = database.RunMigrations(ctx, logger, pool)
-	if err != nil {
+	if err = database.RunMigrations(ctx, logger, pool); err != nil {
 		t.Fatalf("failed to run database migrations: %v", err)
 	}
 
-	// 2. Insert test user
 	userID := uuid.New().String()
-	insertUser := `INSERT INTO users (id, username, email, password, display_name) VALUES ($1, $2, $3, $4, $5)`
-	_, err = pool.Exec(ctx, insertUser, userID, "notify_user", "notify@test.com", []byte("hash"), "Notify User")
+	_, err = pool.Exec(ctx, `INSERT INTO users (id, username, email, password, display_name) VALUES ($1, $2, $3, $4, $5)`,
+		userID, "notify_user", "notify@test.com", []byte("hash"), "Notify User")
 	if err != nil {
 		t.Fatalf("failed to insert user: %v", err)
 	}
 
-	// Reset push counter
-	atomic.StoreInt64(&ExternalPushCount, 0)
+	d := &mockDeliverer{byUser: map[string][]*Notification{}}
 
-	// 3. Create Notification
-	notif := &Notification{
-		UserID:   userID,
-		Subject:  "Daily Reward Available!",
-		Content:  `{"gems": 100}`,
-		Code:     10,
-		SenderID: uuid.New().String(),
+	// Non-persistent: deliver only, no DB row.
+	nonPersist := &Notification{
+		UserID: userID, Subject: "ephemeral", Content: `{"x":1}`, Code: 11, Persistent: false,
 	}
-
-	err = CreateNotification(ctx, pool, notif)
+	if err := NotificationSend(ctx, pool, d, map[string][]*Notification{userID: {nonPersist}}); err != nil {
+		t.Fatalf("non-persist send: %v", err)
+	}
+	list0, err := NotificationList(ctx, pool, userID, 100, "")
 	if err != nil {
-		t.Fatalf("failed to create notification: %v", err)
+		t.Fatalf("list: %v", err)
+	}
+	if len(list0.Notifications) != 0 {
+		t.Fatalf("expected 0 persisted, got %d", len(list0.Notifications))
 	}
 
-	// Wait brief moment for goroutine external trigger mock to execute
-	time.Sleep(50 * time.Millisecond)
-
-	if count := atomic.LoadInt64(&ExternalPushCount); count != 1 {
-		t.Errorf("expected ExternalPushCount to be 1, got: %d", count)
+	// Persistent: save + deliver.
+	persist := &Notification{
+		UserID: userID, Subject: "Daily Reward Available!", Content: `{"gems": 100}`,
+		Code: 10, SenderID: uuid.New().String(), Persistent: true,
+	}
+	if err := NotificationSend(ctx, pool, d, map[string][]*Notification{userID: {persist}}); err != nil {
+		t.Fatalf("persist send: %v", err)
 	}
 
-	// 4. List Notifications and verify
-	list, err := ListNotifications(ctx, pool, userID, 10)
+	list1, err := NotificationList(ctx, pool, userID, 1, "")
 	if err != nil {
-		t.Fatalf("failed to list notifications: %v", err)
+		t.Fatalf("list: %v", err)
 	}
-
-	if len(list) != 1 {
-		t.Fatalf("expected 1 notification record, got: %d", len(list))
+	if len(list1.Notifications) != 1 {
+		t.Fatalf("expected 1 notification, got %d", len(list1.Notifications))
 	}
-
-	n := list[0]
+	n := list1.Notifications[0]
 	if n.Subject != "Daily Reward Available!" {
-		t.Errorf("expected subject 'Daily Reward Available!', got: %s", n.Subject)
+		t.Errorf("subject: %s", n.Subject)
 	}
-	if n.Content != `{"gems": 100}` {
-		t.Errorf("expected content match, got: %s", n.Content)
+	if list1.CacheableCursor == "" {
+		t.Fatal("expected cacheable_cursor")
+	}
+
+	// Second page via cursor.
+	persist2 := &Notification{
+		UserID: userID, Subject: "Second", Content: `{}`, Code: 12, Persistent: true,
+	}
+	if err := NotificationSend(ctx, pool, d, map[string][]*Notification{userID: {persist2}}); err != nil {
+		t.Fatalf("second send: %v", err)
+	}
+	list2, err := NotificationList(ctx, pool, userID, 1, list1.CacheableCursor)
+	if err != nil {
+		t.Fatalf("list page2: %v", err)
+	}
+	if len(list2.Notifications) != 1 || list2.Notifications[0].Subject != "Second" {
+		t.Fatalf("unexpected page2: %+v", list2.Notifications)
+	}
+
+	// Delete clears inbox entry.
+	if err := NotificationDelete(ctx, pool, userID, []string{n.ID, list2.Notifications[0].ID}); err != nil {
+		t.Fatalf("delete: %v", err)
+	}
+	list3, err := NotificationList(ctx, pool, userID, 100, "")
+	if err != nil {
+		t.Fatalf("list after delete: %v", err)
+	}
+	if len(list3.Notifications) != 0 {
+		t.Fatalf("expected empty after delete, got %d", len(list3.Notifications))
+	}
+
+	d.mu.Lock()
+	delivered := len(d.byUser[userID])
+	d.mu.Unlock()
+	if delivered < 3 {
+		t.Fatalf("expected at least 3 deliveries, got %d", delivered)
 	}
 }

@@ -171,7 +171,7 @@ func MapJSNK(vm *goja.Runtime, nk RuntimeModule, timeout time.Duration, registry
 		return vm.ToValue(m)
 	})
 
-	// 6. Notification Send
+	// 6. Notification APIs
 	_ = nkObj.Set("notification_send", func(call goja.FunctionCall) goja.Value {
 		userID := call.Argument(0).String()
 		subject := call.Argument(1).String()
@@ -185,13 +185,99 @@ func MapJSNK(vm *goja.Runtime, nk RuntimeModule, timeout time.Duration, registry
 
 		code := call.Argument(3).ToInteger()
 		senderID := call.Argument(4).String()
-		persistent := true
-		if call.Argument(5).Export() != nil {
+		persistent := false
+		if !goja.IsUndefined(call.Argument(5)) && !goja.IsNull(call.Argument(5)) {
 			persistent = call.Argument(5).ToBoolean()
 		}
 
 		err := nk.NotificationSend(context.Background(), userID, subject, content, int(code), senderID, persistent)
 		if err != nil {
+			panic(vm.NewGoError(err))
+		}
+		return goja.Undefined()
+	})
+
+	_ = nkObj.Set("notifications_list", func(call goja.FunctionCall) goja.Value {
+		userID := call.Argument(0).String()
+		limit := int(call.Argument(1).ToInteger())
+		if limit == 0 {
+			limit = 100
+		}
+		cursor := ""
+		if !goja.IsUndefined(call.Argument(2)) {
+			cursor = call.Argument(2).String()
+		}
+		list, next, err := nk.NotificationsList(context.Background(), userID, limit, cursor)
+		if err != nil {
+			panic(vm.NewGoError(err))
+		}
+		rows := make([]map[string]interface{}, len(list))
+		for i, n := range list {
+			rows[i] = map[string]interface{}{
+				"id":         n.ID,
+				"subject":    n.Subject,
+				"content":    n.Content,
+				"code":       n.Code,
+				"sender_id":  n.SenderID,
+				"persistent": n.Persistent,
+			}
+		}
+		return vm.ToValue(map[string]interface{}{"notifications": rows, "cacheable_cursor": next})
+	})
+
+	_ = nkObj.Set("notifications_delete", func(call goja.FunctionCall) goja.Value {
+		userID := call.Argument(0).String()
+		var ids []string
+		if err := vm.ExportTo(call.Argument(1), &ids); err != nil {
+			panic(vm.NewGoError(err))
+		}
+		if err := nk.NotificationsDelete(context.Background(), userID, ids); err != nil {
+			panic(vm.NewGoError(err))
+		}
+		return goja.Undefined()
+	})
+
+	_ = nkObj.Set("notification_send_all", func(call goja.FunctionCall) goja.Value {
+		subject := call.Argument(0).String()
+		var content map[string]interface{}
+		if contentVal := call.Argument(1).Export(); contentVal != nil {
+			if m, ok := contentVal.(map[string]interface{}); ok {
+				content = m
+			}
+		}
+		code := int(call.Argument(2).ToInteger())
+		persistent := false
+		if !goja.IsUndefined(call.Argument(3)) && !goja.IsNull(call.Argument(3)) {
+			persistent = call.Argument(3).ToBoolean()
+		}
+		if err := nk.NotificationSendAll(context.Background(), subject, content, code, persistent); err != nil {
+			panic(vm.NewGoError(err))
+		}
+		return goja.Undefined()
+	})
+
+	_ = nkObj.Set("notifications_send", func(call goja.FunctionCall) goja.Value {
+		var raw []map[string]interface{}
+		if err := vm.ExportTo(call.Argument(0), &raw); err != nil {
+			panic(vm.NewGoError(err))
+		}
+		params := make([]*NotificationSendParams, 0, len(raw))
+		for _, m := range raw {
+			p := &NotificationSendParams{
+				UserID:   getMapString(m, "user_id"),
+				Subject:  getMapString(m, "subject"),
+				SenderID: getMapString(m, "sender_id"),
+				Code:     int(getMapInt32(m, "code")),
+			}
+			if b, ok := m["persistent"].(bool); ok {
+				p.Persistent = b
+			}
+			if c, ok := m["content"].(map[string]interface{}); ok {
+				p.Content = c
+			}
+			params = append(params, p)
+		}
+		if err := nk.NotificationsSend(context.Background(), params); err != nil {
 			panic(vm.NewGoError(err))
 		}
 		return goja.Undefined()
@@ -256,6 +342,79 @@ func MapJSNK(vm *goja.Runtime, nk RuntimeModule, timeout time.Duration, registry
 			}
 		}
 		return vm.ToValue(map[string]interface{}{"parties": rows, "cursor": next})
+	})
+
+	_ = nkObj.Set("channelIdBuild", func(call goja.FunctionCall) goja.Value {
+		id, err := nk.ChannelIdBuild(context.Background(), call.Argument(0).String(), call.Argument(1).String(), int(call.Argument(2).ToInteger()))
+		if err != nil {
+			panic(vm.NewGoError(err))
+		}
+		return vm.ToValue(id)
+	})
+
+	_ = nkObj.Set("channelMessageSend", func(call goja.FunctionCall) goja.Value {
+		content, _ := call.Argument(1).Export().(map[string]interface{})
+		persist := true
+		if !goja.IsUndefined(call.Argument(4)) {
+			persist = call.Argument(4).ToBoolean()
+		}
+		ack, err := nk.ChannelMessageSend(context.Background(), call.Argument(0).String(), content, call.Argument(2).String(), call.Argument(3).String(), persist)
+		if err != nil {
+			panic(vm.NewGoError(err))
+		}
+		return vm.ToValue(map[string]interface{}{"channel_id": ack.ChannelID, "message_id": ack.MessageID, "code": ack.Code, "persistent": ack.Persistent})
+	})
+
+	_ = nkObj.Set("channelMessageUpdate", func(call goja.FunctionCall) goja.Value {
+		content, _ := call.Argument(2).Export().(map[string]interface{})
+		persist := true
+		if !goja.IsUndefined(call.Argument(5)) {
+			persist = call.Argument(5).ToBoolean()
+		}
+		ack, err := nk.ChannelMessageUpdate(context.Background(), call.Argument(0).String(), call.Argument(1).String(), content, call.Argument(3).String(), call.Argument(4).String(), persist)
+		if err != nil {
+			panic(vm.NewGoError(err))
+		}
+		return vm.ToValue(map[string]interface{}{"message_id": ack.MessageID, "code": ack.Code})
+	})
+
+	_ = nkObj.Set("channelMessageRemove", func(call goja.FunctionCall) goja.Value {
+		persist := true
+		if !goja.IsUndefined(call.Argument(4)) {
+			persist = call.Argument(4).ToBoolean()
+		}
+		ack, err := nk.ChannelMessageRemove(context.Background(), call.Argument(0).String(), call.Argument(1).String(), call.Argument(2).String(), call.Argument(3).String(), persist)
+		if err != nil {
+			panic(vm.NewGoError(err))
+		}
+		return vm.ToValue(map[string]interface{}{"message_id": ack.MessageID, "code": ack.Code})
+	})
+
+	_ = nkObj.Set("channelMessagesList", func(call goja.FunctionCall) goja.Value {
+		limit := int(call.Argument(1).ToInteger())
+		if limit == 0 {
+			limit = 20
+		}
+		forward := true
+		if !goja.IsUndefined(call.Argument(2)) {
+			forward = call.Argument(2).ToBoolean()
+		}
+		cursor := ""
+		if !goja.IsUndefined(call.Argument(3)) {
+			cursor = call.Argument(3).String()
+		}
+		list, next, prev, cacheable, err := nk.ChannelMessagesList(context.Background(), call.Argument(0).String(), limit, forward, cursor)
+		if err != nil {
+			panic(vm.NewGoError(err))
+		}
+		rows := make([]map[string]interface{}, len(list))
+		for i, m := range list {
+			rows[i] = map[string]interface{}{
+				"channel_id": m.ChannelID, "message_id": m.MessageID, "code": m.Code,
+				"sender_id": m.SenderID, "username": m.Username, "content": m.Content, "persistent": m.Persistent,
+			}
+		}
+		return vm.ToValue(map[string]interface{}{"messages": rows, "next_cursor": next, "prev_cursor": prev, "cacheable_cursor": cacheable})
 	})
 
 	_ = nkObj.Set("group_create", func(call goja.FunctionCall) goja.Value {

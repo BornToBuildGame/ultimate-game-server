@@ -27,7 +27,7 @@ const (
 const (
 	NotificationCodeFriendRequest = -2
 	NotificationCodeFriendAccept  = -3
-	NotificationCodeFriendImport  = -6 // UGE extension (Facebook/Steam import)
+	NotificationCodeFriendImport  = -1001 // UGE extension (Facebook/Steam import); -6 reserved for FriendJoinGame
 	NotificationCodeFriendRemove  = -9
 )
 
@@ -304,6 +304,18 @@ AND EXISTS (
 		return false, pgx.ErrNoRows
 	}
 	return false, nil
+}
+
+// UserExistsAndDoesNotBlock returns true if checkUserID exists and has not blocked blocksUserID.
+func UserExistsAndDoesNotBlock(ctx context.Context, pool *pgxpool.Pool, checkUserID, blocksUserID string) (bool, error) {
+	var count int
+	err := pool.QueryRow(ctx, `
+SELECT COUNT(id) FROM users
+WHERE id = $1::UUID AND NOT EXISTS (
+	SELECT state FROM user_edge
+	WHERE source_id = $1::UUID AND destination_id = $2::UUID AND state = $3
+)`, checkUserID, blocksUserID, StateBlocked).Scan(&count)
+	return count != 0, err
 }
 
 // BlockUser blocks interaction with another user.

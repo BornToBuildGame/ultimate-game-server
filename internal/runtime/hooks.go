@@ -59,6 +59,13 @@ type RuntimeModule interface {
 
 	// Notification operations
 	NotificationSend(ctx context.Context, userID, subject string, content map[string]interface{}, code int, senderID string, persistent bool) error
+	NotificationsSend(ctx context.Context, notifications []*NotificationSendParams) error
+	NotificationSendAll(ctx context.Context, subject string, content map[string]interface{}, code int, persistent bool) error
+	NotificationsList(ctx context.Context, userID string, limit int, cursor string) ([]*NotificationView, string, error)
+	NotificationsDelete(ctx context.Context, userID string, ids []string) error
+	NotificationsUpdate(ctx context.Context, updates []*NotificationUpdateParams) error
+	NotificationsGetId(ctx context.Context, userID string, ids []string) ([]*NotificationView, error)
+	NotificationsDeleteId(ctx context.Context, userID string, ids []string) error
 
 	// Friends operations
 	FriendsList(ctx context.Context, userID string, limit int, state *int, cursor string) ([]*FriendEdge, string, error)
@@ -86,6 +93,13 @@ type RuntimeModule interface {
 	GroupsList(ctx context.Context, name, langTag string, open *bool, members, limit int, cursor string) ([]*GroupView, string, error)
 	UserGroupsList(ctx context.Context, userID string, limit int, cursor string) ([]*UserGroupView, string, error)
 	GroupsGetRandom(ctx context.Context, count int) ([]*GroupView, error)
+
+	// Channel / chat operations
+	ChannelIdBuild(ctx context.Context, userID, target string, chanType int) (string, error)
+	ChannelMessageSend(ctx context.Context, channelID string, content map[string]interface{}, senderID, senderUsername string, persist bool) (*ChannelMessageAckView, error)
+	ChannelMessageUpdate(ctx context.Context, channelID, messageID string, content map[string]interface{}, senderID, senderUsername string, persist bool) (*ChannelMessageAckView, error)
+	ChannelMessageRemove(ctx context.Context, channelID, messageID, senderID, senderUsername string, persist bool) (*ChannelMessageAckView, error)
+	ChannelMessagesList(ctx context.Context, channelID string, limit int, forward bool, cursor string) ([]*ChannelMessageView, string, string, string, error)
 
 	// Match operations
 	MatchCreate(ctx context.Context, module string, params map[string]interface{}) (string, error)
@@ -236,6 +250,68 @@ type PartyListEntry struct {
 	Hidden  bool   `json:"hidden"`
 	MaxSize int    `json:"max_size"`
 	Label   string `json:"label"`
+}
+
+// ChannelMessageAckView is returned by runtime channel send/update/remove.
+type ChannelMessageAckView struct {
+	ChannelID  string    `json:"channel_id"`
+	MessageID  string    `json:"message_id"`
+	Code       int16     `json:"code"`
+	Username   string    `json:"username"`
+	CreateTime time.Time `json:"create_time"`
+	UpdateTime time.Time `json:"update_time"`
+	Persistent bool      `json:"persistent"`
+	RoomName   string    `json:"room_name,omitempty"`
+	GroupID    string    `json:"group_id,omitempty"`
+	UserIDOne  string    `json:"user_id_one,omitempty"`
+	UserIDTwo  string    `json:"user_id_two,omitempty"`
+}
+
+// ChannelMessageView is a listed channel message.
+type ChannelMessageView struct {
+	ChannelID  string    `json:"channel_id"`
+	MessageID  string    `json:"message_id"`
+	Code       int16     `json:"code"`
+	SenderID   string    `json:"sender_id"`
+	Username   string    `json:"username"`
+	Content    string    `json:"content"`
+	CreateTime time.Time `json:"create_time"`
+	UpdateTime time.Time `json:"update_time"`
+	Persistent bool      `json:"persistent"`
+	RoomName   string    `json:"room_name,omitempty"`
+	GroupID    string    `json:"group_id,omitempty"`
+	UserIDOne  string    `json:"user_id_one,omitempty"`
+	UserIDTwo  string    `json:"user_id_two,omitempty"`
+}
+
+// NotificationView is a runtime notification record.
+type NotificationView struct {
+	ID         string    `json:"id"`
+	UserID     string    `json:"user_id"`
+	Subject    string    `json:"subject"`
+	Content    string    `json:"content"`
+	Code       int16     `json:"code"`
+	SenderID   string    `json:"sender_id"`
+	CreateTime time.Time `json:"create_time"`
+	Persistent bool      `json:"persistent"`
+}
+
+// NotificationSendParams is a batch send entry.
+type NotificationSendParams struct {
+	UserID     string
+	Subject    string
+	Content    map[string]interface{}
+	Code       int
+	SenderID   string
+	Persistent bool
+}
+
+// NotificationUpdateParams is a partial notification update.
+type NotificationUpdateParams struct {
+	ID       string
+	Subject  *string
+	Content  *string
+	SenderID *string
 }
 
 // GroupView is a runtime group record.

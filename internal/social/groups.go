@@ -34,6 +34,41 @@ const (
 	NotificationCodeGroupJoinRequest = -5
 )
 
+// Group channel message codes (ADR-0013 / reference-aligned).
+const (
+	GroupChannelMsgJoin    int16 = 3
+	GroupChannelMsgAdd     int16 = 4
+	GroupChannelMsgLeave   int16 = 5
+	GroupChannelMsgKick    int16 = 6
+	GroupChannelMsgPromote int16 = 7
+	GroupChannelMsgBan     int16 = 8
+	GroupChannelMsgDemote  int16 = 9
+)
+
+// ChannelBroadcaster emits group lifecycle events onto the group chat stream.
+type ChannelBroadcaster interface {
+	BroadcastGroupChannelMessage(ctx context.Context, groupID string, code int16, content, senderID, username string)
+}
+
+type noopChannelBroadcaster struct{}
+
+func (noopChannelBroadcaster) BroadcastGroupChannelMessage(context.Context, string, int16, string, string, string) {
+}
+
+// DefaultChannelBroadcaster is set by the API/socket layer at startup.
+var DefaultChannelBroadcaster ChannelBroadcaster = noopChannelBroadcaster{}
+
+func broadcastGroupChannel(ctx context.Context, pool *pgxpool.Pool, groupID, userID string, code int16) {
+	if DefaultChannelBroadcaster == nil {
+		return
+	}
+	var username string
+	if pool != nil && userID != "" {
+		_ = pool.QueryRow(ctx, `SELECT username FROM users WHERE id = $1`, userID).Scan(&username)
+	}
+	DefaultChannelBroadcaster.BroadcastGroupChannelMessage(ctx, groupID, code, "{}", userID, username)
+}
+
 var epochDisable = time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC)
 
 // Group represents a guild/clan record.
@@ -202,7 +237,11 @@ func JoinGroup(ctx context.Context, pool *pgxpool.Pool, userID, groupID string, 
 		if _, err = tx.Exec(ctx, `UPDATE groups SET edge_count = edge_count + 1, update_time = now() WHERE id = $1`, groupID); err != nil {
 			return err
 		}
-		return tx.Commit(ctx)
+		if err = tx.Commit(ctx); err != nil {
+			return err
+		}
+		broadcastGroupChannel(ctx, pool, groupID, userID, GroupChannelMsgJoin)
+		return nil
 	}
 
 	// Closed: join request (no edge_count bump)
@@ -331,6 +370,14 @@ func AddGroupUsers(ctx context.Context, pool *pgxpool.Pool, callerID, groupID st
 			_ = notifier.Notify(ctx, uid, "You've been added to a group", string(contentBytes), int16(NotificationCodeGroupAdd), sender)
 		}
 	}
+	if added > 0 {
+		for _, uid := range userIDs {
+			if uid == "" {
+				continue
+			}
+			broadcastGroupChannel(ctx, pool, groupID, uid, GroupChannelMsgAdd)
+		}
+	}
 	return nil
 }
 
@@ -378,7 +425,13 @@ func KickMember(ctx context.Context, pool *pgxpool.Pool, kickerID, userID, group
 			return err
 		}
 	}
-	return tx.Commit(ctx)
+	if err = tx.Commit(ctx); err != nil {
+		return err
+	}
+	if targetRole <= RoleMember {
+		broadcastGroupChannel(ctx, pool, groupID, userID, GroupChannelMsgKick)
+	}
+	return nil
 }
 
 // BanGroupUsers bans users: remove membership edges; insert unidirectional group→user state 4.
@@ -423,7 +476,16 @@ func BanGroupUsers(ctx context.Context, pool *pgxpool.Pool, callerID, groupID st
 			return err
 		}
 	}
-	return tx.Commit(ctx)
+	if err = tx.Commit(ctx); err != nil {
+		return err
+	}
+	for _, uid := range userIDs {
+		if uid == "" || uid == callerID {
+			continue
+		}
+		broadcastGroupChannel(ctx, pool, groupID, uid, GroupChannelMsgBan)
+	}
+	return nil
 }
 
 // UpdateGroup updates group metadata; callerID empty = authoritative.
@@ -633,7 +695,11 @@ func LeaveGroup(ctx context.Context, pool *pgxpool.Pool, userID, groupID string)
 	if err != nil {
 		return err
 	}
-	return tx.Commit(ctx)
+	if err = tx.Commit(ctx); err != nil {
+		return err
+	}
+	broadcastGroupChannel(ctx, pool, groupID, userID, GroupChannelMsgLeave)
+	return nil
 }
 
 // PromoteMember raises a user's role (member→admin→superadmin) one step.
@@ -667,7 +733,11 @@ func PromoteMember(ctx context.Context, pool *pgxpool.Pool, kickerID, userID, gr
 	if err != nil {
 		return err
 	}
-	return tx.Commit(ctx)
+	if err = tx.Commit(ctx); err != nil {
+		return err
+	}
+	broadcastGroupChannel(ctx, pool, groupID, userID, GroupChannelMsgPromote)
+	return nil
 }
 
 // DemoteMember lowers a user's role one step toward member.
@@ -708,7 +778,11 @@ func DemoteMember(ctx context.Context, pool *pgxpool.Pool, kickerID, userID, gro
 	if err != nil {
 		return err
 	}
-	return tx.Commit(ctx)
+	if err = tx.Commit(ctx); err != nil {
+		return err
+	}
+	broadcastGroupChannel(ctx, pool, groupID, userID, GroupChannelMsgDemote)
+	return nil
 }
 
 type GroupMember struct {

@@ -7,6 +7,7 @@ import (
 	"os"
 	"time"
 
+	"ultimate-game-server/internal/chat"
 	"ultimate-game-server/internal/economy"
 	"ultimate-game-server/internal/leaderboard"
 	"ultimate-game-server/internal/notification"
@@ -183,15 +184,113 @@ func (m *GoRuntimeModule) LeaderboardRecordWrite(ctx context.Context, id, ownerI
 }
 
 func (m *GoRuntimeModule) NotificationSend(ctx context.Context, userID, subject string, content map[string]interface{}, code int, senderID string, persistent bool) error {
-	contentBytes, _ := json.Marshal(content)
-	notif := &notification.Notification{
-		UserID:   userID,
-		Subject:  subject,
-		Content:  string(contentBytes),
-		Code:     int16(code),
-		SenderID: senderID,
+	if err := notification.ValidateRuntimeCode(int16(code)); err != nil {
+		return err
 	}
-	return notification.CreateNotification(ctx, m.dbPool, notif)
+	contentBytes, _ := json.Marshal(content)
+	if senderID == "" {
+		senderID = uuid.Nil.String()
+	}
+	n := &notification.Notification{
+		UserID:     userID,
+		Subject:    subject,
+		Content:    string(contentBytes),
+		Code:       int16(code),
+		SenderID:   senderID,
+		Persistent: persistent,
+	}
+	return notification.NotificationSend(ctx, m.dbPool, nil, map[string][]*notification.Notification{userID: {n}})
+}
+
+func (m *GoRuntimeModule) NotificationsSend(ctx context.Context, notifications []*NotificationSendParams) error {
+	batch := make(map[string][]*notification.Notification)
+	for _, p := range notifications {
+		if p == nil {
+			continue
+		}
+		if err := notification.ValidateRuntimeCode(int16(p.Code)); err != nil {
+			return err
+		}
+		contentBytes, _ := json.Marshal(p.Content)
+		sender := p.SenderID
+		if sender == "" {
+			sender = uuid.Nil.String()
+		}
+		n := &notification.Notification{
+			UserID: p.UserID, Subject: p.Subject, Content: string(contentBytes),
+			Code: int16(p.Code), SenderID: sender, Persistent: p.Persistent,
+		}
+		batch[p.UserID] = append(batch[p.UserID], n)
+	}
+	return notification.NotificationSend(ctx, m.dbPool, nil, batch)
+}
+
+func (m *GoRuntimeModule) NotificationSendAll(ctx context.Context, subject string, content map[string]interface{}, code int, persistent bool) error {
+	if code <= 0 {
+		return notification.ErrNotificationCodeInvalid
+	}
+	contentBytes, _ := json.Marshal(content)
+	n := &notification.Notification{
+		Subject: subject, Content: string(contentBytes), Code: int16(code),
+		SenderID: uuid.Nil.String(), Persistent: persistent,
+	}
+	return notification.NotificationSendAll(ctx, m.dbPool, nil, n)
+}
+
+func toNotificationView(n *notification.Notification) *NotificationView {
+	if n == nil {
+		return nil
+	}
+	return &NotificationView{
+		ID: n.ID, UserID: n.UserID, Subject: n.Subject, Content: n.Content,
+		Code: n.Code, SenderID: n.SenderID, CreateTime: n.CreateTime, Persistent: n.Persistent,
+	}
+}
+
+func (m *GoRuntimeModule) NotificationsList(ctx context.Context, userID string, limit int, cursor string) ([]*NotificationView, string, error) {
+	if limit <= 0 {
+		limit = 100
+	}
+	list, err := notification.NotificationList(ctx, m.dbPool, userID, limit, cursor)
+	if err != nil {
+		return nil, "", err
+	}
+	out := make([]*NotificationView, len(list.Notifications))
+	for i, n := range list.Notifications {
+		out[i] = toNotificationView(n)
+	}
+	return out, list.CacheableCursor, nil
+}
+
+func (m *GoRuntimeModule) NotificationsDelete(ctx context.Context, userID string, ids []string) error {
+	return notification.NotificationDelete(ctx, m.dbPool, userID, ids)
+}
+
+func (m *GoRuntimeModule) NotificationsUpdate(ctx context.Context, updates []*NotificationUpdateParams) error {
+	us := make([]notification.NotificationUpdate, 0, len(updates))
+	for _, u := range updates {
+		if u == nil {
+			continue
+		}
+		us = append(us, notification.NotificationUpdate{ID: u.ID, Subject: u.Subject, Content: u.Content, SenderID: u.SenderID})
+	}
+	return notification.NotificationsUpdate(ctx, m.dbPool, us...)
+}
+
+func (m *GoRuntimeModule) NotificationsGetId(ctx context.Context, userID string, ids []string) ([]*NotificationView, error) {
+	list, err := notification.NotificationsGetId(ctx, m.dbPool, userID, ids...)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]*NotificationView, len(list))
+	for i, n := range list {
+		out[i] = toNotificationView(n)
+	}
+	return out, nil
+}
+
+func (m *GoRuntimeModule) NotificationsDeleteId(ctx context.Context, userID string, ids []string) error {
+	return notification.NotificationsDeleteId(ctx, m.dbPool, userID, ids...)
 }
 
 func (m *GoRuntimeModule) MatchCreate(ctx context.Context, module string, params map[string]interface{}) (string, error) {
@@ -669,4 +768,88 @@ func toRuntimeTournamentView(v *tournament.TournamentView) *TournamentView {
 		PrevReset:   v.PrevReset,
 		NextReset:   v.NextReset,
 	}
+}
+
+func toChannelAckView(ack *chat.ChannelMessageAck) *ChannelMessageAckView {
+	if ack == nil {
+		return nil
+	}
+	return &ChannelMessageAckView{
+		ChannelID: ack.ChannelID, MessageID: ack.MessageID, Code: ack.Code, Username: ack.Username,
+		CreateTime: ack.CreateTime, UpdateTime: ack.UpdateTime, Persistent: ack.Persistent,
+		RoomName: ack.RoomName, GroupID: ack.GroupID, UserIDOne: ack.UserIDOne, UserIDTwo: ack.UserIDTwo,
+	}
+}
+
+func (m *GoRuntimeModule) ChannelIdBuild(ctx context.Context, userID, target string, chanType int) (string, error) {
+	id, _, err := chat.BuildChannelId(ctx, m.dbPool, userID, target, chanType)
+	return id, err
+}
+
+func (m *GoRuntimeModule) ChannelMessageSend(ctx context.Context, channelID string, content map[string]interface{}, senderID, senderUsername string, persist bool) (*ChannelMessageAckView, error) {
+	stream, err := chat.ChannelIdToStream(channelID)
+	if err != nil {
+		return nil, err
+	}
+	contentBytes, _ := json.Marshal(content)
+	ack, msg, err := chat.ChannelMessageSend(ctx, m.dbPool, stream, channelID, string(contentBytes), senderID, senderUsername, persist)
+	if err != nil {
+		return nil, err
+	}
+	if chat.DefaultRouter != nil {
+		chat.DefaultRouter.BroadcastChannelMessage(channelID, msg)
+	}
+	return toChannelAckView(ack), nil
+}
+
+func (m *GoRuntimeModule) ChannelMessageUpdate(ctx context.Context, channelID, messageID string, content map[string]interface{}, senderID, senderUsername string, persist bool) (*ChannelMessageAckView, error) {
+	stream, err := chat.ChannelIdToStream(channelID)
+	if err != nil {
+		return nil, err
+	}
+	contentBytes, _ := json.Marshal(content)
+	ack, msg, err := chat.ChannelMessageUpdate(ctx, m.dbPool, stream, channelID, messageID, string(contentBytes), senderID, senderUsername, persist)
+	if err != nil {
+		return nil, err
+	}
+	if chat.DefaultRouter != nil {
+		chat.DefaultRouter.BroadcastChannelMessage(channelID, msg)
+	}
+	return toChannelAckView(ack), nil
+}
+
+func (m *GoRuntimeModule) ChannelMessageRemove(ctx context.Context, channelID, messageID, senderID, senderUsername string, persist bool) (*ChannelMessageAckView, error) {
+	stream, err := chat.ChannelIdToStream(channelID)
+	if err != nil {
+		return nil, err
+	}
+	ack, msg, err := chat.ChannelMessageRemove(ctx, m.dbPool, stream, channelID, messageID, senderID, senderUsername, persist)
+	if err != nil {
+		return nil, err
+	}
+	if chat.DefaultRouter != nil {
+		chat.DefaultRouter.BroadcastChannelMessage(channelID, msg)
+	}
+	return toChannelAckView(ack), nil
+}
+
+func (m *GoRuntimeModule) ChannelMessagesList(ctx context.Context, channelID string, limit int, forward bool, cursor string) ([]*ChannelMessageView, string, string, string, error) {
+	stream, err := chat.ChannelIdToStream(channelID)
+	if err != nil {
+		return nil, "", "", "", err
+	}
+	list, err := chat.ChannelMessagesList(ctx, m.dbPool, "", stream, channelID, limit, forward, cursor)
+	if err != nil {
+		return nil, "", "", "", err
+	}
+	out := make([]*ChannelMessageView, len(list.Messages))
+	for i, msg := range list.Messages {
+		out[i] = &ChannelMessageView{
+			ChannelID: msg.ChannelID, MessageID: msg.MessageID, Code: msg.Code,
+			SenderID: msg.SenderID, Username: msg.Username, Content: msg.Content,
+			CreateTime: msg.CreateTime, UpdateTime: msg.UpdateTime, Persistent: msg.Persistent,
+			RoomName: msg.RoomName, GroupID: msg.GroupID, UserIDOne: msg.UserIDOne, UserIDTwo: msg.UserIDTwo,
+		}
+	}
+	return out, list.NextCursor, list.PrevCursor, list.CacheableCursor, nil
 }

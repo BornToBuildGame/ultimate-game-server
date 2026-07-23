@@ -14,12 +14,15 @@ import (
 	"ultimate-game-server/internal/api/apipb"
 	"ultimate-game-server/internal/api/storagepb"
 	"ultimate-game-server/internal/auth"
+	"ultimate-game-server/internal/chat"
 	"ultimate-game-server/internal/leaderboard"
 	"ultimate-game-server/internal/match"
 	"ultimate-game-server/internal/matchmaker"
+	"ultimate-game-server/internal/notification"
 	"ultimate-game-server/internal/party"
 	"ultimate-game-server/internal/presence"
 	"ultimate-game-server/internal/runtime"
+	"ultimate-game-server/internal/social"
 	"ultimate-game-server/internal/socket"
 	"ultimate-game-server/internal/storage"
 	"ultimate-game-server/internal/tournament"
@@ -71,6 +74,8 @@ type Server struct {
 	TournamentScheduler *tournament.TournamentScheduler
 	lifecycleCancel     context.CancelFunc
 	rankTrimStop        chan struct{}
+
+	notificationServer *NotificationServer
 }
 
 // SetRuntimeManager configures the runtime manager for hook interceptors.
@@ -91,6 +96,9 @@ func (s *Server) SetRuntimeManager(rm *runtime.GoRuntimeManager) {
 		}
 		if s.SocketGateway != nil {
 			s.SocketGateway.SetHookRegistry(rm.Registry())
+		}
+		if s.notificationServer != nil {
+			s.notificationServer.SetHooks(rm.Registry())
 		}
 		if s.TournamentScheduler != nil {
 			s.wireSchedulerHooks()
@@ -154,6 +162,9 @@ func NewServer(logger *zap.Logger, cfg Config, dbPool *pgxpool.Pool) (*Server, e
 	if dbPool != nil {
 		sockGateway.SetDBPool(dbPool)
 	}
+	social.DefaultChannelBroadcaster = sockGateway
+	chat.DefaultRouter = sockGateway
+	notification.DefaultDeliverer = sockGateway
 
 	// Initialize Redis connection for Matchmaker
 	var rdb *redis.Client
@@ -390,6 +401,12 @@ func (s *Server) Start(ctx context.Context) error {
 	apipb.RegisterMatchmakerServiceServer(s.gRPCServer, NewMatchmakerServer(s.Matchmaker, s.tokenMgr))
 	apipb.RegisterRealtimeServiceServer(s.gRPCServer, NewRealtimeServer(s.logger, s.MatchRouter, s.rdb, s.tokenMgr))
 	apipb.RegisterPartyServiceServer(s.gRPCServer, NewPartyServer(s.PartyRegistry, s.tokenMgr))
+	apipb.RegisterChatServiceServer(s.gRPCServer, NewChannelServer(s.dbPool, s.tokenMgr, nil))
+	s.notificationServer = NewNotificationServer(s.dbPool, s.tokenMgr, nil)
+	if s.RuntimeManager != nil {
+		s.notificationServer.SetHooks(s.RuntimeManager.Registry())
+	}
+	apipb.RegisterNotificationServiceServer(s.gRPCServer, s.notificationServer)
 	apipb.RegisterAuthenticationServiceServer(s.gRPCServer, NewAuthServer(s))
 
 	// Start Matchmaker Tick Loop (Ticks every 1 second)
@@ -582,6 +599,9 @@ func (s *Server) registerRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /v2/match", s.handleCreateMatch)
 	mux.HandleFunc("GET /v2/match", s.handleListMatches)
 	mux.HandleFunc("GET /v2/party", s.handleListParties)
+	mux.HandleFunc("GET /v2/channel/{channel_id}", s.handleListChannelMessages)
+	mux.HandleFunc("GET /v2/notification", s.handleListNotifications)
+	mux.HandleFunc("DELETE /v2/notification", s.handleDeleteNotifications)
 	mux.HandleFunc("GET /v2/match/{match_id}", s.handleGetMatch)
 	mux.HandleFunc("POST /v2/match/{match_id}/signal", s.handleMatchSignal)
 

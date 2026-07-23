@@ -704,4 +704,71 @@ message PartyList {
   string cursor = 2;
 }
 
+// --- Chat Service ---
+
+service ChatService {
+  rpc ListChannelMessages(ListChannelMessagesRequest) returns (ChannelMessageList);
+}
+
+message ListChannelMessagesRequest {
+  string channel_id = 1;
+  int32 limit = 2;
+  optional bool forward = 3;
+  string cursor = 4;
+}
+
+message ChannelMessage {
+  string channel_id = 1;
+  string message_id = 2;
+  int32 code = 3;
+  string sender_id = 4;
+  string username = 5;
+  string content = 6;
+  google.protobuf.Timestamp create_time = 7;
+  google.protobuf.Timestamp update_time = 8;
+  bool persistent = 9;
+  string room_name = 10;
+  string group_id = 11;
+  string user_id_one = 12;
+  string user_id_two = 13;
+}
+
+message ChannelMessageList {
+  repeated ChannelMessage messages = 1;
+  string next_cursor = 2;
+  string prev_cursor = 3;
+  string cacheable_cursor = 4;
+}
+
+// --- Notification Service ---
+
+service NotificationService {
+  rpc ListNotifications(ListNotificationsRequest) returns (NotificationList);
+  rpc DeleteNotifications(DeleteNotificationsRequest) returns (google.protobuf.Empty);
+}
+
+message ListNotificationsRequest {
+  int32 limit = 1;
+  string cacheable_cursor = 2;
+}
+
+message ApiNotification {
+  string id = 1;
+  string subject = 2;
+  string content = 3;
+  int32 code = 4;
+  string sender_id = 5;
+  google.protobuf.Timestamp create_time = 6;
+  bool persistent = 7;
+}
+
+message NotificationList {
+  repeated ApiNotification notifications = 1;
+  string cacheable_cursor = 2;
+}
+
+message DeleteNotificationsRequest {
+  repeated string ids = 1;
+}
+
 
