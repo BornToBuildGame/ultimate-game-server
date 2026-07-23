@@ -117,7 +117,7 @@ func (s *TournamentServer) WriteTournamentRecord(ctx context.Context, req *apipb
 	if err != nil {
 		return nil, err
 	}
-	record, err := leaderboard.SubmitScore(ctx, s.dbPool, s.rdb, req.GetTournamentId(), userID, username, req.GetScore(), req.GetSubscore(), req.GetMetadata(), true)
+	record, err := leaderboard.SubmitScore(ctx, s.dbPool, s.rdb, req.GetTournamentId(), userID, username, req.GetScore(), req.GetSubscore(), req.GetMetadata(), true, mapProtoOperator(req.GetOverrideOperator()))
 	if err != nil {
 		return nil, mapLeaderboardErr(err)
 	}
@@ -321,7 +321,7 @@ func (s *Server) handleSubmitTournamentScore(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	metaBytes, _ := json.Marshal(req.Metadata)
-	record, err := leaderboard.SubmitScore(r.Context(), s.dbPool, s.rdb, r.PathValue("id"), userID, username, req.Score, req.Subscore, string(metaBytes), true)
+	record, err := leaderboard.SubmitScore(r.Context(), s.dbPool, s.rdb, r.PathValue("id"), userID, username, req.Score, req.Subscore, string(metaBytes), true, parseOverrideOperator(req.OverrideOperator))
 	if err != nil {
 		writeLeaderboardHTTPError(w, err)
 		return

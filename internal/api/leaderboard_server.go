@@ -125,11 +125,26 @@ func (s *LeaderboardServer) WriteLeaderboardRecord(ctx context.Context, req *api
 	if err != nil {
 		return nil, err
 	}
-	record, err := leaderboard.SubmitScore(ctx, s.dbPool, s.rdb, req.GetLeaderboardId(), userID, username, req.GetScore(), req.GetSubscore(), req.GetMetadata(), true)
+	record, err := leaderboard.SubmitScore(ctx, s.dbPool, s.rdb, req.GetLeaderboardId(), userID, username, req.GetScore(), req.GetSubscore(), req.GetMetadata(), true, mapProtoOperator(req.GetOverrideOperator()))
 	if err != nil {
 		return nil, mapLeaderboardErr(err)
 	}
 	return toProtoRecord(record), nil
+}
+
+func mapProtoOperator(op apipb.Operator) int {
+	switch op {
+	case apipb.Operator_BEST:
+		return leaderboard.OperatorBest
+	case apipb.Operator_SET:
+		return leaderboard.OperatorSet
+	case apipb.Operator_INCREMENT:
+		return leaderboard.OperatorIncrement
+	case apipb.Operator_DECREMENT:
+		return leaderboard.OperatorDecrement
+	default:
+		return leaderboard.OperatorNoOverride
+	}
 }
 
 func (s *LeaderboardServer) ListLeaderboardRecords(ctx context.Context, req *apipb.ListLeaderboardRecordsRequest) (*apipb.LeaderboardRecordList, error) {
@@ -293,9 +308,10 @@ func (s *Server) handleListLeaderboards(w http.ResponseWriter, r *http.Request) 
 }
 
 type restSubmitScoreRequest struct {
-	Score    int64                  `json:"score"`
-	Subscore int64                  `json:"subscore"`
-	Metadata map[string]interface{} `json:"metadata"`
+	Score             int64                  `json:"score"`
+	Subscore          int64                  `json:"subscore"`
+	Metadata          map[string]interface{} `json:"metadata"`
+	OverrideOperator  string                 `json:"override_operator"`
 }
 
 func (s *Server) handleSubmitScore(w http.ResponseWriter, r *http.Request) {
@@ -311,13 +327,28 @@ func (s *Server) handleSubmitScore(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	metaBytes, _ := json.Marshal(req.Metadata)
-	record, err := leaderboard.SubmitScore(r.Context(), s.dbPool, s.rdb, id, userID, username, req.Score, req.Subscore, string(metaBytes), true)
+	record, err := leaderboard.SubmitScore(r.Context(), s.dbPool, s.rdb, id, userID, username, req.Score, req.Subscore, string(metaBytes), true, parseOverrideOperator(req.OverrideOperator))
 	if err != nil {
 		writeLeaderboardHTTPError(w, err)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(record)
+}
+
+func parseOverrideOperator(s string) int {
+	switch strings.ToUpper(strings.TrimSpace(s)) {
+	case "BEST":
+		return leaderboard.OperatorBest
+	case "SET":
+		return leaderboard.OperatorSet
+	case "INCREMENT", "INCR":
+		return leaderboard.OperatorIncrement
+	case "DECREMENT", "DECR":
+		return leaderboard.OperatorDecrement
+	default:
+		return leaderboard.OperatorNoOverride
+	}
 }
 
 func (s *Server) handleListLeaderboardRecords(w http.ResponseWriter, r *http.Request) {

@@ -204,6 +204,154 @@ func MapLuaNK(L *lua.LState, nk RuntimeModule, registry ...*HookRegistry) {
 		return 0
 	}))
 
+	// Friends APIs
+	L.SetField(nkTable, "friends_list", L.NewFunction(func(L *lua.LState) int {
+		userID := L.CheckString(1)
+		limit := L.OptInt(2, 100)
+		var statePtr *int
+		if L.GetTop() >= 3 && L.Get(3).Type() != lua.LTNil {
+			st := L.CheckInt(3)
+			statePtr = &st
+		}
+		cursor := L.OptString(4, "")
+		list, next, err := nk.FriendsList(L.Context(), userID, limit, statePtr, cursor)
+		if err != nil {
+			L.RaiseError("friends_list failed: %v", err)
+			return 0
+		}
+		tbl := L.CreateTable(len(list), 0)
+		for i, f := range list {
+			row := L.NewTable()
+			L.SetField(row, "user_id", lua.LString(f.UserID))
+			L.SetField(row, "username", lua.LString(f.Username))
+			L.SetField(row, "state", lua.LNumber(f.State))
+			tbl.RawSetInt(i+1, row)
+		}
+		L.Push(tbl)
+		L.Push(lua.LString(next))
+		return 2
+	}))
+
+	L.SetField(nkTable, "party_list", L.NewFunction(func(L *lua.LState) int {
+		limit := L.OptInt(1, 10)
+		var openPtr *bool
+		if L.GetTop() >= 2 && L.Get(2).Type() != lua.LTNil {
+			b := L.CheckBool(2)
+			openPtr = &b
+		}
+		hidden := L.OptBool(3, false)
+		query := L.OptString(4, "")
+		cursor := L.OptString(5, "")
+		list, next, err := nk.PartyList(L.Context(), limit, openPtr, hidden, query, cursor)
+		if err != nil {
+			L.RaiseError("party_list failed: %v", err)
+			return 0
+		}
+		tbl := L.CreateTable(len(list), 0)
+		for i, p := range list {
+			row := L.NewTable()
+			L.SetField(row, "id", lua.LString(p.ID))
+			L.SetField(row, "open", lua.LBool(p.Open))
+			L.SetField(row, "hidden", lua.LBool(p.Hidden))
+			L.SetField(row, "max_size", lua.LNumber(p.MaxSize))
+			L.SetField(row, "label", lua.LString(p.Label))
+			tbl.RawSetInt(i+1, row)
+		}
+		L.Push(tbl)
+		L.Push(lua.LString(next))
+		return 2
+	}))
+
+	L.SetField(nkTable, "friends_add", L.NewFunction(func(L *lua.LState) int {
+		userID := L.CheckString(1)
+		idsTbl := L.OptTable(2, nil)
+		usernamesTbl := L.OptTable(3, nil)
+		ids := luaStringSlice(idsTbl)
+		usernames := luaStringSlice(usernamesTbl)
+		if err := nk.FriendsAdd(L.Context(), userID, ids, usernames, nil); err != nil {
+			L.RaiseError("friends_add failed: %v", err)
+			return 0
+		}
+		return 0
+	}))
+
+	L.SetField(nkTable, "friends_delete", L.NewFunction(func(L *lua.LState) int {
+		userID := L.CheckString(1)
+		ids := luaStringSlice(L.OptTable(2, nil))
+		usernames := luaStringSlice(L.OptTable(3, nil))
+		if err := nk.FriendsDelete(L.Context(), userID, ids, usernames); err != nil {
+			L.RaiseError("friends_delete failed: %v", err)
+			return 0
+		}
+		return 0
+	}))
+
+	L.SetField(nkTable, "friends_block", L.NewFunction(func(L *lua.LState) int {
+		userID := L.CheckString(1)
+		ids := luaStringSlice(L.OptTable(2, nil))
+		usernames := luaStringSlice(L.OptTable(3, nil))
+		if err := nk.FriendsBlock(L.Context(), userID, ids, usernames); err != nil {
+			L.RaiseError("friends_block failed: %v", err)
+			return 0
+		}
+		return 0
+	}))
+
+	L.SetField(nkTable, "friends_of_friends_list", L.NewFunction(func(L *lua.LState) int {
+		userID := L.CheckString(1)
+		limit := L.OptInt(2, 100)
+		cursor := L.OptString(3, "")
+		list, next, err := nk.FriendsOfFriendsList(L.Context(), userID, limit, cursor)
+		if err != nil {
+			L.RaiseError("friends_of_friends_list failed: %v", err)
+			return 0
+		}
+		tbl := L.CreateTable(len(list), 0)
+		for i, f := range list {
+			row := L.NewTable()
+			L.SetField(row, "referrer", lua.LString(f.Referrer))
+			L.SetField(row, "user_id", lua.LString(f.UserID))
+			L.SetField(row, "username", lua.LString(f.Username))
+			tbl.RawSetInt(i+1, row)
+		}
+		L.Push(tbl)
+		L.Push(lua.LString(next))
+		return 2
+	}))
+
+	L.SetField(nkTable, "friend_metadata_update", L.NewFunction(func(L *lua.LState) int {
+		userID := L.CheckString(1)
+		friendID := L.CheckString(2)
+		metaTbl := L.OptTable(3, nil)
+		var metadata map[string]any
+		if metaTbl != nil {
+			if m, ok := ToGoValue(metaTbl).(map[string]interface{}); ok {
+				metadata = m
+			}
+		}
+		if err := nk.FriendMetadataUpdate(L.Context(), userID, friendID, metadata); err != nil {
+			L.RaiseError("friend_metadata_update failed: %v", err)
+			return 0
+		}
+		return 0
+	}))
+
+	L.SetField(nkTable, "users_get_friend_status", L.NewFunction(func(L *lua.LState) int {
+		userID := L.CheckString(1)
+		ids := luaStringSlice(L.OptTable(2, nil))
+		statusMap, err := nk.UsersGetFriendStatus(L.Context(), userID, ids)
+		if err != nil {
+			L.RaiseError("users_get_friend_status failed: %v", err)
+			return 0
+		}
+		tbl := L.NewTable()
+		for k, v := range statusMap {
+			L.SetField(tbl, k, lua.LNumber(v))
+		}
+		L.Push(tbl)
+		return 1
+	}))
+
 	// 7. Match Create
 	L.SetField(nkTable, "match_create", L.NewFunction(func(L *lua.LState) int {
 		module := L.CheckString(1)
@@ -689,6 +837,19 @@ func ToLuaValue(L *lua.LState, val interface{}) lua.LValue {
 }
 
 // ToGoValue converts Lua values to Go primitives/slices/maps.
+func luaStringSlice(tbl *lua.LTable) []string {
+	if tbl == nil {
+		return nil
+	}
+	var out []string
+	tbl.ForEach(func(_, v lua.LValue) {
+		if s, ok := v.(lua.LString); ok {
+			out = append(out, string(s))
+		}
+	})
+	return out
+}
+
 func ToGoValue(val lua.LValue) interface{} {
 	switch v := val.(type) {
 	case lua.LBool:

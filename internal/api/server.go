@@ -57,8 +57,9 @@ type Server struct {
 	SocketGateway  *socket.GatewayHandler
 	MatchRouter    *match.Router
 	Matchmaker     *matchmaker.Matchmaker
-	PartyRegistry  *party.Registry
-	rdb            *redis.Client
+	PartyRegistry    *party.Registry
+	presenceTracker  *presence.PresenceTracker
+	rdb              *redis.Client
 
 	httpServer *http.Server
 	gRPCServer *grpc.Server
@@ -81,6 +82,9 @@ func (s *Server) SetRuntimeManager(rm *runtime.GoRuntimeManager) {
 		}
 		if grm, ok := rm.NK().(*runtime.GoRuntimeModule); ok && s.MatchRouter != nil {
 			grm.SetMatchRegistry(s.MatchRouter)
+		}
+		if grm, ok := rm.NK().(*runtime.GoRuntimeModule); ok && s.PartyRegistry != nil {
+			grm.SetPartyLister(&partyListAdapter{reg: s.PartyRegistry})
 		}
 		if s.Matchmaker != nil {
 			s.Matchmaker.SetDependencies(rm.DB(), rm.NK(), rm.Registry())
@@ -117,6 +121,7 @@ func NewServer(logger *zap.Logger, cfg Config, dbPool *pgxpool.Pool) (*Server, e
 	matchRouter := match.NewRouter()
 	sockRegistry := socket.NewConnectionRegistry()
 	presenceTracker := presence.NewPresenceTracker()
+	streamTracker := presence.NewStreamTracker()
 
 	var sockGateway *socket.GatewayHandler
 	onConnect := func(s *socket.Session) {
@@ -138,12 +143,14 @@ func NewServer(logger *zap.Logger, cfg Config, dbPool *pgxpool.Pool) (*Server, e
 		rec, had := presenceTracker.PeekPresence(sessionID)
 		_, _, subs := presenceTracker.RemovePresence(sessionID)
 		presenceTracker.UnfollowAll(sessionID)
+		streamTracker.UntrackAll(sessionID)
 		if had && sockGateway != nil {
 			sockGateway.NotifyStatusLeave(subs, rec.UserID, rec.SessionID, rec.Username)
 		}
 	}
 	sockGateway = socket.NewGatewayHandler(logger, tm, sockRegistry, onConnect, onDisconnect, matchRouter)
 	sockGateway.SetPresenceTracker(presenceTracker)
+	sockGateway.SetStreamTracker(streamTracker)
 	if dbPool != nil {
 		sockGateway.SetDBPool(dbPool)
 	}
@@ -180,18 +187,19 @@ func NewServer(logger *zap.Logger, cfg Config, dbPool *pgxpool.Pool) (*Server, e
 
 	sessStore := auth.NewSessionStoreFromRedis(rdb)
 	s := &Server{
-		logger:         logger,
-		cfg:            cfg,
-		dbPool:         dbPool,
-		tokenMgr:       tm,
-		sessReg:        auth.NewSessionRegistryWithStore(sessStore),
-		rateLimiter:    NewIPRateLimiter(cfg.RateLimitMax, cfg.RateLimitRefill),
-		authRateLimit:  NewIPRateLimiter(10, 10.0/60.0), // 10 auth req/min/IP
-		loginLockout:   auth.NewLoginLockout(),
-		SocketRegistry: sockRegistry,
-		SocketGateway:  sockGateway,
-		MatchRouter:    matchRouter,
-		rdb:            rdb,
+		logger:          logger,
+		cfg:             cfg,
+		dbPool:          dbPool,
+		tokenMgr:        tm,
+		sessReg:         auth.NewSessionRegistryWithStore(sessStore),
+		rateLimiter:     NewIPRateLimiter(cfg.RateLimitMax, cfg.RateLimitRefill),
+		authRateLimit:   NewIPRateLimiter(10, 10.0/60.0), // 10 auth req/min/IP
+		loginLockout:    auth.NewLoginLockout(),
+		SocketRegistry:  sockRegistry,
+		SocketGateway:   sockGateway,
+		MatchRouter:     matchRouter,
+		presenceTracker: presenceTracker,
+		rdb:             rdb,
 	}
 
 	// Matchmaker callbacks (notifying matched players over WebSockets)
@@ -279,7 +287,18 @@ func NewServer(logger *zap.Logger, cfg Config, dbPool *pgxpool.Pool) (*Server, e
 		_ = s.MatchRouter.CreateAndRegisterMatch(context.Background(), matchID, module, params)
 	})
 	s.SocketGateway.SetMatchmaker(s.Matchmaker)
-	s.PartyRegistry = party.NewRegistry()
+	s.PartyRegistry = party.NewRegistryWithConfig(party.Config{
+		Node:            nodeID,
+		SingleParty:     true,
+		DefaultMaxSize:  party.DefaultMaxSize,
+		AbsoluteMaxSize: party.AbsoluteMaxSize,
+		IdleCheckMs:     30000,
+	})
+	s.PartyRegistry.SetMembershipChangeHook(func(partyID string) {
+		if s.Matchmaker != nil {
+			_ = s.Matchmaker.RemovePartyAll(context.Background(), partyID)
+		}
+	})
 	s.SocketGateway.SetPartyRegistry(s.PartyRegistry)
 
 	// Leaderboard/tournament background scheduler (hooks connected via SetRuntimeManager / StartLifecycle).
@@ -366,10 +385,11 @@ func (s *Server) Start(ctx context.Context) error {
 	storagepb.RegisterStorageServiceServer(s.gRPCServer, NewStorageServer(s.dbPool, s.tokenMgr))
 	apipb.RegisterLeaderboardServiceServer(s.gRPCServer, NewLeaderboardServer(s.dbPool, s.rdb, s.tokenMgr))
 	apipb.RegisterTournamentServiceServer(s.gRPCServer, NewTournamentServer(s.dbPool, s.rdb, s.tokenMgr))
-	apipb.RegisterFriendsServiceServer(s.gRPCServer, NewFriendsServer(s.dbPool, s.tokenMgr))
+	apipb.RegisterFriendsServiceServer(s.gRPCServer, NewFriendsServer(s.dbPool, s.tokenMgr, s.presenceTracker))
 	apipb.RegisterGroupServiceServer(s.gRPCServer, NewGroupServer(s.dbPool, s.tokenMgr))
 	apipb.RegisterMatchmakerServiceServer(s.gRPCServer, NewMatchmakerServer(s.Matchmaker, s.tokenMgr))
 	apipb.RegisterRealtimeServiceServer(s.gRPCServer, NewRealtimeServer(s.logger, s.MatchRouter, s.rdb, s.tokenMgr))
+	apipb.RegisterPartyServiceServer(s.gRPCServer, NewPartyServer(s.PartyRegistry, s.tokenMgr))
 	apipb.RegisterAuthenticationServiceServer(s.gRPCServer, NewAuthServer(s))
 
 	// Start Matchmaker Tick Loop (Ticks every 1 second)
@@ -536,8 +556,12 @@ func (s *Server) registerRoutes(mux *http.ServeMux) {
 	// Friends Routes
 	mux.HandleFunc("POST /v2/friend", s.handleAddFriends)
 	mux.HandleFunc("GET /v2/friend", s.handleListFriends)
+	mux.HandleFunc("GET /v2/friend/friends", s.handleListFriendsOfFriends)
 	mux.HandleFunc("DELETE /v2/friend", s.handleDeleteFriends)
 	mux.HandleFunc("POST /v2/friend/block/{user_id}", s.handleBlockFriend)
+	mux.HandleFunc("DELETE /v2/friend/block/{user_id}", s.handleUnblockFriend)
+	mux.HandleFunc("POST /v2/friend/facebook", s.handleImportFacebookFriends)
+	mux.HandleFunc("POST /v2/friend/steam", s.handleImportSteamFriends)
 
 	// Group Routes
 	mux.HandleFunc("POST /v2/group", s.handleCreateGroup)
@@ -554,6 +578,7 @@ func (s *Server) registerRoutes(mux *http.ServeMux) {
 	// Realtime / Match Routes
 	mux.HandleFunc("POST /v2/match", s.handleCreateMatch)
 	mux.HandleFunc("GET /v2/match", s.handleListMatches)
+	mux.HandleFunc("GET /v2/party", s.handleListParties)
 	mux.HandleFunc("GET /v2/match/{match_id}", s.handleGetMatch)
 	mux.HandleFunc("POST /v2/match/{match_id}/signal", s.handleMatchSignal)
 

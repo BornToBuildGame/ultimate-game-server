@@ -563,6 +563,29 @@ func (mm *Matchmaker) cancelLocked(ctx context.Context, ticketID string) error {
 	return nil
 }
 
+// RemovePartyAll cancels every ticket associated with the given party ID.
+func (mm *Matchmaker) RemovePartyAll(ctx context.Context, partyID string) error {
+	if partyID == "" {
+		return nil
+	}
+	mm.mu.Lock()
+	defer mm.mu.Unlock()
+
+	ids := make([]string, 0)
+	for id, t := range mm.tickets {
+		if t != nil && t.PartyID == partyID {
+			ids = append(ids, id)
+		}
+	}
+	var firstErr error
+	for _, id := range ids {
+		if err := mm.cancelLocked(ctx, id); err != nil && firstErr == nil {
+			firstErr = err
+		}
+	}
+	return firstErr
+}
+
 // RemoveSessionAll cancels every ticket owned by the session.
 func (mm *Matchmaker) RemoveSessionAll(ctx context.Context, sessionID string) error {
 	mm.mu.Lock()

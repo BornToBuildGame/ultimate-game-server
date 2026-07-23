@@ -100,7 +100,7 @@ func TestSocial_Integration(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to get friends A: %v", err)
 	}
-	if len(friendsA2) != 1 || friendsA2[0].UserID != userBID {
+	if len(friendsA2) != 1 || friendsA2[0].User.ID != userBID {
 		t.Errorf("expected User B to be in A's friends, got: %v", friendsA2)
 	}
 
@@ -108,7 +108,7 @@ func TestSocial_Integration(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to get friends B: %v", err)
 	}
-	if len(friendsB) != 1 || friendsB[0].UserID != userAID {
+	if len(friendsB) != 1 || friendsB[0].User.ID != userAID {
 		t.Errorf("expected User A to be in B's friends, got: %v", friendsB)
 	}
 
@@ -126,6 +126,43 @@ func TestSocial_Integration(t *testing.T) {
 	friendsB2, _ := GetFriends(ctx, pool, userBID)
 	if len(friendsB2) != 0 {
 		t.Errorf("expected B to have 0 friends post-block, got: %d", len(friendsB2))
+	}
+
+	// 5b. Unblock and re-friend; verify FoF discovery
+	if err := UnblockUser(ctx, pool, userAID, userBID); err != nil {
+		t.Fatalf("unblock: %v", err)
+	}
+	userCID := uuid.New().String()
+	_, err = pool.Exec(ctx, insertUser, userCID, "user_c", "c@test.com", []byte("hash"), "User C")
+	if err != nil {
+		t.Fatalf("insert user C: %v", err)
+	}
+	_ = AddFriend(ctx, pool, userAID, userBID)
+	_ = AddFriend(ctx, pool, userBID, userAID)
+	_ = AddFriend(ctx, pool, userBID, userCID)
+	_ = AddFriend(ctx, pool, userCID, userBID)
+
+	fof, _, err := ListFriendsOfFriends(ctx, pool, userAID, 10, "")
+	if err != nil {
+		t.Fatalf("fof: %v", err)
+	}
+	foundC := false
+	for _, f := range fof {
+		if f.User.ID == userCID {
+			foundC = true
+		}
+		if f.User.ID == userAID || f.User.ID == userBID {
+			t.Errorf("FoF must exclude self and direct friends, got %s", f.User.ID)
+		}
+	}
+	if !foundC {
+		t.Errorf("expected FoF to include user C, got %+v", fof)
+	}
+
+	var edgeCount int
+	_ = pool.QueryRow(ctx, `SELECT edge_count FROM users WHERE id = $1`, userAID).Scan(&edgeCount)
+	if edgeCount < 1 {
+		t.Errorf("expected edge_count >= 1 for user A, got %d", edgeCount)
 	}
 
 	// ==========================================

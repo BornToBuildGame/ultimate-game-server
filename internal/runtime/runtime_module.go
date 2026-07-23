@@ -10,6 +10,7 @@ import (
 	"ultimate-game-server/internal/economy"
 	"ultimate-game-server/internal/leaderboard"
 	"ultimate-game-server/internal/notification"
+	"ultimate-game-server/internal/social"
 	"ultimate-game-server/internal/storage"
 	"ultimate-game-server/internal/tournament"
 
@@ -21,10 +22,16 @@ type MatchRegistry interface {
 	CreateAndRegisterMatch(ctx context.Context, matchID string, module string, params map[string]interface{}) error
 }
 
+// PartyLister lists discoverable parties for runtime party_list.
+type PartyLister interface {
+	List(limit int, open *bool, showHidden bool, query, cursor string) ([]*PartyListEntry, string, error)
+}
+
 type GoRuntimeModule struct {
-	dbPool   *pgxpool.Pool
-	logger   Logger
-	registry MatchRegistry
+	dbPool       *pgxpool.Pool
+	logger       Logger
+	registry     MatchRegistry
+	partyLister  PartyLister
 }
 
 func NewGoRuntimeModule(dbPool *pgxpool.Pool, logger Logger) *GoRuntimeModule {
@@ -36,6 +43,10 @@ func NewGoRuntimeModule(dbPool *pgxpool.Pool, logger Logger) *GoRuntimeModule {
 
 func (m *GoRuntimeModule) SetMatchRegistry(reg MatchRegistry) {
 	m.registry = reg
+}
+
+func (m *GoRuntimeModule) SetPartyLister(l PartyLister) {
+	m.partyLister = l
 }
 
 func (m *GoRuntimeModule) StorageRead(ctx context.Context, reads []*StorageRead) ([]*StorageObject, error) {
@@ -384,6 +395,111 @@ func (m *GoRuntimeModule) TournamentRecordDelete(ctx context.Context, id, ownerI
 
 func (m *GoRuntimeModule) TournamentAddAttempt(ctx context.Context, id, ownerID string, count int) error {
 	return tournament.AddAttempt(ctx, m.dbPool, id, ownerID, count)
+}
+
+func (m *GoRuntimeModule) FriendsList(ctx context.Context, userID string, limit int, state *int, cursor string) ([]*FriendEdge, string, error) {
+	filter := 0
+	if state != nil {
+		filter = *state
+	}
+	list, next, err := social.ListFriends(ctx, m.dbPool, userID, filter, limit, cursor)
+	if err != nil {
+		return nil, "", err
+	}
+	out := make([]*FriendEdge, len(list))
+	for i, f := range list {
+		out[i] = &FriendEdge{
+			UserID: f.User.ID, Username: f.User.Username, DisplayName: f.User.DisplayName,
+			State: f.State, UpdateTime: f.UpdateTime, Metadata: f.Metadata,
+		}
+	}
+	return out, next, nil
+}
+
+func (m *GoRuntimeModule) FriendsAdd(ctx context.Context, userID string, ids, usernames []string, metadata map[string]any) error {
+	resolved, err := social.ResolveUserIDs(ctx, m.dbPool, ids, usernames)
+	if err != nil {
+		return err
+	}
+	meta := "{}"
+	if metadata != nil {
+		b, err := json.Marshal(metadata)
+		if err != nil {
+			return err
+		}
+		meta = string(b)
+	}
+	notifier := apiFriendNotifier{m: m}
+	for _, dest := range resolved {
+		if err := social.AddFriendWithOpts(ctx, m.dbPool, userID, dest, meta, social.DefaultConfig(), notifier); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (m *GoRuntimeModule) FriendsDelete(ctx context.Context, userID string, ids, usernames []string) error {
+	resolved, err := social.ResolveUserIDs(ctx, m.dbPool, ids, usernames)
+	if err != nil {
+		return err
+	}
+	notifier := apiFriendNotifier{m: m}
+	for _, dest := range resolved {
+		if err := social.DeleteFriend(ctx, m.dbPool, userID, dest, notifier); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (m *GoRuntimeModule) FriendsBlock(ctx context.Context, userID string, ids, usernames []string) error {
+	resolved, err := social.ResolveUserIDs(ctx, m.dbPool, ids, usernames)
+	if err != nil {
+		return err
+	}
+	for _, dest := range resolved {
+		if err := social.BlockUser(ctx, m.dbPool, userID, dest); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (m *GoRuntimeModule) FriendsOfFriendsList(ctx context.Context, userID string, limit int, cursor string) ([]*FriendOfFriendEdge, string, error) {
+	list, next, err := social.ListFriendsOfFriends(ctx, m.dbPool, userID, limit, cursor)
+	if err != nil {
+		return nil, "", err
+	}
+	out := make([]*FriendOfFriendEdge, len(list))
+	for i, f := range list {
+		out[i] = &FriendOfFriendEdge{Referrer: f.Referrer, UserID: f.User.ID, Username: f.User.Username}
+	}
+	return out, next, nil
+}
+
+func (m *GoRuntimeModule) UsersGetFriendStatus(ctx context.Context, userID string, friendIDs []string) (map[string]int, error) {
+	return social.UsersGetFriendStatus(ctx, m.dbPool, userID, friendIDs)
+}
+
+func (m *GoRuntimeModule) FriendMetadataUpdate(ctx context.Context, userID, friendID string, metadata map[string]any) error {
+	return social.FriendMetadataUpdate(ctx, m.dbPool, userID, friendID, metadata)
+}
+
+func (m *GoRuntimeModule) PartyList(ctx context.Context, limit int, open *bool, showHidden bool, query, cursor string) ([]*PartyListEntry, string, error) {
+	if m.partyLister == nil {
+		return []*PartyListEntry{}, "", nil
+	}
+	return m.partyLister.List(limit, open, showHidden, query, cursor)
+}
+
+type apiFriendNotifier struct {
+	m *GoRuntimeModule
+}
+
+func (n apiFriendNotifier) Notify(ctx context.Context, userID, subject, content string, code int16, senderID string) error {
+	var contentMap map[string]interface{}
+	_ = json.Unmarshal([]byte(content), &contentMap)
+	return n.m.NotificationSend(ctx, userID, subject, contentMap, int(code), senderID, true)
 }
 
 func toRuntimeRecords(recs []*leaderboard.LeaderboardRecord) []*LeaderboardRecord {

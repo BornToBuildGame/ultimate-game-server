@@ -265,6 +265,7 @@ type GatewayHandler struct {
 	PartyRegistry   *party.Registry
 	HookRegistry    *runtime.HookRegistry
 	PresenceTracker *presence.PresenceTracker
+	StreamTracker   *presence.StreamTracker
 	dbPool          *pgxpool.Pool
 	sendBufSize     int
 	relayedMatches  map[string]*RelayedMatch
@@ -393,6 +394,13 @@ func (gh *GatewayHandler) SetPresenceTracker(pt *presence.PresenceTracker) {
 	gh.mu.Lock()
 	defer gh.mu.Unlock()
 	gh.PresenceTracker = pt
+}
+
+// SetStreamTracker configures the Local-first stream tracker (party/channel/match modes).
+func (gh *GatewayHandler) SetStreamTracker(st *presence.StreamTracker) {
+	gh.mu.Lock()
+	defer gh.mu.Unlock()
+	gh.StreamTracker = st
 }
 
 // SetDBPool configures an optional Postgres pool for chat persistence.
@@ -595,6 +603,7 @@ func (gh *GatewayHandler) handleDisconnect(s *Session) {
 	})
 
 	gh.leaveAllChannels(s)
+	gh.leaveAllParties(s)
 
 	// Start 30-second connection recovery grace period
 	gh.registry.StartGracePeriod(s.ID, func() {
@@ -680,17 +689,23 @@ type Envelope struct {
 	MatchmakerRemove      *MatchmakerRemovePayload      `json:"matchmaker_remove,omitempty"`
 	PartyMatchmakerAdd    *PartyMatchmakerAddPayload    `json:"party_matchmaker_add,omitempty"`
 	PartyMatchmakerRemove *PartyMatchmakerRemovePayload `json:"party_matchmaker_remove,omitempty"`
-	PartyCreate           *PartyCreatePayload           `json:"party_create,omitempty"`
-	PartyJoin             *PartyJoinPayload             `json:"party_join,omitempty"`
-	PartyLeave            *PartyLeavePayload            `json:"party_leave,omitempty"`
-	PartyDataSend         *PartyDataSendPayload         `json:"party_data_send,omitempty"`
-	StatusFollow          *StatusFollowPayload          `json:"status_follow,omitempty"`
-	StatusUnfollow        *StatusUnfollowPayload        `json:"status_unfollow,omitempty"`
-	StatusUpdate          *StatusUpdatePayload          `json:"status_update,omitempty"`
-	Ping                  *PingPayload                  `json:"ping,omitempty"`
-	ChannelJoin           *ChannelJoinPayload           `json:"channel_join,omitempty"`
-	ChannelLeave          *ChannelLeavePayload          `json:"channel_leave,omitempty"`
-	ChannelMessageSend    *ChannelMessageSendPayload    `json:"channel_message_send,omitempty"`
+	PartyCreate            *PartyCreatePayload            `json:"party_create,omitempty"`
+	PartyJoin              *PartyJoinPayload              `json:"party_join,omitempty"`
+	PartyLeave             *PartyLeavePayload             `json:"party_leave,omitempty"`
+	PartyPromote           *PartyPromotePayload           `json:"party_promote,omitempty"`
+	PartyAccept            *PartyAcceptPayload            `json:"party_accept,omitempty"`
+	PartyRemove            *PartyRemovePayload            `json:"party_remove,omitempty"`
+	PartyClose             *PartyClosePayload             `json:"party_close,omitempty"`
+	PartyUpdate            *PartyUpdatePayload            `json:"party_update,omitempty"`
+	PartyJoinRequestList   *PartyJoinRequestListPayload   `json:"party_join_request_list,omitempty"`
+	PartyDataSend          *PartyDataSendPayload          `json:"party_data_send,omitempty"`
+	StatusFollow           *StatusFollowPayload           `json:"status_follow,omitempty"`
+	StatusUnfollow         *StatusUnfollowPayload         `json:"status_unfollow,omitempty"`
+	StatusUpdate           *StatusUpdatePayload           `json:"status_update,omitempty"`
+	Ping                   *PingPayload                   `json:"ping,omitempty"`
+	ChannelJoin            *ChannelJoinPayload            `json:"channel_join,omitempty"`
+	ChannelLeave           *ChannelLeavePayload           `json:"channel_leave,omitempty"`
+	ChannelMessageSend     *ChannelMessageSendPayload     `json:"channel_message_send,omitempty"`
 }
 
 type MatchCreatePayload struct{}
@@ -745,8 +760,10 @@ type PartyMatchmakerRemovePayload struct {
 }
 
 type PartyCreatePayload struct {
-	Open    bool `json:"open"`
-	MaxSize int  `json:"max_size"`
+	Open    bool   `json:"open"`
+	Hidden  bool   `json:"hidden"`
+	MaxSize int    `json:"max_size"`
+	Label   string `json:"label"`
 }
 
 type PartyJoinPayload struct {
@@ -754,6 +771,42 @@ type PartyJoinPayload struct {
 }
 
 type PartyLeavePayload struct {
+	PartyID string `json:"party_id"`
+}
+
+type PartyPresencePayload struct {
+	UserID    string `json:"user_id"`
+	Username  string `json:"username"`
+	SessionID string `json:"session_id"`
+}
+
+type PartyPromotePayload struct {
+	PartyID  string               `json:"party_id"`
+	Presence PartyPresencePayload `json:"presence"`
+}
+
+type PartyAcceptPayload struct {
+	PartyID  string               `json:"party_id"`
+	Presence PartyPresencePayload `json:"presence"`
+}
+
+type PartyRemovePayload struct {
+	PartyID  string               `json:"party_id"`
+	Presence PartyPresencePayload `json:"presence"`
+}
+
+type PartyClosePayload struct {
+	PartyID string `json:"party_id"`
+}
+
+type PartyUpdatePayload struct {
+	PartyID string `json:"party_id"`
+	Open    bool   `json:"open"`
+	Hidden  bool   `json:"hidden"`
+	Label   string `json:"label"`
+}
+
+type PartyJoinRequestListPayload struct {
 	PartyID string `json:"party_id"`
 }
 
@@ -1259,6 +1312,18 @@ func (gh *GatewayHandler) RouteMessage(s *Session, payload []byte) {
 		gh.handlePartyJoin(s, env.Cid, env.PartyJoin)
 	} else if env.PartyLeave != nil {
 		gh.handlePartyLeave(s, env.Cid, env.PartyLeave)
+	} else if env.PartyPromote != nil {
+		gh.handlePartyPromote(s, env.Cid, env.PartyPromote)
+	} else if env.PartyAccept != nil {
+		gh.handlePartyAccept(s, env.Cid, env.PartyAccept)
+	} else if env.PartyRemove != nil {
+		gh.handlePartyRemove(s, env.Cid, env.PartyRemove)
+	} else if env.PartyClose != nil {
+		gh.handlePartyClose(s, env.Cid, env.PartyClose)
+	} else if env.PartyUpdate != nil {
+		gh.handlePartyUpdate(s, env.Cid, env.PartyUpdate)
+	} else if env.PartyJoinRequestList != nil {
+		gh.handlePartyJoinRequestList(s, env.Cid, env.PartyJoinRequestList)
 	} else if env.PartyDataSend != nil {
 		gh.handlePartyDataSend(s, env.Cid, env.PartyDataSend)
 	} else if env.StatusFollow != nil {

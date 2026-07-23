@@ -60,6 +60,18 @@ type RuntimeModule interface {
 	// Notification operations
 	NotificationSend(ctx context.Context, userID, subject string, content map[string]interface{}, code int, senderID string, persistent bool) error
 
+	// Friends operations
+	FriendsList(ctx context.Context, userID string, limit int, state *int, cursor string) ([]*FriendEdge, string, error)
+	FriendsAdd(ctx context.Context, userID string, ids, usernames []string, metadata map[string]any) error
+	FriendsDelete(ctx context.Context, userID string, ids, usernames []string) error
+	FriendsBlock(ctx context.Context, userID string, ids, usernames []string) error
+	FriendsOfFriendsList(ctx context.Context, userID string, limit int, cursor string) ([]*FriendOfFriendEdge, string, error)
+	UsersGetFriendStatus(ctx context.Context, userID string, friendIDs []string) (map[string]int, error)
+	FriendMetadataUpdate(ctx context.Context, userID, friendID string, metadata map[string]any) error
+
+	// Party operations
+	PartyList(ctx context.Context, limit int, open *bool, showHidden bool, query, cursor string) ([]*PartyListEntry, string, error)
+
 	// Match operations
 	MatchCreate(ctx context.Context, module string, params map[string]interface{}) (string, error)
 }
@@ -183,6 +195,32 @@ type WriteStorageObjectsRequest struct {
 type AddFriendsRequest struct {
 	IDs       []string `json:"ids"`
 	Usernames []string `json:"usernames"`
+}
+
+// FriendEdge is a runtime representation of a friend list entry.
+type FriendEdge struct {
+	UserID     string    `json:"user_id"`
+	Username   string    `json:"username"`
+	DisplayName string   `json:"display_name"`
+	State      int       `json:"state"`
+	UpdateTime time.Time `json:"update_time"`
+	Metadata   string    `json:"metadata"`
+}
+
+// FriendOfFriendEdge is a runtime FoF entry.
+type FriendOfFriendEdge struct {
+	Referrer string `json:"referrer"`
+	UserID   string `json:"user_id"`
+	Username string `json:"username"`
+}
+
+// PartyListEntry is a discoverable party for runtime PartyList.
+type PartyListEntry struct {
+	ID      string `json:"id"`
+	Open    bool   `json:"open"`
+	Hidden  bool   `json:"hidden"`
+	MaxSize int    `json:"max_size"`
+	Label   string `json:"label"`
 }
 
 type JoinGroupRequest struct {

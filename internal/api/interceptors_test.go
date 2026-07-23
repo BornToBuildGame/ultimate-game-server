@@ -20,7 +20,14 @@ func TestResolveHTTPHookID_LeaderboardTournament(t *testing.T) {
 		{http.MethodGet, "/v2/tournament/arena/around/user-1", "ListTournamentRecordsAroundOwner"},
 		{http.MethodDelete, "/v2/tournament/arena/owner/user-1", "DeleteTournamentRecord"},
 		{http.MethodPost, "/v2/storage", "WriteStorageObjects"},
-		{http.MethodGet, "/v2/friend", ""},
+		{http.MethodPost, "/v2/friend", "AddFriends"},
+		{http.MethodGet, "/v2/friend", "ListFriends"},
+		{http.MethodGet, "/v2/friend/friends", "ListFriendsOfFriends"},
+		{http.MethodDelete, "/v2/friend", "DeleteFriends"},
+		{http.MethodPost, "/v2/friend/block/user-1", "BlockFriends"},
+		{http.MethodDelete, "/v2/friend/block/user-1", "DeleteFriends"},
+		{http.MethodPost, "/v2/friend/facebook", "ImportFacebookFriends"},
+		{http.MethodPost, "/v2/friend/steam", "ImportSteamFriends"},
 	}
 	for _, tc := range cases {
 		got := resolveHTTPHookID(tc.method, tc.path)

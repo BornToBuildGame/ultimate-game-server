@@ -55,20 +55,11 @@ func (g *GlobalRankCache) getOrCreate(leaderboardID string, expiryUnix int64, so
 	return rc
 }
 
-// GetRank returns 1-based rank for owner, or 0 if disabled/missing.
-func (g *GlobalRankCache) GetRank(leaderboardID string, expiryUnix int64, ownerID string) int64 {
-	key := leaderboardExpiryKey{LeaderboardID: leaderboardID, ExpiryUnix: expiryUnix}
-	g.mu.RLock()
-	rc, ok := g.cache[key]
-	g.mu.RUnlock()
-	if !ok || !rc.enabled {
-		return 0
-	}
-	return rc.sl.GetRank(ownerID)
-}
-
 // Insert upserts a score and returns the new 1-based rank (0 if ranks disabled).
 func (g *GlobalRankCache) Insert(leaderboardID string, sortOrder int, score, subscore int64, expiryUnix int64, ownerID string, enableRanks bool) int64 {
+	if IsRankCacheBlacklisted(leaderboardID) {
+		return 0
+	}
 	rc := g.getOrCreate(leaderboardID, expiryUnix, sortOrder, enableRanks)
 	if !enableRanks {
 		rc.enabled = false
@@ -78,6 +69,21 @@ func (g *GlobalRankCache) Insert(leaderboardID string, sortOrder int, score, sub
 	rc.enabled = true
 	rc.sl.enabled = true
 	return rc.sl.Insert(RankEntry{OwnerID: ownerID, Score: score, Subscore: subscore})
+}
+
+// GetRank returns 1-based rank for owner, or 0 if disabled/missing.
+func (g *GlobalRankCache) GetRank(leaderboardID string, expiryUnix int64, ownerID string) int64 {
+	if IsRankCacheBlacklisted(leaderboardID) {
+		return 0
+	}
+	key := leaderboardExpiryKey{LeaderboardID: leaderboardID, ExpiryUnix: expiryUnix}
+	g.mu.RLock()
+	rc, ok := g.cache[key]
+	g.mu.RUnlock()
+	if !ok || !rc.enabled {
+		return 0
+	}
+	return rc.sl.GetRank(ownerID)
 }
 
 // Delete removes an owner from the rank cache.

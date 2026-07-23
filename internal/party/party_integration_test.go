@@ -1,150 +1,257 @@
 package party
 
 import (
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
 )
 
-func TestParty_UnitAndLogic(t *testing.T) {
-	reg := NewRegistry()
+func TestParty_CreateJoinLeavePromote(t *testing.T) {
+	reg := NewRegistryWithConfig(Config{
+		Node: "node1", SingleParty: true, DefaultMaxSize: 4, AbsoluteMaxSize: 256, IdleCheckMs: 0,
+	})
+	defer reg.StopIdleSweep()
 
 	leaderID := uuid.New().String()
 	userA := uuid.New().String()
 	userB := uuid.New().String()
 
-	// 1. Create Party
-	p, err := reg.CreateParty(leaderID, "leader", "session_lead", true, 4)
+	p, err := reg.Create(leaderID, "leader", "sess_lead", true, false, 4, `{"mode":"ranked"}`)
 	if err != nil {
-		t.Fatalf("failed to create party: %v", err)
+		t.Fatalf("create: %v", err)
+	}
+	if !strings.HasSuffix(p.PartyID, ".node1") {
+		t.Fatalf("expected {uuid}.node1 id, got %s", p.PartyID)
+	}
+	if p.LeaderID != leaderID || len(p.Members) != 1 {
+		t.Fatalf("unexpected party state: %+v", p)
 	}
 
-	if p.LeaderID != leaderID {
-		t.Errorf("expected leader to be %s, got %s", leaderID, p.LeaderID)
+	out, err := reg.Join(p.PartyID, userA, "user_a", "sess_a")
+	if err != nil || !out.Joined {
+		t.Fatalf("open join: err=%v joined=%v", err, out != nil && out.Joined)
 	}
-	if len(p.Members) != 1 {
-		t.Errorf("expected 1 member in party, got: %d", len(p.Members))
-	}
-
-	// 2. Test Invalid Max Size bounds
-	_, err = reg.CreateParty(leaderID, "leader", "session_lead", true, 1)
-	if err != ErrInvalidMaxSize {
-		t.Errorf("expected ErrInvalidMaxSize, got: %v", err)
-	}
-	_, err = reg.CreateParty(leaderID, "leader", "session_lead", true, 20)
-	if err != ErrInvalidMaxSize {
-		t.Errorf("expected ErrInvalidMaxSize, got: %v", err)
+	if len(out.Party.Members) != 2 {
+		t.Fatalf("expected 2 members, got %d", len(out.Party.Members))
 	}
 
-	// 3. Invite Target User
-	err = reg.SendInvitation(p.PartyID, leaderID, userA)
+	// Full party at max_size=2
+	p2, err := reg.Create(uuid.New().String(), "l2", "sess_l2", true, false, 2, "{}")
 	if err != nil {
-		t.Fatalf("failed to send invitation: %v", err)
+		t.Fatalf("create p2: %v", err)
+	}
+	userX := uuid.New().String()
+	userY := uuid.New().String()
+	if _, err := reg.Join(p2.PartyID, userX, "x", "sx"); err != nil {
+		t.Fatalf("join x: %v", err)
+	}
+	if _, err := reg.Join(p2.PartyID, userY, "y", "sy"); err != ErrPartyFull {
+		t.Fatalf("expected ErrPartyFull, got %v", err)
 	}
 
-	// Inviting again should be fine
-	err = reg.SendInvitation(p.PartyID, leaderID, userA)
+	// Fresh users for promote/dissolve path
+	leaderID = uuid.New().String()
+	userA = uuid.New().String()
+	userB = uuid.New().String()
+	p3, err := reg.Create(leaderID, "leader", "sess_lead", true, false, 4, "{}")
 	if err != nil {
-		t.Fatalf("failed to send duplicate invitation: %v", err)
+		t.Fatalf("create p3: %v", err)
+	}
+	if _, err := reg.Join(p3.PartyID, userA, "user_a", "sess_a"); err != nil {
+		t.Fatalf("join a: %v", err)
+	}
+	if _, err := reg.Join(p3.PartyID, userB, "user_b", "sess_b"); err != nil {
+		t.Fatalf("join b: %v", err)
 	}
 
-	// Non-leader inviting should fail
-	err = reg.SendInvitation(p.PartyID, userA, userB)
-	if err != ErrNotLeader {
-		t.Errorf("expected ErrNotLeader, got: %v", err)
+	leave, err := reg.Leave(p3.PartyID, leaderID)
+	if err != nil {
+		t.Fatalf("leave: %v", err)
+	}
+	if leave.PromotedLeader == nil || leave.PromotedLeader.UserID != userA {
+		t.Fatalf("expected promote to userA, got %+v", leave.PromotedLeader)
 	}
 
-	// 4. Join Party
-	p, err = reg.JoinParty(p.PartyID, userA, "user_a", "session_a")
+	leave, err = reg.Leave(p3.PartyID, userA)
 	if err != nil {
-		t.Fatalf("userA failed to join party: %v", err)
+		t.Fatalf("leave a: %v", err)
 	}
-	if len(p.Members) != 2 {
-		t.Errorf("expected 2 members, got: %d", len(p.Members))
-	}
-
-	// 5. Test Closed Party restriction
-	p.Open = false
-	_, err = reg.JoinParty(p.PartyID, userB, "user_b", "session_b")
-	if err != ErrClosedNoInvitation {
-		t.Errorf("expected ErrClosedNoInvitation, got: %v", err)
-	}
-
-	// Invite userB
-	err = reg.SendInvitation(p.PartyID, leaderID, userB)
+	leave, err = reg.Leave(p3.PartyID, userB)
 	if err != nil {
-		t.Fatalf("failed to invite userB: %v", err)
+		t.Fatalf("leave b: %v", err)
 	}
-	p, err = reg.JoinParty(p.PartyID, userB, "user_b", "session_b")
-	if err != nil {
-		t.Fatalf("userB failed to join closed party after invitation: %v", err)
-	}
-
-	// 6. Test Max Size Full checks
-	p.MaxSize = 3
-	userC := uuid.New().String()
-	err = reg.SendInvitation(p.PartyID, leaderID, userC)
-	if err != nil {
-		t.Fatalf("failed to invite userC: %v", err)
-	}
-	_, err = reg.JoinParty(p.PartyID, userC, "user_c", "session_c")
-	if err != ErrPartyFull {
-		t.Errorf("expected ErrPartyFull, got: %v", err)
-	}
-
-	// 7. Test Member Property Updates
-	props := map[string]interface{}{
-		"ready": true,
-		"hero":  "warrior",
-	}
-	p, err = reg.UpdateMemberProperties(p.PartyID, userA, props)
-	if err != nil {
-		t.Fatalf("failed to update member properties: %v", err)
-	}
-	mProps := p.Members[userA].Properties
-	if mProps["ready"] != true || mProps["hero"] != "warrior" {
-		t.Errorf("properties not updated correctly")
-	}
-
-	// 8. Test Leader Promotion on Leave
-	// Join order: leader first, then userA, then userB.
-	// When leader leaves, userA (longest serving) should be promoted.
-	p, err = reg.LeaveParty(p.PartyID, leaderID)
-	if err != nil {
-		t.Fatalf("leader failed to leave party: %v", err)
-	}
-	if p.LeaderID != userA {
-		t.Errorf("expected userA to be promoted to leader, got %s", p.LeaderID)
-	}
-
-	// 9. Evicting everyone deletes the party
-	p, err = reg.LeaveParty(p.PartyID, userA)
-	if err != nil {
-		t.Fatalf("userA failed to leave: %v", err)
-	}
-	p, err = reg.LeaveParty(p.PartyID, userB)
-	if err != nil {
-		t.Fatalf("userB failed to leave: %v", err)
-	}
-	if p != nil {
-		t.Errorf("expected returned party to be nil after last user leaves")
+	if !leave.Dissolved {
+		t.Fatalf("expected dissolve")
 	}
 }
 
-func TestParty_Sweep(t *testing.T) {
-	reg := NewRegistry()
+func TestParty_ClosedJoinRequestAcceptReject(t *testing.T) {
+	reg := NewRegistryWithConfig(Config{Node: "n", SingleParty: true, AbsoluteMaxSize: 256, IdleCheckMs: 0})
+	defer reg.StopIdleSweep()
+
 	leaderID := uuid.New().String()
-	userA := uuid.New().String()
+	guestID := uuid.New().String()
+	p, err := reg.Create(leaderID, "lead", "s1", false, false, 4, "{}")
+	if err != nil {
+		t.Fatal(err)
+	}
 
-	p, _ := reg.CreateParty(leaderID, "leader", "session_lead", false, 4)
-	reg.SendInvitation(p.PartyID, leaderID, userA)
+	out, err := reg.Join(p.PartyID, guestID, "guest", "s2")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if out.Joined {
+		t.Fatal("closed join should queue request")
+	}
+	if len(out.Party.JoinRequests) != 1 {
+		t.Fatalf("expected 1 join request, got %d", len(out.Party.JoinRequests))
+	}
 
-	// Manually set invitation time to 10 minutes ago
-	p.Invitations[userA] = time.Now().Add(-10 * time.Minute)
+	list, err := reg.JoinRequestList(p.PartyID, "s1")
+	if err != nil || len(list) != 1 {
+		t.Fatalf("join request list: %v len=%d", err, len(list))
+	}
 
-	reg.SweepInvitations()
-	if _, ok := p.Invitations[userA]; ok {
-		t.Errorf("expected invitation to be swept")
+	_, member, err := reg.Accept(p.PartyID, "s1", Presence{UserID: guestID, Username: "guest", SessionID: "s2"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if member.UserID != guestID {
+		t.Fatalf("accepted wrong member")
+	}
+	got, _ := reg.GetParty(p.PartyID)
+	if len(got.Members) != 2 || len(got.JoinRequests) != 0 {
+		t.Fatalf("after accept members=%d requests=%d", len(got.Members), len(got.JoinRequests))
+	}
+
+	guest2 := uuid.New().String()
+	_, _ = reg.Join(p.PartyID, guest2, "g2", "s3")
+	rem, err := reg.Remove(p.PartyID, "s1", Presence{UserID: guest2, Username: "g2", SessionID: "s3"})
+	if err != nil || !rem.RejectedRequest {
+		t.Fatalf("reject request: err=%v rejected=%v", err, rem != nil && rem.RejectedRequest)
+	}
+}
+
+func TestParty_PromoteKickCloseUpdateList(t *testing.T) {
+	reg := NewRegistryWithConfig(Config{Node: "n", SingleParty: false, AbsoluteMaxSize: 256, IdleCheckMs: 0})
+	defer reg.StopIdleSweep()
+
+	lead := uuid.New().String()
+	a := uuid.New().String()
+	p, _ := reg.Create(lead, "l", "sl", true, false, 4, `{"tier":1}`)
+	_, _ = reg.Join(p.PartyID, a, "a", "sa")
+
+	_, newLead, err := reg.Promote(p.PartyID, "sl", Presence{UserID: a, Username: "a", SessionID: "sa"})
+	if err != nil || newLead.UserID != a {
+		t.Fatalf("promote: %v %+v", err, newLead)
+	}
+
+	// a is leader now; kick original lead
+	rem, err := reg.Remove(p.PartyID, "sa", Presence{UserID: lead, Username: "l", SessionID: "sl"})
+	if err != nil || rem.Kicked == nil {
+		t.Fatalf("kick: %v %+v", err, rem)
+	}
+
+	upd, err := reg.Update(p.PartyID, "sa", `{"tier":2}`, false, false)
+	if err != nil || upd.Open || upd.Label != `{"tier":2}` {
+		t.Fatalf("update: %v %+v", err, upd)
+	}
+
+	openTrue := true
+	list, _, err := reg.List(10, &openTrue, false, "tier", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// party is now closed (open=false), so open=true filter should exclude
+	for _, e := range list {
+		if e.ID == p.PartyID {
+			t.Fatal("closed party should not appear in open=true list")
+		}
+	}
+	openFalse := false
+	list, _, err = reg.List(10, &openFalse, false, "tier", "")
+	if err != nil || len(list) == 0 {
+		t.Fatalf("expected closed party in list: %v len=%d", err, len(list))
+	}
+
+	_, err = reg.Close(p.PartyID, "sa")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = reg.GetParty(p.PartyID)
+	if err != ErrPartyNotFound {
+		t.Fatalf("expected not found after close, got %v", err)
+	}
+}
+
+func TestParty_LeaveSessionAndMMHook(t *testing.T) {
+	reg := NewRegistryWithConfig(Config{Node: "n", SingleParty: true, AbsoluteMaxSize: 256, IdleCheckMs: 0})
+	defer reg.StopIdleSweep()
+
+	var cancelled []string
+	reg.SetMembershipChangeHook(func(partyID string) {
+		cancelled = append(cancelled, partyID)
+	})
+
+	lead := uuid.New().String()
+	a := uuid.New().String()
+	p, _ := reg.Create(lead, "l", "sl", true, false, 4, "{}")
+	_, _ = reg.Join(p.PartyID, a, "a", "sa")
+	if len(cancelled) == 0 {
+		t.Fatal("expected MM cancel on join")
+	}
+
+	out, err := reg.LeaveSession("sa")
+	if err != nil || !out.WasMember {
+		t.Fatalf("leave session: %v %+v", err, out)
+	}
+	got, _ := reg.GetParty(p.PartyID)
+	if _, ok := got.Members[a]; ok {
+		t.Fatal("member should be gone after LeaveSession")
+	}
+}
+
+func TestParty_MaxSizeBoundsAndHidden(t *testing.T) {
+	reg := NewRegistryWithConfig(Config{Node: "n", AbsoluteMaxSize: 256, IdleCheckMs: 0})
+	defer reg.StopIdleSweep()
+
+	lead := uuid.New().String()
+	_, err := reg.Create(lead, "l", "s", true, false, 0, "{}")
+	if err != nil {
+		t.Fatalf("default max size create: %v", err)
+	}
+	_, err = reg.Create(uuid.New().String(), "l", "s2", true, false, 257, "{}")
+	if err != ErrInvalidMaxSize {
+		t.Fatalf("expected invalid max size, got %v", err)
+	}
+	_, err = reg.Create(uuid.New().String(), "l", "s3", true, true, 4, `{"x":1}`)
+	if err != ErrHiddenNonEmptyLabel {
+		t.Fatalf("expected hidden label error, got %v", err)
+	}
+	p, err := reg.Create(uuid.New().String(), "l", "s4", true, true, 4, "{}")
+	if err != nil {
+		t.Fatal(err)
+	}
+	list, _, _ := reg.List(10, nil, false, "", "")
+	for _, e := range list {
+		if e.ID == p.PartyID {
+			t.Fatal("hidden party should be excluded from client list")
+		}
+	}
+}
+
+func TestParty_SweepIdle(t *testing.T) {
+	reg := NewRegistryWithConfig(Config{Node: "n", IdleCheckMs: 0})
+	defer reg.StopIdleSweep()
+	p, _ := reg.Create(uuid.New().String(), "l", "s", true, false, 4, "{}")
+	reg.mu.Lock()
+	reg.parties[p.PartyID].Members = map[string]*PartyMember{}
+	reg.mu.Unlock()
+	reg.SweepIdle()
+	time.Sleep(10 * time.Millisecond)
+	if _, err := reg.GetParty(p.PartyID); err != ErrPartyNotFound {
+		t.Fatalf("empty party should be swept, err=%v", err)
 	}
 }

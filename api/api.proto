@@ -18,6 +18,17 @@ message User {
   string metadata = 8;
   google.protobuf.Timestamp create_time = 9;
   google.protobuf.Timestamp update_time = 10;
+  bool online = 11;
+  int32 edge_count = 12;
+}
+
+// Score operator override for leaderboard/tournament writes.
+enum Operator {
+  NO_OVERRIDE = 0;
+  BEST = 1;
+  SET = 2;
+  INCREMENT = 3;
+  DECREMENT = 4;
 }
 
 // --- Authentication ---
@@ -209,6 +220,7 @@ message WriteLeaderboardRecordRequest {
   int64 score = 2;
   int64 subscore = 3;
   string metadata = 4; // JSON string format
+  Operator override_operator = 5;
 }
 
 message LeaderboardRecord {
@@ -335,6 +347,7 @@ message WriteTournamentRecordRequest {
   int64 score = 2;
   int64 subscore = 3;
   string metadata = 4;
+  Operator override_operator = 5;
 }
 
 message ListTournamentRecordsRequest {
@@ -361,6 +374,7 @@ message DeleteTournamentRecordRequest {
 service FriendsService {
   rpc AddFriends(AddFriendsRequest) returns (google.protobuf.Empty);
   rpc ListFriends(ListFriendsRequest) returns (FriendList);
+  rpc ListFriendsOfFriends(ListFriendsOfFriendsRequest) returns (FriendsOfFriendsList);
   rpc DeleteFriends(DeleteFriendsRequest) returns (google.protobuf.Empty);
   rpc BlockFriends(BlockFriendsRequest) returns (google.protobuf.Empty);
   rpc ImportFacebookFriends(ImportFacebookFriendsRequest) returns (google.protobuf.Empty);
@@ -378,15 +392,31 @@ message ListFriendsRequest {
   string cursor = 3;
 }
 
+message ListFriendsOfFriendsRequest {
+  int32 limit = 1;
+  string cursor = 2;
+}
+
 message Friend {
   User user = 1;
   int32 state = 2;
   google.protobuf.Timestamp update_time = 3;
+  string metadata = 4;
 }
 
 message FriendList {
   repeated Friend friends = 1;
   string next_cursor = 2;
+}
+
+message FriendOfFriend {
+  string referrer = 1;
+  User user = 2;
+}
+
+message FriendsOfFriendsList {
+  repeated FriendOfFriend friends_of_friends = 1;
+  string cursor = 2;
 }
 
 message DeleteFriendsRequest {
@@ -645,6 +675,32 @@ message MatchSignalRequest {
 
 message MatchSignalResponse {
   string response = 1;
+}
+
+// --- Party Service ---
+
+service PartyService {
+  rpc ListParties(ListPartiesRequest) returns (PartyList);
+}
+
+message ListPartiesRequest {
+  int32 limit = 1;
+  optional bool open = 2;
+  string query = 3;
+  string cursor = 4;
+}
+
+message Party {
+  string id = 1;
+  bool open = 2;
+  bool hidden = 3;
+  int32 max_size = 4;
+  string label = 5;
+}
+
+message PartyList {
+  repeated Party parties = 1;
+  string cursor = 2;
 }
 
 

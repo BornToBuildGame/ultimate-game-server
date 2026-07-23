@@ -197,6 +197,141 @@ func MapJSNK(vm *goja.Runtime, nk RuntimeModule, timeout time.Duration, registry
 		return goja.Undefined()
 	})
 
+	_ = nkObj.Set("friends_list", func(call goja.FunctionCall) goja.Value {
+		userID := call.Argument(0).String()
+		limit := int(call.Argument(1).ToInteger())
+		if limit == 0 {
+			limit = 100
+		}
+		var statePtr *int
+		if !goja.IsUndefined(call.Argument(2)) && !goja.IsNull(call.Argument(2)) {
+			st := int(call.Argument(2).ToInteger())
+			statePtr = &st
+		}
+		cursor := ""
+		if !goja.IsUndefined(call.Argument(3)) {
+			cursor = call.Argument(3).String()
+		}
+		list, next, err := nk.FriendsList(context.Background(), userID, limit, statePtr, cursor)
+		if err != nil {
+			panic(vm.NewGoError(err))
+		}
+		rows := make([]map[string]interface{}, len(list))
+		for i, f := range list {
+			rows[i] = map[string]interface{}{"user_id": f.UserID, "username": f.Username, "state": f.State}
+		}
+		return vm.ToValue(map[string]interface{}{"friends": rows, "cursor": next})
+	})
+
+	_ = nkObj.Set("party_list", func(call goja.FunctionCall) goja.Value {
+		limit := int(call.Argument(0).ToInteger())
+		if limit == 0 {
+			limit = 10
+		}
+		var openPtr *bool
+		if !goja.IsUndefined(call.Argument(1)) && !goja.IsNull(call.Argument(1)) {
+			b := call.Argument(1).ToBoolean()
+			openPtr = &b
+		}
+		hidden := false
+		if !goja.IsUndefined(call.Argument(2)) {
+			hidden = call.Argument(2).ToBoolean()
+		}
+		query := ""
+		if !goja.IsUndefined(call.Argument(3)) {
+			query = call.Argument(3).String()
+		}
+		cursor := ""
+		if !goja.IsUndefined(call.Argument(4)) {
+			cursor = call.Argument(4).String()
+		}
+		list, next, err := nk.PartyList(context.Background(), limit, openPtr, hidden, query, cursor)
+		if err != nil {
+			panic(vm.NewGoError(err))
+		}
+		rows := make([]map[string]interface{}, len(list))
+		for i, p := range list {
+			rows[i] = map[string]interface{}{
+				"id": p.ID, "open": p.Open, "hidden": p.Hidden, "max_size": p.MaxSize, "label": p.Label,
+			}
+		}
+		return vm.ToValue(map[string]interface{}{"parties": rows, "cursor": next})
+	})
+
+	_ = nkObj.Set("friends_add", func(call goja.FunctionCall) goja.Value {
+		userID := call.Argument(0).String()
+		ids := jsStringSlice(call.Argument(1).Export())
+		usernames := jsStringSlice(call.Argument(2).Export())
+		if err := nk.FriendsAdd(context.Background(), userID, ids, usernames, nil); err != nil {
+			panic(vm.NewGoError(err))
+		}
+		return goja.Undefined()
+	})
+
+	_ = nkObj.Set("friends_delete", func(call goja.FunctionCall) goja.Value {
+		userID := call.Argument(0).String()
+		ids := jsStringSlice(call.Argument(1).Export())
+		usernames := jsStringSlice(call.Argument(2).Export())
+		if err := nk.FriendsDelete(context.Background(), userID, ids, usernames); err != nil {
+			panic(vm.NewGoError(err))
+		}
+		return goja.Undefined()
+	})
+
+	_ = nkObj.Set("friends_block", func(call goja.FunctionCall) goja.Value {
+		userID := call.Argument(0).String()
+		ids := jsStringSlice(call.Argument(1).Export())
+		usernames := jsStringSlice(call.Argument(2).Export())
+		if err := nk.FriendsBlock(context.Background(), userID, ids, usernames); err != nil {
+			panic(vm.NewGoError(err))
+		}
+		return goja.Undefined()
+	})
+
+	_ = nkObj.Set("friends_of_friends_list", func(call goja.FunctionCall) goja.Value {
+		userID := call.Argument(0).String()
+		limit := int(call.Argument(1).ToInteger())
+		if limit == 0 {
+			limit = 100
+		}
+		cursor := ""
+		if !goja.IsUndefined(call.Argument(2)) {
+			cursor = call.Argument(2).String()
+		}
+		list, next, err := nk.FriendsOfFriendsList(context.Background(), userID, limit, cursor)
+		if err != nil {
+			panic(vm.NewGoError(err))
+		}
+		rows := make([]map[string]interface{}, len(list))
+		for i, f := range list {
+			rows[i] = map[string]interface{}{"referrer": f.Referrer, "user_id": f.UserID, "username": f.Username}
+		}
+		return vm.ToValue(map[string]interface{}{"friendsOfFriends": rows, "cursor": next})
+	})
+
+	_ = nkObj.Set("friend_metadata_update", func(call goja.FunctionCall) goja.Value {
+		userID := call.Argument(0).String()
+		friendID := call.Argument(1).String()
+		var metadata map[string]any
+		if m, ok := call.Argument(2).Export().(map[string]interface{}); ok {
+			metadata = m
+		}
+		if err := nk.FriendMetadataUpdate(context.Background(), userID, friendID, metadata); err != nil {
+			panic(vm.NewGoError(err))
+		}
+		return goja.Undefined()
+	})
+
+	_ = nkObj.Set("users_get_friend_status", func(call goja.FunctionCall) goja.Value {
+		userID := call.Argument(0).String()
+		ids := jsStringSlice(call.Argument(1).Export())
+		statusMap, err := nk.UsersGetFriendStatus(context.Background(), userID, ids)
+		if err != nil {
+			panic(vm.NewGoError(err))
+		}
+		return vm.ToValue(statusMap)
+	})
+
 	// 7. Match Create
 	_ = nkObj.Set("match_create", func(call goja.FunctionCall) goja.Value {
 		module := call.Argument(0).String()
@@ -643,4 +778,24 @@ func ExecuteJSAfterHook(vm *goja.Runtime, funcName string, ctx context.Context, 
 
 	_, err := fn(goja.Undefined(), ctxVal, jsOut, jsIn)
 	return err
+}
+
+func jsStringSlice(v interface{}) []string {
+	if v == nil {
+		return nil
+	}
+	switch t := v.(type) {
+	case []string:
+		return t
+	case []interface{}:
+		out := make([]string, 0, len(t))
+		for _, x := range t {
+			if s, ok := x.(string); ok {
+				out = append(out, s)
+			}
+		}
+		return out
+	default:
+		return nil
+	}
 }

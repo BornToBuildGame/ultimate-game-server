@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"ultimate-game-server/internal/auth"
+	"ultimate-game-server/internal/party"
 	"ultimate-game-server/internal/presence"
 
 	"go.uber.org/zap"
@@ -314,5 +315,108 @@ func TestGatewayHandler_StatusFollowAndUpdate(t *testing.T) {
 		}
 	default:
 		t.Fatal("expected pong")
+	}
+}
+
+func TestGatewayHandler_PartyJoinRequestFlow(t *testing.T) {
+	logger := zap.NewNop()
+	secret := []byte("super_secret_signing_key_at_least_32_bytes_long_1234567")
+	tm, _ := auth.NewTokenManager(secret, 10*time.Minute)
+	reg := NewConnectionRegistry()
+	gh := NewGatewayHandler(logger, tm, reg, nil, nil, nil)
+
+	partyReg := party.NewRegistryWithConfig(party.Config{Node: "test", SingleParty: true, AbsoluteMaxSize: 256, IdleCheckMs: 0})
+	defer partyReg.StopIdleSweep()
+	gh.SetPartyRegistry(partyReg)
+	gh.SetStreamTracker(presence.NewStreamTracker())
+
+	leader := &Session{ID: "sl", UserID: "lead", Username: "lead", Send: make(chan []byte, 16), IsActive: true, matchIDs: map[string]bool{}}
+	guest := &Session{ID: "sg", UserID: "guest", Username: "guest", Send: make(chan []byte, 16), IsActive: true, matchIDs: map[string]bool{}}
+	reg.Add(leader)
+	reg.Add(guest)
+
+	gh.RouteMessage(leader, []byte(`{"cid":"c1","party_create":{"open":false,"max_size":4,"label":"{}"}}`))
+	var partyID string
+	select {
+	case msg := <-leader.Send:
+		var resp struct {
+			Party struct {
+				PartyID string `json:"party_id"`
+			} `json:"party"`
+		}
+		if err := json.Unmarshal(msg, &resp); err != nil {
+			t.Fatalf("create resp: %v %s", err, msg)
+		}
+		partyID = resp.Party.PartyID
+		if partyID == "" || !strings.HasSuffix(partyID, ".test") {
+			t.Fatalf("bad party id %q", partyID)
+		}
+	default:
+		t.Fatal("expected party create reply")
+	}
+
+	gh.RouteMessage(guest, []byte(fmt.Sprintf(`{"cid":"c2","party_join":{"party_id":%q}}`, partyID)))
+	select {
+	case msg := <-guest.Send:
+		if !strings.Contains(string(msg), `"pending":true`) {
+			t.Fatalf("expected pending join ack, got %s", msg)
+		}
+	default:
+		t.Fatal("expected guest join ack")
+	}
+	select {
+	case msg := <-leader.Send:
+		if !strings.Contains(string(msg), "party_join_request") {
+			t.Fatalf("expected join request on leader, got %s", msg)
+		}
+	default:
+		t.Fatal("expected party_join_request")
+	}
+
+	accept := fmt.Sprintf(`{"cid":"c3","party_accept":{"party_id":%q,"presence":{"user_id":"guest","username":"guest","session_id":"sg"}}}`, partyID)
+	gh.RouteMessage(leader, []byte(accept))
+	// drain accept ack + presence on leader, party state on guest
+	deadline := time.After(500 * time.Millisecond)
+	gotParty := false
+	for !gotParty {
+		select {
+		case msg := <-guest.Send:
+			if strings.Contains(string(msg), `"party"`) {
+				gotParty = true
+			}
+		case <-leader.Send:
+		case <-deadline:
+			t.Fatal("timeout waiting for accepted party state")
+		}
+	}
+
+	gh.RouteMessage(leader, []byte(fmt.Sprintf(`{"cid":"c4","party_promote":{"party_id":%q,"presence":{"user_id":"guest","username":"guest","session_id":"sg"}}}`, partyID)))
+	sawLeader := false
+	deadline = time.After(500 * time.Millisecond)
+	for !sawLeader {
+		select {
+		case msg := <-leader.Send:
+			if strings.Contains(string(msg), "party_leader") {
+				sawLeader = true
+			}
+		case msg := <-guest.Send:
+			if strings.Contains(string(msg), "party_leader") {
+				sawLeader = true
+			}
+		case <-deadline:
+			t.Fatal("expected party_leader broadcast")
+		}
+	}
+
+	gh.leaveAllParties(leader)
+	p, err := partyReg.GetParty(partyID)
+	if err != nil {
+		t.Fatalf("party should still exist after leader disconnect leave: %v", err)
+	}
+	if _, ok := p.Members["lead"]; ok {
+		t.Fatal("leader should have left party on disconnect")
+	}
+	if p.LeaderID != "guest" {
+		t.Fatalf("expected guest as leader after disconnect, got %s", p.LeaderID)
 	}
 }

@@ -106,6 +106,7 @@ func (s *Server) Start(addr string) error {
 	mux.HandleFunc("/console/api/users/ban", s.handleBanUser)
 	mux.HandleFunc("/console/api/search", s.handleSearch)
 	s.registerLeaderboardRoutes(mux)
+	s.registerFriendsRoutes(mux)
 
 	s.httpServer = &http.Server{
 		Handler:      mux,

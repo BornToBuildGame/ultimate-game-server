@@ -1810,6 +1810,7 @@ var TournamentService_ServiceDesc = grpc.ServiceDesc{
 const (
 	FriendsService_AddFriends_FullMethodName            = "/ultimate.server.api.FriendsService/AddFriends"
 	FriendsService_ListFriends_FullMethodName           = "/ultimate.server.api.FriendsService/ListFriends"
+	FriendsService_ListFriendsOfFriends_FullMethodName  = "/ultimate.server.api.FriendsService/ListFriendsOfFriends"
 	FriendsService_DeleteFriends_FullMethodName         = "/ultimate.server.api.FriendsService/DeleteFriends"
 	FriendsService_BlockFriends_FullMethodName          = "/ultimate.server.api.FriendsService/BlockFriends"
 	FriendsService_ImportFacebookFriends_FullMethodName = "/ultimate.server.api.FriendsService/ImportFacebookFriends"
@@ -1822,6 +1823,7 @@ const (
 type FriendsServiceClient interface {
 	AddFriends(ctx context.Context, in *AddFriendsRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	ListFriends(ctx context.Context, in *ListFriendsRequest, opts ...grpc.CallOption) (*FriendList, error)
+	ListFriendsOfFriends(ctx context.Context, in *ListFriendsOfFriendsRequest, opts ...grpc.CallOption) (*FriendsOfFriendsList, error)
 	DeleteFriends(ctx context.Context, in *DeleteFriendsRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	BlockFriends(ctx context.Context, in *BlockFriendsRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	ImportFacebookFriends(ctx context.Context, in *ImportFacebookFriendsRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
@@ -1850,6 +1852,16 @@ func (c *friendsServiceClient) ListFriends(ctx context.Context, in *ListFriendsR
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(FriendList)
 	err := c.cc.Invoke(ctx, FriendsService_ListFriends_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *friendsServiceClient) ListFriendsOfFriends(ctx context.Context, in *ListFriendsOfFriendsRequest, opts ...grpc.CallOption) (*FriendsOfFriendsList, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(FriendsOfFriendsList)
+	err := c.cc.Invoke(ctx, FriendsService_ListFriendsOfFriends_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -1902,6 +1914,7 @@ func (c *friendsServiceClient) ImportSteamFriends(ctx context.Context, in *Impor
 type FriendsServiceServer interface {
 	AddFriends(context.Context, *AddFriendsRequest) (*emptypb.Empty, error)
 	ListFriends(context.Context, *ListFriendsRequest) (*FriendList, error)
+	ListFriendsOfFriends(context.Context, *ListFriendsOfFriendsRequest) (*FriendsOfFriendsList, error)
 	DeleteFriends(context.Context, *DeleteFriendsRequest) (*emptypb.Empty, error)
 	BlockFriends(context.Context, *BlockFriendsRequest) (*emptypb.Empty, error)
 	ImportFacebookFriends(context.Context, *ImportFacebookFriendsRequest) (*emptypb.Empty, error)
@@ -1921,6 +1934,9 @@ func (UnimplementedFriendsServiceServer) AddFriends(context.Context, *AddFriends
 }
 func (UnimplementedFriendsServiceServer) ListFriends(context.Context, *ListFriendsRequest) (*FriendList, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListFriends not implemented")
+}
+func (UnimplementedFriendsServiceServer) ListFriendsOfFriends(context.Context, *ListFriendsOfFriendsRequest) (*FriendsOfFriendsList, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListFriendsOfFriends not implemented")
 }
 func (UnimplementedFriendsServiceServer) DeleteFriends(context.Context, *DeleteFriendsRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteFriends not implemented")
@@ -1987,6 +2003,24 @@ func _FriendsService_ListFriends_Handler(srv interface{}, ctx context.Context, d
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(FriendsServiceServer).ListFriends(ctx, req.(*ListFriendsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _FriendsService_ListFriendsOfFriends_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListFriendsOfFriendsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FriendsServiceServer).ListFriendsOfFriends(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: FriendsService_ListFriendsOfFriends_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FriendsServiceServer).ListFriendsOfFriends(ctx, req.(*ListFriendsOfFriendsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -2077,6 +2111,10 @@ var FriendsService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListFriends",
 			Handler:    _FriendsService_ListFriends_Handler,
+		},
+		{
+			MethodName: "ListFriendsOfFriends",
+			Handler:    _FriendsService_ListFriendsOfFriends_Handler,
 		},
 		{
 			MethodName: "DeleteFriends",
@@ -3083,6 +3121,108 @@ var RealtimeService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "MatchSignal",
 			Handler:    _RealtimeService_MatchSignal_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "api/api.proto",
+}
+
+const (
+	PartyService_ListParties_FullMethodName = "/ultimate.server.api.PartyService/ListParties"
+)
+
+// PartyServiceClient is the client API for PartyService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type PartyServiceClient interface {
+	ListParties(ctx context.Context, in *ListPartiesRequest, opts ...grpc.CallOption) (*PartyList, error)
+}
+
+type partyServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewPartyServiceClient(cc grpc.ClientConnInterface) PartyServiceClient {
+	return &partyServiceClient{cc}
+}
+
+func (c *partyServiceClient) ListParties(ctx context.Context, in *ListPartiesRequest, opts ...grpc.CallOption) (*PartyList, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(PartyList)
+	err := c.cc.Invoke(ctx, PartyService_ListParties_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// PartyServiceServer is the server API for PartyService service.
+// All implementations must embed UnimplementedPartyServiceServer
+// for forward compatibility.
+type PartyServiceServer interface {
+	ListParties(context.Context, *ListPartiesRequest) (*PartyList, error)
+	mustEmbedUnimplementedPartyServiceServer()
+}
+
+// UnimplementedPartyServiceServer must be embedded to have
+// forward compatible implementations.
+//
+// NOTE: this should be embedded by value instead of pointer to avoid a nil
+// pointer dereference when methods are called.
+type UnimplementedPartyServiceServer struct{}
+
+func (UnimplementedPartyServiceServer) ListParties(context.Context, *ListPartiesRequest) (*PartyList, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListParties not implemented")
+}
+func (UnimplementedPartyServiceServer) mustEmbedUnimplementedPartyServiceServer() {}
+func (UnimplementedPartyServiceServer) testEmbeddedByValue()                      {}
+
+// UnsafePartyServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to PartyServiceServer will
+// result in compilation errors.
+type UnsafePartyServiceServer interface {
+	mustEmbedUnimplementedPartyServiceServer()
+}
+
+func RegisterPartyServiceServer(s grpc.ServiceRegistrar, srv PartyServiceServer) {
+	// If the following call pancis, it indicates UnimplementedPartyServiceServer was
+	// embedded by pointer and is nil.  This will cause panics if an
+	// unimplemented method is ever invoked, so we test this at initialization
+	// time to prevent it from happening at runtime later due to I/O.
+	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
+		t.testEmbeddedByValue()
+	}
+	s.RegisterService(&PartyService_ServiceDesc, srv)
+}
+
+func _PartyService_ListParties_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListPartiesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PartyServiceServer).ListParties(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: PartyService_ListParties_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PartyServiceServer).ListParties(ctx, req.(*ListPartiesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// PartyService_ServiceDesc is the grpc.ServiceDesc for PartyService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var PartyService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "ultimate.server.api.PartyService",
+	HandlerType: (*PartyServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "ListParties",
+			Handler:    _PartyService_ListParties_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

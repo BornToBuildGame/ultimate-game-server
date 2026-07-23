@@ -109,6 +109,38 @@ func (m *mockRuntimeModule) NotificationSend(ctx context.Context, userID, subjec
 	return nil
 }
 
+func (m *mockRuntimeModule) FriendsList(ctx context.Context, userID string, limit int, state *int, cursor string) ([]*FriendEdge, string, error) {
+	return nil, "", nil
+}
+
+func (m *mockRuntimeModule) FriendsAdd(ctx context.Context, userID string, ids, usernames []string, metadata map[string]any) error {
+	return nil
+}
+
+func (m *mockRuntimeModule) FriendsDelete(ctx context.Context, userID string, ids, usernames []string) error {
+	return nil
+}
+
+func (m *mockRuntimeModule) FriendsBlock(ctx context.Context, userID string, ids, usernames []string) error {
+	return nil
+}
+
+func (m *mockRuntimeModule) FriendsOfFriendsList(ctx context.Context, userID string, limit int, cursor string) ([]*FriendOfFriendEdge, string, error) {
+	return nil, "", nil
+}
+
+func (m *mockRuntimeModule) UsersGetFriendStatus(ctx context.Context, userID string, friendIDs []string) (map[string]int, error) {
+	return map[string]int{}, nil
+}
+
+func (m *mockRuntimeModule) FriendMetadataUpdate(ctx context.Context, userID, friendID string, metadata map[string]any) error {
+	return nil
+}
+
+func (m *mockRuntimeModule) PartyList(ctx context.Context, limit int, open *bool, showHidden bool, query, cursor string) ([]*PartyListEntry, string, error) {
+	return nil, "", nil
+}
+
 func (m *mockRuntimeModule) MatchCreate(ctx context.Context, module string, params map[string]interface{}) (string, error) {
 	return "match_12345", nil
 }

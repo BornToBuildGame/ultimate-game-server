@@ -67,6 +67,29 @@ func resolveHTTPHookID(method, path string) string {
 			return "DeleteTournamentRecord"
 		}
 	}
+
+	if strings.HasPrefix(path, "/v2/friend") {
+		parts := strings.Split(strings.Trim(path, "/"), "/")
+		// parts: ["v2","friend", ...]
+		switch {
+		case method == http.MethodPost && len(parts) == 2:
+			return "AddFriends"
+		case method == http.MethodGet && len(parts) == 2:
+			return "ListFriends"
+		case method == http.MethodGet && len(parts) == 3 && parts[2] == "friends":
+			return "ListFriendsOfFriends"
+		case method == http.MethodDelete && len(parts) == 2:
+			return "DeleteFriends"
+		case method == http.MethodPost && len(parts) == 4 && parts[2] == "block":
+			return "BlockFriends"
+		case method == http.MethodDelete && len(parts) == 4 && parts[2] == "block":
+			return "DeleteFriends"
+		case method == http.MethodPost && len(parts) == 3 && parts[2] == "facebook":
+			return "ImportFacebookFriends"
+		case method == http.MethodPost && len(parts) == 3 && parts[2] == "steam":
+			return "ImportSteamFriends"
+		}
+	}
 	return ""
 }
 
@@ -87,6 +110,12 @@ func buildHTTPHookRequest(r *http.Request, bodyBytes []byte) map[string]interfac
 	}
 	if ownerID := r.PathValue("owner_id"); ownerID != "" {
 		reqVal["owner_id"] = ownerID
+	}
+	if userID := r.PathValue("user_id"); userID != "" {
+		reqVal["user_id"] = userID
+		if ids, ok := reqVal["ids"]; !ok || ids == nil {
+			reqVal["ids"] = []string{userID}
+		}
 	}
 	for k, vals := range r.URL.Query() {
 		if len(vals) == 1 {

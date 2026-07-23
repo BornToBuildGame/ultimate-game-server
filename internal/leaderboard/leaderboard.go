@@ -306,8 +306,17 @@ func publishInvalidation(ctx context.Context, rdb *redis.Client, leaderboardID s
 	}
 }
 
+// OperatorNoOverride sentinel for SubmitScore override (use board operator).
+const OperatorNoOverride = -1
+
 // SubmitScore writes a player score, enforcing constraints and operators.
-func SubmitScore(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Client, leaderboardID, ownerID, username string, score, subscore int64, metadata string, byPlayer bool) (*LeaderboardRecord, error) {
+// Optional overrideOp: when provided and != OperatorNoOverride / when first element >= 0,
+// overrides the leaderboard's configured operator (BEST/SET/INCREMENT/DECREMENT).
+func SubmitScore(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Client, leaderboardID, ownerID, username string, score, subscore int64, metadata string, byPlayer bool, overrideOp ...int) (*LeaderboardRecord, error) {
+	override := OperatorNoOverride
+	if len(overrideOp) > 0 {
+		override = overrideOp[0]
+	}
 	if score < 0 || subscore < 0 {
 		return nil, fmt.Errorf("score and subscore must be non-negative")
 	}
@@ -395,6 +404,10 @@ func SubmitScore(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Client, lea
 	newSubscore := subscore
 	now := time.Now().UTC()
 
+	if override >= 0 && override <= OperatorDecrement {
+		operator = override
+	}
+
 	if exists {
 		if numScore >= maxNumScore {
 			return nil, ErrMaxAttemptsReached
@@ -455,9 +468,19 @@ func SubmitScore(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Client, lea
 			return nil, err
 		}
 		numScore = 1
+		oldScore = 0
+		oldSubscore = 0
 	}
 
 	_, err = tx.Exec(ctx, `UPDATE leaderboard SET size = (SELECT COUNT(*) FROM leaderboard_record WHERE leaderboard_id = $1 AND expiry_time = $2) WHERE id = $1`, leaderboardID, expiryTime)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = tx.Exec(ctx, `
+INSERT INTO leaderboard_score_audit (leaderboard_id, owner_id, old_score, new_score, old_subscore, new_subscore, operator)
+VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+		leaderboardID, ownerID, oldScore, newScore, oldSubscore, newSubscore, operator)
 	if err != nil {
 		return nil, err
 	}

@@ -4,7 +4,20 @@ import (
 	"encoding/json"
 
 	"ultimate-game-server/internal/party"
+	"ultimate-game-server/internal/presence"
 )
+
+func (gh *GatewayHandler) trackParty(sessionID, partyID string) {
+	if gh.StreamTracker != nil {
+		gh.StreamTracker.Track(sessionID, presence.PartyStream(partyID))
+	}
+}
+
+func (gh *GatewayHandler) untrackParty(sessionID, partyID string) {
+	if gh.StreamTracker != nil {
+		gh.StreamTracker.Untrack(sessionID, presence.PartyStream(partyID))
+	}
+}
 
 func (gh *GatewayHandler) handlePartyCreate(s *Session, cid string, req *PartyCreatePayload) {
 	if gh.PartyRegistry == nil {
@@ -16,12 +29,13 @@ func (gh *GatewayHandler) handlePartyCreate(s *Session, cid string, req *PartyCr
 	if maxSize == 0 {
 		maxSize = 4
 	}
-	p, err := gh.PartyRegistry.CreateParty(s.UserID, s.Username, s.ID, req.Open, maxSize)
+	p, err := gh.PartyRegistry.Create(s.UserID, s.Username, s.ID, req.Open, req.Hidden, maxSize, req.Label)
 	if err != nil {
 		res, _ := json.Marshal(map[string]interface{}{"cid": cid, "error": err.Error()})
 		s.TrySend(res)
 		return
 	}
+	gh.trackParty(s.ID, p.PartyID)
 	s.TrySend(gh.marshalPartyReply(cid, p, s))
 }
 
@@ -31,14 +45,41 @@ func (gh *GatewayHandler) handlePartyJoin(s *Session, cid string, req *PartyJoin
 		s.TrySend(res)
 		return
 	}
-	p, err := gh.PartyRegistry.JoinParty(req.PartyID, s.UserID, s.Username, s.ID)
+	out, err := gh.PartyRegistry.Join(req.PartyID, s.UserID, s.Username, s.ID)
 	if err != nil {
 		res, _ := json.Marshal(map[string]interface{}{"cid": cid, "error": err.Error()})
 		s.TrySend(res)
 		return
 	}
-	s.TrySend(gh.marshalPartyReply(cid, p, s))
+	p := out.Party
+	if !out.Joined {
+		leader := p.Members[p.LeaderID]
+		if leader != nil {
+			payload, _ := json.Marshal(map[string]interface{}{
+				"party_join_request": map[string]interface{}{
+					"party_id": p.PartyID,
+					"presences": []map[string]interface{}{{
+						"user_id":    s.UserID,
+						"username":   s.Username,
+						"session_id": s.ID,
+					}},
+				},
+			})
+			gh.registry.SendToSession(leader.SessionID, payload)
+		}
+		ack, _ := json.Marshal(map[string]interface{}{
+			"cid": cid,
+			"party_join": map[string]interface{}{
+				"party_id": p.PartyID,
+				"pending":  true,
+			},
+		})
+		s.TrySend(ack)
+		return
+	}
 
+	gh.trackParty(s.ID, p.PartyID)
+	s.TrySend(gh.marshalPartyReply(cid, p, s))
 	join := map[string]interface{}{
 		"user_id":    s.UserID,
 		"username":   s.Username,
@@ -53,24 +94,192 @@ func (gh *GatewayHandler) handlePartyLeave(s *Session, cid string, req *PartyLea
 		s.TrySend(res)
 		return
 	}
-	p, err := gh.PartyRegistry.LeaveParty(req.PartyID, s.UserID)
+	out, err := gh.PartyRegistry.Leave(req.PartyID, s.UserID)
 	if err != nil {
 		res, _ := json.Marshal(map[string]interface{}{"cid": cid, "error": err.Error()})
 		s.TrySend(res)
 		return
 	}
+	gh.untrackParty(s.ID, req.PartyID)
 	leave := map[string]interface{}{
 		"user_id":    s.UserID,
 		"username":   s.Username,
 		"session_id": s.ID,
 	}
-	if p != nil {
-		gh.broadcastPartyPresence(req.PartyID, p.Members, nil, []map[string]interface{}{leave}, s.ID)
+	if out.Party != nil {
+		gh.broadcastPartyPresence(req.PartyID, out.Party.Members, nil, []map[string]interface{}{leave}, s.ID)
+		if out.PromotedLeader != nil {
+			gh.broadcastPartyLeader(req.PartyID, out.Party.Members, out.PromotedLeader)
+		}
 	}
 	res, _ := json.Marshal(map[string]interface{}{
 		"cid": cid,
 		"party_leave": map[string]interface{}{
 			"party_id": req.PartyID,
+		},
+	})
+	s.TrySend(res)
+}
+
+func (gh *GatewayHandler) handlePartyPromote(s *Session, cid string, req *PartyPromotePayload) {
+	if gh.PartyRegistry == nil {
+		res, _ := json.Marshal(map[string]interface{}{"cid": cid, "error": "party registry not configured"})
+		s.TrySend(res)
+		return
+	}
+	p, leader, err := gh.PartyRegistry.Promote(req.PartyID, s.ID, party.Presence{
+		UserID: req.Presence.UserID, Username: req.Presence.Username, SessionID: req.Presence.SessionID,
+	})
+	if err != nil {
+		res, _ := json.Marshal(map[string]interface{}{"cid": cid, "error": err.Error()})
+		s.TrySend(res)
+		return
+	}
+	gh.broadcastPartyLeader(req.PartyID, p.Members, leader)
+	ack, _ := json.Marshal(map[string]interface{}{"cid": cid, "party_promote": map[string]interface{}{"party_id": req.PartyID}})
+	s.TrySend(ack)
+}
+
+func (gh *GatewayHandler) handlePartyAccept(s *Session, cid string, req *PartyAcceptPayload) {
+	if gh.PartyRegistry == nil {
+		res, _ := json.Marshal(map[string]interface{}{"cid": cid, "error": "party registry not configured"})
+		s.TrySend(res)
+		return
+	}
+	p, member, err := gh.PartyRegistry.Accept(req.PartyID, s.ID, party.Presence{
+		UserID: req.Presence.UserID, Username: req.Presence.Username, SessionID: req.Presence.SessionID,
+	})
+	if err != nil {
+		res, _ := json.Marshal(map[string]interface{}{"cid": cid, "error": err.Error()})
+		s.TrySend(res)
+		return
+	}
+	gh.trackParty(member.SessionID, req.PartyID)
+	join := map[string]interface{}{
+		"user_id":    member.UserID,
+		"username":   member.Username,
+		"session_id": member.SessionID,
+	}
+	gh.broadcastPartyPresence(req.PartyID, p.Members, []map[string]interface{}{join}, nil, "")
+	if sess, ok := gh.registry.GetBySession(member.SessionID); ok && sess != nil {
+		sess.TrySend(gh.marshalPartyReply("", p, sess))
+	}
+	ack, _ := json.Marshal(map[string]interface{}{"cid": cid, "party_accept": map[string]interface{}{"party_id": req.PartyID}})
+	s.TrySend(ack)
+}
+
+func (gh *GatewayHandler) handlePartyRemove(s *Session, cid string, req *PartyRemovePayload) {
+	if gh.PartyRegistry == nil {
+		res, _ := json.Marshal(map[string]interface{}{"cid": cid, "error": "party registry not configured"})
+		s.TrySend(res)
+		return
+	}
+	out, err := gh.PartyRegistry.Remove(req.PartyID, s.ID, party.Presence{
+		UserID: req.Presence.UserID, Username: req.Presence.Username, SessionID: req.Presence.SessionID,
+	})
+	if err != nil {
+		res, _ := json.Marshal(map[string]interface{}{"cid": cid, "error": err.Error()})
+		s.TrySend(res)
+		return
+	}
+	if out.Kicked != nil {
+		gh.untrackParty(out.Kicked.SessionID, req.PartyID)
+		leave := map[string]interface{}{
+			"user_id":    out.Kicked.UserID,
+			"username":   out.Kicked.Username,
+			"session_id": out.Kicked.SessionID,
+		}
+		if out.Party != nil {
+			gh.broadcastPartyPresence(req.PartyID, out.Party.Members, nil, []map[string]interface{}{leave}, "")
+		}
+		closePayload, _ := json.Marshal(map[string]interface{}{
+			"party_close": map[string]interface{}{"party_id": req.PartyID},
+		})
+		gh.registry.SendToSession(out.Kicked.SessionID, closePayload)
+	}
+	ack, _ := json.Marshal(map[string]interface{}{"cid": cid, "party_remove": map[string]interface{}{"party_id": req.PartyID}})
+	s.TrySend(ack)
+}
+
+func (gh *GatewayHandler) handlePartyClose(s *Session, cid string, req *PartyClosePayload) {
+	if gh.PartyRegistry == nil {
+		res, _ := json.Marshal(map[string]interface{}{"cid": cid, "error": "party registry not configured"})
+		s.TrySend(res)
+		return
+	}
+	p, err := gh.PartyRegistry.Close(req.PartyID, s.ID)
+	if err != nil {
+		res, _ := json.Marshal(map[string]interface{}{"cid": cid, "error": err.Error()})
+		s.TrySend(res)
+		return
+	}
+	closePayload, _ := json.Marshal(map[string]interface{}{
+		"party_close": map[string]interface{}{"party_id": req.PartyID},
+	})
+	for _, m := range p.Members {
+		gh.untrackParty(m.SessionID, req.PartyID)
+		gh.registry.SendToSession(m.SessionID, closePayload)
+	}
+	ack, _ := json.Marshal(map[string]interface{}{"cid": cid, "party_close": map[string]interface{}{"party_id": req.PartyID}})
+	s.TrySend(ack)
+}
+
+func (gh *GatewayHandler) handlePartyUpdate(s *Session, cid string, req *PartyUpdatePayload) {
+	if gh.PartyRegistry == nil {
+		res, _ := json.Marshal(map[string]interface{}{"cid": cid, "error": "party registry not configured"})
+		s.TrySend(res)
+		return
+	}
+	label := req.Label
+	if label == "" {
+		label = "{}"
+	}
+	p, err := gh.PartyRegistry.Update(req.PartyID, s.ID, label, req.Open, req.Hidden)
+	if err != nil {
+		res, _ := json.Marshal(map[string]interface{}{"cid": cid, "error": err.Error()})
+		s.TrySend(res)
+		return
+	}
+	payload, _ := json.Marshal(map[string]interface{}{
+		"party_update": map[string]interface{}{
+			"party_id": p.PartyID,
+			"open":     p.Open,
+			"hidden":   p.Hidden,
+			"label":    p.Label,
+		},
+	})
+	for _, m := range p.Members {
+		gh.registry.SendToSession(m.SessionID, payload)
+	}
+	ack, _ := json.Marshal(map[string]interface{}{"cid": cid, "party_update": map[string]interface{}{"party_id": req.PartyID}})
+	s.TrySend(ack)
+}
+
+func (gh *GatewayHandler) handlePartyJoinRequestList(s *Session, cid string, req *PartyJoinRequestListPayload) {
+	if gh.PartyRegistry == nil {
+		res, _ := json.Marshal(map[string]interface{}{"cid": cid, "error": "party registry not configured"})
+		s.TrySend(res)
+		return
+	}
+	list, err := gh.PartyRegistry.JoinRequestList(req.PartyID, s.ID)
+	if err != nil {
+		res, _ := json.Marshal(map[string]interface{}{"cid": cid, "error": err.Error()})
+		s.TrySend(res)
+		return
+	}
+	presences := make([]map[string]interface{}, 0, len(list))
+	for _, jr := range list {
+		presences = append(presences, map[string]interface{}{
+			"user_id":    jr.UserID,
+			"username":   jr.Username,
+			"session_id": jr.SessionID,
+		})
+	}
+	res, _ := json.Marshal(map[string]interface{}{
+		"cid": cid,
+		"party_join_request": map[string]interface{}{
+			"party_id":  req.PartyID,
+			"presences": presences,
 		},
 	})
 	s.TrySend(res)
@@ -120,18 +329,46 @@ func (gh *GatewayHandler) handlePartyDataSend(s *Session, cid string, req *Party
 	s.TrySend(ack)
 }
 
+func (gh *GatewayHandler) leaveAllParties(s *Session) {
+	if gh.PartyRegistry == nil {
+		return
+	}
+	partyID, _ := gh.PartyRegistry.PartyIDForSession(s.ID)
+	out, err := gh.PartyRegistry.LeaveSession(s.ID)
+	if gh.StreamTracker != nil {
+		gh.StreamTracker.UntrackByMode(s.ID, presence.StreamModeParty)
+	}
+	if err != nil || out == nil || !out.WasMember {
+		if partyID != "" {
+			gh.untrackParty(s.ID, partyID)
+		}
+		return
+	}
+	leave := map[string]interface{}{
+		"user_id":    s.UserID,
+		"username":   s.Username,
+		"session_id": s.ID,
+	}
+	if out.Party != nil {
+		gh.broadcastPartyPresence(out.Party.PartyID, out.Party.Members, nil, []map[string]interface{}{leave}, s.ID)
+		if out.PromotedLeader != nil {
+			gh.broadcastPartyLeader(out.Party.PartyID, out.Party.Members, out.PromotedLeader)
+		}
+	}
+}
+
 func (gh *GatewayHandler) marshalPartyReply(cid string, p *party.PartySession, self *Session) []byte {
 	presences := make([]map[string]interface{}, 0, len(p.Members))
 	var leader map[string]interface{}
 	for _, m := range p.Members {
-		presence := map[string]interface{}{
+		row := map[string]interface{}{
 			"user_id":    m.UserID,
 			"username":   m.Username,
 			"session_id": m.SessionID,
 		}
-		presences = append(presences, presence)
+		presences = append(presences, row)
 		if m.UserID == p.LeaderID {
-			leader = presence
+			leader = row
 		}
 	}
 	if leader == nil {
@@ -142,7 +379,9 @@ func (gh *GatewayHandler) marshalPartyReply(cid string, p *party.PartySession, s
 		"party": map[string]interface{}{
 			"party_id": p.PartyID,
 			"open":     p.Open,
+			"hidden":   p.Hidden,
 			"max_size": p.MaxSize,
+			"label":    p.Label,
 			"self": map[string]interface{}{
 				"user_id":    self.UserID,
 				"username":   self.Username,
@@ -178,6 +417,25 @@ func (gh *GatewayHandler) broadcastPartyPresence(
 		if m.SessionID == excludeSessionID {
 			continue
 		}
+		gh.registry.SendToSession(m.SessionID, payload)
+	}
+}
+
+func (gh *GatewayHandler) broadcastPartyLeader(partyID string, members map[string]*party.PartyMember, leader *party.PartyMember) {
+	if leader == nil {
+		return
+	}
+	payload, _ := json.Marshal(map[string]interface{}{
+		"party_leader": map[string]interface{}{
+			"party_id": partyID,
+			"presence": map[string]interface{}{
+				"user_id":    leader.UserID,
+				"username":   leader.Username,
+				"session_id": leader.SessionID,
+			},
+		},
+	})
+	for _, m := range members {
 		gh.registry.SendToSession(m.SessionID, payload)
 	}
 }
