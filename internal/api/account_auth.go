@@ -172,6 +172,14 @@ func (s *Server) handleAuthenticateSteam(w http.ResponseWriter, r *http.Request)
 		http.Error(w, "bad request", http.StatusBadRequest)
 		return
 	}
+	in, err := s.invokeBefore(r.Context(), "AuthenticateSteam", &req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if casted, ok := in.(*authSteamRequest); ok {
+		req = *casted
+	}
 	ticket := req.Ticket
 	if ticket == "" {
 		ticket = req.Account.Ticket
@@ -208,6 +216,14 @@ func (s *Server) handleAuthenticateGameCenter(w http.ResponseWriter, r *http.Req
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "bad request", http.StatusBadRequest)
 		return
+	}
+	in, err := s.invokeBefore(r.Context(), "AuthenticateGameCenter", &req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if casted, ok := in.(*authGameCenterRequest); ok {
+		req = *casted
 	}
 	cred := auth.GameCenterCredentials{
 		PlayerID: req.Account.PlayerID, BundleID: req.Account.BundleID,
@@ -402,10 +418,19 @@ func (s *Server) handleLinkEmail(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "bad request", http.StatusBadRequest)
 		return
 	}
+	in, err := s.invokeBefore(r.Context(), "LinkEmail", &req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if casted, ok := in.(*authEmailRequest); ok {
+		req = *casted
+	}
 	if err := auth.LinkEmail(r.Context(), s.dbPool, uid, req.Email, req.Password); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	s.invokeAfter("LinkEmail", nil, &req)
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -419,10 +444,19 @@ func (s *Server) handleLinkDevice(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "bad request", http.StatusBadRequest)
 		return
 	}
+	in, err := s.invokeBefore(r.Context(), "LinkDevice", &req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if casted, ok := in.(*authDeviceRequest); ok {
+		req = *casted
+	}
 	if err := auth.AddDevice(r.Context(), s.dbPool, uid, req.ID, "{}", nil); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	s.invokeAfter("LinkDevice", nil, &req)
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -436,10 +470,19 @@ func (s *Server) handleLinkCustom(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "bad request", http.StatusBadRequest)
 		return
 	}
+	in, err := s.invokeBefore(r.Context(), "LinkCustom", &req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if casted, ok := in.(*authCustomRequest); ok {
+		req = *casted
+	}
 	if err := auth.LinkProvider(r.Context(), s.dbPool, uid, "custom", req.CustomID); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	s.invokeAfter("LinkCustom", nil, &req)
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -453,6 +496,15 @@ func (s *Server) linkSocial(w http.ResponseWriter, r *http.Request, provider str
 		http.Error(w, "bad request", http.StatusBadRequest)
 		return
 	}
+	hookName := linkHookName(provider)
+	in, err := s.invokeBefore(r.Context(), hookName, &req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if casted, ok := in.(*authSocialRequest); ok {
+		req = *casted
+	}
 	providerID, err := verify(r.Context(), req.Account.Token)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
@@ -462,6 +514,7 @@ func (s *Server) linkSocial(w http.ResponseWriter, r *http.Request, provider str
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	s.invokeAfter(hookName, nil, &req)
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -484,6 +537,14 @@ func (s *Server) handleLinkSteam(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "bad request", http.StatusBadRequest)
 		return
 	}
+	in, err := s.invokeBefore(r.Context(), "LinkSteam", &req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if casted, ok := in.(*authSteamRequest); ok {
+		req = *casted
+	}
 	ticket := req.Ticket
 	if ticket == "" {
 		ticket = req.Account.Ticket
@@ -497,6 +558,7 @@ func (s *Server) handleLinkSteam(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	s.invokeAfter("LinkSteam", nil, &req)
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -517,6 +579,7 @@ func (s *Server) handleUnlinkProvider(provider string) http.HandlerFunc {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
+		s.invokeAfter(hookName, nil, &req)
 		w.WriteHeader(http.StatusOK)
 	}
 }
@@ -531,11 +594,31 @@ func (s *Server) handleUnlinkDevice(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "bad request", http.StatusBadRequest)
 		return
 	}
+	if _, err := s.invokeBefore(r.Context(), "UnlinkDevice", &req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 	if err := auth.UnlinkDevice(r.Context(), s.dbPool, uid, req.ID); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	s.invokeAfter("UnlinkDevice", nil, &req)
 	w.WriteHeader(http.StatusOK)
+}
+
+func linkHookName(provider string) string {
+	switch strings.ToLower(provider) {
+	case "apple":
+		return "LinkApple"
+	case "google":
+		return "LinkGoogle"
+	case "facebook":
+		return "LinkFacebook"
+	case "steam":
+		return "LinkSteam"
+	default:
+		return "LinkProvider"
+	}
 }
 
 func unlinkHookName(provider string) string {

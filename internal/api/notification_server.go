@@ -78,7 +78,7 @@ func (s *NotificationServer) ListNotifications(ctx context.Context, req *apipb.L
 		return nil, err
 	}
 	if s.hooks != nil {
-		if before, ok := s.hooks.GetBefore("listnotifications"); ok && before != nil {
+		if before, ok := s.hooks.GetBefore("ListNotifications"); ok && before != nil {
 			out, herr := before(ctx, nil, nil, nil, req)
 			if herr != nil {
 				return nil, status.Errorf(codes.Internal, "%v", herr)
@@ -107,7 +107,7 @@ func (s *NotificationServer) ListNotifications(ctx context.Context, req *apipb.L
 		out.Notifications = append(out.Notifications, toProtoNotification(n))
 	}
 	if s.hooks != nil {
-		if after, ok := s.hooks.GetAfter("listnotifications"); ok && after != nil {
+		if after, ok := s.hooks.GetAfter("ListNotifications"); ok && after != nil {
 			_ = after(ctx, nil, nil, nil, out, req)
 		}
 	}
@@ -120,7 +120,7 @@ func (s *NotificationServer) DeleteNotifications(ctx context.Context, req *apipb
 		return nil, err
 	}
 	if s.hooks != nil {
-		if before, ok := s.hooks.GetBefore("deletenotifications"); ok && before != nil {
+		if before, ok := s.hooks.GetBefore("DeleteNotifications"); ok && before != nil {
 			out, herr := before(ctx, nil, nil, nil, req)
 			if herr != nil {
 				return nil, status.Errorf(codes.Internal, "%v", herr)
@@ -137,7 +137,7 @@ func (s *NotificationServer) DeleteNotifications(ctx context.Context, req *apipb
 		return nil, status.Errorf(codes.Internal, "delete notifications: %v", err)
 	}
 	if s.hooks != nil {
-		if after, ok := s.hooks.GetAfter("deletenotifications"); ok && after != nil {
+		if after, ok := s.hooks.GetAfter("DeleteNotifications"); ok && after != nil {
 			_ = after(ctx, nil, nil, nil, &emptypb.Empty{}, req)
 		}
 	}

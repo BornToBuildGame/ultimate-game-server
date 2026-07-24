@@ -43,6 +43,7 @@ type GoRuntimeModule struct {
 	registry       MatchRegistry
 	partyLister    PartyLister
 	statusFollower StatusFollower
+	streamManager  StreamManager
 	rpcDispatcher  RPCDispatcherFunc
 }
 
@@ -63,6 +64,10 @@ func (m *GoRuntimeModule) SetPartyLister(l PartyLister) {
 
 func (m *GoRuntimeModule) SetStatusFollower(sf StatusFollower) {
 	m.statusFollower = sf
+}
+
+func (m *GoRuntimeModule) SetStreamManager(sm StreamManager) {
+	m.streamManager = sm
 }
 
 func (m *GoRuntimeModule) SetRPCDispatcher(fn RPCDispatcherFunc) {
@@ -581,6 +586,48 @@ func (m *GoRuntimeModule) StatusUnfollow(sessionID string, userIDs []string) err
 		return fmt.Errorf("expects a valid session id")
 	}
 	return m.statusFollower.StatusUnfollow(sessionID, userIDs)
+}
+
+func (m *GoRuntimeModule) StreamUserList(mode int16, subject, subcontext, label string, includeHidden, includeNotHidden bool) ([]StreamPresenceView, error) {
+	if m.streamManager == nil {
+		return nil, fmt.Errorf("stream manager not configured")
+	}
+	return m.streamManager.StreamUserList(mode, subject, subcontext, label, includeHidden, includeNotHidden)
+}
+
+func (m *GoRuntimeModule) StreamUserJoin(mode int16, subject, subcontext, label, userID, sessionID string, hidden, persistence bool, status string) (bool, error) {
+	if m.streamManager == nil {
+		return false, fmt.Errorf("stream manager not configured")
+	}
+	return m.streamManager.StreamUserJoin(mode, subject, subcontext, label, userID, sessionID, hidden, persistence, status)
+}
+
+func (m *GoRuntimeModule) StreamUserLeave(mode int16, subject, subcontext, label, userID, sessionID string) error {
+	if m.streamManager == nil {
+		return fmt.Errorf("stream manager not configured")
+	}
+	return m.streamManager.StreamUserLeave(mode, subject, subcontext, label, userID, sessionID)
+}
+
+func (m *GoRuntimeModule) StreamCount(mode int16, subject, subcontext, label string) (int, error) {
+	if m.streamManager == nil {
+		return 0, fmt.Errorf("stream manager not configured")
+	}
+	return m.streamManager.StreamCount(mode, subject, subcontext, label)
+}
+
+func (m *GoRuntimeModule) StreamSend(mode int16, subject, subcontext, label, data string, sessionIDs []string, reliable bool) error {
+	if m.streamManager == nil {
+		return fmt.Errorf("stream manager not configured")
+	}
+	return m.streamManager.StreamSend(mode, subject, subcontext, label, data, sessionIDs, reliable)
+}
+
+func (m *GoRuntimeModule) SessionDisconnect(sessionID string) error {
+	if m.streamManager == nil {
+		return fmt.Errorf("stream manager not configured")
+	}
+	return m.streamManager.SessionDisconnect(sessionID)
 }
 
 func (m *GoRuntimeModule) LeaderboardCreate(ctx context.Context, id string, authoritative bool, sortOrder int, operator int, resetSchedule string, metadata map[string]interface{}, enableRanks bool) error {

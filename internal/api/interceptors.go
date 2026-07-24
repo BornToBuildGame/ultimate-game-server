@@ -224,23 +224,24 @@ func HTTPHookMiddleware(rm *runtime.GoRuntimeManager, luaVM *lua.LState, jsVM *g
 		if aFound {
 			var respVal interface{}
 			_ = json.Unmarshal(rec.body.Bytes(), &respVal)
-
-			switch aRuntimeType {
-			case "go":
-				_ = aHook(r.Context(), rm.Logger(), rm.DB(), rm.NK(), &respVal, &reqVal)
-			case "lua":
-				if luaVM != nil {
-					luaVMMutex.Lock()
-					_ = runtime.ExecuteLuaAfterHook(luaVM, aFnName, r.Context(), respVal, reqVal)
-					luaVMMutex.Unlock()
+			go func(ctx context.Context, respVal, reqVal interface{}, aHook runtime.AfterHook, aRuntimeType, aFnName string) {
+				switch aRuntimeType {
+				case "go":
+					_ = aHook(ctx, rm.Logger(), rm.DB(), rm.NK(), &respVal, &reqVal)
+				case "lua":
+					if luaVM != nil {
+						luaVMMutex.Lock()
+						_ = runtime.ExecuteLuaAfterHook(luaVM, aFnName, ctx, respVal, reqVal)
+						luaVMMutex.Unlock()
+					}
+				case "js":
+					if jsVM != nil {
+						jsVMMutex.Lock()
+						_ = runtime.ExecuteJSAfterHook(jsVM, aFnName, ctx, respVal, reqVal)
+						jsVMMutex.Unlock()
+					}
 				}
-			case "js":
-				if jsVM != nil {
-					jsVMMutex.Lock()
-					_ = runtime.ExecuteJSAfterHook(jsVM, aFnName, r.Context(), respVal, reqVal)
-					jsVMMutex.Unlock()
-				}
-			}
+			}(context.WithoutCancel(r.Context()), respVal, reqVal, aHook, aRuntimeType, aFnName)
 		}
 
 		if rec.status != 0 {
@@ -313,22 +314,24 @@ func GRPCHookUnaryInterceptor(rm *runtime.GoRuntimeManager, luaVM *lua.LState, j
 
 		aHook, aRuntimeType, aFnName, aFound := rm.Registry().GetAfterHook(hookID)
 		if aFound {
-			switch aRuntimeType {
-			case "go":
-				_ = aHook(ctx, rm.Logger(), rm.DB(), rm.NK(), resp, req)
-			case "lua":
-				if luaVM != nil {
-					luaVMMutex.Lock()
-					_ = runtime.ExecuteLuaAfterHook(luaVM, aFnName, ctx, resp, req)
-					luaVMMutex.Unlock()
+			go func(ctx context.Context, resp, req interface{}, aHook runtime.AfterHook, aRuntimeType, aFnName string) {
+				switch aRuntimeType {
+				case "go":
+					_ = aHook(ctx, rm.Logger(), rm.DB(), rm.NK(), resp, req)
+				case "lua":
+					if luaVM != nil {
+						luaVMMutex.Lock()
+						_ = runtime.ExecuteLuaAfterHook(luaVM, aFnName, ctx, resp, req)
+						luaVMMutex.Unlock()
+					}
+				case "js":
+					if jsVM != nil {
+						jsVMMutex.Lock()
+						_ = runtime.ExecuteJSAfterHook(jsVM, aFnName, ctx, resp, req)
+						jsVMMutex.Unlock()
+					}
 				}
-			case "js":
-				if jsVM != nil {
-					jsVMMutex.Lock()
-					_ = runtime.ExecuteJSAfterHook(jsVM, aFnName, ctx, resp, req)
-					jsVMMutex.Unlock()
-				}
-			}
+			}(context.WithoutCancel(ctx), resp, req, aHook, aRuntimeType, aFnName)
 		}
 
 		return resp, nil

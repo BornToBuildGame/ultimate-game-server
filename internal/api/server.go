@@ -72,6 +72,7 @@ type Server struct {
 	Matchmaker     *matchmaker.Matchmaker
 	PartyRegistry    *party.Registry
 	presenceTracker  *presence.PresenceTracker
+	streamManager    *runtime.LocalStreamManager
 	rdb              *redis.Client
 
 	httpServer *http.Server
@@ -108,11 +109,27 @@ func (s *Server) SetRuntimeManager(rm *runtime.GoRuntimeManager) {
 		if grm, ok := rm.NK().(*runtime.GoRuntimeModule); ok && s.SocketGateway != nil {
 			grm.SetStatusFollower(s.SocketGateway)
 		}
+		if grm, ok := rm.NK().(*runtime.GoRuntimeModule); ok && s.streamManager != nil {
+			grm.SetStreamManager(s.streamManager)
+		}
 		if s.Matchmaker != nil {
 			s.Matchmaker.SetDependencies(rm.DB(), rm.NK(), rm.Registry())
 		}
 		if s.SocketGateway != nil {
 			s.SocketGateway.SetHookRegistry(rm.Registry())
+			ex := runtime.NewRtHookExecutor(rm.Registry(), rm.Logger(), rm.DB(), rm.NK(), s.LuaVM, s.JSVM, &luaVMMutex, &jsVMMutex)
+			s.SocketGateway.SetRtHookExecutor(ex)
+			s.SocketGateway.SetEventDispatcher(func(name, userID, sessionID, username string) {
+				rm.Registry().DispatchEvent(context.Background(), rm.Logger(), &runtime.Event{
+					Name: name,
+					Properties: map[string]string{
+						"user_id":    userID,
+						"session_id": sessionID,
+						"username":   username,
+					},
+					Timestamp: time.Now().Unix(),
+				})
+			})
 		}
 		if s.notificationServer != nil {
 			s.notificationServer.SetHooks(rm.Registry())
@@ -201,10 +218,12 @@ func NewServer(logger *zap.Logger, cfg Config, dbPool *pgxpool.Pool) (*Server, e
 	onConnect := func(s *socket.Session) {
 		if sockGateway != nil {
 			sockGateway.TrackStatusOnConnect(s)
+			sockGateway.EmitSessionEvent("session_start", s.UserID, s.ID, s.Username)
 		}
 	}
 	onDisconnect := func(sessionID, userID, username string) {
 		if sockGateway != nil {
+			sockGateway.EmitSessionEvent("session_end", userID, sessionID, username)
 			sockGateway.UntrackStatusOnDisconnect(sessionID, userID, username)
 		} else {
 			_ = streamTracker.UntrackAll(sessionID)
@@ -217,6 +236,11 @@ func NewServer(logger *zap.Logger, cfg Config, dbPool *pgxpool.Pool) (*Server, e
 	sockGateway.SetStatusRegistry(statusRegistry)
 	sockGateway.SetMessageRouter(msgRouter)
 	sockGateway.SetPresenceLimits(maxStatus, maxSubs)
+	streamMgr := &runtime.LocalStreamManager{
+		Tracker:  streamTracker,
+		Router:   msgRouter,
+		Registry: sockGateway,
+	}
 	if dbPool != nil {
 		sockGateway.SetDBPool(dbPool)
 	}
@@ -268,6 +292,7 @@ func NewServer(logger *zap.Logger, cfg Config, dbPool *pgxpool.Pool) (*Server, e
 		SocketGateway:   sockGateway,
 		MatchRouter:     matchRouter,
 		presenceTracker: onlineIndex,
+		streamManager:   streamMgr,
 		rdb:             rdb,
 		rpcCfg:          rpcCfg,
 	}

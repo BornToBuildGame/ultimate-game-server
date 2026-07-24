@@ -170,6 +170,24 @@ func (m *mockRuntimeModule) StatusFollow(sessionID string, userIDs []string) err
 func (m *mockRuntimeModule) StatusUnfollow(sessionID string, userIDs []string) error {
 	return nil
 }
+func (m *mockRuntimeModule) StreamUserList(mode int16, subject, subcontext, label string, includeHidden, includeNotHidden bool) ([]StreamPresenceView, error) {
+	return nil, nil
+}
+func (m *mockRuntimeModule) StreamUserJoin(mode int16, subject, subcontext, label, userID, sessionID string, hidden, persistence bool, status string) (bool, error) {
+	return false, nil
+}
+func (m *mockRuntimeModule) StreamUserLeave(mode int16, subject, subcontext, label, userID, sessionID string) error {
+	return nil
+}
+func (m *mockRuntimeModule) StreamCount(mode int16, subject, subcontext, label string) (int, error) {
+	return 0, nil
+}
+func (m *mockRuntimeModule) StreamSend(mode int16, subject, subcontext, label, data string, sessionIDs []string, reliable bool) error {
+	return nil
+}
+func (m *mockRuntimeModule) SessionDisconnect(sessionID string) error {
+	return nil
+}
 func (m *mockRuntimeModule) RpcCall(ctx context.Context, id, payload string) (string, error) {
 	return payload, nil
 }

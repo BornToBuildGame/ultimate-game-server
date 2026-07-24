@@ -129,6 +129,14 @@ type RuntimeModule interface {
 	StatusFollow(sessionID string, userIDs []string) error
 	StatusUnfollow(sessionID string, userIDs []string) error
 
+	// Stream Tracker (ADR-0020)
+	StreamUserList(mode int16, subject, subcontext, label string, includeHidden, includeNotHidden bool) ([]StreamPresenceView, error)
+	StreamUserJoin(mode int16, subject, subcontext, label, userID, sessionID string, hidden, persistence bool, status string) (bool, error)
+	StreamUserLeave(mode int16, subject, subcontext, label, userID, sessionID string) error
+	StreamCount(mode int16, subject, subcontext, label string) (int, error)
+	StreamSend(mode int16, subject, subcontext, label, data string, sessionIDs []string, reliable bool) error
+	SessionDisconnect(sessionID string) error
+
 	// RPC
 	RpcCall(ctx context.Context, id, payload string) (string, error)
 }
@@ -638,6 +646,30 @@ func (hr *HookRegistry) RegisterEvent(handler EventHandler) {
 	hr.mu.Lock()
 	defer hr.mu.Unlock()
 	hr.eventHandlers = append(hr.eventHandlers, handler)
+}
+
+// EventHandlers returns a snapshot of registered event handlers.
+func (hr *HookRegistry) EventHandlers() []EventHandler {
+	hr.mu.RLock()
+	defer hr.mu.RUnlock()
+	out := make([]EventHandler, len(hr.eventHandlers))
+	copy(out, hr.eventHandlers)
+	return out
+}
+
+// DispatchEvent fans out to all registered event handlers asynchronously.
+func (hr *HookRegistry) DispatchEvent(ctx context.Context, logger Logger, evt *Event) {
+	if hr == nil || evt == nil {
+		return
+	}
+	handlers := hr.EventHandlers()
+	for _, h := range handlers {
+		h := h
+		go func() {
+			defer func() { _ = recover() }()
+			h(ctx, logger, evt)
+		}()
+	}
 }
 
 // RegisterMatch registers a match handler factory.

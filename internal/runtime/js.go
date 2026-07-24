@@ -796,6 +796,54 @@ func MapJSNK(vm *goja.Runtime, nk RuntimeModule, timeout time.Duration, registry
 	})
 	_ = nkObj.Set("statusUnfollow", nkObj.Get("status_unfollow"))
 
+	_ = nkObj.Set("stream_user_list", func(call goja.FunctionCall) goja.Value {
+		mode := int16(call.Argument(0).ToInteger())
+		list, err := nk.StreamUserList(mode, jsOptString(call.Argument(1)), jsOptString(call.Argument(2)), jsOptString(call.Argument(3)), jsOptBool(call.Argument(4), true), jsOptBool(call.Argument(5), true))
+		if err != nil {
+			panic(vm.NewGoError(err))
+		}
+		return vm.ToValue(list)
+	})
+	_ = nkObj.Set("streamUserList", nkObj.Get("stream_user_list"))
+	_ = nkObj.Set("stream_user_join", func(call goja.FunctionCall) goja.Value {
+		ok, err := nk.StreamUserJoin(int16(call.Argument(0).ToInteger()), jsOptString(call.Argument(1)), jsOptString(call.Argument(2)), jsOptString(call.Argument(3)), call.Argument(4).String(), call.Argument(5).String(), jsOptBool(call.Argument(6), false), jsOptBool(call.Argument(7), false), jsOptString(call.Argument(8)))
+		if err != nil {
+			panic(vm.NewGoError(err))
+		}
+		return vm.ToValue(ok)
+	})
+	_ = nkObj.Set("streamUserJoin", nkObj.Get("stream_user_join"))
+	_ = nkObj.Set("stream_user_leave", func(call goja.FunctionCall) goja.Value {
+		if err := nk.StreamUserLeave(int16(call.Argument(0).ToInteger()), jsOptString(call.Argument(1)), jsOptString(call.Argument(2)), jsOptString(call.Argument(3)), jsOptString(call.Argument(4)), call.Argument(5).String()); err != nil {
+			panic(vm.NewGoError(err))
+		}
+		return goja.Undefined()
+	})
+	_ = nkObj.Set("streamUserLeave", nkObj.Get("stream_user_leave"))
+	_ = nkObj.Set("stream_count", func(call goja.FunctionCall) goja.Value {
+		n, err := nk.StreamCount(int16(call.Argument(0).ToInteger()), jsOptString(call.Argument(1)), jsOptString(call.Argument(2)), jsOptString(call.Argument(3)))
+		if err != nil {
+			panic(vm.NewGoError(err))
+		}
+		return vm.ToValue(n)
+	})
+	_ = nkObj.Set("streamCount", nkObj.Get("stream_count"))
+	_ = nkObj.Set("stream_send", func(call goja.FunctionCall) goja.Value {
+		ids := jsStringSlice(call.Argument(5).Export())
+		if err := nk.StreamSend(int16(call.Argument(0).ToInteger()), jsOptString(call.Argument(1)), jsOptString(call.Argument(2)), jsOptString(call.Argument(3)), call.Argument(4).String(), ids, jsOptBool(call.Argument(6), true)); err != nil {
+			panic(vm.NewGoError(err))
+		}
+		return goja.Undefined()
+	})
+	_ = nkObj.Set("streamSend", nkObj.Get("stream_send"))
+	_ = nkObj.Set("session_disconnect", func(call goja.FunctionCall) goja.Value {
+		if err := nk.SessionDisconnect(call.Argument(0).String()); err != nil {
+			panic(vm.NewGoError(err))
+		}
+		return goja.Undefined()
+	})
+	_ = nkObj.Set("sessionDisconnect", nkObj.Get("session_disconnect"))
+
 	_ = nkObj.Set("rpc", func(call goja.FunctionCall) goja.Value {
 		payload := ""
 		if !goja.IsUndefined(call.Argument(1)) {
@@ -824,6 +872,56 @@ func MapJSNK(vm *goja.Runtime, nk RuntimeModule, timeout time.Duration, registry
 			return goja.Undefined()
 		})
 		_ = nkObj.Set("register_rpc", nkObj.Get("registerRpc"))
+
+		registerBefore := func(call goja.FunctionCall) goja.Value {
+			fn, ok := goja.AssertFunction(call.Argument(0))
+			if !ok {
+				panic(vm.NewGoError(fmt.Errorf("register before requires a function")))
+			}
+			id := call.Argument(1).String()
+			globalName := "__before_" + id
+			_ = vm.Set(globalName, fn)
+			reg.RegisterJSBefore(id, globalName)
+			return goja.Undefined()
+		}
+		registerAfter := func(call goja.FunctionCall) goja.Value {
+			fn, ok := goja.AssertFunction(call.Argument(0))
+			if !ok {
+				panic(vm.NewGoError(fmt.Errorf("register after requires a function")))
+			}
+			id := call.Argument(1).String()
+			globalName := "__after_" + id
+			_ = vm.Set(globalName, fn)
+			reg.RegisterJSAfter(id, globalName)
+			return goja.Undefined()
+		}
+		_ = nkObj.Set("register_req_before", registerBefore)
+		_ = nkObj.Set("registerReqBefore", registerBefore)
+		_ = nkObj.Set("register_req_after", registerAfter)
+		_ = nkObj.Set("registerReqAfter", registerAfter)
+		_ = nkObj.Set("register_rt_before", registerBefore)
+		_ = nkObj.Set("registerRtBefore", registerBefore)
+		_ = nkObj.Set("register_rt_after", registerAfter)
+		_ = nkObj.Set("registerRtAfter", registerAfter)
+
+		_ = nkObj.Set("register_matchmaker_matched", func(call goja.FunctionCall) goja.Value {
+			fn, ok := goja.AssertFunction(call.Argument(0))
+			if !ok {
+				panic(vm.NewGoError(fmt.Errorf("register_matchmaker_matched requires a function")))
+			}
+			reg.RegisterMatchmakerMatched(func(ctx context.Context, logger Logger, db *sql.DB, nkMod RuntimeModule, entries []interface{}) (string, error) {
+				ret, err := fn(goja.Undefined(), vm.ToValue(entries))
+				if err != nil {
+					return "", err
+				}
+				if goja.IsUndefined(ret) || goja.IsNull(ret) {
+					return "", nil
+				}
+				return ret.String(), nil
+			})
+			return goja.Undefined()
+		})
+		_ = nkObj.Set("registerMatchmakerMatched", nkObj.Get("register_matchmaker_matched"))
 	}
 
 	// 8. Leaderboard Create
@@ -1208,8 +1306,20 @@ func ExecuteJSBeforeHook(vm *goja.Runtime, funcName string, ctx context.Context,
 		return nil, fmt.Errorf("before hook rejected request")
 	}
 
-	// Translate modified JS object back to Go request struct
+	// Translate modified JS object back to Go
 	goMap := resVal.Export()
+	if _, ok := in.(map[string]interface{}); ok {
+		goBytes, err := json.Marshal(goMap)
+		if err != nil {
+			return nil, err
+		}
+		var m map[string]interface{}
+		if err := json.Unmarshal(goBytes, &m); err != nil {
+			return nil, err
+		}
+		return m, nil
+	}
+
 	goBytes, err := json.Marshal(goMap)
 	if err != nil {
 		return nil, err
@@ -1274,4 +1384,18 @@ func jsStringSlice(v interface{}) []string {
 	default:
 		return nil
 	}
+}
+
+func jsOptString(v goja.Value) string {
+	if goja.IsUndefined(v) || goja.IsNull(v) {
+		return ""
+	}
+	return v.String()
+}
+
+func jsOptBool(v goja.Value, def bool) bool {
+	if goja.IsUndefined(v) || goja.IsNull(v) {
+		return def
+	}
+	return v.ToBoolean()
 }

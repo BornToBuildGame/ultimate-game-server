@@ -871,6 +871,57 @@ func MapLuaNK(L *lua.LState, nk RuntimeModule, registry ...*HookRegistry) {
 		return 0
 	}))
 
+	L.SetField(nkTable, "stream_user_list", L.NewFunction(func(L *lua.LState) int {
+		mode := int16(L.CheckInt(1))
+		list, err := nk.StreamUserList(mode, L.OptString(2, ""), L.OptString(3, ""), L.OptString(4, ""), L.OptBool(5, true), L.OptBool(6, true))
+		if err != nil {
+			L.RaiseError("stream_user_list failed: %v", err)
+			return 0
+		}
+		L.Push(ToLuaValue(L, list))
+		return 1
+	}))
+	L.SetField(nkTable, "stream_user_join", L.NewFunction(func(L *lua.LState) int {
+		ok, err := nk.StreamUserJoin(int16(L.CheckInt(1)), L.OptString(2, ""), L.OptString(3, ""), L.OptString(4, ""), L.CheckString(5), L.CheckString(6), L.OptBool(7, false), L.OptBool(8, false), L.OptString(9, ""))
+		if err != nil {
+			L.RaiseError("stream_user_join failed: %v", err)
+			return 0
+		}
+		L.Push(lua.LBool(ok))
+		return 1
+	}))
+	L.SetField(nkTable, "stream_user_leave", L.NewFunction(func(L *lua.LState) int {
+		if err := nk.StreamUserLeave(int16(L.CheckInt(1)), L.OptString(2, ""), L.OptString(3, ""), L.OptString(4, ""), L.OptString(5, ""), L.CheckString(6)); err != nil {
+			L.RaiseError("stream_user_leave failed: %v", err)
+			return 0
+		}
+		return 0
+	}))
+	L.SetField(nkTable, "stream_count", L.NewFunction(func(L *lua.LState) int {
+		n, err := nk.StreamCount(int16(L.CheckInt(1)), L.OptString(2, ""), L.OptString(3, ""), L.OptString(4, ""))
+		if err != nil {
+			L.RaiseError("stream_count failed: %v", err)
+			return 0
+		}
+		L.Push(lua.LNumber(n))
+		return 1
+	}))
+	L.SetField(nkTable, "stream_send", L.NewFunction(func(L *lua.LState) int {
+		ids := luaStringSlice(L.OptTable(6, nil))
+		if err := nk.StreamSend(int16(L.CheckInt(1)), L.OptString(2, ""), L.OptString(3, ""), L.OptString(4, ""), L.CheckString(5), ids, L.OptBool(7, true)); err != nil {
+			L.RaiseError("stream_send failed: %v", err)
+			return 0
+		}
+		return 0
+	}))
+	L.SetField(nkTable, "session_disconnect", L.NewFunction(func(L *lua.LState) int {
+		if err := nk.SessionDisconnect(L.CheckString(1)); err != nil {
+			L.RaiseError("session_disconnect failed: %v", err)
+			return 0
+		}
+		return 0
+	}))
+
 	L.SetField(nkTable, "rpc", L.NewFunction(func(L *lua.LState) int {
 		id := L.CheckString(1)
 		payload := L.OptString(2, "")
@@ -892,6 +943,58 @@ func MapLuaNK(L *lua.LState, nk RuntimeModule, registry ...*HookRegistry) {
 			globalName := "__rpc_" + id
 			L.SetGlobal(globalName, fn)
 			reg.RegisterLuaRPC(id, globalName)
+			return 0
+		}))
+		L.SetField(nkTable, "register_req_before", L.NewFunction(func(L *lua.LState) int {
+			fn := L.CheckFunction(1)
+			id := L.CheckString(2)
+			globalName := "__before_" + id
+			L.SetGlobal(globalName, fn)
+			reg.RegisterLuaBefore(id, globalName)
+			return 0
+		}))
+		L.SetField(nkTable, "register_req_after", L.NewFunction(func(L *lua.LState) int {
+			fn := L.CheckFunction(1)
+			id := L.CheckString(2)
+			globalName := "__after_" + id
+			L.SetGlobal(globalName, fn)
+			reg.RegisterLuaAfter(id, globalName)
+			return 0
+		}))
+		L.SetField(nkTable, "register_rt_before", L.NewFunction(func(L *lua.LState) int {
+			fn := L.CheckFunction(1)
+			id := L.CheckString(2)
+			globalName := "__rt_before_" + id
+			L.SetGlobal(globalName, fn)
+			reg.RegisterLuaBefore(id, globalName)
+			return 0
+		}))
+		L.SetField(nkTable, "register_rt_after", L.NewFunction(func(L *lua.LState) int {
+			fn := L.CheckFunction(1)
+			id := L.CheckString(2)
+			globalName := "__rt_after_" + id
+			L.SetGlobal(globalName, fn)
+			reg.RegisterLuaAfter(id, globalName)
+			return 0
+		}))
+		L.SetField(nkTable, "register_matchmaker_matched", L.NewFunction(func(L *lua.LState) int {
+			fn := L.CheckFunction(1)
+			reg.RegisterMatchmakerMatched(func(ctx context.Context, logger Logger, db *sql.DB, nkMod RuntimeModule, entries []interface{}) (string, error) {
+				L.SetContext(ctx)
+				tbl := L.NewTable()
+				for i, e := range entries {
+					tbl.RawSetInt(i+1, ToLuaValue(L, e))
+				}
+				if err := L.CallByParam(lua.P{Fn: fn, NRet: 1, Protect: true}, tbl); err != nil {
+					return "", err
+				}
+				ret := L.Get(-1)
+				L.Pop(1)
+				if ret.Type() == lua.LTString {
+					return ret.String(), nil
+				}
+				return "", nil
+			})
 			return 0
 		}))
 	}
@@ -1278,14 +1381,29 @@ func ExecuteLuaBeforeHook(L *lua.LState, funcName string, ctx context.Context, i
 		return nil, fmt.Errorf("before hook rejected request")
 	}
 
-	// Translate modified Lua Table back to Go struct
+	// Translate modified Lua Table back to Go
 	goVal := ToGoValue(retVal)
+	if _, ok := in.(map[string]interface{}); ok {
+		if m, ok := goVal.(map[string]interface{}); ok {
+			return m, nil
+		}
+		goBytes, err := json.Marshal(goVal)
+		if err != nil {
+			return nil, err
+		}
+		var m map[string]interface{}
+		if err := json.Unmarshal(goBytes, &m); err != nil {
+			return nil, err
+		}
+		return m, nil
+	}
+
 	goBytes, err := json.Marshal(goVal)
 	if err != nil {
 		return nil, err
 	}
 
-	// Create a new instance of the same type as in
+	// Create a new instance of the same type as in (must be pointer for structs)
 	outPtr := in
 	if err := json.Unmarshal(goBytes, outPtr); err != nil {
 		return nil, err

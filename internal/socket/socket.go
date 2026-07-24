@@ -309,6 +309,8 @@ type GatewayHandler struct {
 	nodeID          string
 	relayCancel     context.CancelFunc
 	rpcInvoker      func(ctx context.Context, userID, username, id, payload string) (result string, code int, err error)
+	rtHookExecutor  *runtime.RtHookExecutor
+	eventDispatcher func(name, userID, sessionID, username string)
 }
 
 // SetRPCInvoker configures WebSocket custom RPC dispatch.
@@ -316,6 +318,42 @@ func (gh *GatewayHandler) SetRPCInvoker(fn func(ctx context.Context, userID, use
 	gh.mu.Lock()
 	defer gh.mu.Unlock()
 	gh.rpcInvoker = fn
+}
+
+// SetRtHookExecutor configures BeforeRt/AfterRt for WebSocket envelopes.
+func (gh *GatewayHandler) SetRtHookExecutor(ex *runtime.RtHookExecutor) {
+	gh.mu.Lock()
+	defer gh.mu.Unlock()
+	gh.rtHookExecutor = ex
+}
+
+// SetEventDispatcher configures session_start/session_end event emission.
+func (gh *GatewayHandler) SetEventDispatcher(fn func(name, userID, sessionID, username string)) {
+	gh.mu.Lock()
+	defer gh.mu.Unlock()
+	gh.eventDispatcher = fn
+}
+
+// DisconnectSession force-closes a session (runtime SessionDisconnect).
+func (gh *GatewayHandler) DisconnectSession(sessionID string) error {
+	sess, ok := gh.registry.GetBySession(sessionID)
+	if !ok || sess == nil {
+		return fmt.Errorf("session not found")
+	}
+	if sess.Conn != nil {
+		_ = sess.Conn.Close()
+	}
+	return nil
+}
+
+// EmitSessionEvent dispatches session_start / session_end via configured dispatcher.
+func (gh *GatewayHandler) EmitSessionEvent(name, userID, sessionID, username string) {
+	gh.mu.RLock()
+	fn := gh.eventDispatcher
+	gh.mu.RUnlock()
+	if fn != nil {
+		fn(name, userID, sessionID, username)
+	}
 }
 
 // SetMatchmaker configures the Matchmaker instance for ticket routing.
@@ -964,6 +1002,56 @@ func (gh *GatewayHandler) RouteMessage(s *Session, payload []byte) {
 		return
 	}
 
+	envMap, _ := runtime.ParseEnvelopeMap(payload)
+	hookID := runtime.EnvelopeHookIDFromJSON(envMap)
+	var afterIn map[string]interface{}
+	runAfter := false
+	if hookID != "" {
+		gh.mu.RLock()
+		ex := gh.rtHookExecutor
+		gh.mu.RUnlock()
+		if ex != nil {
+			modified, err := ex.RunBeforeRt(context.Background(), hookID, envMap)
+			if err != nil {
+				res := map[string]interface{}{"cid": env.Cid, "error": err.Error()}
+				resBytes, _ := json.Marshal(res)
+				s.TrySend(resBytes)
+				return
+			}
+			if modified != nil {
+				envMap = modified
+				afterIn = modified
+				b, _ := json.Marshal(modified)
+				payload = b
+				if err := json.Unmarshal(payload, &env); err != nil {
+					gh.logger.Warn("Failed to unmarshal modified envelope", zap.Error(err))
+					return
+				}
+			} else {
+				afterIn = envMap
+			}
+			runAfter = true
+		}
+	}
+	defer func() {
+		if !runAfter || hookID == "" {
+			return
+		}
+		gh.mu.RLock()
+		ex := gh.rtHookExecutor
+		gh.mu.RUnlock()
+		if ex == nil {
+			return
+		}
+		in := afterIn
+		if in == nil {
+			in = envMap
+		}
+		go func() {
+			_ = ex.RunAfterRt(context.Background(), hookID, nil, in)
+		}()
+	}()
+
 	if env.MatchCreate != nil {
 		matchID := uuid.New().String() + "."
 		gh.mu.Lock()
@@ -1281,25 +1369,7 @@ func (gh *GatewayHandler) RouteMessage(s *Session, payload []byte) {
 			return
 		}
 
-		payload := interface{}(env.MatchmakerAdd)
-		if gh.HookRegistry != nil {
-			if before, ok := gh.HookRegistry.GetBefore("matchmakeradd"); ok {
-				out, err := before(context.Background(), &socketRuntimeLogger{gh.logger}, nil, nil, payload)
-				if err != nil {
-					res := map[string]interface{}{"cid": env.Cid, "error": err.Error()}
-					resBytes, _ := json.Marshal(res)
-					s.Send <- resBytes
-					return
-				}
-				if out != nil {
-					payload = out
-				}
-			}
-		}
-		addReq, _ := payload.(*MatchmakerAddPayload)
-		if addReq == nil {
-			addReq = env.MatchmakerAdd
-		}
+		addReq := env.MatchmakerAdd
 
 		queueName := addReq.QueueName
 		if queueName == "" {
@@ -1341,14 +1411,6 @@ func (gh *GatewayHandler) RouteMessage(s *Session, payload []byte) {
 			return
 		}
 
-		if gh.HookRegistry != nil {
-			if after, ok := gh.HookRegistry.GetAfter("matchmakeradd"); ok {
-				_ = after(context.Background(), &socketRuntimeLogger{gh.logger}, nil, nil, map[string]interface{}{
-					"ticket_id": t.ID,
-				}, addReq)
-			}
-		}
-
 		res := map[string]interface{}{
 			"cid": env.Cid,
 			"matchmaker_ticket": map[string]interface{}{
@@ -1366,25 +1428,7 @@ func (gh *GatewayHandler) RouteMessage(s *Session, payload []byte) {
 			return
 		}
 
-		payload := interface{}(env.MatchmakerRemove)
-		if gh.HookRegistry != nil {
-			if before, ok := gh.HookRegistry.GetBefore("matchmakerremove"); ok {
-				out, err := before(context.Background(), &socketRuntimeLogger{gh.logger}, nil, nil, payload)
-				if err != nil {
-					res := map[string]interface{}{"cid": env.Cid, "error": err.Error()}
-					resBytes, _ := json.Marshal(res)
-					s.Send <- resBytes
-					return
-				}
-				if out != nil {
-					payload = out
-				}
-			}
-		}
-		remReq, _ := payload.(*MatchmakerRemovePayload)
-		if remReq == nil {
-			remReq = env.MatchmakerRemove
-		}
+		remReq := env.MatchmakerRemove
 
 		err := gh.Matchmaker.Cancel(context.Background(), remReq.TicketID)
 		if err != nil {
@@ -1396,14 +1440,6 @@ func (gh *GatewayHandler) RouteMessage(s *Session, payload []byte) {
 			resBytes, _ := json.Marshal(res)
 			s.Send <- resBytes
 			return
-		}
-
-		if gh.HookRegistry != nil {
-			if after, ok := gh.HookRegistry.GetAfter("matchmakerremove"); ok {
-				_ = after(context.Background(), &socketRuntimeLogger{gh.logger}, nil, nil, map[string]interface{}{
-					"ticket_id": remReq.TicketID,
-				}, remReq)
-			}
 		}
 
 		res := map[string]interface{}{
