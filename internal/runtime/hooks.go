@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 )
@@ -120,6 +121,12 @@ type RuntimeModule interface {
 
 	// Match operations
 	MatchCreate(ctx context.Context, module string, params map[string]interface{}) (string, error)
+	MatchList(ctx context.Context, limit int, authoritative bool, label string, minSize, maxSize int) ([]*MatchInfo, error)
+	MatchGet(ctx context.Context, matchID string) (*MatchInfo, error)
+	MatchSignal(ctx context.Context, matchID, data string) (string, error)
+
+	// RPC
+	RpcCall(ctx context.Context, id, payload string) (string, error)
 }
 
 type StorageRead struct {
@@ -143,6 +150,16 @@ type StorageDelete struct {
 	Key        string `json:"key"`
 	UserID     string `json:"user_id"`
 	Version    string `json:"version"`
+}
+
+// MatchInfo is metadata for an active match (not full opaque state).
+type MatchInfo struct {
+	MatchID       string `json:"match_id"`
+	Authoritative bool   `json:"authoritative"`
+	Label         string `json:"label"`
+	Size          int    `json:"size"`
+	MaxSize       int    `json:"max_size"`
+	HandlerName   string `json:"handler_name,omitempty"`
 }
 
 // WalletUpdateParams is a batch wallet mutation for runtime WalletsUpdate.
@@ -601,14 +618,14 @@ func (hr *HookRegistry) GetAfter(name string) (AfterHook, bool) {
 func (hr *HookRegistry) RegisterRPC(rpcName string, handler RPCHandler) {
 	hr.mu.Lock()
 	defer hr.mu.Unlock()
-	hr.rpcHooks[rpcName] = handler
+	hr.rpcHooks[strings.ToLower(rpcName)] = handler
 }
 
 // GetRPC retrieves an RPC handler.
 func (hr *HookRegistry) GetRPC(rpcName string) (RPCHandler, bool) {
 	hr.mu.RLock()
 	defer hr.mu.RUnlock()
-	handler, ok := hr.rpcHooks[rpcName]
+	handler, ok := hr.rpcHooks[strings.ToLower(rpcName)]
 	return handler, ok
 }
 
@@ -690,6 +707,7 @@ func (hr *HookRegistry) GetAfterHook(name string) (AfterHook, string, string, bo
 func (hr *HookRegistry) GetRPCHook(name string) (RPCHandler, string, string, bool) {
 	hr.mu.RLock()
 	defer hr.mu.RUnlock()
+	name = strings.ToLower(name)
 
 	if hook, ok := hr.rpcHooks[name]; ok {
 		return hook, "go", "", true
@@ -718,7 +736,7 @@ func (hr *HookRegistry) RegisterLuaAfter(name, fnName string) {
 func (hr *HookRegistry) RegisterLuaRPC(name, fnName string) {
 	hr.mu.Lock()
 	defer hr.mu.Unlock()
-	hr.luaRpcHooks[name] = fnName
+	hr.luaRpcHooks[strings.ToLower(name)] = fnName
 }
 
 func (hr *HookRegistry) RegisterJSBefore(name, fnName string) {
@@ -736,7 +754,7 @@ func (hr *HookRegistry) RegisterJSAfter(name, fnName string) {
 func (hr *HookRegistry) RegisterJSRPC(name, fnName string) {
 	hr.mu.Lock()
 	defer hr.mu.Unlock()
-	hr.jsRpcHooks[name] = fnName
+	hr.jsRpcHooks[strings.ToLower(name)] = fnName
 }
 
 func (hr *HookRegistry) RegisterMatchmakerMatched(fn MatchmakerMatchedHandler) {

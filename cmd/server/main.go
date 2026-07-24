@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"flag"
 	"log"
 	"os"
@@ -11,19 +12,38 @@ import (
 
 	"ultimate-game-server/internal/api"
 	"ultimate-game-server/internal/database"
+	"ultimate-game-server/internal/runtime"
 
+	"github.com/dop251/goja"
+	"github.com/jackc/pgx/v5/stdlib"
+	"github.com/yuin/gopher-lua"
 	"go.uber.org/zap"
 )
 
+type zapRuntimeLogger struct{ z *zap.Logger }
+
+func (l *zapRuntimeLogger) Debug(format string, args ...interface{}) {
+	l.z.Sugar().Debugf(format, args...)
+}
+func (l *zapRuntimeLogger) Info(format string, args ...interface{}) {
+	l.z.Sugar().Infof(format, args...)
+}
+func (l *zapRuntimeLogger) Warn(format string, args ...interface{}) {
+	l.z.Sugar().Warnf(format, args...)
+}
+func (l *zapRuntimeLogger) Error(format string, args ...interface{}) {
+	l.z.Sugar().Errorf(format, args...)
+}
+
 func main() {
-	// Parse CLI Flags
 	httpAddr := flag.String("http_addr", "0.0.0.0:7350", "HTTP server address")
 	grpcAddr := flag.String("grpc_addr", "0.0.0.0:7349", "gRPC server address")
 	dsn := flag.String("dsn", "", "Database DSN (overrides environment variable)")
 	jwtSecret := flag.String("jwt_secret", "super_secret_signing_key_at_least_32_bytes_long_1234567", "JWT secret key")
+	runtimePath := flag.String("runtime_path", "data/modules", "Go plugins and Lua/JS modules directory")
+	rpcHTTPKey := flag.String("rpc_http_key", "", "RPC server-to-server HTTP key (env UGE_RPC_HTTP_KEY)")
 	flag.Parse()
 
-	// Initialize Logger
 	logger, err := zap.NewDevelopment()
 	if err != nil {
 		log.Fatalf("failed to initialize logger: %v", err)
@@ -32,7 +52,6 @@ func main() {
 
 	logger.Info("Starting Ultimate Game Engine server bootstrap...")
 
-	// 1. Resolve DB DSN (environment variable takes priority if dsn flag is default/empty)
 	dbDsn := *dsn
 	if dbDsn == "" {
 		dbDsn = os.Getenv("DATABASE_URL")
@@ -44,7 +63,6 @@ func main() {
 	dbCfg := database.DefaultConfig()
 	dbCfg.DSN = dbDsn
 
-	// 2. Connect to Database with backoff
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	dbPool, err := database.ConnectWithBackoff(ctx, logger, dbCfg)
 	cancel()
@@ -55,7 +73,6 @@ func main() {
 
 	logger.Info("Database connection established successfully.")
 
-	// 3. Run Database Migrations
 	ctx = context.Background()
 	err = database.RunMigrations(ctx, logger, dbPool)
 	if err != nil {
@@ -63,7 +80,15 @@ func main() {
 	}
 	logger.Info("Database migrations completed successfully.")
 
-	// 4. Initialize API Server
+	rpcKey := *rpcHTTPKey
+	if rpcKey == "" {
+		rpcKey = os.Getenv("UGE_RPC_HTTP_KEY")
+	}
+	rtPath := *runtimePath
+	if v := os.Getenv("UGE_RUNTIME_PATH"); v != "" {
+		rtPath = v
+	}
+
 	serverCfg := api.Config{
 		HTTPAddr:        *httpAddr,
 		GRPCAddr:        *grpcAddr,
@@ -71,6 +96,8 @@ func main() {
 		JWTExpiry:       24 * time.Hour,
 		RateLimitMax:    100,
 		RateLimitRefill: 10,
+		RPCHTTPKey:      rpcKey,
+		RuntimePath:     rtPath,
 	}
 
 	server, err := api.NewServer(logger, serverCfg, dbPool)
@@ -78,7 +105,25 @@ func main() {
 		logger.Fatal("Failed to initialize server instance", zap.Error(err))
 	}
 
-	// 5. Start Server
+	// Runtime: Go plugins + Lua/JS VMs
+	rtLogger := &zapRuntimeLogger{z: logger}
+	var sqlDB *sql.DB
+	if dbPool != nil {
+		sqlDB = stdlib.OpenDBFromPool(dbPool)
+	}
+	nk := runtime.NewGoRuntimeModule(dbPool, rtLogger)
+	rm := runtime.NewGoRuntimeManager(rtLogger, sqlDB, nk)
+	if err := rm.LoadPlugins(ctx, rtPath); err != nil {
+		logger.Warn("LoadPlugins completed with errors", zap.Error(err))
+	}
+	server.SetRuntimeManager(rm)
+
+	luaVM := lua.NewState()
+	jsVM := goja.New()
+	runtime.MapLuaNK(luaVM, nk, rm.Registry())
+	runtime.MapJSNK(jsVM, nk, 5*time.Second, rm.Registry())
+	server.SetVMs(luaVM, jsVM)
+
 	go func() {
 		logger.Info("Booting API server instances...", zap.String("http", *httpAddr), zap.String("grpc", *grpcAddr))
 		if err := server.Start(ctx); err != nil {
@@ -86,7 +131,6 @@ func main() {
 		}
 	}()
 
-	// 6. Graceful Shutdown Setup
 	shutdownChan := make(chan os.Signal, 1)
 	signal.Notify(shutdownChan, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
 
@@ -96,6 +140,7 @@ func main() {
 	teardownCtx, teardownCancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer teardownCancel()
 
+	luaVM.Close()
 	if err := server.Stop(teardownCtx); err != nil {
 		logger.Error("Failed to shutdown server cleanly", zap.Error(err))
 	} else {

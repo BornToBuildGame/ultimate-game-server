@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/yuin/gopher-lua"
 )
@@ -814,6 +815,67 @@ func MapLuaNK(L *lua.LState, nk RuntimeModule, registry ...*HookRegistry) {
 		L.Push(lua.LString(matchID))
 		return 1
 	}))
+
+	L.SetField(nkTable, "match_list", L.NewFunction(func(L *lua.LState) int {
+		limit := L.OptInt(1, 100)
+		authoritative := L.OptBool(2, false)
+		label := L.OptString(3, "")
+		minSize := L.OptInt(4, 0)
+		maxSize := L.OptInt(5, 0)
+		list, err := nk.MatchList(L.Context(), limit, authoritative, label, minSize, maxSize)
+		if err != nil {
+			L.RaiseError("match_list failed: %v", err)
+			return 0
+		}
+		L.Push(ToLuaValue(L, list))
+		return 1
+	}))
+	L.SetField(nkTable, "match_get", L.NewFunction(func(L *lua.LState) int {
+		id := L.CheckString(1)
+		info, err := nk.MatchGet(L.Context(), id)
+		if err != nil {
+			L.Push(lua.LNil)
+			return 1
+		}
+		L.Push(ToLuaValue(L, info))
+		return 1
+	}))
+	L.SetField(nkTable, "match_signal", L.NewFunction(func(L *lua.LState) int {
+		id := L.CheckString(1)
+		data := L.CheckString(2)
+		res, err := nk.MatchSignal(L.Context(), id, data)
+		if err != nil {
+			L.RaiseError("match_signal failed: %v", err)
+			return 0
+		}
+		L.Push(lua.LString(res))
+		return 1
+	}))
+
+	L.SetField(nkTable, "rpc", L.NewFunction(func(L *lua.LState) int {
+		id := L.CheckString(1)
+		payload := L.OptString(2, "")
+		res, err := nk.RpcCall(L.Context(), id, payload)
+		if err != nil {
+			L.RaiseError("rpc failed: %v", err)
+			return 0
+		}
+		L.Push(lua.LString(res))
+		return 1
+	}))
+	L.SetField(nkTable, "rpc_call", L.GetField(nkTable, "rpc"))
+
+	if len(registry) > 0 && registry[0] != nil {
+		reg := registry[0]
+		L.SetField(nkTable, "register_rpc", L.NewFunction(func(L *lua.LState) int {
+			fn := L.CheckFunction(1)
+			id := strings.ToLower(L.CheckString(2))
+			globalName := "__rpc_" + id
+			L.SetGlobal(globalName, fn)
+			reg.RegisterLuaRPC(id, globalName)
+			return 0
+		}))
+	}
 
 	// 8. Leaderboard Create
 	L.SetField(nkTable, "leaderboard_create", L.NewFunction(func(L *lua.LState) int {

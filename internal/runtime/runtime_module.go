@@ -21,6 +21,9 @@ import (
 
 type MatchRegistry interface {
 	CreateAndRegisterMatch(ctx context.Context, matchID string, module string, params map[string]interface{}) error
+	ListMatches(ctx context.Context, limit int, authoritative bool, label string, minSize, maxSize int) ([]*MatchInfo, error)
+	GetMatch(ctx context.Context, matchID string) (*MatchInfo, error)
+	MatchSignal(ctx context.Context, matchID, data string) (string, error)
 }
 
 // PartyLister lists discoverable parties for runtime party_list.
@@ -29,10 +32,11 @@ type PartyLister interface {
 }
 
 type GoRuntimeModule struct {
-	dbPool       *pgxpool.Pool
-	logger       Logger
-	registry     MatchRegistry
-	partyLister  PartyLister
+	dbPool        *pgxpool.Pool
+	logger        Logger
+	registry      MatchRegistry
+	partyLister   PartyLister
+	rpcDispatcher RPCDispatcherFunc
 }
 
 func NewGoRuntimeModule(dbPool *pgxpool.Pool, logger Logger) *GoRuntimeModule {
@@ -48,6 +52,10 @@ func (m *GoRuntimeModule) SetMatchRegistry(reg MatchRegistry) {
 
 func (m *GoRuntimeModule) SetPartyLister(l PartyLister) {
 	m.partyLister = l
+}
+
+func (m *GoRuntimeModule) SetRPCDispatcher(fn RPCDispatcherFunc) {
+	m.rpcDispatcher = fn
 }
 
 func (m *GoRuntimeModule) StorageRead(ctx context.Context, reads []*StorageRead) ([]*StorageObject, error) {
@@ -521,6 +529,27 @@ func (m *GoRuntimeModule) MatchCreate(ctx context.Context, module string, params
 		}
 	}
 	return matchID, nil
+}
+
+func (m *GoRuntimeModule) MatchList(ctx context.Context, limit int, authoritative bool, label string, minSize, maxSize int) ([]*MatchInfo, error) {
+	if m.registry == nil {
+		return nil, nil
+	}
+	return m.registry.ListMatches(ctx, limit, authoritative, label, minSize, maxSize)
+}
+
+func (m *GoRuntimeModule) MatchGet(ctx context.Context, matchID string) (*MatchInfo, error) {
+	if m.registry == nil {
+		return nil, fmt.Errorf("match not found")
+	}
+	return m.registry.GetMatch(ctx, matchID)
+}
+
+func (m *GoRuntimeModule) MatchSignal(ctx context.Context, matchID, data string) (string, error) {
+	if m.registry == nil {
+		return "", fmt.Errorf("match registry not configured")
+	}
+	return m.registry.MatchSignal(ctx, matchID, data)
 }
 
 func (m *GoRuntimeModule) LeaderboardCreate(ctx context.Context, id string, authoritative bool, sortOrder int, operator int, resetSchedule string, metadata map[string]interface{}, enableRanks bool) error {

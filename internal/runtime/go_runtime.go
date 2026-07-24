@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"plugin"
+	"strings"
 	"reflect"
 	"runtime/debug"
 	"sync"
@@ -283,7 +284,7 @@ func (i *goInitializer) RegisterRpc(id string, fn RPCHandler) error {
 	if id == "" {
 		return fmt.Errorf("RPC id must not be empty")
 	}
-	i.registry.RegisterRPC(id, fn)
+	i.registry.RegisterRPC(strings.ToLower(id), fn)
 	return nil
 }
 

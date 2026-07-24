@@ -155,6 +155,19 @@ func (m *mockRuntimeModule) SubscriptionGetProductID(ctx context.Context, userID
 	return &ValidatedSubscriptionView{UserID: userID, ProductID: productID}, nil
 }
 
+func (m *mockRuntimeModule) MatchList(ctx context.Context, limit int, authoritative bool, label string, minSize, maxSize int) ([]*MatchInfo, error) {
+	return nil, nil
+}
+func (m *mockRuntimeModule) MatchGet(ctx context.Context, matchID string) (*MatchInfo, error) {
+	return &MatchInfo{MatchID: matchID}, nil
+}
+func (m *mockRuntimeModule) MatchSignal(ctx context.Context, matchID, data string) (string, error) {
+	return "ok", nil
+}
+func (m *mockRuntimeModule) RpcCall(ctx context.Context, id, payload string) (string, error) {
+	return payload, nil
+}
+
 func (m *mockRuntimeModule) AccountGetId(ctx context.Context, userID string) (*Account, error) {
 	return &Account{ID: userID, Username: "test_user"}, nil
 }

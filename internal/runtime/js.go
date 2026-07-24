@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/dop251/goja"
@@ -738,6 +739,73 @@ func MapJSNK(vm *goja.Runtime, nk RuntimeModule, timeout time.Duration, registry
 		}
 		return vm.ToValue(matchID)
 	})
+	_ = nkObj.Set("matchCreate", nkObj.Get("match_create"))
+
+	_ = nkObj.Set("match_list", func(call goja.FunctionCall) goja.Value {
+		limit := int(call.Argument(0).ToInteger())
+		if limit == 0 {
+			limit = 100
+		}
+		authoritative := call.Argument(1).ToBoolean()
+		label := ""
+		if !goja.IsUndefined(call.Argument(2)) {
+			label = call.Argument(2).String()
+		}
+		minSize := int(call.Argument(3).ToInteger())
+		maxSize := int(call.Argument(4).ToInteger())
+		list, err := nk.MatchList(context.Background(), limit, authoritative, label, minSize, maxSize)
+		if err != nil {
+			panic(vm.NewGoError(err))
+		}
+		return vm.ToValue(list)
+	})
+	_ = nkObj.Set("matchList", nkObj.Get("match_list"))
+	_ = nkObj.Set("match_get", func(call goja.FunctionCall) goja.Value {
+		info, err := nk.MatchGet(context.Background(), call.Argument(0).String())
+		if err != nil {
+			return goja.Null()
+		}
+		return vm.ToValue(info)
+	})
+	_ = nkObj.Set("matchGet", nkObj.Get("match_get"))
+	_ = nkObj.Set("match_signal", func(call goja.FunctionCall) goja.Value {
+		res, err := nk.MatchSignal(context.Background(), call.Argument(0).String(), call.Argument(1).String())
+		if err != nil {
+			panic(vm.NewGoError(err))
+		}
+		return vm.ToValue(res)
+	})
+	_ = nkObj.Set("matchSignal", nkObj.Get("match_signal"))
+
+	_ = nkObj.Set("rpc", func(call goja.FunctionCall) goja.Value {
+		payload := ""
+		if !goja.IsUndefined(call.Argument(1)) {
+			payload = call.Argument(1).String()
+		}
+		res, err := nk.RpcCall(context.Background(), call.Argument(0).String(), payload)
+		if err != nil {
+			panic(vm.NewGoError(err))
+		}
+		return vm.ToValue(res)
+	})
+	_ = nkObj.Set("rpc_call", nkObj.Get("rpc"))
+	_ = nkObj.Set("rpcCall", nkObj.Get("rpc"))
+
+	if len(registry) > 0 && registry[0] != nil {
+		reg := registry[0]
+		_ = nkObj.Set("registerRpc", func(call goja.FunctionCall) goja.Value {
+			id := strings.ToLower(call.Argument(0).String())
+			fn, ok := goja.AssertFunction(call.Argument(1))
+			if !ok {
+				panic(vm.NewGoError(fmt.Errorf("registerRpc requires a function")))
+			}
+			globalName := "__rpc_" + id
+			_ = vm.Set(globalName, fn)
+			reg.RegisterJSRPC(id, globalName)
+			return goja.Undefined()
+		})
+		_ = nkObj.Set("register_rpc", nkObj.Get("registerRpc"))
+	}
 
 	// 8. Leaderboard Create
 	_ = nkObj.Set("leaderboard_create", func(call goja.FunctionCall) goja.Value {

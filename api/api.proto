@@ -898,4 +898,16 @@ message GetSubscriptionRequest {
   string product_id = 1;
 }
 
+// --- RPC Service ---
+
+service RpcService {
+  rpc RpcFunc(Rpc) returns (Rpc);
+}
+
+message Rpc {
+  string id = 1;
+  string payload = 2;
+  string http_key = 3;
+}
+
 

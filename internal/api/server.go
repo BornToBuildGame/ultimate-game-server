@@ -37,6 +37,7 @@ import (
 	"github.com/yuin/gopher-lua"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 )
 
 // Config defines the configuration options for the API server.
@@ -47,6 +48,10 @@ type Config struct {
 	JWTExpiry       time.Duration `json:"jwt_expiry" yaml:"jwt_expiry"`
 	RateLimitMax    float64       `json:"rate_limit_max" yaml:"rate_limit_max"`
 	RateLimitRefill float64       `json:"rate_limit_refill" yaml:"rate_limit_refill"`
+	RPCHTTPKey      string        `json:"rpc_http_key" yaml:"rpc_http_key"`
+	RPCTimeoutMs    int           `json:"rpc_execution_timeout_ms" yaml:"rpc_execution_timeout_ms"`
+	RPCMaxPayload   int           `json:"rpc_max_payload_size_bytes" yaml:"rpc_max_payload_size_bytes"`
+	RuntimePath     string        `json:"runtime_path" yaml:"runtime_path"`
 }
 
 // Server handles HTTP and gRPC network interfaces.
@@ -81,6 +86,8 @@ type Server struct {
 	notificationServer *NotificationServer
 	economyServer      *EconomyServer
 	iapServer          *IAPServer
+	rpcServer          *RpcServer
+	rpcCfg             runtime.RPCConfig
 }
 
 // SetRuntimeManager configures the runtime manager for hook interceptors.
@@ -111,6 +118,22 @@ func (s *Server) SetRuntimeManager(rm *runtime.GoRuntimeManager) {
 		if s.iapServer != nil {
 			s.iapServer.SetHooks(rm.Registry())
 		}
+		if s.rpcServer != nil {
+			s.rpcServer.SetRuntime(rm)
+		}
+		if grm, ok := rm.NK().(*runtime.GoRuntimeModule); ok {
+			grm.SetRPCDispatcher(func(ctx context.Context, id, payload string, opts runtime.RPCDispatchOpts) (string, codes.Code, error) {
+				return rm.DispatchRPC(ctx, id, payload, opts, s.LuaVM, s.JSVM, s.rpcCfg)
+			})
+		}
+		if s.SocketGateway != nil {
+			s.SocketGateway.SetRPCInvoker(func(ctx context.Context, userID, username, id, payload string) (string, int, error) {
+				res, code, err := rm.DispatchRPC(ctx, id, payload, runtime.RPCDispatchOpts{
+					UserID: userID, Username: username, ExecutionMode: "websocket",
+				}, s.LuaVM, s.JSVM, s.rpcCfg)
+				return res, int(code), err
+			})
+		}
 		if s.TournamentScheduler != nil {
 			s.wireSchedulerHooks()
 		}
@@ -121,6 +144,9 @@ func (s *Server) SetRuntimeManager(rm *runtime.GoRuntimeManager) {
 func (s *Server) SetVMs(luaVM *lua.LState, jsVM *goja.Runtime) {
 	s.LuaVM = luaVM
 	s.JSVM = jsVM
+	if s.rpcServer != nil {
+		s.rpcServer.SetVMs(luaVM, jsVM)
+	}
 }
 
 // NewServer creates a new API Server instance.
@@ -135,6 +161,19 @@ func NewServer(logger *zap.Logger, cfg Config, dbPool *pgxpool.Pool) (*Server, e
 	}
 	if cfg.RateLimitRefill <= 0 {
 		cfg.RateLimitRefill = 10
+	}
+	rpcCfg := runtime.DefaultRPCConfig()
+	if cfg.RPCHTTPKey != "" {
+		rpcCfg.HTTPKey = cfg.RPCHTTPKey
+	}
+	if cfg.RPCTimeoutMs > 0 {
+		rpcCfg.ExecutionTimeoutMs = cfg.RPCTimeoutMs
+	}
+	if cfg.RPCMaxPayload > 0 {
+		rpcCfg.MaxPayloadBytes = cfg.RPCMaxPayload
+	}
+	if v := os.Getenv("UGE_RPC_HTTP_KEY"); v != "" {
+		rpcCfg.HTTPKey = v
 	}
 
 	matchRouter := match.NewRouter()
@@ -222,6 +261,7 @@ func NewServer(logger *zap.Logger, cfg Config, dbPool *pgxpool.Pool) (*Server, e
 		MatchRouter:     matchRouter,
 		presenceTracker: presenceTracker,
 		rdb:             rdb,
+		rpcCfg:          rpcCfg,
 	}
 
 	// Matchmaker callbacks (notifying matched players over WebSockets)
@@ -424,6 +464,26 @@ func (s *Server) Start(ctx context.Context) error {
 	apipb.RegisterNotificationServiceServer(s.gRPCServer, s.notificationServer)
 	apipb.RegisterEconomyServiceServer(s.gRPCServer, s.economyServer)
 	apipb.RegisterIAPServiceServer(s.gRPCServer, s.iapServer)
+	s.rpcServer = NewRpcServer(s.dbPool, s.tokenMgr, s.RuntimeManager, s.rpcCfg)
+	s.rpcServer.SetVMs(s.LuaVM, s.JSVM)
+	apipb.RegisterRpcServiceServer(s.gRPCServer, s.rpcServer)
+	if s.RuntimeManager != nil {
+		if grm, ok := s.RuntimeManager.NK().(*runtime.GoRuntimeModule); ok {
+			rm := s.RuntimeManager
+			grm.SetRPCDispatcher(func(ctx context.Context, id, payload string, opts runtime.RPCDispatchOpts) (string, codes.Code, error) {
+				return rm.DispatchRPC(ctx, id, payload, opts, s.LuaVM, s.JSVM, s.rpcCfg)
+			})
+		}
+		if s.SocketGateway != nil {
+			rm := s.RuntimeManager
+			s.SocketGateway.SetRPCInvoker(func(ctx context.Context, userID, username, id, payload string) (string, int, error) {
+				res, code, err := rm.DispatchRPC(ctx, id, payload, runtime.RPCDispatchOpts{
+					UserID: userID, Username: username, ExecutionMode: "websocket",
+				}, s.LuaVM, s.JSVM, s.rpcCfg)
+				return res, int(code), err
+			})
+		}
+	}
 	apipb.RegisterAuthenticationServiceServer(s.gRPCServer, NewAuthServer(s))
 
 	// Start Matchmaker Tick Loop (Ticks every 1 second)
@@ -621,6 +681,8 @@ func (s *Server) registerRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /v2/channel/{channel_id}", s.handleListChannelMessages)
 	mux.HandleFunc("GET /v2/notification", s.handleListNotifications)
 	mux.HandleFunc("DELETE /v2/notification", s.handleDeleteNotifications)
+	mux.HandleFunc("GET /v2/rpc/{id}", s.handleRPC)
+	mux.HandleFunc("POST /v2/rpc/{id}", s.handleRPC)
 	mux.HandleFunc("GET /v2/wallet", s.handleGetWallet)
 	mux.HandleFunc("GET /v2/wallet/ledger", s.handleListWalletLedger)
 	mux.HandleFunc("POST /v2/iap/purchase/apple", s.handleValidatePurchaseApple)

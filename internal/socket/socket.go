@@ -304,6 +304,14 @@ type GatewayHandler struct {
 	rdb             *redis.Client
 	nodeID          string
 	relayCancel     context.CancelFunc
+	rpcInvoker      func(ctx context.Context, userID, username, id, payload string) (result string, code int, err error)
+}
+
+// SetRPCInvoker configures WebSocket custom RPC dispatch.
+func (gh *GatewayHandler) SetRPCInvoker(fn func(ctx context.Context, userID, username, id, payload string) (string, int, error)) {
+	gh.mu.Lock()
+	defer gh.mu.Unlock()
+	gh.rpcInvoker = fn
 }
 
 // SetMatchmaker configures the Matchmaker instance for ticket routing.
@@ -740,6 +748,12 @@ type Envelope struct {
 	ChannelMessageSend     *ChannelMessageSendPayload     `json:"channel_message_send,omitempty"`
 	ChannelMessageUpdate   *ChannelMessageUpdatePayload   `json:"channel_message_update,omitempty"`
 	ChannelMessageRemove   *ChannelMessageRemovePayload   `json:"channel_message_remove,omitempty"`
+	Rpc                    *RpcPayload                    `json:"rpc,omitempty"`
+}
+
+type RpcPayload struct {
+	ID      string `json:"id"`
+	Payload string `json:"payload"`
 }
 
 type MatchCreatePayload struct{}
@@ -895,6 +909,26 @@ func (gh *GatewayHandler) RouteMessage(s *Session, payload []byte) {
 	var env Envelope
 	if err := json.Unmarshal(payload, &env); err != nil {
 		gh.logger.Warn("Failed to unmarshal websocket envelope", zap.Error(err))
+		return
+	}
+
+	if env.Rpc != nil {
+		gh.mu.RLock()
+		invoker := gh.rpcInvoker
+		gh.mu.RUnlock()
+		res := map[string]interface{}{"cid": env.Cid}
+		if invoker == nil {
+			res["error"] = map[string]interface{}{"message": "RPC not available", "code": 14}
+		} else {
+			result, code, err := invoker(context.Background(), s.UserID, s.Username, env.Rpc.ID, env.Rpc.Payload)
+			if err != nil {
+				res["error"] = map[string]interface{}{"message": err.Error(), "code": code}
+			} else {
+				res["rpc"] = map[string]interface{}{"id": env.Rpc.ID, "payload": result}
+			}
+		}
+		resBytes, _ := json.Marshal(res)
+		s.TrySend(resBytes)
 		return
 	}
 

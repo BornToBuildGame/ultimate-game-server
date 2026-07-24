@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 	"sync"
 
 	"ultimate-game-server/internal/runtime"
@@ -331,4 +332,113 @@ func (r *Router) GetLocalMatch(matchID string) (*ActiveMatch, []PresenceImpl, bo
 		Authoritative: true,
 	}
 	return match, presences, true
+}
+
+// ListMatches returns active match metadata (local or Redis registry).
+func (r *Router) ListMatches(ctx context.Context, limit int, authoritative bool, label string, minSize, maxSize int) ([]*runtime.MatchInfo, error) {
+	if limit <= 0 {
+		limit = 100
+	}
+	var out []*runtime.MatchInfo
+	if r.rdb != nil {
+		matchIDs, err := r.rdb.SMembers(ctx, "match:ids").Result()
+		if err != nil {
+			return nil, err
+		}
+		for _, matchID := range matchIDs {
+			meta, err := r.rdb.HGetAll(ctx, "match:metadata:"+matchID).Result()
+			if err != nil || len(meta) == 0 {
+				continue
+			}
+			authVal, _ := strconv.ParseBool(meta["authoritative"])
+			sizeVal, _ := strconv.Atoi(meta["size"])
+			maxSizeVal, _ := strconv.Atoi(meta["max_size"])
+			if authoritative && !authVal {
+				continue
+			}
+			if label != "" && !containsLabel(meta["label"], label) {
+				continue
+			}
+			if minSize > 0 && sizeVal < minSize {
+				continue
+			}
+			if maxSize > 0 && sizeVal > maxSize {
+				continue
+			}
+			out = append(out, &runtime.MatchInfo{
+				MatchID: matchID, Authoritative: authVal, Label: meta["label"],
+				Size: sizeVal, MaxSize: maxSizeVal, HandlerName: meta["handler"],
+			})
+			if len(out) >= limit {
+				break
+			}
+		}
+		return out, nil
+	}
+	for _, m := range r.GetLocalMatches() {
+		if authoritative && !m.Authoritative {
+			continue
+		}
+		labelBytes, _ := json.Marshal(m.Label)
+		labelStr := string(labelBytes)
+		if label != "" && !containsLabel(labelStr, label) {
+			continue
+		}
+		if minSize > 0 && m.PlayerCount < minSize {
+			continue
+		}
+		if maxSize > 0 && m.PlayerCount > maxSize {
+			continue
+		}
+		out = append(out, &runtime.MatchInfo{
+			MatchID: m.MatchID, Authoritative: m.Authoritative, Label: labelStr,
+			Size: m.PlayerCount, MaxSize: m.MaxSize,
+		})
+		if len(out) >= limit {
+			break
+		}
+	}
+	return out, nil
+}
+
+func containsLabel(haystack, needle string) bool {
+	return needle == "" || strings.Contains(haystack, needle)
+}
+
+// GetMatch returns metadata for one match.
+func (r *Router) GetMatch(ctx context.Context, matchID string) (*runtime.MatchInfo, error) {
+	if r.rdb != nil {
+		meta, err := r.rdb.HGetAll(ctx, "match:metadata:"+matchID).Result()
+		if err != nil || len(meta) == 0 {
+			if m, _, ok := r.GetLocalMatch(matchID); ok {
+				lb, _ := json.Marshal(m.Label)
+				return &runtime.MatchInfo{
+					MatchID: m.MatchID, Authoritative: m.Authoritative, Label: string(lb),
+					Size: m.PlayerCount, MaxSize: m.MaxSize,
+				}, nil
+			}
+			return nil, errors.New("match not found")
+		}
+		authVal, _ := strconv.ParseBool(meta["authoritative"])
+		sizeVal, _ := strconv.Atoi(meta["size"])
+		maxSizeVal, _ := strconv.Atoi(meta["max_size"])
+		return &runtime.MatchInfo{
+			MatchID: matchID, Authoritative: authVal, Label: meta["label"],
+			Size: sizeVal, MaxSize: maxSizeVal, HandlerName: meta["handler"],
+		}, nil
+	}
+	m, _, ok := r.GetLocalMatch(matchID)
+	if !ok {
+		return nil, errors.New("match not found")
+	}
+	lb, _ := json.Marshal(m.Label)
+	return &runtime.MatchInfo{
+		MatchID: m.MatchID, Authoritative: m.Authoritative, Label: string(lb),
+		Size: m.PlayerCount, MaxSize: m.MaxSize,
+	}, nil
+}
+
+// MatchSignal delivers a signal to a match loop.
+func (r *Router) MatchSignal(ctx context.Context, matchID, data string) (string, error) {
+	return r.ForwardSignal(ctx, matchID, data)
 }
