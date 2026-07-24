@@ -20,33 +20,38 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	AuthenticationService_AuthenticateEmail_FullMethodName      = "/ultimate.server.api.AuthenticationService/AuthenticateEmail"
-	AuthenticationService_AuthenticateDevice_FullMethodName     = "/ultimate.server.api.AuthenticationService/AuthenticateDevice"
-	AuthenticationService_AuthenticateApple_FullMethodName      = "/ultimate.server.api.AuthenticationService/AuthenticateApple"
-	AuthenticationService_AuthenticateGoogle_FullMethodName     = "/ultimate.server.api.AuthenticationService/AuthenticateGoogle"
-	AuthenticationService_AuthenticateFacebook_FullMethodName   = "/ultimate.server.api.AuthenticationService/AuthenticateFacebook"
-	AuthenticationService_AuthenticateSteam_FullMethodName      = "/ultimate.server.api.AuthenticationService/AuthenticateSteam"
-	AuthenticationService_AuthenticateGameCenter_FullMethodName = "/ultimate.server.api.AuthenticationService/AuthenticateGameCenter"
-	AuthenticationService_AuthenticateCustom_FullMethodName     = "/ultimate.server.api.AuthenticationService/AuthenticateCustom"
-	AuthenticationService_SessionRefresh_FullMethodName         = "/ultimate.server.api.AuthenticationService/SessionRefresh"
-	AuthenticationService_SessionLogout_FullMethodName          = "/ultimate.server.api.AuthenticationService/SessionLogout"
-	AuthenticationService_GetAccount_FullMethodName             = "/ultimate.server.api.AuthenticationService/GetAccount"
-	AuthenticationService_UpdateAccount_FullMethodName          = "/ultimate.server.api.AuthenticationService/UpdateAccount"
-	AuthenticationService_DeleteAccount_FullMethodName          = "/ultimate.server.api.AuthenticationService/DeleteAccount"
-	AuthenticationService_LinkEmail_FullMethodName              = "/ultimate.server.api.AuthenticationService/LinkEmail"
-	AuthenticationService_LinkDevice_FullMethodName             = "/ultimate.server.api.AuthenticationService/LinkDevice"
-	AuthenticationService_LinkApple_FullMethodName              = "/ultimate.server.api.AuthenticationService/LinkApple"
-	AuthenticationService_LinkGoogle_FullMethodName             = "/ultimate.server.api.AuthenticationService/LinkGoogle"
-	AuthenticationService_LinkFacebook_FullMethodName           = "/ultimate.server.api.AuthenticationService/LinkFacebook"
-	AuthenticationService_LinkSteam_FullMethodName              = "/ultimate.server.api.AuthenticationService/LinkSteam"
-	AuthenticationService_LinkCustom_FullMethodName             = "/ultimate.server.api.AuthenticationService/LinkCustom"
-	AuthenticationService_UnlinkEmail_FullMethodName            = "/ultimate.server.api.AuthenticationService/UnlinkEmail"
-	AuthenticationService_UnlinkDevice_FullMethodName           = "/ultimate.server.api.AuthenticationService/UnlinkDevice"
-	AuthenticationService_UnlinkApple_FullMethodName            = "/ultimate.server.api.AuthenticationService/UnlinkApple"
-	AuthenticationService_UnlinkGoogle_FullMethodName           = "/ultimate.server.api.AuthenticationService/UnlinkGoogle"
-	AuthenticationService_UnlinkFacebook_FullMethodName         = "/ultimate.server.api.AuthenticationService/UnlinkFacebook"
-	AuthenticationService_UnlinkSteam_FullMethodName            = "/ultimate.server.api.AuthenticationService/UnlinkSteam"
-	AuthenticationService_UnlinkCustom_FullMethodName           = "/ultimate.server.api.AuthenticationService/UnlinkCustom"
+	AuthenticationService_AuthenticateEmail_FullMethodName               = "/ultimate.server.api.AuthenticationService/AuthenticateEmail"
+	AuthenticationService_AuthenticateDevice_FullMethodName              = "/ultimate.server.api.AuthenticationService/AuthenticateDevice"
+	AuthenticationService_AuthenticateApple_FullMethodName               = "/ultimate.server.api.AuthenticationService/AuthenticateApple"
+	AuthenticationService_AuthenticateGoogle_FullMethodName              = "/ultimate.server.api.AuthenticationService/AuthenticateGoogle"
+	AuthenticationService_AuthenticateFacebook_FullMethodName            = "/ultimate.server.api.AuthenticationService/AuthenticateFacebook"
+	AuthenticationService_AuthenticateSteam_FullMethodName               = "/ultimate.server.api.AuthenticationService/AuthenticateSteam"
+	AuthenticationService_AuthenticateGameCenter_FullMethodName          = "/ultimate.server.api.AuthenticationService/AuthenticateGameCenter"
+	AuthenticationService_AuthenticateFacebookInstantGame_FullMethodName = "/ultimate.server.api.AuthenticationService/AuthenticateFacebookInstantGame"
+	AuthenticationService_AuthenticateCustom_FullMethodName              = "/ultimate.server.api.AuthenticationService/AuthenticateCustom"
+	AuthenticationService_SessionRefresh_FullMethodName                  = "/ultimate.server.api.AuthenticationService/SessionRefresh"
+	AuthenticationService_SessionLogout_FullMethodName                   = "/ultimate.server.api.AuthenticationService/SessionLogout"
+	AuthenticationService_GetAccount_FullMethodName                      = "/ultimate.server.api.AuthenticationService/GetAccount"
+	AuthenticationService_UpdateAccount_FullMethodName                   = "/ultimate.server.api.AuthenticationService/UpdateAccount"
+	AuthenticationService_DeleteAccount_FullMethodName                   = "/ultimate.server.api.AuthenticationService/DeleteAccount"
+	AuthenticationService_LinkEmail_FullMethodName                       = "/ultimate.server.api.AuthenticationService/LinkEmail"
+	AuthenticationService_LinkDevice_FullMethodName                      = "/ultimate.server.api.AuthenticationService/LinkDevice"
+	AuthenticationService_LinkApple_FullMethodName                       = "/ultimate.server.api.AuthenticationService/LinkApple"
+	AuthenticationService_LinkGoogle_FullMethodName                      = "/ultimate.server.api.AuthenticationService/LinkGoogle"
+	AuthenticationService_LinkFacebook_FullMethodName                    = "/ultimate.server.api.AuthenticationService/LinkFacebook"
+	AuthenticationService_LinkSteam_FullMethodName                       = "/ultimate.server.api.AuthenticationService/LinkSteam"
+	AuthenticationService_LinkCustom_FullMethodName                      = "/ultimate.server.api.AuthenticationService/LinkCustom"
+	AuthenticationService_LinkGameCenter_FullMethodName                  = "/ultimate.server.api.AuthenticationService/LinkGameCenter"
+	AuthenticationService_LinkFacebookInstantGame_FullMethodName         = "/ultimate.server.api.AuthenticationService/LinkFacebookInstantGame"
+	AuthenticationService_UnlinkEmail_FullMethodName                     = "/ultimate.server.api.AuthenticationService/UnlinkEmail"
+	AuthenticationService_UnlinkDevice_FullMethodName                    = "/ultimate.server.api.AuthenticationService/UnlinkDevice"
+	AuthenticationService_UnlinkApple_FullMethodName                     = "/ultimate.server.api.AuthenticationService/UnlinkApple"
+	AuthenticationService_UnlinkGoogle_FullMethodName                    = "/ultimate.server.api.AuthenticationService/UnlinkGoogle"
+	AuthenticationService_UnlinkFacebook_FullMethodName                  = "/ultimate.server.api.AuthenticationService/UnlinkFacebook"
+	AuthenticationService_UnlinkSteam_FullMethodName                     = "/ultimate.server.api.AuthenticationService/UnlinkSteam"
+	AuthenticationService_UnlinkCustom_FullMethodName                    = "/ultimate.server.api.AuthenticationService/UnlinkCustom"
+	AuthenticationService_UnlinkGameCenter_FullMethodName                = "/ultimate.server.api.AuthenticationService/UnlinkGameCenter"
+	AuthenticationService_UnlinkFacebookInstantGame_FullMethodName       = "/ultimate.server.api.AuthenticationService/UnlinkFacebookInstantGame"
 )
 
 // AuthenticationServiceClient is the client API for AuthenticationService service.
@@ -60,6 +65,7 @@ type AuthenticationServiceClient interface {
 	AuthenticateFacebook(ctx context.Context, in *AuthenticateFacebookRequest, opts ...grpc.CallOption) (*Session, error)
 	AuthenticateSteam(ctx context.Context, in *AuthenticateSteamRequest, opts ...grpc.CallOption) (*Session, error)
 	AuthenticateGameCenter(ctx context.Context, in *AuthenticateGameCenterRequest, opts ...grpc.CallOption) (*Session, error)
+	AuthenticateFacebookInstantGame(ctx context.Context, in *AuthenticateFacebookInstantGameRequest, opts ...grpc.CallOption) (*Session, error)
 	AuthenticateCustom(ctx context.Context, in *AuthenticateCustomRequest, opts ...grpc.CallOption) (*Session, error)
 	SessionRefresh(ctx context.Context, in *SessionRefreshRequest, opts ...grpc.CallOption) (*Session, error)
 	SessionLogout(ctx context.Context, in *SessionLogoutRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
@@ -73,6 +79,8 @@ type AuthenticationServiceClient interface {
 	LinkFacebook(ctx context.Context, in *AuthenticateFacebookRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	LinkSteam(ctx context.Context, in *AuthenticateSteamRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	LinkCustom(ctx context.Context, in *AuthenticateCustomRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	LinkGameCenter(ctx context.Context, in *AuthenticateGameCenterRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	LinkFacebookInstantGame(ctx context.Context, in *AuthenticateFacebookInstantGameRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	UnlinkEmail(ctx context.Context, in *UnlinkRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	UnlinkDevice(ctx context.Context, in *UnlinkRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	UnlinkApple(ctx context.Context, in *UnlinkRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
@@ -80,6 +88,8 @@ type AuthenticationServiceClient interface {
 	UnlinkFacebook(ctx context.Context, in *UnlinkRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	UnlinkSteam(ctx context.Context, in *UnlinkRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	UnlinkCustom(ctx context.Context, in *UnlinkRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	UnlinkGameCenter(ctx context.Context, in *UnlinkRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	UnlinkFacebookInstantGame(ctx context.Context, in *UnlinkRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
 
 type authenticationServiceClient struct {
@@ -154,6 +164,16 @@ func (c *authenticationServiceClient) AuthenticateGameCenter(ctx context.Context
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(Session)
 	err := c.cc.Invoke(ctx, AuthenticationService_AuthenticateGameCenter_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authenticationServiceClient) AuthenticateFacebookInstantGame(ctx context.Context, in *AuthenticateFacebookInstantGameRequest, opts ...grpc.CallOption) (*Session, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Session)
+	err := c.cc.Invoke(ctx, AuthenticationService_AuthenticateFacebookInstantGame_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -290,6 +310,26 @@ func (c *authenticationServiceClient) LinkCustom(ctx context.Context, in *Authen
 	return out, nil
 }
 
+func (c *authenticationServiceClient) LinkGameCenter(ctx context.Context, in *AuthenticateGameCenterRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, AuthenticationService_LinkGameCenter_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authenticationServiceClient) LinkFacebookInstantGame(ctx context.Context, in *AuthenticateFacebookInstantGameRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, AuthenticationService_LinkFacebookInstantGame_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *authenticationServiceClient) UnlinkEmail(ctx context.Context, in *UnlinkRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(emptypb.Empty)
@@ -360,6 +400,26 @@ func (c *authenticationServiceClient) UnlinkCustom(ctx context.Context, in *Unli
 	return out, nil
 }
 
+func (c *authenticationServiceClient) UnlinkGameCenter(ctx context.Context, in *UnlinkRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, AuthenticationService_UnlinkGameCenter_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authenticationServiceClient) UnlinkFacebookInstantGame(ctx context.Context, in *UnlinkRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, AuthenticationService_UnlinkFacebookInstantGame_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AuthenticationServiceServer is the server API for AuthenticationService service.
 // All implementations must embed UnimplementedAuthenticationServiceServer
 // for forward compatibility.
@@ -371,6 +431,7 @@ type AuthenticationServiceServer interface {
 	AuthenticateFacebook(context.Context, *AuthenticateFacebookRequest) (*Session, error)
 	AuthenticateSteam(context.Context, *AuthenticateSteamRequest) (*Session, error)
 	AuthenticateGameCenter(context.Context, *AuthenticateGameCenterRequest) (*Session, error)
+	AuthenticateFacebookInstantGame(context.Context, *AuthenticateFacebookInstantGameRequest) (*Session, error)
 	AuthenticateCustom(context.Context, *AuthenticateCustomRequest) (*Session, error)
 	SessionRefresh(context.Context, *SessionRefreshRequest) (*Session, error)
 	SessionLogout(context.Context, *SessionLogoutRequest) (*emptypb.Empty, error)
@@ -384,6 +445,8 @@ type AuthenticationServiceServer interface {
 	LinkFacebook(context.Context, *AuthenticateFacebookRequest) (*emptypb.Empty, error)
 	LinkSteam(context.Context, *AuthenticateSteamRequest) (*emptypb.Empty, error)
 	LinkCustom(context.Context, *AuthenticateCustomRequest) (*emptypb.Empty, error)
+	LinkGameCenter(context.Context, *AuthenticateGameCenterRequest) (*emptypb.Empty, error)
+	LinkFacebookInstantGame(context.Context, *AuthenticateFacebookInstantGameRequest) (*emptypb.Empty, error)
 	UnlinkEmail(context.Context, *UnlinkRequest) (*emptypb.Empty, error)
 	UnlinkDevice(context.Context, *UnlinkRequest) (*emptypb.Empty, error)
 	UnlinkApple(context.Context, *UnlinkRequest) (*emptypb.Empty, error)
@@ -391,6 +454,8 @@ type AuthenticationServiceServer interface {
 	UnlinkFacebook(context.Context, *UnlinkRequest) (*emptypb.Empty, error)
 	UnlinkSteam(context.Context, *UnlinkRequest) (*emptypb.Empty, error)
 	UnlinkCustom(context.Context, *UnlinkRequest) (*emptypb.Empty, error)
+	UnlinkGameCenter(context.Context, *UnlinkRequest) (*emptypb.Empty, error)
+	UnlinkFacebookInstantGame(context.Context, *UnlinkRequest) (*emptypb.Empty, error)
 	mustEmbedUnimplementedAuthenticationServiceServer()
 }
 
@@ -421,6 +486,9 @@ func (UnimplementedAuthenticationServiceServer) AuthenticateSteam(context.Contex
 }
 func (UnimplementedAuthenticationServiceServer) AuthenticateGameCenter(context.Context, *AuthenticateGameCenterRequest) (*Session, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method AuthenticateGameCenter not implemented")
+}
+func (UnimplementedAuthenticationServiceServer) AuthenticateFacebookInstantGame(context.Context, *AuthenticateFacebookInstantGameRequest) (*Session, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AuthenticateFacebookInstantGame not implemented")
 }
 func (UnimplementedAuthenticationServiceServer) AuthenticateCustom(context.Context, *AuthenticateCustomRequest) (*Session, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method AuthenticateCustom not implemented")
@@ -461,6 +529,12 @@ func (UnimplementedAuthenticationServiceServer) LinkSteam(context.Context, *Auth
 func (UnimplementedAuthenticationServiceServer) LinkCustom(context.Context, *AuthenticateCustomRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method LinkCustom not implemented")
 }
+func (UnimplementedAuthenticationServiceServer) LinkGameCenter(context.Context, *AuthenticateGameCenterRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method LinkGameCenter not implemented")
+}
+func (UnimplementedAuthenticationServiceServer) LinkFacebookInstantGame(context.Context, *AuthenticateFacebookInstantGameRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method LinkFacebookInstantGame not implemented")
+}
 func (UnimplementedAuthenticationServiceServer) UnlinkEmail(context.Context, *UnlinkRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UnlinkEmail not implemented")
 }
@@ -481,6 +555,12 @@ func (UnimplementedAuthenticationServiceServer) UnlinkSteam(context.Context, *Un
 }
 func (UnimplementedAuthenticationServiceServer) UnlinkCustom(context.Context, *UnlinkRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UnlinkCustom not implemented")
+}
+func (UnimplementedAuthenticationServiceServer) UnlinkGameCenter(context.Context, *UnlinkRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UnlinkGameCenter not implemented")
+}
+func (UnimplementedAuthenticationServiceServer) UnlinkFacebookInstantGame(context.Context, *UnlinkRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UnlinkFacebookInstantGame not implemented")
 }
 func (UnimplementedAuthenticationServiceServer) mustEmbedUnimplementedAuthenticationServiceServer() {}
 func (UnimplementedAuthenticationServiceServer) testEmbeddedByValue()                               {}
@@ -625,6 +705,24 @@ func _AuthenticationService_AuthenticateGameCenter_Handler(srv interface{}, ctx 
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(AuthenticationServiceServer).AuthenticateGameCenter(ctx, req.(*AuthenticateGameCenterRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthenticationService_AuthenticateFacebookInstantGame_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AuthenticateFacebookInstantGameRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthenticationServiceServer).AuthenticateFacebookInstantGame(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthenticationService_AuthenticateFacebookInstantGame_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthenticationServiceServer).AuthenticateFacebookInstantGame(ctx, req.(*AuthenticateFacebookInstantGameRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -863,6 +961,42 @@ func _AuthenticationService_LinkCustom_Handler(srv interface{}, ctx context.Cont
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AuthenticationService_LinkGameCenter_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AuthenticateGameCenterRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthenticationServiceServer).LinkGameCenter(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthenticationService_LinkGameCenter_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthenticationServiceServer).LinkGameCenter(ctx, req.(*AuthenticateGameCenterRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthenticationService_LinkFacebookInstantGame_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AuthenticateFacebookInstantGameRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthenticationServiceServer).LinkFacebookInstantGame(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthenticationService_LinkFacebookInstantGame_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthenticationServiceServer).LinkFacebookInstantGame(ctx, req.(*AuthenticateFacebookInstantGameRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _AuthenticationService_UnlinkEmail_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(UnlinkRequest)
 	if err := dec(in); err != nil {
@@ -989,6 +1123,42 @@ func _AuthenticationService_UnlinkCustom_Handler(srv interface{}, ctx context.Co
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AuthenticationService_UnlinkGameCenter_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UnlinkRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthenticationServiceServer).UnlinkGameCenter(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthenticationService_UnlinkGameCenter_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthenticationServiceServer).UnlinkGameCenter(ctx, req.(*UnlinkRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthenticationService_UnlinkFacebookInstantGame_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UnlinkRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthenticationServiceServer).UnlinkFacebookInstantGame(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthenticationService_UnlinkFacebookInstantGame_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthenticationServiceServer).UnlinkFacebookInstantGame(ctx, req.(*UnlinkRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AuthenticationService_ServiceDesc is the grpc.ServiceDesc for AuthenticationService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -1023,6 +1193,10 @@ var AuthenticationService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "AuthenticateGameCenter",
 			Handler:    _AuthenticationService_AuthenticateGameCenter_Handler,
+		},
+		{
+			MethodName: "AuthenticateFacebookInstantGame",
+			Handler:    _AuthenticationService_AuthenticateFacebookInstantGame_Handler,
 		},
 		{
 			MethodName: "AuthenticateCustom",
@@ -1077,6 +1251,14 @@ var AuthenticationService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _AuthenticationService_LinkCustom_Handler,
 		},
 		{
+			MethodName: "LinkGameCenter",
+			Handler:    _AuthenticationService_LinkGameCenter_Handler,
+		},
+		{
+			MethodName: "LinkFacebookInstantGame",
+			Handler:    _AuthenticationService_LinkFacebookInstantGame_Handler,
+		},
+		{
 			MethodName: "UnlinkEmail",
 			Handler:    _AuthenticationService_UnlinkEmail_Handler,
 		},
@@ -1103,6 +1285,14 @@ var AuthenticationService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "UnlinkCustom",
 			Handler:    _AuthenticationService_UnlinkCustom_Handler,
+		},
+		{
+			MethodName: "UnlinkGameCenter",
+			Handler:    _AuthenticationService_UnlinkGameCenter_Handler,
+		},
+		{
+			MethodName: "UnlinkFacebookInstantGame",
+			Handler:    _AuthenticationService_UnlinkFacebookInstantGame_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
@@ -1813,6 +2003,7 @@ const (
 	FriendsService_ListFriendsOfFriends_FullMethodName  = "/ultimate.server.api.FriendsService/ListFriendsOfFriends"
 	FriendsService_DeleteFriends_FullMethodName         = "/ultimate.server.api.FriendsService/DeleteFriends"
 	FriendsService_BlockFriends_FullMethodName          = "/ultimate.server.api.FriendsService/BlockFriends"
+	FriendsService_UnblockFriends_FullMethodName        = "/ultimate.server.api.FriendsService/UnblockFriends"
 	FriendsService_ImportFacebookFriends_FullMethodName = "/ultimate.server.api.FriendsService/ImportFacebookFriends"
 	FriendsService_ImportSteamFriends_FullMethodName    = "/ultimate.server.api.FriendsService/ImportSteamFriends"
 )
@@ -1826,6 +2017,7 @@ type FriendsServiceClient interface {
 	ListFriendsOfFriends(ctx context.Context, in *ListFriendsOfFriendsRequest, opts ...grpc.CallOption) (*FriendsOfFriendsList, error)
 	DeleteFriends(ctx context.Context, in *DeleteFriendsRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	BlockFriends(ctx context.Context, in *BlockFriendsRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	UnblockFriends(ctx context.Context, in *UnblockFriendsRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	ImportFacebookFriends(ctx context.Context, in *ImportFacebookFriendsRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	ImportSteamFriends(ctx context.Context, in *ImportSteamFriendsRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
@@ -1888,6 +2080,16 @@ func (c *friendsServiceClient) BlockFriends(ctx context.Context, in *BlockFriend
 	return out, nil
 }
 
+func (c *friendsServiceClient) UnblockFriends(ctx context.Context, in *UnblockFriendsRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, FriendsService_UnblockFriends_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *friendsServiceClient) ImportFacebookFriends(ctx context.Context, in *ImportFacebookFriendsRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(emptypb.Empty)
@@ -1917,6 +2119,7 @@ type FriendsServiceServer interface {
 	ListFriendsOfFriends(context.Context, *ListFriendsOfFriendsRequest) (*FriendsOfFriendsList, error)
 	DeleteFriends(context.Context, *DeleteFriendsRequest) (*emptypb.Empty, error)
 	BlockFriends(context.Context, *BlockFriendsRequest) (*emptypb.Empty, error)
+	UnblockFriends(context.Context, *UnblockFriendsRequest) (*emptypb.Empty, error)
 	ImportFacebookFriends(context.Context, *ImportFacebookFriendsRequest) (*emptypb.Empty, error)
 	ImportSteamFriends(context.Context, *ImportSteamFriendsRequest) (*emptypb.Empty, error)
 	mustEmbedUnimplementedFriendsServiceServer()
@@ -1943,6 +2146,9 @@ func (UnimplementedFriendsServiceServer) DeleteFriends(context.Context, *DeleteF
 }
 func (UnimplementedFriendsServiceServer) BlockFriends(context.Context, *BlockFriendsRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method BlockFriends not implemented")
+}
+func (UnimplementedFriendsServiceServer) UnblockFriends(context.Context, *UnblockFriendsRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UnblockFriends not implemented")
 }
 func (UnimplementedFriendsServiceServer) ImportFacebookFriends(context.Context, *ImportFacebookFriendsRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ImportFacebookFriends not implemented")
@@ -2061,6 +2267,24 @@ func _FriendsService_BlockFriends_Handler(srv interface{}, ctx context.Context, 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _FriendsService_UnblockFriends_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UnblockFriendsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FriendsServiceServer).UnblockFriends(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: FriendsService_UnblockFriends_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FriendsServiceServer).UnblockFriends(ctx, req.(*UnblockFriendsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _FriendsService_ImportFacebookFriends_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ImportFacebookFriendsRequest)
 	if err := dec(in); err != nil {
@@ -2123,6 +2347,10 @@ var FriendsService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "BlockFriends",
 			Handler:    _FriendsService_BlockFriends_Handler,
+		},
+		{
+			MethodName: "UnblockFriends",
+			Handler:    _FriendsService_UnblockFriends_Handler,
 		},
 		{
 			MethodName: "ImportFacebookFriends",
@@ -2700,6 +2928,7 @@ const (
 	MatchmakerService_RemoveMatchmaker_FullMethodName    = "/ultimate.server.api.MatchmakerService/RemoveMatchmaker"
 	MatchmakerService_GetMatchmakerTicket_FullMethodName = "/ultimate.server.api.MatchmakerService/GetMatchmakerTicket"
 	MatchmakerService_GetQueueStats_FullMethodName       = "/ultimate.server.api.MatchmakerService/GetQueueStats"
+	MatchmakerService_GetMatchmakerStats_FullMethodName  = "/ultimate.server.api.MatchmakerService/GetMatchmakerStats"
 )
 
 // MatchmakerServiceClient is the client API for MatchmakerService service.
@@ -2710,6 +2939,7 @@ type MatchmakerServiceClient interface {
 	RemoveMatchmaker(ctx context.Context, in *RemoveMatchmakerRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	GetMatchmakerTicket(ctx context.Context, in *GetMatchmakerTicketRequest, opts ...grpc.CallOption) (*MatchmakerTicket, error)
 	GetQueueStats(ctx context.Context, in *GetQueueStatsRequest, opts ...grpc.CallOption) (*QueueStats, error)
+	GetMatchmakerStats(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*MatchmakerStats, error)
 }
 
 type matchmakerServiceClient struct {
@@ -2760,6 +2990,16 @@ func (c *matchmakerServiceClient) GetQueueStats(ctx context.Context, in *GetQueu
 	return out, nil
 }
 
+func (c *matchmakerServiceClient) GetMatchmakerStats(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*MatchmakerStats, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(MatchmakerStats)
+	err := c.cc.Invoke(ctx, MatchmakerService_GetMatchmakerStats_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // MatchmakerServiceServer is the server API for MatchmakerService service.
 // All implementations must embed UnimplementedMatchmakerServiceServer
 // for forward compatibility.
@@ -2768,6 +3008,7 @@ type MatchmakerServiceServer interface {
 	RemoveMatchmaker(context.Context, *RemoveMatchmakerRequest) (*emptypb.Empty, error)
 	GetMatchmakerTicket(context.Context, *GetMatchmakerTicketRequest) (*MatchmakerTicket, error)
 	GetQueueStats(context.Context, *GetQueueStatsRequest) (*QueueStats, error)
+	GetMatchmakerStats(context.Context, *emptypb.Empty) (*MatchmakerStats, error)
 	mustEmbedUnimplementedMatchmakerServiceServer()
 }
 
@@ -2789,6 +3030,9 @@ func (UnimplementedMatchmakerServiceServer) GetMatchmakerTicket(context.Context,
 }
 func (UnimplementedMatchmakerServiceServer) GetQueueStats(context.Context, *GetQueueStatsRequest) (*QueueStats, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetQueueStats not implemented")
+}
+func (UnimplementedMatchmakerServiceServer) GetMatchmakerStats(context.Context, *emptypb.Empty) (*MatchmakerStats, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetMatchmakerStats not implemented")
 }
 func (UnimplementedMatchmakerServiceServer) mustEmbedUnimplementedMatchmakerServiceServer() {}
 func (UnimplementedMatchmakerServiceServer) testEmbeddedByValue()                           {}
@@ -2883,6 +3127,24 @@ func _MatchmakerService_GetQueueStats_Handler(srv interface{}, ctx context.Conte
 	return interceptor(ctx, in, info, handler)
 }
 
+func _MatchmakerService_GetMatchmakerStats_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MatchmakerServiceServer).GetMatchmakerStats(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MatchmakerService_GetMatchmakerStats_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MatchmakerServiceServer).GetMatchmakerStats(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // MatchmakerService_ServiceDesc is the grpc.ServiceDesc for MatchmakerService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -2905,6 +3167,10 @@ var MatchmakerService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetQueueStats",
 			Handler:    _MatchmakerService_GetQueueStats_Handler,
+		},
+		{
+			MethodName: "GetMatchmakerStats",
+			Handler:    _MatchmakerService_GetMatchmakerStats_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
@@ -4113,6 +4379,312 @@ var RpcService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RpcFunc",
 			Handler:    _RpcService_RpcFunc_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "api/api.proto",
+}
+
+const (
+	UserService_GetUsers_FullMethodName = "/ultimate.server.api.UserService/GetUsers"
+)
+
+// UserServiceClient is the client API for UserService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type UserServiceClient interface {
+	GetUsers(ctx context.Context, in *GetUsersRequest, opts ...grpc.CallOption) (*Users, error)
+}
+
+type userServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewUserServiceClient(cc grpc.ClientConnInterface) UserServiceClient {
+	return &userServiceClient{cc}
+}
+
+func (c *userServiceClient) GetUsers(ctx context.Context, in *GetUsersRequest, opts ...grpc.CallOption) (*Users, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Users)
+	err := c.cc.Invoke(ctx, UserService_GetUsers_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// UserServiceServer is the server API for UserService service.
+// All implementations must embed UnimplementedUserServiceServer
+// for forward compatibility.
+type UserServiceServer interface {
+	GetUsers(context.Context, *GetUsersRequest) (*Users, error)
+	mustEmbedUnimplementedUserServiceServer()
+}
+
+// UnimplementedUserServiceServer must be embedded to have
+// forward compatible implementations.
+//
+// NOTE: this should be embedded by value instead of pointer to avoid a nil
+// pointer dereference when methods are called.
+type UnimplementedUserServiceServer struct{}
+
+func (UnimplementedUserServiceServer) GetUsers(context.Context, *GetUsersRequest) (*Users, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetUsers not implemented")
+}
+func (UnimplementedUserServiceServer) mustEmbedUnimplementedUserServiceServer() {}
+func (UnimplementedUserServiceServer) testEmbeddedByValue()                     {}
+
+// UnsafeUserServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to UserServiceServer will
+// result in compilation errors.
+type UnsafeUserServiceServer interface {
+	mustEmbedUnimplementedUserServiceServer()
+}
+
+func RegisterUserServiceServer(s grpc.ServiceRegistrar, srv UserServiceServer) {
+	// If the following call pancis, it indicates UnimplementedUserServiceServer was
+	// embedded by pointer and is nil.  This will cause panics if an
+	// unimplemented method is ever invoked, so we test this at initialization
+	// time to prevent it from happening at runtime later due to I/O.
+	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
+		t.testEmbeddedByValue()
+	}
+	s.RegisterService(&UserService_ServiceDesc, srv)
+}
+
+func _UserService_GetUsers_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetUsersRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServiceServer).GetUsers(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserService_GetUsers_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServiceServer).GetUsers(ctx, req.(*GetUsersRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// UserService_ServiceDesc is the grpc.ServiceDesc for UserService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var UserService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "ultimate.server.api.UserService",
+	HandlerType: (*UserServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "GetUsers",
+			Handler:    _UserService_GetUsers_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "api/api.proto",
+}
+
+const (
+	EventService_Event_FullMethodName = "/ultimate.server.api.EventService/Event"
+)
+
+// EventServiceClient is the client API for EventService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type EventServiceClient interface {
+	Event(ctx context.Context, in *ClientEvent, opts ...grpc.CallOption) (*emptypb.Empty, error)
+}
+
+type eventServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewEventServiceClient(cc grpc.ClientConnInterface) EventServiceClient {
+	return &eventServiceClient{cc}
+}
+
+func (c *eventServiceClient) Event(ctx context.Context, in *ClientEvent, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, EventService_Event_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// EventServiceServer is the server API for EventService service.
+// All implementations must embed UnimplementedEventServiceServer
+// for forward compatibility.
+type EventServiceServer interface {
+	Event(context.Context, *ClientEvent) (*emptypb.Empty, error)
+	mustEmbedUnimplementedEventServiceServer()
+}
+
+// UnimplementedEventServiceServer must be embedded to have
+// forward compatible implementations.
+//
+// NOTE: this should be embedded by value instead of pointer to avoid a nil
+// pointer dereference when methods are called.
+type UnimplementedEventServiceServer struct{}
+
+func (UnimplementedEventServiceServer) Event(context.Context, *ClientEvent) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Event not implemented")
+}
+func (UnimplementedEventServiceServer) mustEmbedUnimplementedEventServiceServer() {}
+func (UnimplementedEventServiceServer) testEmbeddedByValue()                      {}
+
+// UnsafeEventServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to EventServiceServer will
+// result in compilation errors.
+type UnsafeEventServiceServer interface {
+	mustEmbedUnimplementedEventServiceServer()
+}
+
+func RegisterEventServiceServer(s grpc.ServiceRegistrar, srv EventServiceServer) {
+	// If the following call pancis, it indicates UnimplementedEventServiceServer was
+	// embedded by pointer and is nil.  This will cause panics if an
+	// unimplemented method is ever invoked, so we test this at initialization
+	// time to prevent it from happening at runtime later due to I/O.
+	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
+		t.testEmbeddedByValue()
+	}
+	s.RegisterService(&EventService_ServiceDesc, srv)
+}
+
+func _EventService_Event_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ClientEvent)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EventServiceServer).Event(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: EventService_Event_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EventServiceServer).Event(ctx, req.(*ClientEvent))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// EventService_ServiceDesc is the grpc.ServiceDesc for EventService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var EventService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "ultimate.server.api.EventService",
+	HandlerType: (*EventServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "Event",
+			Handler:    _EventService_Event_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "api/api.proto",
+}
+
+const (
+	SystemService_Healthcheck_FullMethodName = "/ultimate.server.api.SystemService/Healthcheck"
+)
+
+// SystemServiceClient is the client API for SystemService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type SystemServiceClient interface {
+	Healthcheck(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
+}
+
+type systemServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewSystemServiceClient(cc grpc.ClientConnInterface) SystemServiceClient {
+	return &systemServiceClient{cc}
+}
+
+func (c *systemServiceClient) Healthcheck(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, SystemService_Healthcheck_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// SystemServiceServer is the server API for SystemService service.
+// All implementations must embed UnimplementedSystemServiceServer
+// for forward compatibility.
+type SystemServiceServer interface {
+	Healthcheck(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
+	mustEmbedUnimplementedSystemServiceServer()
+}
+
+// UnimplementedSystemServiceServer must be embedded to have
+// forward compatible implementations.
+//
+// NOTE: this should be embedded by value instead of pointer to avoid a nil
+// pointer dereference when methods are called.
+type UnimplementedSystemServiceServer struct{}
+
+func (UnimplementedSystemServiceServer) Healthcheck(context.Context, *emptypb.Empty) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Healthcheck not implemented")
+}
+func (UnimplementedSystemServiceServer) mustEmbedUnimplementedSystemServiceServer() {}
+func (UnimplementedSystemServiceServer) testEmbeddedByValue()                       {}
+
+// UnsafeSystemServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to SystemServiceServer will
+// result in compilation errors.
+type UnsafeSystemServiceServer interface {
+	mustEmbedUnimplementedSystemServiceServer()
+}
+
+func RegisterSystemServiceServer(s grpc.ServiceRegistrar, srv SystemServiceServer) {
+	// If the following call pancis, it indicates UnimplementedSystemServiceServer was
+	// embedded by pointer and is nil.  This will cause panics if an
+	// unimplemented method is ever invoked, so we test this at initialization
+	// time to prevent it from happening at runtime later due to I/O.
+	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
+		t.testEmbeddedByValue()
+	}
+	s.RegisterService(&SystemService_ServiceDesc, srv)
+}
+
+func _SystemService_Healthcheck_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SystemServiceServer).Healthcheck(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SystemService_Healthcheck_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SystemServiceServer).Healthcheck(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// SystemService_ServiceDesc is the grpc.ServiceDesc for SystemService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var SystemService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "ultimate.server.api.SystemService",
+	HandlerType: (*SystemServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "Healthcheck",
+			Handler:    _SystemService_Healthcheck_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -447,3 +447,23 @@ func VerifyGameCenterSignature(ctx context.Context, cred GameCenterCredentials) 
 	}
 	return cred.PlayerID, nil
 }
+
+// VerifyFacebookInstantGame verifies a signed player info token.
+// Tokens prefixed with mock_ are accepted for hermetic tests.
+func VerifyFacebookInstantGame(ctx context.Context, signedPlayerInfo string) (string, error) {
+	_ = ctx
+	if id, ok := mockProviderID(signedPlayerInfo); ok {
+		return id, nil
+	}
+	// MVP: treat non-empty signed_player_info as opaque provider ID when not mock.
+	// Production should HMAC-verify with Facebook Instant Game app secret.
+	s := strings.TrimSpace(signedPlayerInfo)
+	if s == "" {
+		return "", errors.New("facebook instant game signed_player_info required")
+	}
+	if len(s) > 2048 {
+		return "", errors.New("facebook instant game signed_player_info too long")
+	}
+	return s, nil
+}
+

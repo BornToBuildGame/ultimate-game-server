@@ -142,7 +142,19 @@ func (s *AuthServer) AuthenticateGameCenter(ctx context.Context, req *apipb.Auth
 	if err != nil {
 		return nil, status.Error(codes.Unauthenticated, err.Error())
 	}
-	user, created, err := auth.AuthenticateSocialWithOpts(ctx, s.api.dbPool, "gamecenter", id, auth.AuthOptions{Create: true, Username: req.GetUsername()})
+	user, created, err := auth.AuthenticateSocialWithOpts(ctx, s.api.dbPool, "gamecenter", id, auth.AuthOptions{Create: req.GetCreate(), Username: req.GetUsername()})
+	if err != nil {
+		return nil, status.Error(codes.Unauthenticated, err.Error())
+	}
+	return s.issue(user, created)
+}
+
+func (s *AuthServer) AuthenticateFacebookInstantGame(ctx context.Context, req *apipb.AuthenticateFacebookInstantGameRequest) (*apipb.Session, error) {
+	id, err := auth.VerifyFacebookInstantGame(ctx, req.GetSignedPlayerInfo())
+	if err != nil {
+		return nil, status.Error(codes.Unauthenticated, err.Error())
+	}
+	user, created, err := auth.AuthenticateSocialWithOpts(ctx, s.api.dbPool, "facebookinstantgame", id, auth.AuthOptions{Create: req.GetCreate(), Username: req.GetUsername()})
 	if err != nil {
 		return nil, status.Error(codes.Unauthenticated, err.Error())
 	}
@@ -363,6 +375,41 @@ func (s *AuthServer) LinkCustom(ctx context.Context, req *apipb.AuthenticateCust
 	return &emptypb.Empty{}, nil
 }
 
+func (s *AuthServer) LinkGameCenter(ctx context.Context, req *apipb.AuthenticateGameCenterRequest) (*emptypb.Empty, error) {
+	claims, err := s.bearerClaims(ctx)
+	if err != nil {
+		return nil, err
+	}
+	id, err := auth.VerifyGameCenterSignature(ctx, auth.GameCenterCredentials{
+		PlayerID: req.GetPlayerId(), BundleID: req.GetBundleId(), Timestamp: req.GetTimestamp(),
+		Salt: req.GetSalt(), Signature: req.GetSignature(), PublicKeyURL: req.GetPublicKeyUrl(),
+	})
+	if err != nil {
+		return nil, status.Error(codes.Unauthenticated, err.Error())
+	}
+	uid, _ := uuid.Parse(claims.UserID)
+	if err := auth.LinkProvider(ctx, s.api.dbPool, uid, "gamecenter", id); err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+	return &emptypb.Empty{}, nil
+}
+
+func (s *AuthServer) LinkFacebookInstantGame(ctx context.Context, req *apipb.AuthenticateFacebookInstantGameRequest) (*emptypb.Empty, error) {
+	claims, err := s.bearerClaims(ctx)
+	if err != nil {
+		return nil, err
+	}
+	id, err := auth.VerifyFacebookInstantGame(ctx, req.GetSignedPlayerInfo())
+	if err != nil {
+		return nil, status.Error(codes.Unauthenticated, err.Error())
+	}
+	uid, _ := uuid.Parse(claims.UserID)
+	if err := auth.LinkProvider(ctx, s.api.dbPool, uid, "facebookinstantgame", id); err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+	return &emptypb.Empty{}, nil
+}
+
 func (s *AuthServer) unlink(ctx context.Context, provider, deviceID string) (*emptypb.Empty, error) {
 	claims, err := s.bearerClaims(ctx)
 	if err != nil {
@@ -401,4 +448,10 @@ func (s *AuthServer) UnlinkSteam(ctx context.Context, _ *apipb.UnlinkRequest) (*
 }
 func (s *AuthServer) UnlinkCustom(ctx context.Context, _ *apipb.UnlinkRequest) (*emptypb.Empty, error) {
 	return s.unlink(ctx, "custom", "")
+}
+func (s *AuthServer) UnlinkGameCenter(ctx context.Context, _ *apipb.UnlinkRequest) (*emptypb.Empty, error) {
+	return s.unlink(ctx, "gamecenter", "")
+}
+func (s *AuthServer) UnlinkFacebookInstantGame(ctx context.Context, _ *apipb.UnlinkRequest) (*emptypb.Empty, error) {
+	return s.unlink(ctx, "facebookinstantgame", "")
 }

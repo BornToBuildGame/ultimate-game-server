@@ -41,6 +41,7 @@ service AuthenticationService {
   rpc AuthenticateFacebook(AuthenticateFacebookRequest) returns (Session);
   rpc AuthenticateSteam(AuthenticateSteamRequest) returns (Session);
   rpc AuthenticateGameCenter(AuthenticateGameCenterRequest) returns (Session);
+  rpc AuthenticateFacebookInstantGame(AuthenticateFacebookInstantGameRequest) returns (Session);
   rpc AuthenticateCustom(AuthenticateCustomRequest) returns (Session);
 
   rpc SessionRefresh(SessionRefreshRequest) returns (Session);
@@ -57,6 +58,8 @@ service AuthenticationService {
   rpc LinkFacebook(AuthenticateFacebookRequest) returns (google.protobuf.Empty);
   rpc LinkSteam(AuthenticateSteamRequest) returns (google.protobuf.Empty);
   rpc LinkCustom(AuthenticateCustomRequest) returns (google.protobuf.Empty);
+  rpc LinkGameCenter(AuthenticateGameCenterRequest) returns (google.protobuf.Empty);
+  rpc LinkFacebookInstantGame(AuthenticateFacebookInstantGameRequest) returns (google.protobuf.Empty);
 
   rpc UnlinkEmail(UnlinkRequest) returns (google.protobuf.Empty);
   rpc UnlinkDevice(UnlinkRequest) returns (google.protobuf.Empty);
@@ -65,6 +68,8 @@ service AuthenticationService {
   rpc UnlinkFacebook(UnlinkRequest) returns (google.protobuf.Empty);
   rpc UnlinkSteam(UnlinkRequest) returns (google.protobuf.Empty);
   rpc UnlinkCustom(UnlinkRequest) returns (google.protobuf.Empty);
+  rpc UnlinkGameCenter(UnlinkRequest) returns (google.protobuf.Empty);
+  rpc UnlinkFacebookInstantGame(UnlinkRequest) returns (google.protobuf.Empty);
 }
 
 message AuthenticateEmailRequest {
@@ -114,6 +119,12 @@ message AuthenticateGameCenterRequest {
   string public_key_url = 6;
   bool create = 7;
   string username = 8;
+}
+
+message AuthenticateFacebookInstantGameRequest {
+  string signed_player_info = 1;
+  bool create = 2;
+  string username = 3;
 }
 
 message AuthenticateCustomRequest {
@@ -378,6 +389,7 @@ service FriendsService {
   rpc ListFriendsOfFriends(ListFriendsOfFriendsRequest) returns (FriendsOfFriendsList);
   rpc DeleteFriends(DeleteFriendsRequest) returns (google.protobuf.Empty);
   rpc BlockFriends(BlockFriendsRequest) returns (google.protobuf.Empty);
+  rpc UnblockFriends(UnblockFriendsRequest) returns (google.protobuf.Empty);
   rpc ImportFacebookFriends(ImportFacebookFriendsRequest) returns (google.protobuf.Empty);
   rpc ImportSteamFriends(ImportSteamFriendsRequest) returns (google.protobuf.Empty);
 }
@@ -426,6 +438,11 @@ message DeleteFriendsRequest {
 }
 
 message BlockFriendsRequest {
+  repeated string ids = 1;
+  repeated string usernames = 2;
+}
+
+message UnblockFriendsRequest {
   repeated string ids = 1;
   repeated string usernames = 2;
 }
@@ -585,6 +602,7 @@ service MatchmakerService {
   rpc RemoveMatchmaker(RemoveMatchmakerRequest) returns (google.protobuf.Empty);
   rpc GetMatchmakerTicket(GetMatchmakerTicketRequest) returns (MatchmakerTicket);
   rpc GetQueueStats(GetQueueStatsRequest) returns (QueueStats);
+  rpc GetMatchmakerStats(google.protobuf.Empty) returns (MatchmakerStats);
 }
 
 message AddMatchmakerRequest {
@@ -623,6 +641,12 @@ message QueueStats {
   int32 ticket_count = 3;
   int32 average_wait_sec = 4;
   int32 active_matches = 5;
+}
+
+message MatchmakerStats {
+  int32 ticket_count = 1;
+  string oldest_ticket_create_time = 2;
+  int32 completion_count = 3;
 }
 
 // --- Realtime / Match Service ---
@@ -908,6 +932,37 @@ message Rpc {
   string id = 1;
   string payload = 2;
   string http_key = 3;
+}
+
+// --- Users / Events / System (ADR-0021) ---
+
+service UserService {
+  rpc GetUsers(GetUsersRequest) returns (Users);
+}
+
+message GetUsersRequest {
+  repeated string ids = 1;
+  repeated string usernames = 2;
+  repeated string facebook_ids = 3;
+}
+
+message Users {
+  repeated User users = 1;
+}
+
+service EventService {
+  rpc Event(ClientEvent) returns (google.protobuf.Empty);
+}
+
+message ClientEvent {
+  string name = 1;
+  map<string, string> properties = 2;
+  int64 timestamp = 3;
+  bool external = 4;
+}
+
+service SystemService {
+  rpc Healthcheck(google.protobuf.Empty) returns (google.protobuf.Empty);
 }
 
 

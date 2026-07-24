@@ -216,6 +216,8 @@ func AuthenticateSocialWithOpts(ctx context.Context, pool *pgxpool.Pool, provide
 		providerColumn = "gamecenter_id"
 	case "steam":
 		providerColumn = "steam_id"
+	case "facebookinstantgame", "facebook_instant_game", "facebookinstant":
+		providerColumn = "facebook_instant_game_id"
 	default:
 		return nil, false, fmt.Errorf("unsupported provider: %s", provider)
 	}
@@ -287,6 +289,8 @@ func LinkProvider(ctx context.Context, pool *pgxpool.Pool, userID uuid.UUID, pro
 		providerColumn = "steam_id"
 	case "custom":
 		providerColumn = "custom_id"
+	case "facebookinstantgame", "facebook_instant_game", "facebookinstant":
+		providerColumn = "facebook_instant_game_id"
 	default:
 		return fmt.Errorf("unsupported provider: %s", provider)
 	}

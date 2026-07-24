@@ -616,6 +616,10 @@ func linkHookName(provider string) string {
 		return "LinkFacebook"
 	case "steam":
 		return "LinkSteam"
+	case "gamecenter":
+		return "LinkGameCenter"
+	case "facebookinstantgame", "facebook_instant_game", "facebookinstant":
+		return "LinkFacebookInstantGame"
 	default:
 		return "LinkProvider"
 	}
@@ -637,7 +641,136 @@ func unlinkHookName(provider string) string {
 		return "UnlinkSteam"
 	case "custom":
 		return "UnlinkCustom"
+	case "gamecenter":
+		return "UnlinkGameCenter"
+	case "facebookinstantgame", "facebook_instant_game", "facebookinstant":
+		return "UnlinkFacebookInstantGame"
 	default:
 		return "UnlinkProvider"
 	}
+}
+
+func (s *Server) handleAuthenticateFacebookInstantGame(w http.ResponseWriter, r *http.Request) {
+	if !s.authRateLimit.Allow(s.clientIP(r)) {
+		http.Error(w, "too many requests", http.StatusTooManyRequests)
+		return
+	}
+	var req struct {
+		Account struct {
+			SignedPlayerInfo string `json:"signed_player_info"`
+		} `json:"account"`
+		SignedPlayerInfo string            `json:"signed_player_info"`
+		Create           *bool             `json:"create"`
+		Username         string            `json:"username"`
+		Vars             map[string]string `json:"vars"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "bad request", http.StatusBadRequest)
+		return
+	}
+	in, err := s.invokeBefore(r.Context(), "AuthenticateFacebookInstantGame", &req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	_ = in
+	info := req.SignedPlayerInfo
+	if info == "" {
+		info = req.Account.SignedPlayerInfo
+	}
+	providerID, err := auth.VerifyFacebookInstantGame(r.Context(), info)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+	opts := auth.AuthOptions{Create: createFlag(req.Create), Username: req.Username, Vars: req.Vars}
+	user, created, err := auth.AuthenticateSocialWithOpts(r.Context(), s.dbPool, "facebookinstantgame", providerID, opts)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+	accessToken, refreshToken, err := s.tokenMgr.GenerateSessionWithVars(user.ID.String(), user.Username, req.Vars)
+	if err != nil {
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+	s.sessReg.RegisterSession(user.ID.String(), refreshToken, "")
+	resp := authResponse{AccessToken: accessToken, RefreshToken: refreshToken, UserID: user.ID.String(), Username: user.Username, Created: created}
+	s.invokeAfter("AuthenticateFacebookInstantGame", &resp, &req)
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(resp)
+}
+
+func (s *Server) handleLinkGameCenter(w http.ResponseWriter, r *http.Request) {
+	uid, ok := s.requireUser(w, r)
+	if !ok {
+		return
+	}
+	var req authGameCenterRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "bad request", http.StatusBadRequest)
+		return
+	}
+	in, err := s.invokeBefore(r.Context(), "LinkGameCenter", &req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if casted, ok := in.(*authGameCenterRequest); ok {
+		req = *casted
+	}
+	cred := auth.GameCenterCredentials{
+		PlayerID: req.Account.PlayerID, BundleID: req.Account.BundleID,
+		Timestamp: req.Account.Timestamp, Salt: req.Account.Salt,
+		Signature: req.Account.Signature, PublicKeyURL: req.Account.PublicKeyURL,
+	}
+	id, err := auth.VerifyGameCenterSignature(r.Context(), cred)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+	if err := auth.LinkProvider(r.Context(), s.dbPool, uid, "gamecenter", id); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	s.invokeAfter("LinkGameCenter", nil, &req)
+	w.WriteHeader(http.StatusOK)
+}
+
+func (s *Server) handleLinkFacebookInstantGame(w http.ResponseWriter, r *http.Request) {
+	uid, ok := s.requireUser(w, r)
+	if !ok {
+		return
+	}
+	var req struct {
+		Account struct {
+			SignedPlayerInfo string `json:"signed_player_info"`
+		} `json:"account"`
+		SignedPlayerInfo string `json:"signed_player_info"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "bad request", http.StatusBadRequest)
+		return
+	}
+	in, err := s.invokeBefore(r.Context(), "LinkFacebookInstantGame", &req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	_ = in
+	info := req.SignedPlayerInfo
+	if info == "" {
+		info = req.Account.SignedPlayerInfo
+	}
+	id, err := auth.VerifyFacebookInstantGame(r.Context(), info)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+	if err := auth.LinkProvider(r.Context(), s.dbPool, uid, "facebookinstantgame", id); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	s.invokeAfter("LinkFacebookInstantGame", nil, &req)
+	w.WriteHeader(http.StatusOK)
 }

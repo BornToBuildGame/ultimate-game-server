@@ -169,3 +169,21 @@ func (s *MatchmakerServer) GetQueueStats(ctx context.Context, req *apipb.GetQueu
 		ActiveMatches:  int32(len(stats.Completions)),
 	}, nil
 }
+
+// GetMatchmakerStats returns aggregate matchmaker statistics (reference-compatible).
+func (s *MatchmakerServer) GetMatchmakerStats(ctx context.Context, _ *emptypb.Empty) (*apipb.MatchmakerStats, error) {
+	_, err := s.authenticate(ctx)
+	if err != nil {
+		return nil, err
+	}
+	stats := s.mm.GetStats(ctx)
+	oldest := ""
+	if !stats.OldestTicketCreateTime.IsZero() {
+		oldest = stats.OldestTicketCreateTime.Format(time.RFC3339)
+	}
+	return &apipb.MatchmakerStats{
+		TicketCount:            int32(stats.TicketCount),
+		OldestTicketCreateTime: oldest,
+		CompletionCount:        int32(len(stats.Completions)),
+	}, nil
+}

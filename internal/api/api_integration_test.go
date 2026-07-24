@@ -96,7 +96,7 @@ func TestAPI_Integration(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 
 	// 3. Verify Health Endpoint
-	resp, err := http.Get("http://127.0.0.1:17350/health")
+	resp, err := http.Get("http://127.0.0.1:17350/healthcheck")
 	if err != nil {
 		t.Fatalf("failed to query health endpoint: %v", err)
 	}
@@ -104,9 +104,19 @@ func TestAPI_Integration(t *testing.T) {
 	if resp.StatusCode != http.StatusOK {
 		t.Errorf("expected health status 200, got: %d", resp.StatusCode)
 	}
+	if resp.Header.Get("X-Request-Id") == "" {
+		t.Error("expected X-Request-Id on health response")
+	}
+	var healthBody map[string]interface{}
+	if err := json.NewDecoder(resp.Body).Decode(&healthBody); err != nil {
+		t.Fatalf("health JSON: %v", err)
+	}
+	if healthBody["status"] != "ok" {
+		t.Errorf("health body=%v", healthBody)
+	}
 
-	// 4. Test Body Limit Middleware (exceeding 4KB)
-	largeBody := make([]byte, 5000)
+	// 4. Test Body Limit Middleware (exceeding 256KB)
+	largeBody := make([]byte, 300000)
 	respLarge, err := http.Post("http://127.0.0.1:17350/v2/account/authenticate/email", "application/json", bytes.NewReader(largeBody))
 	if err == nil {
 		respLarge.Body.Close()
@@ -128,8 +138,14 @@ func TestAPI_Integration(t *testing.T) {
 		if err != nil {
 			t.Fatalf("request failed: %v", err)
 		}
+		if r.Header.Get("X-RateLimit-Limit") == "" {
+			t.Error("expected X-RateLimit-Limit")
+		}
 		if r.StatusCode == http.StatusTooManyRequests {
 			rateLimited = true
+			if r.Header.Get("Retry-After") == "" {
+				t.Error("expected Retry-After on 429")
+			}
 			r.Body.Close()
 			break
 		}

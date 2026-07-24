@@ -33,6 +33,14 @@ func resolveHTTPHookID(method, path string) string {
 		return "DeleteStorageObjects"
 	case strings.HasPrefix(path, "/v2/storage/"):
 		return "ListStorageObjects"
+	case path == "/v2/user" && method == http.MethodGet:
+		return "GetUsers"
+	case path == "/v2/event" && method == http.MethodPost:
+		return "Event"
+	case path == "/v2/session/logout" && method == http.MethodPost:
+		return "SessionLogout"
+	case path == "/healthcheck" || path == "/health":
+		return "Healthcheck"
 	}
 
 	if strings.HasPrefix(path, "/v2/leaderboard") {
@@ -57,7 +65,7 @@ func resolveHTTPHookID(method, path string) string {
 			return "ListTournaments"
 		case method == http.MethodPost && len(parts) == 4 && parts[3] == "join":
 			return "JoinTournament"
-		case method == http.MethodPost && len(parts) == 3:
+		case (method == http.MethodPost || method == http.MethodPut) && len(parts) == 3:
 			return "WriteTournamentRecord"
 		case method == http.MethodGet && len(parts) == 3:
 			return "ListTournamentRecords"
@@ -80,14 +88,26 @@ func resolveHTTPHookID(method, path string) string {
 			return "ListFriendsOfFriends"
 		case method == http.MethodDelete && len(parts) == 2:
 			return "DeleteFriends"
+		case method == http.MethodPost && len(parts) == 3 && parts[2] == "block":
+			return "BlockFriends"
 		case method == http.MethodPost && len(parts) == 4 && parts[2] == "block":
 			return "BlockFriends"
+		case method == http.MethodDelete && len(parts) == 3 && parts[2] == "block":
+			return "UnblockFriends"
 		case method == http.MethodDelete && len(parts) == 4 && parts[2] == "block":
-			return "DeleteFriends"
+			return "UnblockFriends"
+		case method == http.MethodPost && len(parts) == 3 && parts[2] == "unblock":
+			return "UnblockFriends"
 		case method == http.MethodPost && len(parts) == 3 && parts[2] == "facebook":
 			return "ImportFacebookFriends"
 		case method == http.MethodPost && len(parts) == 3 && parts[2] == "steam":
 			return "ImportSteamFriends"
+		}
+	}
+
+	if strings.HasPrefix(path, "/v2/matchmaker/stats") {
+		if method == http.MethodGet {
+			return "GetMatchmakerStats"
 		}
 	}
 	return ""

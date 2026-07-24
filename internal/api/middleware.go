@@ -2,17 +2,23 @@ package api
 
 import (
 	"context"
+	"math"
 	"net/http"
+	"strconv"
 	"strings"
+	"time"
 
 	"ultimate-game-server/internal/auth"
+
+	"github.com/google/uuid"
 )
 
 type contextKey string
 
 const (
-	UserIDKey   contextKey = "user_id"
-	UsernameKey contextKey = "username"
+	UserIDKey    contextKey = "user_id"
+	UsernameKey  contextKey = "username"
+	RequestIDKey contextKey = "request_id"
 )
 
 // SecurityHeadersMiddleware adds standard security headers to HTTP responses.
@@ -26,20 +32,55 @@ func SecurityHeadersMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-// CORSMiddleware handles CORS requests.
-func CORSMiddleware(next http.Handler) http.Handler {
+// RequestIDMiddleware echoes or generates X-Request-Id.
+func RequestIDMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
-
-		if r.Method == "OPTIONS" {
-			w.WriteHeader(http.StatusOK)
-			return
+		id := strings.TrimSpace(r.Header.Get("X-Request-Id"))
+		if id == "" {
+			id = uuid.New().String()
 		}
-
-		next.ServeHTTP(w, r)
+		w.Header().Set("X-Request-Id", id)
+		ctx := context.WithValue(r.Context(), RequestIDKey, id)
+		next.ServeHTTP(w, r.WithContext(ctx))
 	})
+}
+
+// CORSMiddleware handles CORS with a configurable origin allowlist.
+// Empty origins or a single "*" entry allows any origin (development default).
+func CORSMiddleware(allowedOrigins []string) func(http.Handler) http.Handler {
+	allowAll := len(allowedOrigins) == 0
+	originSet := make(map[string]struct{}, len(allowedOrigins))
+	for _, o := range allowedOrigins {
+		o = strings.TrimSpace(o)
+		if o == "*" {
+			allowAll = true
+		}
+		if o != "" {
+			originSet[o] = struct{}{}
+		}
+	}
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			origin := r.Header.Get("Origin")
+			if allowAll {
+				w.Header().Set("Access-Control-Allow-Origin", "*")
+			} else if origin != "" {
+				if _, ok := originSet[origin]; ok {
+					w.Header().Set("Access-Control-Allow-Origin", origin)
+					w.Header().Set("Vary", "Origin")
+				}
+			}
+			w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, X-Request-Id")
+			w.Header().Set("Access-Control-Expose-Headers", "X-Request-Id, X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset, Retry-After")
+
+			if r.Method == http.MethodOptions {
+				w.WriteHeader(http.StatusOK)
+				return
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
 }
 
 // BodyLimitMiddleware restricts request body size.
@@ -56,7 +97,6 @@ func BodyLimitMiddleware(maxBytes int64) func(http.Handler) http.Handler {
 func RateLimitMiddleware(limiter *IPTokenBucketRateLimiter) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			// Resolve IP checking X-Forwarded-For proxy header first
 			ip := r.Header.Get("X-Forwarded-For")
 			if ip == "" {
 				ip = r.RemoteAddr
@@ -69,7 +109,19 @@ func RateLimitMiddleware(limiter *IPTokenBucketRateLimiter) func(http.Handler) h
 				}
 			}
 
-			if !limiter.Allow(ip) {
+			tb := limiter.GetLimiter(ip)
+			allowed, remaining, resetAt := tb.AllowWithInfo()
+			limit := int(math.Floor(limiter.MaxTokens()))
+			w.Header().Set("X-RateLimit-Limit", strconv.Itoa(limit))
+			w.Header().Set("X-RateLimit-Remaining", strconv.Itoa(int(math.Floor(remaining))))
+			w.Header().Set("X-RateLimit-Reset", strconv.FormatInt(resetAt.Unix(), 10))
+
+			if !allowed {
+				retry := int(math.Ceil(time.Until(resetAt).Seconds()))
+				if retry < 1 {
+					retry = 1
+				}
+				w.Header().Set("Retry-After", strconv.Itoa(retry))
 				w.WriteHeader(http.StatusTooManyRequests)
 				w.Write([]byte("429 Too Many Requests"))
 				return
@@ -105,7 +157,6 @@ func AuthMiddleware(tm *auth.TokenManager) func(http.Handler) http.Handler {
 				return
 			}
 
-			// Inject user ID and username claims into context
 			ctx := context.WithValue(r.Context(), UserIDKey, claims.UserID)
 			ctx = context.WithValue(ctx, UsernameKey, claims.Username)
 

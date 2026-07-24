@@ -48,6 +48,9 @@ type Config struct {
 	JWTExpiry       time.Duration `json:"jwt_expiry" yaml:"jwt_expiry"`
 	RateLimitMax    float64       `json:"rate_limit_max" yaml:"rate_limit_max"`
 	RateLimitRefill float64       `json:"rate_limit_refill" yaml:"rate_limit_refill"`
+	BodyLimitBytes  int64         `json:"body_limit_bytes" yaml:"body_limit_bytes"`
+	CORSOrigins     []string      `json:"cors_allowed_origins" yaml:"cors_allowed_origins"`
+	Version         string        `json:"version" yaml:"version"`
 	RPCHTTPKey      string        `json:"rpc_http_key" yaml:"rpc_http_key"`
 	RPCTimeoutMs    int           `json:"rpc_execution_timeout_ms" yaml:"rpc_execution_timeout_ms"`
 	RPCMaxPayload   int           `json:"rpc_max_payload_size_bytes" yaml:"rpc_max_payload_size_bytes"`
@@ -90,6 +93,7 @@ type Server struct {
 	economyServer      *EconomyServer
 	iapServer          *IAPServer
 	rpcServer          *RpcServer
+	eventServer        *EventServer
 	rpcCfg             runtime.RPCConfig
 }
 
@@ -137,6 +141,10 @@ func (s *Server) SetRuntimeManager(rm *runtime.GoRuntimeManager) {
 		if s.economyServer != nil {
 			s.economyServer.SetHooks(rm.Registry())
 		}
+		if s.eventServer != nil {
+			s.eventServer.SetHooks(rm.Registry())
+			s.eventServer.logger = rm.Logger()
+		}
 		if s.iapServer != nil {
 			s.iapServer.SetHooks(rm.Registry())
 		}
@@ -183,6 +191,15 @@ func NewServer(logger *zap.Logger, cfg Config, dbPool *pgxpool.Pool) (*Server, e
 	}
 	if cfg.RateLimitRefill <= 0 {
 		cfg.RateLimitRefill = 10
+	}
+	if cfg.BodyLimitBytes <= 0 {
+		cfg.BodyLimitBytes = 262144 // 256 KB
+	}
+	if len(cfg.CORSOrigins) == 0 {
+		cfg.CORSOrigins = []string{"*"}
+	}
+	if cfg.Version == "" {
+		cfg.Version = "1.0.0"
 	}
 	rpcCfg := runtime.DefaultRPCConfig()
 	if cfg.RPCHTTPKey != "" {
@@ -453,16 +470,18 @@ func (s *Server) Start(ctx context.Context) error {
 	mux := http.NewServeMux()
 	s.registerRoutes(mux)
 
-	// Wrap handlers in global middlewares
+	// Wrap handlers in global middlewares (outermost first when nesting)
 	var handler http.Handler = mux
 	handler = RateLimitMiddleware(s.rateLimiter)(handler)
-	handler = BodyLimitMiddleware(4096)(handler) // limit request size to 4KB
-	handler = CORSMiddleware(handler)
+	handler = BodyLimitMiddleware(s.cfg.BodyLimitBytes)(handler)
+	handler = CORSMiddleware(s.cfg.CORSOrigins)(handler)
 	handler = SecurityHeadersMiddleware(handler)
+	handler = RequestIDMiddleware(handler)
 
 	if s.RuntimeManager != nil {
+		inner := handler
 		handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			HTTPHookMiddleware(s.RuntimeManager, s.LuaVM, s.JSVM, mux.ServeHTTP)(w, r)
+			HTTPHookMiddleware(s.RuntimeManager, s.LuaVM, s.JSVM, inner.ServeHTTP)(w, r)
 		})
 	}
 
@@ -518,6 +537,14 @@ func (s *Server) Start(ctx context.Context) error {
 		}
 	}
 	apipb.RegisterAuthenticationServiceServer(s.gRPCServer, NewAuthServer(s))
+	apipb.RegisterSystemServiceServer(s.gRPCServer, NewSystemServer())
+	apipb.RegisterUserServiceServer(s.gRPCServer, NewUserServer(s.dbPool, s.tokenMgr))
+	s.eventServer = NewEventServer(s.tokenMgr, nil, nil)
+	if s.RuntimeManager != nil {
+		s.eventServer.SetHooks(s.RuntimeManager.Registry())
+		s.eventServer.logger = s.RuntimeManager.Logger()
+	}
+	apipb.RegisterEventServiceServer(s.gRPCServer, s.eventServer)
 
 	// Start Matchmaker Tick Loop (Ticks every 1 second)
 	s.Matchmaker.Start(ctx, 1000*time.Millisecond)
@@ -622,7 +649,8 @@ type authResponse struct {
 }
 
 func (s *Server) registerRoutes(mux *http.ServeMux) {
-	mux.HandleFunc("GET /health", s.handleHealth)
+	mux.HandleFunc("GET /healthcheck", s.handleHealthcheck)
+	mux.HandleFunc("GET /health", s.handleHealthDeprecated)
 	mux.HandleFunc("POST /v2/account/authenticate/email", s.handleAuthenticateEmail)
 	mux.HandleFunc("POST /v2/account/authenticate/custom", s.handleAuthenticateCustom)
 	mux.HandleFunc("POST /v2/account/authenticate/device", s.handleAuthenticateDevice)
@@ -631,8 +659,10 @@ func (s *Server) registerRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /v2/account/authenticate/facebook", s.handleAuthenticateFacebook)
 	mux.HandleFunc("POST /v2/account/authenticate/steam", s.handleAuthenticateSteam)
 	mux.HandleFunc("POST /v2/account/authenticate/gamecenter", s.handleAuthenticateGameCenter)
+	mux.HandleFunc("POST /v2/account/authenticate/facebookinstantgame", s.handleAuthenticateFacebookInstantGame)
 	mux.HandleFunc("POST /v2/account/session/refresh", s.handleSessionRefresh)
 	mux.HandleFunc("POST /v2/account/session/logout", s.handleSessionLogout)
+	mux.HandleFunc("POST /v2/session/logout", s.handleSessionLogout)
 	mux.HandleFunc("GET /v2/account", s.handleGetAccount)
 	mux.HandleFunc("PUT /v2/account", s.handleUpdateAccount)
 	mux.HandleFunc("DELETE /v2/account", s.handleDeleteAccount)
@@ -643,6 +673,8 @@ func (s *Server) registerRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /v2/account/link/facebook", s.handleLinkFacebook)
 	mux.HandleFunc("POST /v2/account/link/steam", s.handleLinkSteam)
 	mux.HandleFunc("POST /v2/account/link/custom", s.handleLinkCustom)
+	mux.HandleFunc("POST /v2/account/link/gamecenter", s.handleLinkGameCenter)
+	mux.HandleFunc("POST /v2/account/link/facebookinstantgame", s.handleLinkFacebookInstantGame)
 	mux.HandleFunc("POST /v2/account/unlink/email", s.handleUnlinkProvider("email"))
 	mux.HandleFunc("POST /v2/account/unlink/device", s.handleUnlinkDevice)
 	mux.HandleFunc("POST /v2/account/unlink/apple", s.handleUnlinkProvider("apple"))
@@ -650,6 +682,10 @@ func (s *Server) registerRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /v2/account/unlink/facebook", s.handleUnlinkProvider("facebook"))
 	mux.HandleFunc("POST /v2/account/unlink/steam", s.handleUnlinkProvider("steam"))
 	mux.HandleFunc("POST /v2/account/unlink/custom", s.handleUnlinkProvider("custom"))
+	mux.HandleFunc("POST /v2/account/unlink/gamecenter", s.handleUnlinkProvider("gamecenter"))
+	mux.HandleFunc("POST /v2/account/unlink/facebookinstantgame", s.handleUnlinkProvider("facebookinstantgame"))
+	mux.HandleFunc("GET /v2/user", s.handleGetUsers)
+	mux.HandleFunc("POST /v2/event", s.handleClientEvent)
 	mux.HandleFunc("PUT /v2/storage", s.handleWriteStorageObjects)
 	mux.HandleFunc("POST /v2/storage", s.handleReadStorageObjects)
 	mux.HandleFunc("POST /v2/storage/read", s.handleReadStorageObjects)
@@ -677,6 +713,7 @@ func (s *Server) registerRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /v2/tournament/{id}/join", s.handleJoinTournament)
 	mux.HandleFunc("GET /v2/tournament", s.handleListTournaments)
 	mux.HandleFunc("POST /v2/tournament/{id}", s.handleSubmitTournamentScore)
+	mux.HandleFunc("PUT /v2/tournament/{id}", s.handleSubmitTournamentScore)
 	mux.HandleFunc("GET /v2/tournament/{id}", s.handleListTournamentRecords)
 	mux.HandleFunc("GET /v2/tournament/{id}/around/{owner_id}", s.handleTournamentAroundPlayer)
 	mux.HandleFunc("DELETE /v2/tournament/{id}/owner/{owner_id}", s.handleDeleteTournamentRecord)
@@ -688,7 +725,10 @@ func (s *Server) registerRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /v2/friend/friends", s.handleListFriendsOfFriends)
 	mux.HandleFunc("DELETE /v2/friend", s.handleDeleteFriends)
 	mux.HandleFunc("POST /v2/friend/block/{user_id}", s.handleBlockFriend)
+	mux.HandleFunc("POST /v2/friend/block", s.handleBlockFriendsBody)
 	mux.HandleFunc("DELETE /v2/friend/block/{user_id}", s.handleUnblockFriend)
+	mux.HandleFunc("DELETE /v2/friend/block", s.handleUnblockFriendsBody)
+	mux.HandleFunc("POST /v2/friend/unblock", s.handleUnblockFriendsBody)
 	mux.HandleFunc("POST /v2/friend/facebook", s.handleImportFacebookFriends)
 	mux.HandleFunc("POST /v2/friend/steam", s.handleImportSteamFriends)
 
@@ -735,11 +775,22 @@ func (s *Server) registerRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("DELETE /v2/matchmaker/ticket/{ticket_id}", s.handleCancelMatchmakerTicket)
 	mux.HandleFunc("GET /v2/matchmaker/ticket/{ticket_id}", s.handleGetMatchmakerTicket)
 	mux.HandleFunc("GET /v2/matchmaker/stats/{queue_name}", s.handleGetQueueStats)
+	mux.HandleFunc("GET /v2/matchmaker/stats", s.handleGetMatchmakerStats)
 }
 
-func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
+func (s *Server) handleHealthcheck(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("OK"))
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"status":    "ok",
+		"version":   s.cfg.Version,
+		"timestamp": time.Now().UTC().Format(time.RFC3339),
+	})
+}
+
+func (s *Server) handleHealthDeprecated(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Deprecation", "true")
+	s.handleHealthcheck(w, r)
 }
 
 func (s *Server) handleAuthenticateEmail(w http.ResponseWriter, r *http.Request) {
@@ -1403,8 +1454,33 @@ func (s *Server) handleGetQueueStats(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
+		"queue_name":                r.PathValue("queue_name"),
 		"ticket_count":              stats.TicketCount,
 		"oldest_ticket_create_time": oldest,
+		"completions":               stats.Completions,
+	})
+}
+
+func (s *Server) handleGetMatchmakerStats(w http.ResponseWriter, r *http.Request) {
+	_, err := s.authenticateREST(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+	if s.Matchmaker == nil {
+		http.Error(w, "matchmaker unavailable", http.StatusServiceUnavailable)
+		return
+	}
+	stats := s.Matchmaker.GetStats(r.Context())
+	oldest := ""
+	if !stats.OldestTicketCreateTime.IsZero() {
+		oldest = stats.OldestTicketCreateTime.Format(time.RFC3339)
+	}
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"ticket_count":              stats.TicketCount,
+		"oldest_ticket_create_time": oldest,
+		"completion_count":          len(stats.Completions),
 		"completions":               stats.Completions,
 	})
 }

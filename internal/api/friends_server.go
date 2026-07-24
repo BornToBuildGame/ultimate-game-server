@@ -202,6 +202,23 @@ func (s *FriendsServer) BlockFriends(ctx context.Context, req *apipb.BlockFriend
 	return &emptypb.Empty{}, nil
 }
 
+func (s *FriendsServer) UnblockFriends(ctx context.Context, req *apipb.UnblockFriendsRequest) (*emptypb.Empty, error) {
+	userID, _, err := s.authenticate(ctx)
+	if err != nil {
+		return nil, err
+	}
+	resolvedIDs, err := social.ResolveUserIDs(ctx, s.dbPool, req.GetIds(), req.GetUsernames())
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to resolve users: %v", err)
+	}
+	for _, destID := range resolvedIDs {
+		if err := social.UnblockUser(ctx, s.dbPool, userID, destID); err != nil {
+			return nil, mapFriendError(err)
+		}
+	}
+	return &emptypb.Empty{}, nil
+}
+
 func (s *FriendsServer) ImportFacebookFriends(ctx context.Context, req *apipb.ImportFacebookFriendsRequest) (*emptypb.Empty, error) {
 	userID, username, err := s.authenticate(ctx)
 	if err != nil {
@@ -425,6 +442,31 @@ func (s *Server) handleBlockFriend(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+func (s *Server) handleBlockFriendsBody(w http.ResponseWriter, r *http.Request) {
+	userID, err := s.authenticateREST(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+	var req restAddFriendsRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "bad request", http.StatusBadRequest)
+		return
+	}
+	resolvedIDs, err := social.ResolveUserIDs(r.Context(), s.dbPool, req.IDs, req.Usernames)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	for _, destID := range resolvedIDs {
+		if err := social.BlockUser(r.Context(), s.dbPool, userID, destID); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+	w.WriteHeader(http.StatusOK)
+}
+
 func (s *Server) handleUnblockFriend(w http.ResponseWriter, r *http.Request) {
 	userID, err := s.authenticateREST(r)
 	if err != nil {
@@ -439,6 +481,31 @@ func (s *Server) handleUnblockFriend(w http.ResponseWriter, r *http.Request) {
 	if err := social.UnblockUser(r.Context(), s.dbPool, userID, destID); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
+	}
+	w.WriteHeader(http.StatusOK)
+}
+
+func (s *Server) handleUnblockFriendsBody(w http.ResponseWriter, r *http.Request) {
+	userID, err := s.authenticateREST(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+	var req restAddFriendsRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "bad request", http.StatusBadRequest)
+		return
+	}
+	resolvedIDs, err := social.ResolveUserIDs(r.Context(), s.dbPool, req.IDs, req.Usernames)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	for _, destID := range resolvedIDs {
+		if err := social.UnblockUser(r.Context(), s.dbPool, userID, destID); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 	}
 	w.WriteHeader(http.StatusOK)
 }

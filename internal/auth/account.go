@@ -162,13 +162,14 @@ func ChangePassword(ctx context.Context, pool *pgxpool.Pool, userID uuid.UUID, o
 
 // CountIdentities returns how many login methods the user currently has.
 func CountIdentities(ctx context.Context, pool *pgxpool.Pool, userID uuid.UUID) (int, error) {
-	var email, custom, apple, google, facebook, gc, steam sql.NullString
+	var email, custom, apple, google, facebook, gc, steam, fig sql.NullString
 	var hasPassword bool
 	err := pool.QueryRow(ctx, `
 		SELECT email, custom_id, apple_id, google_id, facebook_id, gamecenter_id, steam_id,
+		       facebook_instant_game_id,
 		       (password IS NOT NULL AND length(password) > 0)
 		FROM users WHERE id = $1
-	`, userID).Scan(&email, &custom, &apple, &google, &facebook, &gc, &steam, &hasPassword)
+	`, userID).Scan(&email, &custom, &apple, &google, &facebook, &gc, &steam, &fig, &hasPassword)
 	if err != nil {
 		return 0, err
 	}
@@ -176,7 +177,7 @@ func CountIdentities(ctx context.Context, pool *pgxpool.Pool, userID uuid.UUID) 
 	if email.Valid && email.String != "" && hasPassword {
 		n++
 	}
-	for _, v := range []*sql.NullString{&custom, &apple, &google, &facebook, &gc, &steam} {
+	for _, v := range []*sql.NullString{&custom, &apple, &google, &facebook, &gc, &steam, &fig} {
 		if v.Valid && v.String != "" {
 			n++
 		}
@@ -211,6 +212,8 @@ func UnlinkProvider(ctx context.Context, pool *pgxpool.Pool, userID uuid.UUID, p
 		col = "steam_id"
 	case "custom":
 		col = "custom_id"
+	case "facebookinstantgame", "facebook_instant_game", "facebookinstant":
+		col = "facebook_instant_game_id"
 	case "email":
 		cmd, err := pool.Exec(ctx, `
 			UPDATE users SET email = NULL, password = NULL, update_time = now() WHERE id = $1
@@ -325,6 +328,97 @@ func loadUserBasic(ctx context.Context, pool *pgxpool.Pool, userID uuid.UUID) (*
 	return &u, nil
 }
 
+// GetUsersPublic returns public profile fields for users matching ids, usernames, or facebook IDs.
+// Disabled accounts are omitted. Metadata is returned as stored JSON text.
+func GetUsersPublic(ctx context.Context, pool *pgxpool.Pool, ids, usernames, facebookIDs []string) ([]*User, error) {
+	seen := make(map[uuid.UUID]struct{})
+	var out []*User
+
+	appendUser := func(u *User) {
+		if u == nil {
+			return
+		}
+		if u.DisableTime.After(time.Unix(0, 0)) {
+			return
+		}
+		if _, ok := seen[u.ID]; ok {
+			return
+		}
+		seen[u.ID] = struct{}{}
+		out = append(out, u)
+	}
+
+	queryPublic := `
+		SELECT id, username, COALESCE(display_name,''), COALESCE(avatar_url,''), lang_tag,
+		       COALESCE(location,''), COALESCE(timezone,''), COALESCE(metadata::text,'{}'),
+		       disable_time, create_time, update_time
+		FROM users WHERE `
+
+	for _, idStr := range ids {
+		idStr = strings.TrimSpace(idStr)
+		if idStr == "" {
+			continue
+		}
+		uid, err := uuid.Parse(idStr)
+		if err != nil {
+			continue
+		}
+		var u User
+		err = pool.QueryRow(ctx, queryPublic+`id = $1`, uid).Scan(
+			&u.ID, &u.Username, &u.DisplayName, &u.AvatarURL, &u.LangTag,
+			&u.Location, &u.Timezone, &u.Metadata, &u.DisableTime, &u.CreateTime, &u.UpdateTime,
+		)
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				continue
+			}
+			return nil, err
+		}
+		appendUser(&u)
+	}
+
+	for _, name := range usernames {
+		name = strings.TrimSpace(name)
+		if name == "" {
+			continue
+		}
+		var u User
+		err := pool.QueryRow(ctx, queryPublic+`LOWER(username) = LOWER($1)`, name).Scan(
+			&u.ID, &u.Username, &u.DisplayName, &u.AvatarURL, &u.LangTag,
+			&u.Location, &u.Timezone, &u.Metadata, &u.DisableTime, &u.CreateTime, &u.UpdateTime,
+		)
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				continue
+			}
+			return nil, err
+		}
+		appendUser(&u)
+	}
+
+	for _, fb := range facebookIDs {
+		fb = strings.TrimSpace(fb)
+		if fb == "" {
+			continue
+		}
+		var u User
+		err := pool.QueryRow(ctx, queryPublic+`facebook_id = $1`, fb).Scan(
+			&u.ID, &u.Username, &u.DisplayName, &u.AvatarURL, &u.LangTag,
+			&u.Location, &u.Timezone, &u.Metadata, &u.DisableTime, &u.CreateTime, &u.UpdateTime,
+		)
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				continue
+			}
+			return nil, err
+		}
+		appendUser(&u)
+	}
+
+	return out, nil
+}
+
 func randomUsername() string {
 	return fmt.Sprintf("user_%s", strings.ReplaceAll(uuid.New().String()[:8], "-", ""))
 }
+
