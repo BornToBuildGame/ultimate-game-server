@@ -777,6 +777,25 @@ func MapJSNK(vm *goja.Runtime, nk RuntimeModule, timeout time.Duration, registry
 	})
 	_ = nkObj.Set("matchSignal", nkObj.Get("match_signal"))
 
+	_ = nkObj.Set("status_follow", func(call goja.FunctionCall) goja.Value {
+		sessionID := call.Argument(0).String()
+		ids := jsStringSlice(call.Argument(1).Export())
+		if err := nk.StatusFollow(sessionID, ids); err != nil {
+			panic(vm.NewGoError(err))
+		}
+		return goja.Undefined()
+	})
+	_ = nkObj.Set("statusFollow", nkObj.Get("status_follow"))
+	_ = nkObj.Set("status_unfollow", func(call goja.FunctionCall) goja.Value {
+		sessionID := call.Argument(0).String()
+		ids := jsStringSlice(call.Argument(1).Export())
+		if err := nk.StatusUnfollow(sessionID, ids); err != nil {
+			panic(vm.NewGoError(err))
+		}
+		return goja.Undefined()
+	})
+	_ = nkObj.Set("statusUnfollow", nkObj.Get("status_unfollow"))
+
 	_ = nkObj.Set("rpc", func(call goja.FunctionCall) goja.Value {
 		payload := ""
 		if !goja.IsUndefined(call.Argument(1)) {

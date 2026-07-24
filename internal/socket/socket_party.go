@@ -9,13 +9,13 @@ import (
 
 func (gh *GatewayHandler) trackParty(sessionID, partyID string) {
 	if gh.StreamTracker != nil {
-		gh.StreamTracker.Track(sessionID, presence.PartyStream(partyID))
+		gh.StreamTracker.TrackMembership(sessionID, presence.PartyStream(partyID))
 	}
 }
 
 func (gh *GatewayHandler) untrackParty(sessionID, partyID string) {
 	if gh.StreamTracker != nil {
-		gh.StreamTracker.Untrack(sessionID, presence.PartyStream(partyID))
+		_, _ = gh.StreamTracker.Untrack(sessionID, presence.PartyStream(partyID))
 	}
 }
 

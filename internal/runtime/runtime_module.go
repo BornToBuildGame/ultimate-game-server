@@ -31,12 +31,19 @@ type PartyLister interface {
 	List(limit int, open *bool, showHidden bool, query, cursor string) ([]*PartyListEntry, string, error)
 }
 
+// StatusFollower follows/unfollows status presence for a session (runtime nk.status_follow).
+type StatusFollower interface {
+	StatusFollow(sessionID string, userIDs []string) error
+	StatusUnfollow(sessionID string, userIDs []string) error
+}
+
 type GoRuntimeModule struct {
-	dbPool        *pgxpool.Pool
-	logger        Logger
-	registry      MatchRegistry
-	partyLister   PartyLister
-	rpcDispatcher RPCDispatcherFunc
+	dbPool         *pgxpool.Pool
+	logger         Logger
+	registry       MatchRegistry
+	partyLister    PartyLister
+	statusFollower StatusFollower
+	rpcDispatcher  RPCDispatcherFunc
 }
 
 func NewGoRuntimeModule(dbPool *pgxpool.Pool, logger Logger) *GoRuntimeModule {
@@ -52,6 +59,10 @@ func (m *GoRuntimeModule) SetMatchRegistry(reg MatchRegistry) {
 
 func (m *GoRuntimeModule) SetPartyLister(l PartyLister) {
 	m.partyLister = l
+}
+
+func (m *GoRuntimeModule) SetStatusFollower(sf StatusFollower) {
+	m.statusFollower = sf
 }
 
 func (m *GoRuntimeModule) SetRPCDispatcher(fn RPCDispatcherFunc) {
@@ -550,6 +561,26 @@ func (m *GoRuntimeModule) MatchSignal(ctx context.Context, matchID, data string)
 		return "", fmt.Errorf("match registry not configured")
 	}
 	return m.registry.MatchSignal(ctx, matchID, data)
+}
+
+func (m *GoRuntimeModule) StatusFollow(sessionID string, userIDs []string) error {
+	if m.statusFollower == nil {
+		return fmt.Errorf("status registry not configured")
+	}
+	if sessionID == "" {
+		return fmt.Errorf("expects a valid session id")
+	}
+	return m.statusFollower.StatusFollow(sessionID, userIDs)
+}
+
+func (m *GoRuntimeModule) StatusUnfollow(sessionID string, userIDs []string) error {
+	if m.statusFollower == nil {
+		return fmt.Errorf("status registry not configured")
+	}
+	if sessionID == "" {
+		return fmt.Errorf("expects a valid session id")
+	}
+	return m.statusFollower.StatusUnfollow(sessionID, userIDs)
 }
 
 func (m *GoRuntimeModule) LeaderboardCreate(ctx context.Context, id string, authoritative bool, sortOrder int, operator int, resetSchedule string, metadata map[string]interface{}, enableRanks bool) error {

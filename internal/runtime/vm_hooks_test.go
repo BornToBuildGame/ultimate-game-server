@@ -164,6 +164,12 @@ func (m *mockRuntimeModule) MatchGet(ctx context.Context, matchID string) (*Matc
 func (m *mockRuntimeModule) MatchSignal(ctx context.Context, matchID, data string) (string, error) {
 	return "ok", nil
 }
+func (m *mockRuntimeModule) StatusFollow(sessionID string, userIDs []string) error {
+	return nil
+}
+func (m *mockRuntimeModule) StatusUnfollow(sessionID string, userIDs []string) error {
+	return nil
+}
 func (m *mockRuntimeModule) RpcCall(ctx context.Context, id, payload string) (string, error) {
 	return payload, nil
 }

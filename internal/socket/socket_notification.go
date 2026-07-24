@@ -17,7 +17,7 @@ func (gh *GatewayHandler) trackNotifications(s *Session) {
 	if gh.StreamTracker == nil || s == nil {
 		return
 	}
-	gh.StreamTracker.Track(s.ID, NotificationsStream(s.UserID))
+	gh.StreamTracker.TrackMembership(s.ID, NotificationsStream(s.UserID))
 }
 
 // SendNotifications implements notification.Deliverer for a single user.

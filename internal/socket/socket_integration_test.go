@@ -48,7 +48,7 @@ func TestSocket_Integration(t *testing.T) {
 		tm,
 		reg,
 		func(s *Session) {},
-		func(sessionID string) {
+		func(sessionID, userID, username string) {
 			mu.Lock()
 			onDisconnectCalled = true
 			mu.Unlock()

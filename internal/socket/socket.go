@@ -289,13 +289,17 @@ type GatewayHandler struct {
 	tokenMgr        *auth.TokenManager
 	registry        *ConnectionRegistry
 	onConnect       func(s *Session)
-	onDisconnect    func(sessionID string)
+	onDisconnect    func(sessionID, userID, username string)
 	Router          *match.Router
 	Matchmaker      *matchmaker.Matchmaker
 	PartyRegistry   *party.Registry
 	HookRegistry    *runtime.HookRegistry
 	PresenceTracker *presence.PresenceTracker
 	StreamTracker   *presence.StreamTracker
+	StatusRegistry  *presence.StatusRegistry
+	MessageRouter   *presence.LocalMessageRouter
+	MaxStatusBytes  int
+	MaxSubscriptions int
 	dbPool          *pgxpool.Pool
 	sendBufSize     int
 	relayedMatches  map[string]*RelayedMatch
@@ -428,18 +432,44 @@ func (gh *GatewayHandler) publishRelayFanout(matchID, kind string, envelope []by
 	_ = match.PublishRelayFanout(context.Background(), rdb, nodeID, matchID, kind, envelope)
 }
 
-// SetPresenceTracker configures the presence tracker for status envelopes.
+// SetPresenceTracker configures the online index for friends∩online (legacy field name).
 func (gh *GatewayHandler) SetPresenceTracker(pt *presence.PresenceTracker) {
 	gh.mu.Lock()
 	defer gh.mu.Unlock()
 	gh.PresenceTracker = pt
 }
 
-// SetStreamTracker configures the Local-first stream tracker (party/channel/match modes).
+// SetStreamTracker configures the Local-first stream tracker (party/channel/match/status modes).
 func (gh *GatewayHandler) SetStreamTracker(st *presence.StreamTracker) {
 	gh.mu.Lock()
 	defer gh.mu.Unlock()
 	gh.StreamTracker = st
+}
+
+// SetStatusRegistry configures the status follow graph and fan-out.
+func (gh *GatewayHandler) SetStatusRegistry(sr *presence.StatusRegistry) {
+	gh.mu.Lock()
+	defer gh.mu.Unlock()
+	gh.StatusRegistry = sr
+}
+
+// SetMessageRouter configures the local message router for status delivery.
+func (gh *GatewayHandler) SetMessageRouter(r *presence.LocalMessageRouter) {
+	gh.mu.Lock()
+	defer gh.mu.Unlock()
+	gh.MessageRouter = r
+}
+
+// SetPresenceLimits configures status string and follow caps.
+func (gh *GatewayHandler) SetPresenceLimits(maxStatusBytes, maxSubscriptions int) {
+	gh.mu.Lock()
+	defer gh.mu.Unlock()
+	if maxStatusBytes > 0 {
+		gh.MaxStatusBytes = maxStatusBytes
+	}
+	if maxSubscriptions > 0 {
+		gh.MaxSubscriptions = maxSubscriptions
+	}
 }
 
 // SetDBPool configures an optional Postgres pool for chat persistence.
@@ -455,7 +485,7 @@ func NewGatewayHandler(
 	tm *auth.TokenManager,
 	reg *ConnectionRegistry,
 	onConnect func(s *Session),
-	onDisconnect func(sessionID string),
+	onDisconnect func(sessionID, userID, username string),
 	router *match.Router,
 ) *GatewayHandler {
 	return &GatewayHandler{
@@ -651,7 +681,7 @@ func (gh *GatewayHandler) handleDisconnect(s *Session) {
 			_ = gh.Matchmaker.RemoveSessionAll(context.Background(), s.ID)
 		}
 		if gh.onDisconnect != nil {
-			gh.onDisconnect(s.ID)
+			gh.onDisconnect(s.ID, s.UserID, s.Username)
 		}
 
 		s.mu.RLock()
@@ -865,15 +895,17 @@ type PartyDataSendPayload struct {
 }
 
 type StatusFollowPayload struct {
-	UserIDs []string `json:"user_ids"`
+	UserIDs    []string `json:"user_ids"`
+	Usernames  []string `json:"usernames"`
 }
 
 type StatusUnfollowPayload struct {
 	UserIDs []string `json:"user_ids"`
 }
 
+// StatusUpdatePayload distinguishes JSON null (offline) from empty string (online blank).
 type StatusUpdatePayload struct {
-	Status string `json:"status"`
+	Status *string `json:"status"`
 }
 
 type PingPayload struct{}

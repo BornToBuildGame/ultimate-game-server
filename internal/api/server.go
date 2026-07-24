@@ -52,6 +52,8 @@ type Config struct {
 	RPCTimeoutMs    int           `json:"rpc_execution_timeout_ms" yaml:"rpc_execution_timeout_ms"`
 	RPCMaxPayload   int           `json:"rpc_max_payload_size_bytes" yaml:"rpc_max_payload_size_bytes"`
 	RuntimePath     string        `json:"runtime_path" yaml:"runtime_path"`
+	PresenceMaxSubscriptions int  `json:"presence_max_subscriptions_per_user" yaml:"presence_max_subscriptions_per_user"`
+	PresenceMaxStatusBytes   int  `json:"presence_max_status_bytes" yaml:"presence_max_status_bytes"`
 }
 
 // Server handles HTTP and gRPC network interfaces.
@@ -102,6 +104,9 @@ func (s *Server) SetRuntimeManager(rm *runtime.GoRuntimeManager) {
 		}
 		if grm, ok := rm.NK().(*runtime.GoRuntimeModule); ok && s.PartyRegistry != nil {
 			grm.SetPartyLister(&partyListAdapter{reg: s.PartyRegistry})
+		}
+		if grm, ok := rm.NK().(*runtime.GoRuntimeModule); ok && s.SocketGateway != nil {
+			grm.SetStatusFollower(s.SocketGateway)
 		}
 		if s.Matchmaker != nil {
 			s.Matchmaker.SetDependencies(rm.DB(), rm.NK(), rm.Registry())
@@ -178,37 +183,40 @@ func NewServer(logger *zap.Logger, cfg Config, dbPool *pgxpool.Pool) (*Server, e
 
 	matchRouter := match.NewRouter()
 	sockRegistry := socket.NewConnectionRegistry()
-	presenceTracker := presence.NewPresenceTracker()
-	streamTracker := presence.NewStreamTracker()
+	onlineIndex := presence.NewOnlineIndex()
+	streamTracker := presence.NewLocalTracker()
+	msgRouter := presence.NewLocalMessageRouter(sockRegistry)
+	statusRegistry := presence.NewStatusRegistry(msgRouter, onlineIndex, 1024)
+
+	maxSubs := cfg.PresenceMaxSubscriptions
+	if maxSubs <= 0 {
+		maxSubs = 1000
+	}
+	maxStatus := cfg.PresenceMaxStatusBytes
+	if maxStatus <= 0 {
+		maxStatus = 2048
+	}
 
 	var sockGateway *socket.GatewayHandler
 	onConnect := func(s *socket.Session) {
-		if !s.TrackStatus {
-			return
-		}
-		subs := presenceTracker.SetPresence(presence.PresenceRecord{
-			UserID:    s.UserID,
-			SessionID: s.ID,
-			Username:  s.Username,
-			Status:    "",
-			JoinedAt:  time.Now(),
-		})
 		if sockGateway != nil {
-			sockGateway.NotifyStatusJoin(subs, s.UserID, s.ID, s.Username, "")
+			sockGateway.TrackStatusOnConnect(s)
 		}
 	}
-	onDisconnect := func(sessionID string) {
-		rec, had := presenceTracker.PeekPresence(sessionID)
-		_, _, subs := presenceTracker.RemovePresence(sessionID)
-		presenceTracker.UnfollowAll(sessionID)
-		streamTracker.UntrackAll(sessionID)
-		if had && sockGateway != nil {
-			sockGateway.NotifyStatusLeave(subs, rec.UserID, rec.SessionID, rec.Username)
+	onDisconnect := func(sessionID, userID, username string) {
+		if sockGateway != nil {
+			sockGateway.UntrackStatusOnDisconnect(sessionID, userID, username)
+		} else {
+			_ = streamTracker.UntrackAll(sessionID)
+			statusRegistry.UnfollowAll(sessionID)
 		}
 	}
 	sockGateway = socket.NewGatewayHandler(logger, tm, sockRegistry, onConnect, onDisconnect, matchRouter)
-	sockGateway.SetPresenceTracker(presenceTracker)
+	sockGateway.SetPresenceTracker(onlineIndex)
 	sockGateway.SetStreamTracker(streamTracker)
+	sockGateway.SetStatusRegistry(statusRegistry)
+	sockGateway.SetMessageRouter(msgRouter)
+	sockGateway.SetPresenceLimits(maxStatus, maxSubs)
 	if dbPool != nil {
 		sockGateway.SetDBPool(dbPool)
 	}
@@ -259,7 +267,7 @@ func NewServer(logger *zap.Logger, cfg Config, dbPool *pgxpool.Pool) (*Server, e
 		SocketRegistry:  sockRegistry,
 		SocketGateway:   sockGateway,
 		MatchRouter:     matchRouter,
-		presenceTracker: presenceTracker,
+		presenceTracker: onlineIndex,
 		rdb:             rdb,
 		rpcCfg:          rpcCfg,
 	}

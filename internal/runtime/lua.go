@@ -852,6 +852,25 @@ func MapLuaNK(L *lua.LState, nk RuntimeModule, registry ...*HookRegistry) {
 		return 1
 	}))
 
+	L.SetField(nkTable, "status_follow", L.NewFunction(func(L *lua.LState) int {
+		sessionID := L.CheckString(1)
+		ids := luaStringSlice(L.OptTable(2, nil))
+		if err := nk.StatusFollow(sessionID, ids); err != nil {
+			L.RaiseError("status_follow failed: %v", err)
+			return 0
+		}
+		return 0
+	}))
+	L.SetField(nkTable, "status_unfollow", L.NewFunction(func(L *lua.LState) int {
+		sessionID := L.CheckString(1)
+		ids := luaStringSlice(L.OptTable(2, nil))
+		if err := nk.StatusUnfollow(sessionID, ids); err != nil {
+			L.RaiseError("status_unfollow failed: %v", err)
+			return 0
+		}
+		return 0
+	}))
+
 	L.SetField(nkTable, "rpc", L.NewFunction(func(L *lua.LState) int {
 		id := L.CheckString(1)
 		payload := L.OptString(2, "")

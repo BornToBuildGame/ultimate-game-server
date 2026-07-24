@@ -45,7 +45,7 @@ func (gh *GatewayHandler) handleChannelJoin(s *Session, cid string, req *Channel
 	}
 
 	if gh.StreamTracker != nil {
-		gh.StreamTracker.Track(s.ID, chat.StreamKey(stream))
+		gh.StreamTracker.TrackMembership(s.ID, chat.StreamKey(stream))
 	}
 
 	gh.mu.Lock()
@@ -396,7 +396,7 @@ func (gh *GatewayHandler) removeFromChannel(s *Session, channelID string) {
 	gh.mu.Unlock()
 
 	if streamErr == nil && gh.StreamTracker != nil {
-		gh.StreamTracker.Untrack(s.ID, chat.StreamKey(stream))
+		_, _ = gh.StreamTracker.Untrack(s.ID, chat.StreamKey(stream))
 	}
 
 	if meta.Hidden || len(others) == 0 {

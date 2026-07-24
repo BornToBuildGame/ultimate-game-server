@@ -125,6 +125,10 @@ type RuntimeModule interface {
 	MatchGet(ctx context.Context, matchID string) (*MatchInfo, error)
 	MatchSignal(ctx context.Context, matchID, data string) (string, error)
 
+	// Status presence
+	StatusFollow(sessionID string, userIDs []string) error
+	StatusUnfollow(sessionID string, userIDs []string) error
+
 	// RPC
 	RpcCall(ctx context.Context, id, payload string) (string, error)
 }
