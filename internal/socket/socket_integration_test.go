@@ -35,12 +35,9 @@ func TestSocket_Integration(t *testing.T) {
 	}
 
 	reg := NewConnectionRegistry()
-	reg.GracePeriod = 200 * time.Millisecond // Use short grace period for fast integration test
+	reg.GracePeriod = 200 * time.Millisecond // Optional legacy grace for session registry recovery
 
-	var disconnectWg sync.WaitGroup
-	disconnectWg.Add(1)
-
-	var onDisconnectCalled bool
+	var disconnectCount int
 	var mu sync.Mutex
 
 	handler := NewGatewayHandler(
@@ -50,9 +47,8 @@ func TestSocket_Integration(t *testing.T) {
 		func(s *Session) {},
 		func(sessionID, userID, username string) {
 			mu.Lock()
-			onDisconnectCalled = true
+			disconnectCount++
 			mu.Unlock()
-			disconnectWg.Done()
 		},
 		nil,
 	)
@@ -75,16 +71,13 @@ func TestSocket_Integration(t *testing.T) {
 		t.Fatalf("failed to dial websocket: %v", err)
 	}
 
-	// Verify we can receive the ping message or close it
-	// Close the connection immediately to trigger grace period
+	// Close the connection — presence untrack fires immediately; session stays in registry during grace.
 	conn.Close()
-
-	// Wait 50ms: less than 200ms grace period. Session should still exist.
-	time.Sleep(50 * time.Millisecond)
+	time.Sleep(20 * time.Millisecond)
 
 	mu.Lock()
-	if onDisconnectCalled {
-		t.Error("onDisconnect was called too early during grace period")
+	if disconnectCount != 1 {
+		t.Errorf("expected onDisconnect once immediately, got %d", disconnectCount)
 	}
 	mu.Unlock()
 
@@ -110,32 +103,37 @@ func TestSocket_Integration(t *testing.T) {
 	}
 	defer conn2.Close()
 
-	// Wait 250ms: since we reconnected, the grace period timer for activeSessionID should have been cancelled,
-	// and onDisconnect should NOT be called.
-	time.Sleep(250 * time.Millisecond)
+	// Wait briefly — grace timer cancelled by reconnect; no extra onDisconnect.
+	time.Sleep(50 * time.Millisecond)
 
 	mu.Lock()
-	if onDisconnectCalled {
-		t.Error("onDisconnect was called despite successful session recovery")
+	if disconnectCount != 1 {
+		t.Errorf("expected onDisconnect still 1 after reconnect, got %d", disconnectCount)
 	}
 	mu.Unlock()
 
-	// 3. Close the second connection and let it expire
+	// Close the second connection; onDisconnect fires immediately again.
 	conn2.Close()
+	time.Sleep(20 * time.Millisecond)
 
-	// Wait for grace period expiration (should trigger wg.Done())
-	c := make(chan struct{})
-	go func() {
-		disconnectWg.Wait()
-		close(c)
-	}()
-
-	select {
-	case <-c:
-		// Success: onDisconnect was called after grace period expired
-	case <-time.After(1 * time.Second):
-		t.Error("timed out waiting for onDisconnect to be called after grace period expired")
+	mu.Lock()
+	if disconnectCount != 2 {
+		t.Errorf("expected onDisconnect twice after second close, got %d", disconnectCount)
 	}
+	mu.Unlock()
+
+	// After grace expires the session is evicted from the registry.
+	deadline := time.Now().Add(1 * time.Second)
+	for time.Now().Before(deadline) {
+		reg.mu.RLock()
+		_, exists := reg.sessions[activeSessionID]
+		reg.mu.RUnlock()
+		if !exists {
+			return
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	t.Error("timed out waiting for session eviction after grace period")
 }
 
 // Helper mock logger to avoid dependency on main zap setup in testing

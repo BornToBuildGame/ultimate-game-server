@@ -1,8 +1,10 @@
 package runtime
 
 import (
+	"context"
 	"fmt"
 
+	"ultimate-game-server/internal/cluster"
 	"ultimate-game-server/internal/presence"
 )
 
@@ -30,6 +32,17 @@ type LocalStreamManager struct {
 	Tracker  *presence.LocalTracker
 	Router   presence.MessageRouter
 	Registry SessionDisconnecter
+	mesh     *cluster.Mesh
+	nodeID   string
+}
+
+// SetClusterMesh enables cross-node StreamSend fan-out.
+func (m *LocalStreamManager) SetClusterMesh(mesh *cluster.Mesh, nodeID string) {
+	if m == nil {
+		return
+	}
+	m.mesh = mesh
+	m.nodeID = nodeID
 }
 
 // SessionDisconnecter closes a live WebSocket session by ID.
@@ -112,6 +125,13 @@ func (m *LocalStreamManager) StreamSend(mode int16, subject, subcontext, label, 
 		return nil
 	}
 	m.Router.SendToSessionIDs(targets, []byte(data))
+	if m.mesh != nil {
+		_ = m.mesh.PublishStreamBroadcast(context.Background(), cluster.StreamSendMessage{
+			SourceNode: m.nodeID,
+			Mode: mode, Subject: subject, Subcontext: subcontext, Label: label,
+			Data: data, SessionIDs: sessionIDs,
+		})
+	}
 	return nil
 }
 

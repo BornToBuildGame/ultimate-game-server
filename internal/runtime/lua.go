@@ -209,6 +209,72 @@ func MapLuaNK(L *lua.LState, nk RuntimeModule, registry ...*HookRegistry) {
 		return 1
 	}))
 
+	L.SetField(nkTable, "multi_update", L.NewFunction(func(L *lua.LState) int {
+		accountTbl := L.OptTable(1, nil)
+		writesTbl := L.OptTable(2, nil)
+		deletesTbl := L.OptTable(3, nil)
+		walletTbl := L.OptTable(4, nil)
+		updateLedger := L.OptBool(5, true)
+
+		accounts := parseLuaAccountUpdates(accountTbl)
+		writes := parseLuaStorageWrites(writesTbl)
+		deletes := parseLuaStorageDeletes(deletesTbl)
+		wallets := parseLuaWalletUpdates(walletTbl)
+
+		acks, results, err := nk.MultiUpdate(L.Context(), accounts, writes, deletes, wallets, updateLedger)
+		if err != nil {
+			L.RaiseError("multi_update failed: %v", err)
+			return 0
+		}
+		L.Push(ToLuaValue(L, acks))
+		L.Push(ToLuaValue(L, results))
+		return 2
+	}))
+
+	L.SetField(nkTable, "storage_index_list", L.NewFunction(func(L *lua.LState) int {
+		callerID := L.OptString(1, "")
+		indexName := L.CheckString(2)
+		query := L.OptString(3, "*")
+		limit := L.OptInt(4, 10)
+		orderTbl := L.OptTable(5, nil)
+		cursor := L.OptString(6, "")
+		var order []string
+		if orderTbl != nil {
+			if arr, ok := ToGoValue(orderTbl).([]interface{}); ok {
+				for _, v := range arr {
+					order = append(order, fmt.Sprint(v))
+				}
+			}
+		}
+		objs, next, err := nk.StorageIndexList(L.Context(), callerID, indexName, query, limit, order, cursor)
+		if err != nil {
+			L.RaiseError("storage_index_list failed: %v", err)
+			return 0
+		}
+		L.Push(ToLuaValue(L, objs))
+		L.Push(lua.LString(next))
+		return 2
+	}))
+
+	if grm, ok := nk.(*GoRuntimeModule); ok {
+		L.SetField(nkTable, "register_storage_index", L.NewFunction(func(L *lua.LState) int {
+			name := L.CheckString(1)
+			collection := L.CheckString(2)
+			key := L.OptString(3, "")
+			fieldsTbl := L.OptTable(4, nil)
+			sortableTbl := L.OptTable(5, nil)
+			maxEntries := L.OptInt(6, 1000)
+			indexOnly := L.OptBool(7, false)
+			fields := luaStringSlice(fieldsTbl)
+			sortable := luaStringSlice(sortableTbl)
+			if err := grm.RegisterStorageIndex(name, collection, key, fields, sortable, maxEntries, indexOnly); err != nil {
+				L.RaiseError("register_storage_index failed: %v", err)
+				return 0
+			}
+			return 0
+		}))
+	}
+
 	L.SetField(nkTable, "wallet_ledger_list", L.NewFunction(func(L *lua.LState) int {
 		userID := L.CheckString(1)
 		limit := L.OptInt(2, 100)
@@ -1570,4 +1636,126 @@ func ToGoValue(val lua.LValue) interface{} {
 	default:
 		return nil
 	}
+}
+
+func parseLuaAccountUpdates(tbl *lua.LTable) []*AccountUpdateParams {
+	if tbl == nil {
+		return nil
+	}
+	arr, _ := ToGoValue(tbl).([]interface{})
+	out := make([]*AccountUpdateParams, 0, len(arr))
+	for _, item := range arr {
+		m, ok := item.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		u := &AccountUpdateParams{UserID: fmt.Sprint(m["user_id"])}
+		if v, ok := m["username"].(string); ok {
+			u.Username = &v
+		}
+		if v, ok := m["display_name"].(string); ok {
+			u.DisplayName = &v
+		}
+		if v, ok := m["avatar_url"].(string); ok {
+			u.AvatarURL = &v
+		}
+		if v, ok := m["lang_tag"].(string); ok {
+			u.LangTag = &v
+		}
+		if v, ok := m["location"].(string); ok {
+			u.Location = &v
+		}
+		if v, ok := m["timezone"].(string); ok {
+			u.Timezone = &v
+		}
+		if v, ok := m["metadata"].(string); ok {
+			u.Metadata = &v
+		}
+		out = append(out, u)
+	}
+	return out
+}
+
+func parseLuaStorageWrites(tbl *lua.LTable) []*StorageWrite {
+	if tbl == nil {
+		return nil
+	}
+	arr, _ := ToGoValue(tbl).([]interface{})
+	out := make([]*StorageWrite, 0, len(arr))
+	for _, item := range arr {
+		m, ok := item.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		w := &StorageWrite{
+			Collection: fmt.Sprint(m["collection"]),
+			Key:        fmt.Sprint(m["key"]),
+			UserID:     fmt.Sprint(m["user_id"]),
+			Version:    fmt.Sprint(m["version"]),
+		}
+		switch v := m["value"].(type) {
+		case string:
+			w.Value = v
+		default:
+			b, _ := json.Marshal(v)
+			w.Value = string(b)
+		}
+		if f, ok := m["permission_read"].(float64); ok {
+			w.PermissionRead = int32(f)
+		}
+		if f, ok := m["permission_write"].(float64); ok {
+			w.PermissionWrite = int32(f)
+		}
+		out = append(out, w)
+	}
+	return out
+}
+
+func parseLuaStorageDeletes(tbl *lua.LTable) []*StorageDelete {
+	if tbl == nil {
+		return nil
+	}
+	arr, _ := ToGoValue(tbl).([]interface{})
+	out := make([]*StorageDelete, 0, len(arr))
+	for _, item := range arr {
+		m, ok := item.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		out = append(out, &StorageDelete{
+			Collection: fmt.Sprint(m["collection"]),
+			Key:        fmt.Sprint(m["key"]),
+			UserID:     fmt.Sprint(m["user_id"]),
+			Version:    fmt.Sprint(m["version"]),
+		})
+	}
+	return out
+}
+
+func parseLuaWalletUpdates(tbl *lua.LTable) []*WalletUpdateParams {
+	if tbl == nil {
+		return nil
+	}
+	arr, _ := ToGoValue(tbl).([]interface{})
+	out := make([]*WalletUpdateParams, 0, len(arr))
+	for _, item := range arr {
+		m, ok := item.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		u := &WalletUpdateParams{UserID: fmt.Sprint(m["user_id"])}
+		if cs, ok := m["changeset"].(map[string]interface{}); ok {
+			u.Changeset = make(map[string]int64)
+			for k, v := range cs {
+				if f, ok := v.(float64); ok {
+					u.Changeset[k] = int64(f)
+				}
+			}
+		}
+		if meta, ok := m["metadata"].(map[string]interface{}); ok {
+			u.Metadata = meta
+		}
+		out = append(out, u)
+	}
+	return out
 }

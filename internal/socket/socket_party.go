@@ -1,8 +1,10 @@
 package socket
 
 import (
+	"context"
 	"encoding/json"
 
+	"ultimate-game-server/internal/cluster"
 	"ultimate-game-server/internal/party"
 	"ultimate-game-server/internal/presence"
 )
@@ -419,6 +421,12 @@ func (gh *GatewayHandler) broadcastPartyPresence(
 		}
 		gh.registry.SendToSession(m.SessionID, payload)
 	}
+	if mesh := gh.clusterMesh(); mesh != nil {
+		_ = mesh.PublishParty(context.Background(), cluster.PartyMessage{
+			PartyID: partyID,
+			Payload: payload,
+		})
+	}
 }
 
 func (gh *GatewayHandler) broadcastPartyLeader(partyID string, members map[string]*party.PartyMember, leader *party.PartyMember) {
@@ -436,6 +444,29 @@ func (gh *GatewayHandler) broadcastPartyLeader(partyID string, members map[strin
 		},
 	})
 	for _, m := range members {
+		gh.registry.SendToSession(m.SessionID, payload)
+	}
+	if mesh := gh.clusterMesh(); mesh != nil {
+		_ = mesh.PublishParty(context.Background(), cluster.PartyMessage{
+			PartyID: partyID,
+			Payload: payload,
+		})
+	}
+}
+
+// DeliverClusterParty delivers a remote party envelope to local party members.
+func (gh *GatewayHandler) DeliverClusterParty(partyID string, payload []byte) {
+	if gh.PartyRegistry == nil {
+		return
+	}
+	p, err := gh.PartyRegistry.GetParty(partyID)
+	if err != nil || p == nil {
+		return
+	}
+	for _, m := range p.Members {
+		if m == nil {
+			continue
+		}
 		gh.registry.SendToSession(m.SessionID, payload)
 	}
 }

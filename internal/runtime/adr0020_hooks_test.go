@@ -65,19 +65,16 @@ func TestRunBeforeRtRejectAndModify(t *testing.T) {
 		t.Fatalf("match_id=%v", got)
 	}
 
-	// rpc must be skipped
+	// rpc before hooks run
 	reg3 := NewHookRegistry()
 	reg3.RegisterBefore("rpc", func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in interface{}) (interface{}, error) {
 		return nil, errors.New("should not run")
 	})
 	ex3 := NewRtHookExecutor(reg3, &testLogger{t: t}, nil, nil, nil, nil, nil, nil)
 	env := map[string]interface{}{"rpc": map[string]interface{}{"id": "x"}}
-	out3, err := ex3.RunBeforeRt(context.Background(), "rpc", env)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if out3["rpc"] == nil {
-		t.Fatal("rpc envelope mutated unexpectedly")
+	_, err = ex3.RunBeforeRt(context.Background(), "rpc", env)
+	if err == nil {
+		t.Fatal("expected rpc before hook error")
 	}
 }
 

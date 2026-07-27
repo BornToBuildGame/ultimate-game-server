@@ -16,7 +16,11 @@ import (
 	"ultimate-game-server/internal/console"
 	"ultimate-game-server/internal/database"
 	"ultimate-game-server/internal/economy"
+	"ultimate-game-server/internal/fleet"
+	"ultimate-game-server/internal/match"
 	"ultimate-game-server/internal/runtime"
+	"ultimate-game-server/internal/satori"
+	"ultimate-game-server/internal/storage"
 
 	"github.com/dop251/goja"
 	"github.com/jackc/pgx/v5/stdlib"
@@ -137,6 +141,15 @@ func main() {
 		sqlDB = stdlib.OpenDBFromPool(dbPool)
 	}
 	nk := runtime.NewGoRuntimeModule(dbPool, rtLogger)
+	nk.SetStorageIndex(storage.NewBlugeStorageIndex())
+	if os.Getenv("SATORI_URL") != "" {
+		nk.SetSatoriClient(satori.NewClient(satori.Config{
+			URL:        os.Getenv("SATORI_URL"),
+			APIKeyName: os.Getenv("SATORI_API_KEY_NAME"),
+			APIKey:     os.Getenv("SATORI_API_KEY"),
+		}))
+	}
+	nk.SetFleetManager(&fleet.LocalStub{})
 	rm := runtime.NewGoRuntimeManager(rtLogger, sqlDB, nk)
 	if err := rm.LoadPlugins(ctx, rtPath); err != nil {
 		logger.Warn("LoadPlugins completed with errors", zap.Error(err))
@@ -150,6 +163,9 @@ func main() {
 	server.SetVMs(luaVM, jsVM)
 
 	cronSched := runtime.NewCronScheduler(rm.Registry(), rtLogger, sqlDB, nk)
+	if server.Redis() != nil {
+		cronSched.SetClusterLock(runtime.NewCronClusterLock(server.Redis(), match.ResolveNodeID()))
+	}
 	cronSched.Start(ctx)
 
 	consoleListen := strings.TrimSpace(*consoleAddr)
@@ -169,6 +185,13 @@ func main() {
 		cs.SetRPCDispatcher(&rpcConsoleAdapter{
 			rm: rm, luaVM: luaVM, jsVM: jsVM, cfg: runtime.DefaultRPCConfig(),
 		})
+		if os.Getenv("SATORI_URL") != "" {
+			cs.SetSatoriClient(satori.NewClient(satori.Config{
+				URL:        os.Getenv("SATORI_URL"),
+				APIKeyName: os.Getenv("SATORI_API_KEY_NAME"),
+				APIKey:     os.Getenv("SATORI_API_KEY"),
+			}))
+		}
 		if err := cs.Start(consoleListen); err != nil {
 			logger.Fatal("Failed to start console admin", zap.Error(err), zap.String("addr", consoleListen))
 		}

@@ -11,10 +11,12 @@ import (
 	"os"
 	"path/filepath"
 	"plugin"
-	"strings"
 	"reflect"
 	"runtime/debug"
+	"strings"
 	"sync"
+
+	"ultimate-game-server/internal/storage"
 )
 
 // RuntimeType identifies the execution runtime for a registered handler.
@@ -169,7 +171,10 @@ func (m *GoRuntimeManager) loadPlugin(ctx context.Context, path string) error {
 	}
 
 	// 4. Create an initializer that registers into our HookRegistry
-	init := &goInitializer{registry: m.registry}
+	init := &goInitializer{registry: m.registry, nk: m.nk}
+	if grm, ok := m.nk.(*GoRuntimeModule); ok {
+		init.storageIndex = grm.storageIndex
+	}
 
 	// 5. Execute InitModule with panic recovery
 	if err := m.safeCall(func() error {
@@ -277,7 +282,9 @@ func (m *GoRuntimeManager) Registry() *HookRegistry {
 // goInitializer implements the Initializer interface for Go modules.
 // It captures registrations into the HookRegistry during InitModule execution.
 type goInitializer struct {
-	registry *HookRegistry
+	registry     *HookRegistry
+	storageIndex *storage.BlugeStorageIndex
+	nk           RuntimeModule
 }
 
 func (i *goInitializer) RegisterRpc(id string, fn RPCHandler) error {
@@ -494,4 +501,29 @@ func (i *goInitializer) RegisterEvent(fn EventHandler) error {
 
 func (i *goInitializer) RegisterCron(name, schedule string, fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule) error) error {
 	return i.registry.RegisterCron(name, &CronJob{Schedule: schedule, Handler: fn})
+}
+
+func (i *goInitializer) RegisterStorageIndex(name, collection, key string, fields, sortableFields []string, maxEntries int, indexOnly bool) error {
+	if i.storageIndex == nil {
+		return fmt.Errorf("storage index not configured")
+	}
+	return i.storageIndex.CreateIndex(storage.StorageIndexDefinition{
+		Name: name, Collection: collection, Key: key,
+		Fields: fields, SortableFields: sortableFields,
+		MaxEntries: maxEntries, IndexOnly: indexOnly,
+	})
+}
+
+func (i *goInitializer) RegisterStorageIndexFilter(indexName string, fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, write *StorageWrite) bool) error {
+	if i.storageIndex == nil {
+		return fmt.Errorf("storage index not configured")
+	}
+	i.storageIndex.RegisterFilter(indexName, func(ctx context.Context, obj *storage.StorageObject) (bool, error) {
+		sw := &StorageWrite{
+			Collection: obj.Collection, Key: obj.Key, UserID: obj.UserID, Value: obj.Value, Version: obj.Version,
+			PermissionRead: int32(obj.Read), PermissionWrite: int32(obj.Write),
+		}
+		return fn(ctx, nil, nil, nil, sw), nil
+	})
+	return nil
 }

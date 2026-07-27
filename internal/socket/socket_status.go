@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"ultimate-game-server/internal/cluster"
 	"ultimate-game-server/internal/presence"
 )
 
@@ -212,16 +213,18 @@ func (gh *GatewayHandler) handleStatusUpdate(s *Session, cid string, req *Status
 	// JSON null → Untrack (appear offline). Empty string → online with blank status.
 	if req.Status == nil {
 		p, had := tr.Untrack(s.ID, stream)
-		if had {
+	if had {
 			username := p.Meta.Username
 			if username == "" {
 				username = s.Username
 			}
-			sr.QueueLeave(s.UserID, presence.StatusPresence{
+			sp := presence.StatusPresence{
 				UserID:    s.UserID,
 				SessionID: s.ID,
 				Username:  username,
-			})
+			}
+			sr.QueueLeave(s.UserID, sp)
+			gh.publishPresenceMesh("leave", s.UserID, sp)
 		}
 		res, _ := json.Marshal(map[string]interface{}{
 			"cid":           cid,
@@ -244,6 +247,12 @@ func (gh *GatewayHandler) handleStatusUpdate(s *Session, cid string, req *Status
 		tr.Track(s.ID, stream, s.UserID, meta)
 	}
 	sr.QueueJoin(s.UserID, presence.StatusPresence{
+		UserID:    s.UserID,
+		SessionID: s.ID,
+		Username:  s.Username,
+		Status:    status,
+	})
+	gh.publishPresenceMesh("update", s.UserID, presence.StatusPresence{
 		UserID:    s.UserID,
 		SessionID: s.ID,
 		Username:  s.Username,
@@ -292,6 +301,12 @@ func (gh *GatewayHandler) TrackStatusOnConnect(s *Session) {
 		Username:  s.Username,
 		Status:    "",
 	})
+	gh.publishPresenceMesh("join", s.UserID, presence.StatusPresence{
+		UserID:    s.UserID,
+		SessionID: s.ID,
+		Username:  s.Username,
+		Status:    "",
+	})
 }
 
 // UntrackStatusOnDisconnect removes status presence and follow edges after grace expiry.
@@ -304,11 +319,13 @@ func (gh *GatewayHandler) UntrackStatusOnDisconnect(sessionID, userID, username 
 					uname = username
 				}
 				if gh.StatusRegistry != nil {
-					gh.StatusRegistry.QueueLeave(userID, presence.StatusPresence{
+					sp := presence.StatusPresence{
 						UserID:    userID,
 						SessionID: sessionID,
 						Username:  uname,
-					})
+					}
+					gh.StatusRegistry.QueueLeave(userID, sp)
+					gh.publishPresenceMesh("leave", userID, sp)
 				}
 			}
 		}
@@ -317,6 +334,56 @@ func (gh *GatewayHandler) UntrackStatusOnDisconnect(sessionID, userID, username 
 	if gh.StatusRegistry != nil {
 		gh.StatusRegistry.UnfollowAll(sessionID)
 	}
+}
+
+func (gh *GatewayHandler) publishPresenceMesh(kind, userID string, p presence.StatusPresence) {
+	mesh := gh.clusterMesh()
+	if mesh == nil {
+		return
+	}
+	payload, _ := json.Marshal(map[string]interface{}{
+		"user_id": userID,
+		"presence": map[string]interface{}{
+			"user_id":    p.UserID,
+			"session_id": p.SessionID,
+			"username":   p.Username,
+			"status":     p.Status,
+		},
+	})
+	_ = mesh.PublishPresence(context.Background(), cluster.PresenceEventMessage{
+		Kind:    kind,
+		Payload: payload,
+	})
+}
+
+// DeliverClusterPresence applies a remote status join/leave/update to local followers.
+func (gh *GatewayHandler) DeliverClusterPresence(kind string, payload []byte) {
+	if gh.StatusRegistry == nil {
+		return
+	}
+	var body struct {
+		UserID   string `json:"user_id"`
+		Presence struct {
+			UserID    string `json:"user_id"`
+			SessionID string `json:"session_id"`
+			Username  string `json:"username"`
+			Status    string `json:"status"`
+		} `json:"presence"`
+	}
+	if err := json.Unmarshal(payload, &body); err != nil || body.UserID == "" {
+		return
+	}
+	sp := presence.StatusPresence{
+		UserID:    body.Presence.UserID,
+		SessionID: body.Presence.SessionID,
+		Username:  body.Presence.Username,
+		Status:    body.Presence.Status,
+	}
+	if kind == "leave" {
+		gh.StatusRegistry.QueueLeave(body.UserID, sp)
+		return
+	}
+	gh.StatusRegistry.QueueJoin(body.UserID, sp)
 }
 
 // StatusFollow adds follow edges for a session (runtime nk.status_follow).

@@ -54,6 +54,14 @@ type TournamentScheduler struct {
 	lastExpiry       int64
 	callbackQueue    chan schedulerCallback
 	workers          int
+
+	tournamentLeader  ClusterLeader
+	leaderboardLeader ClusterLeader
+}
+
+// ClusterLeader is a Redis SETNX leadership lease (same pattern as runtime cron lock).
+type ClusterLeader interface {
+	TryAcquire(ctx context.Context) bool
 }
 
 type schedulerCallback struct {
@@ -92,6 +100,16 @@ func (ts *TournamentScheduler) SetResetHook(hook ResetHook) {
 // SetLeaderboardResetHook configures the leaderboard reset callback.
 func (ts *TournamentScheduler) SetLeaderboardResetHook(hook LeaderboardResetHook) {
 	ts.leaderboardReset = hook
+}
+
+// SetTournamentLeaderLock attaches Redis leadership for tournament end/reset ticks.
+func (ts *TournamentScheduler) SetTournamentLeaderLock(lock ClusterLeader) {
+	ts.tournamentLeader = lock
+}
+
+// SetLeaderboardLeaderLock attaches Redis leadership for leaderboard reset ticks.
+func (ts *TournamentScheduler) SetLeaderboardLeaderLock(lock ClusterLeader) {
+	ts.leaderboardLeader = lock
 }
 
 // Start runs timer-based end/expiry evaluation with a callback worker queue.
@@ -148,6 +166,12 @@ func (ts *TournamentScheduler) Update() {
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 
+	runTournament := ts.tournamentLeader == nil || ts.tournamentLeader.TryAcquire(ctx)
+	runLeaderboard := ts.leaderboardLeader == nil || ts.leaderboardLeader.TryAcquire(ctx)
+	if !runTournament && !runLeaderboard {
+		return
+	}
+
 	now := time.Now().UTC()
 	var nearestEnd, nearestExpiry int64
 
@@ -168,6 +192,9 @@ func (ts *TournamentScheduler) Update() {
 
 	for _, lb := range lbs {
 		if lb.IsTournament() {
+			if !runTournament {
+				continue
+			}
 			_, endActive, expiry := leaderboard.ActiveDeadlines(lb, now)
 			if endActive > now.Unix() {
 				if nearestEnd == 0 || endActive < nearestEnd {
@@ -183,7 +210,7 @@ func (ts *TournamentScheduler) Update() {
 			} else if expiry > 0 {
 				dueNow = append(dueNow, dueItem{kind: "tournament_reset", id: lb.ID, end: endActive, exp: expiry})
 			}
-		} else if lb.ResetSchedule != "" {
+		} else if runLeaderboard && lb.ResetSchedule != "" {
 			sched := leaderboard.MustParseResetSchedule(lb.ResetSchedule)
 			if sched == nil {
 				continue

@@ -10,21 +10,41 @@ import (
 	"sync"
 	"time"
 
+	"ultimate-game-server/internal/console/acl"
+	"ultimate-game-server/internal/console/consolepb"
+	"ultimate-game-server/internal/satori"
+
 	"github.com/blevesearch/bleve/v2"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/soheilhy/cmux"
 	"golang.org/x/crypto/bcrypt"
+	"google.golang.org/grpc"
 )
 
 // ConsoleClaims defines the JWT claims for authenticated console operators.
 type ConsoleClaims struct {
-	UserID   string                 `json:"user_id"`
-	Username string                 `json:"username"`
-	Email    string                 `json:"email"`
-	ACL      map[string]interface{} `json:"acl"`
+	UserID     string                 `json:"user_id"`
+	Username   string                 `json:"username"`
+	Email      string                 `json:"email"`
+	ACL        map[string]interface{} `json:"acl"`         // legacy JSON flags (compat)
+	ACLBitmap  string                 `json:"acl_bitmap"`  // reference-aligned bitmap
 	jwt.RegisteredClaims
+}
+
+func (c *ConsoleClaims) Permission() acl.Permission {
+	if c == nil {
+		return acl.None()
+	}
+	if c.ACLBitmap != "" {
+		if p, err := acl.Parse(c.ACLBitmap); err == nil {
+			return p
+		}
+	}
+	b, _ := json.Marshal(c.ACL)
+	return acl.FromDBACL(b)
 }
 
 // Server encapsulates the Console Admin HTTP server.
@@ -34,6 +54,7 @@ type Server struct {
 	jwtSecret      []byte
 	listener       net.Listener
 	httpServer     *http.Server
+	grpcServer     *grpc.Server
 	bleveIndex     bleve.Index
 	auditChan      chan *AuditLogEntry
 	wg             sync.WaitGroup
@@ -42,10 +63,11 @@ type Server struct {
 	startTime      time.Time
 
 	// Optional deps for Phase 2c parity (set via setters).
-	matchLister   MatchLister
-	matchStater   MatchStater
-	rpcDispatcher RPCDispatcher
+	matchLister    MatchLister
+	matchStater    MatchStater
+	rpcDispatcher  RPCDispatcher
 	statusProvider StatusProvider
+	satoriClient   *satori.Client
 
 	revokedTokens sync.Map // token string -> struct{}
 }
@@ -90,6 +112,9 @@ func (s *Server) SetRPCDispatcher(d RPCDispatcher) { s.rpcDispatcher = d }
 // SetStatusProvider wires GET /console/api/status.
 func (s *Server) SetStatusProvider(p StatusProvider) { s.statusProvider = p }
 
+// SetSatoriClient wires Satori console RPCs.
+func (s *Server) SetSatoriClient(c *satori.Client) { s.satoriClient = c }
+
 // Logger interface matching our requirements.
 type Logger interface {
 	Info(msg string, fields ...any)
@@ -132,13 +157,17 @@ func NewServer(logger Logger, pool *pgxpool.Pool, jwtSecret []byte) (*Server, er
 	return s, nil
 }
 
-// Start opens the network listener and starts the HTTP server.
+// Start opens the network listener and starts HTTP (/v2/console + legacy /console) and gRPC Console.
 func (s *Server) Start(addr string) error {
 	l, err := net.Listen("tcp", addr)
 	if err != nil {
 		return err
 	}
 	s.listener = l
+
+	m := cmux.New(l)
+	grpcL := m.MatchWithWriters(cmux.HTTP2MatchHeaderFieldSendSettings("content-type", "application/grpc"))
+	httpL := m.Match(cmux.Any())
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /console/authenticate", s.handleAuthenticate)
@@ -150,25 +179,42 @@ func (s *Server) Start(addr string) error {
 	s.registerParityRoutes(mux)
 	s.registerLeaderboardRoutes(mux)
 	s.registerFriendsRoutes(mux)
+	s.registerDeferredRoutes(mux)
+	s.registerV2ConsoleRoutes(mux)
 
 	s.httpServer = &http.Server{
 		Handler:      mux,
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 30 * time.Second,
 	}
+	s.grpcServer = grpc.NewServer()
+	consolepb.RegisterConsoleServer(s.grpcServer, NewGRPCConsole(s))
 
-	s.logger.Info("Console Admin server listening", "address", addr)
+	s.logger.Info("Console Admin server listening (HTTP /v2/console + gRPC)", "address", addr)
 	go func() {
-		if err := s.httpServer.Serve(l); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			s.logger.Error("Console Admin server closed with error", "err", err)
+		if err := s.grpcServer.Serve(grpcL); err != nil {
+			s.logger.Error("Console gRPC closed", "err", err)
+		}
+	}()
+	go func() {
+		if err := s.httpServer.Serve(httpL); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			s.logger.Error("Console Admin HTTP closed with error", "err", err)
+		}
+	}()
+	go func() {
+		if err := m.Serve(); err != nil {
+			s.logger.Error("Console cmux closed", "err", err)
 		}
 	}()
 
 	return nil
 }
 
-// Close gracefully terminates HTTP server and async workers.
+// Close gracefully terminates HTTP/gRPC servers and async workers.
 func (s *Server) Close() {
+	if s.grpcServer != nil {
+		s.grpcServer.GracefulStop()
+	}
 	if s.httpServer != nil {
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 		defer cancel()
@@ -183,30 +229,31 @@ func (s *Server) Close() {
 }
 
 func parseACL(dbAclBytes []byte) map[string]interface{} {
-	acl := make(map[string]interface{})
+	aclMap := make(map[string]interface{})
 	if len(dbAclBytes) > 0 {
-		_ = json.Unmarshal(dbAclBytes, &acl)
+		_ = json.Unmarshal(dbAclBytes, &aclMap)
 	}
-	return acl
+	return aclMap
 }
 
-// hasACL returns true if claims include admin or the named flag set to true.
+// hasACL returns true if claims grant the legacy flag via bitmap (or admin).
 func hasACL(claims *ConsoleClaims, flag string) bool {
-	if claims == nil || claims.ACL == nil {
+	if claims == nil {
 		return false
 	}
-	if v, ok := claims.ACL["admin"].(bool); ok && v {
-		return true
-	}
-	if flag == "" {
-		return false
-	}
-	v, ok := claims.ACL[flag].(bool)
-	return ok && v
+	return acl.LegacyFlagAccess(claims.Permission(), flag)
 }
 
 func (s *Server) requireACL(w http.ResponseWriter, claims *ConsoleClaims, flag string) bool {
 	if hasACL(claims, flag) {
+		return true
+	}
+	http.Error(w, "Forbidden", http.StatusForbidden)
+	return false
+}
+
+func (s *Server) requirePerm(w http.ResponseWriter, claims *ConsoleClaims, res acl.Resource, level acl.PermissionLevel) bool {
+	if claims != nil && claims.Permission().HasAccess(acl.NewPermission(res, level)) {
 		return true
 	}
 	http.Error(w, "Forbidden", http.StatusForbidden)
@@ -291,13 +338,15 @@ func (s *Server) handleAuthenticate(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	acl := parseACL(dbAclBytes)
+	aclMap := parseACL(dbAclBytes)
+	perm := acl.FromDBACL(dbAclBytes)
 	jti := uuid.New().String()
 	claims := &ConsoleClaims{
-		UserID:   dbID,
-		Username: dbUsername,
-		Email:    dbEmail,
-		ACL:      acl,
+		UserID:    dbID,
+		Username:  dbUsername,
+		Email:     dbEmail,
+		ACL:       aclMap,
+		ACLBitmap: perm.String(),
 		RegisteredClaims: jwt.RegisteredClaims{
 			ID:        jti,
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(12 * time.Hour)),
@@ -323,7 +372,7 @@ func (s *Server) handleAuthenticate(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(map[string]interface{}{
-		"ok": true, "username": dbUsername, "acl": acl,
+		"ok": true, "username": dbUsername, "acl": aclMap, "acl_bitmap": perm.String(),
 	})
 }
 

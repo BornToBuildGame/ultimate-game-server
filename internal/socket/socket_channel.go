@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"ultimate-game-server/internal/chat"
+	"ultimate-game-server/internal/cluster"
 	"ultimate-game-server/internal/notification"
 	"ultimate-game-server/internal/social"
 
@@ -216,6 +217,12 @@ func (gh *GatewayHandler) broadcastChannelMessage(recipients []*Session, msg *ch
 	bytes, _ := json.Marshal(payload)
 	for _, sess := range recipients {
 		sess.TrySend(bytes)
+	}
+	if mesh := gh.clusterMesh(); mesh != nil {
+		_ = mesh.PublishChat(context.Background(), cluster.ChatMessage{
+			ChannelID: msg.ChannelID,
+			Payload:   bytes,
+		})
 	}
 }
 
@@ -493,4 +500,18 @@ func (gh *GatewayHandler) BroadcastGroupChannelMessage(ctx context.Context, grou
 	}
 	gh.mu.RUnlock()
 	gh.broadcastChannelMessage(recipients, msg)
+}
+
+// DeliverClusterChat delivers a cross-node chat payload to local channel subscribers.
+func (gh *GatewayHandler) DeliverClusterChat(channelID string, payload []byte) {
+	gh.mu.RLock()
+	room := gh.channels[channelID]
+	recipients := make([]*Session, 0, len(room))
+	for _, sess := range room {
+		recipients = append(recipients, sess)
+	}
+	gh.mu.RUnlock()
+	for _, sess := range recipients {
+		sess.TrySend(payload)
+	}
 }

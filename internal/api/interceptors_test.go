@@ -52,7 +52,7 @@ func TestResolveHTTPHookID_LeaderboardTournament(t *testing.T) {
 		{http.MethodGet, "/v2/match/m1", "GetMatch"},
 		{http.MethodGet, "/v2/party", "ListParties"},
 		{http.MethodGet, "/v2/channel/ch1", "ListChannelMessages"},
-		{http.MethodPost, "/v2/rpc/myfn", ""},
+		{http.MethodPost, "/v2/rpc/myfn", "RpcFunc"},
 		{http.MethodGet, "/v2/account", ""},
 	}
 	for _, tc := range cases {

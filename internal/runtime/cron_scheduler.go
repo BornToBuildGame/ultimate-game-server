@@ -24,6 +24,8 @@ type CronScheduler struct {
 	nextFire map[string]time.Time
 	inflight map[string]bool
 
+	clusterLock *CronClusterLock
+
 	cancel context.CancelFunc
 	wg     sync.WaitGroup
 }
@@ -78,6 +80,9 @@ func (s *CronScheduler) loop(ctx context.Context) {
 }
 
 func (s *CronScheduler) tickOnce(ctx context.Context) {
+	if s.clusterLock != nil && !s.clusterLock.TryAcquire(ctx) {
+		return
+	}
 	now := s.now()
 	jobs := s.registry.ListCronJobs()
 	for name, job := range jobs {

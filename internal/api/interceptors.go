@@ -9,11 +9,14 @@ import (
 	"strings"
 	"sync"
 
+	"ultimate-game-server/internal/metrics"
 	"ultimate-game-server/internal/runtime"
 
 	"github.com/dop251/goja"
 	"github.com/yuin/gopher-lua"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 var (
@@ -211,7 +214,10 @@ func resolveHTTPHookID(method, path string) string {
 		return "ListChannelMessages"
 	}
 
-	// /v2/rpc/{id} intentionally returns "" — custom RPC skips before/after (reference-aligned).
+	if strings.HasPrefix(path, "/v2/rpc/") {
+		return "RpcFunc"
+	}
+
 	return ""
 }
 
@@ -460,5 +466,27 @@ func GRPCHookUnaryInterceptor(rm *runtime.GoRuntimeManager, luaVM *lua.LState, j
 		}
 
 		return resp, nil
+	}
+}
+
+// GRPCMetricsUnaryInterceptor records gRPC request counts for Prometheus.
+func GRPCMetricsUnaryInterceptor() grpc.UnaryServerInterceptor {
+	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
+		parts := strings.Split(info.FullMethod, "/")
+		method := info.FullMethod
+		if len(parts) > 0 {
+			method = parts[len(parts)-1]
+		}
+		resp, err := handler(ctx, req)
+		code := codes.OK.String()
+		if err != nil {
+			if st, ok := status.FromError(err); ok {
+				code = st.Code().String()
+			} else {
+				code = codes.Unknown.String()
+			}
+		}
+		metrics.ObserveGRPC(method, code)
+		return resp, err
 	}
 }

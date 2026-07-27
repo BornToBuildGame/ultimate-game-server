@@ -7,11 +7,14 @@ import (
 	"os"
 	"time"
 
+	"ultimate-game-server/internal/auth"
 	"ultimate-game-server/internal/chat"
 	"ultimate-game-server/internal/cronexpr"
 	"ultimate-game-server/internal/economy"
 	"ultimate-game-server/internal/leaderboard"
 	"ultimate-game-server/internal/notification"
+	"ultimate-game-server/internal/fleet"
+	"ultimate-game-server/internal/satori"
 	"ultimate-game-server/internal/social"
 	"ultimate-game-server/internal/storage"
 	"ultimate-game-server/internal/tournament"
@@ -46,6 +49,9 @@ type GoRuntimeModule struct {
 	statusFollower StatusFollower
 	streamManager  StreamManager
 	rpcDispatcher  RPCDispatcherFunc
+	storageIndex   *storage.BlugeStorageIndex
+	satoriClient   *satori.Client
+	fleetManager   fleet.Manager
 }
 
 func NewGoRuntimeModule(dbPool *pgxpool.Pool, logger Logger) *GoRuntimeModule {
@@ -73,6 +79,125 @@ func (m *GoRuntimeModule) SetStreamManager(sm StreamManager) {
 
 func (m *GoRuntimeModule) SetRPCDispatcher(fn RPCDispatcherFunc) {
 	m.rpcDispatcher = fn
+}
+
+func (m *GoRuntimeModule) SetStorageIndex(idx *storage.BlugeStorageIndex) {
+	m.storageIndex = idx
+	storage.SetDefaultIndex(idx)
+}
+
+func (m *GoRuntimeModule) RegisterStorageIndex(name, collection, key string, fields, sortableFields []string, maxEntries int, indexOnly bool) error {
+	if m.storageIndex == nil {
+		return fmt.Errorf("storage index not configured")
+	}
+	return m.storageIndex.CreateIndex(storage.StorageIndexDefinition{
+		Name: name, Collection: collection, Key: key,
+		Fields: fields, SortableFields: sortableFields,
+		MaxEntries: maxEntries, IndexOnly: indexOnly,
+	})
+}
+
+func (m *GoRuntimeModule) RegisterStorageIndexFilter(indexName string, fn func(ctx context.Context, write *storage.StorageObject) (bool, error)) error {
+	if m.storageIndex == nil {
+		return fmt.Errorf("storage index not configured")
+	}
+	m.storageIndex.RegisterFilter(indexName, fn)
+	return nil
+}
+
+func (m *GoRuntimeModule) SetSatoriClient(c *satori.Client) {
+	m.satoriClient = c
+}
+
+func (m *GoRuntimeModule) GetSatori() *satori.Client {
+	return m.satoriClient
+}
+
+func (m *GoRuntimeModule) SetFleetManager(fm fleet.Manager) {
+	m.fleetManager = fm
+}
+
+func (m *GoRuntimeModule) GetFleetManager() fleet.Manager {
+	return m.fleetManager
+}
+
+func (m *GoRuntimeModule) MultiUpdate(ctx context.Context, accountUpdates []*AccountUpdateParams, storageWrites []*StorageWrite, storageDeletes []*StorageDelete, walletUpdates []*WalletUpdateParams, updateLedger bool) ([]*StorageObjectAck, []*WalletUpdateResultView, error) {
+	acc := make([]auth.AccountUpdateParams, 0, len(accountUpdates))
+	for _, a := range accountUpdates {
+		if a == nil {
+			continue
+		}
+		acc = append(acc, auth.AccountUpdateParams{
+			UserID: a.UserID, Username: a.Username, DisplayName: a.DisplayName,
+			AvatarURL: a.AvatarURL, LangTag: a.LangTag, Location: a.Location,
+			Timezone: a.Timezone, Metadata: a.Metadata,
+		})
+	}
+	objs := make([]*storage.StorageObject, 0, len(storageWrites))
+	for _, w := range storageWrites {
+		if w == nil {
+			continue
+		}
+		objs = append(objs, &storage.StorageObject{
+			Collection: w.Collection, Key: w.Key, UserID: w.UserID, Value: w.Value, Version: w.Version,
+			Read: int16(w.PermissionRead), Write: int16(w.PermissionWrite),
+		})
+	}
+	dels := make([]storage.DeleteRequest, 0, len(storageDeletes))
+	for _, d := range storageDeletes {
+		if d == nil {
+			continue
+		}
+		dels = append(dels, storage.DeleteRequest{Collection: d.Collection, Key: d.Key, UserID: d.UserID, Version: d.Version})
+	}
+	wallets := make([]economy.WalletUpdate, 0, len(walletUpdates))
+	for _, u := range walletUpdates {
+		if u == nil {
+			continue
+		}
+		wallets = append(wallets, economy.WalletUpdate{UserID: u.UserID, Changeset: u.Changeset, Metadata: u.Metadata})
+	}
+	var idx storage.IndexWriter
+	if m.storageIndex != nil {
+		idx = m.storageIndex
+	}
+	acks, results, err := economy.MultiUpdate(ctx, m.dbPool, idx, economy.MultiUpdateParams{
+		AccountUpdates: acc, StorageWrites: objs, StorageDeletes: dels,
+		WalletUpdates: wallets, UpdateLedger: updateLedger,
+	})
+	if err != nil {
+		return nil, nil, err
+	}
+	outAcks := make([]*StorageObjectAck, len(acks))
+	for i, a := range acks {
+		outAcks[i] = &StorageObjectAck{
+			Collection: a.Collection, Key: a.Key, UserID: a.UserID, Version: a.Version,
+			CreateTime: a.CreateTime, UpdateTime: a.UpdateTime,
+		}
+	}
+	outWallets := make([]*WalletUpdateResultView, len(results))
+	for i, r := range results {
+		outWallets[i] = &WalletUpdateResultView{UserID: r.UserID, Updated: r.Updated, Previous: r.Previous}
+	}
+	return outAcks, outWallets, nil
+}
+
+func (m *GoRuntimeModule) StorageIndexList(ctx context.Context, callerID, indexName, query string, limit int, order []string, cursor string) ([]*StorageObject, string, error) {
+	if m.storageIndex == nil {
+		return nil, "", fmt.Errorf("storage index not configured")
+	}
+	objs, next, err := m.storageIndex.List(ctx, callerID, indexName, query, limit, order, cursor)
+	if err != nil {
+		return nil, "", err
+	}
+	out := make([]*StorageObject, len(objs))
+	for i, o := range objs {
+		out[i] = &StorageObject{
+			Collection: o.Collection, Key: o.Key, UserID: o.UserID, Value: o.Value, Version: o.Version,
+			CreateTime: o.CreateTime, UpdateTime: o.UpdateTime,
+		}
+	}
+	return out, next, nil
 }
 
 func (m *GoRuntimeModule) StorageRead(ctx context.Context, reads []*StorageRead) ([]*StorageObject, error) {

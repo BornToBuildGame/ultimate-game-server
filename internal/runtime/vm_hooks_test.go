@@ -191,6 +191,12 @@ func (m *mockRuntimeModule) SessionDisconnect(sessionID string) error {
 func (m *mockRuntimeModule) RpcCall(ctx context.Context, id, payload string) (string, error) {
 	return payload, nil
 }
+func (m *mockRuntimeModule) MultiUpdate(ctx context.Context, accountUpdates []*AccountUpdateParams, storageWrites []*StorageWrite, storageDeletes []*StorageDelete, walletUpdates []*WalletUpdateParams, updateLedger bool) ([]*StorageObjectAck, []*WalletUpdateResultView, error) {
+	return nil, nil, nil
+}
+func (m *mockRuntimeModule) StorageIndexList(ctx context.Context, callerID, indexName, query string, limit int, order []string, cursor string) ([]*StorageObject, string, error) {
+	return nil, "", nil
+}
 func (m *mockRuntimeModule) CronNext(expression string, timestamp int64) (int64, error) {
 	return timestamp, nil
 }

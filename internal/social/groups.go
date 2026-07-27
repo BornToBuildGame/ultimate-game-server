@@ -384,7 +384,7 @@ func AddGroupUsers(ctx context.Context, pool *pgxpool.Pool, callerID, groupID st
 // KickMember removes a user from a group if kicker has proper authority.
 // Also used to reject join requests (state 3) without changing edge_count.
 func KickMember(ctx context.Context, pool *pgxpool.Pool, kickerID, userID, groupID string) error {
-	if kickerID == userID {
+	if kickerID == userID && kickerID != "" {
 		return errors.New("cannot kick yourself")
 	}
 
@@ -394,26 +394,27 @@ func KickMember(ctx context.Context, pool *pgxpool.Pool, kickerID, userID, group
 	}
 	defer tx.Rollback(ctx)
 
-	var kickerRole int
-	err = tx.QueryRow(ctx, `SELECT state FROM group_edge WHERE source_id = $1 AND destination_id = $2`, groupID, kickerID).Scan(&kickerRole)
-	if err != nil {
-		return errors.New("kicker is not a member of the group")
-	}
-	if kickerRole > RoleAdmin {
-		return errors.New("insufficient permissions to kick")
-	}
-
 	var targetRole int
 	err = tx.QueryRow(ctx, `SELECT state FROM group_edge WHERE source_id = $1 AND destination_id = $2`, groupID, userID).Scan(&targetRole)
 	if err != nil {
 		return errors.New("target is not a member of the group")
 	}
-	if kickerRole >= targetRole && targetRole <= RoleMember {
-		return errors.New("cannot kick equal or higher ranking members")
-	}
-	// Admin can kick join requests (state 3)
-	if targetRole == RoleJoinRequest && kickerRole > RoleAdmin {
-		return errors.New("insufficient permissions to kick")
+
+	if kickerID != "" {
+		var kickerRole int
+		err = tx.QueryRow(ctx, `SELECT state FROM group_edge WHERE source_id = $1 AND destination_id = $2`, groupID, kickerID).Scan(&kickerRole)
+		if err != nil {
+			return errors.New("kicker is not a member of the group")
+		}
+		if kickerRole > RoleAdmin {
+			return errors.New("insufficient permissions to kick")
+		}
+		if kickerRole >= targetRole && targetRole <= RoleMember {
+			return errors.New("cannot kick equal or higher ranking members")
+		}
+		if targetRole == RoleJoinRequest && kickerRole > RoleAdmin {
+			return errors.New("insufficient permissions to kick")
+		}
 	}
 
 	_, err = tx.Exec(ctx, `DELETE FROM group_edge WHERE (source_id = $1 AND destination_id = $2) OR (source_id = $2 AND destination_id = $1)`, groupID, userID)
@@ -710,14 +711,7 @@ func PromoteMember(ctx context.Context, pool *pgxpool.Pool, kickerID, userID, gr
 	}
 	defer tx.Rollback(ctx)
 
-	var kickerRole, targetRole int
-	err = tx.QueryRow(ctx, `SELECT state FROM group_edge WHERE source_id = $1 AND destination_id = $2`, groupID, kickerID).Scan(&kickerRole)
-	if err != nil {
-		return errors.New("kicker is not a member")
-	}
-	if kickerRole > RoleAdmin {
-		return errors.New("insufficient permissions to promote")
-	}
+	var targetRole int
 	err = tx.QueryRow(ctx, `SELECT state FROM group_edge WHERE source_id = $1 AND destination_id = $2`, groupID, userID).Scan(&targetRole)
 	if err != nil {
 		return errors.New("target is not a member")
@@ -725,9 +719,21 @@ func PromoteMember(ctx context.Context, pool *pgxpool.Pool, kickerID, userID, gr
 	if targetRole > RoleMember || targetRole <= RoleSuperAdmin {
 		return errors.New("cannot promote target")
 	}
-	if targetRole <= kickerRole {
-		return errors.New("cannot promote equal or higher ranking members")
+
+	if kickerID != "" {
+		var kickerRole int
+		err = tx.QueryRow(ctx, `SELECT state FROM group_edge WHERE source_id = $1 AND destination_id = $2`, groupID, kickerID).Scan(&kickerRole)
+		if err != nil {
+			return errors.New("kicker is not a member")
+		}
+		if kickerRole > RoleAdmin {
+			return errors.New("insufficient permissions to promote")
+		}
+		if targetRole <= kickerRole {
+			return errors.New("cannot promote equal or higher ranking members")
+		}
 	}
+
 	newRole := targetRole - 1
 	_, err = tx.Exec(ctx, `UPDATE group_edge SET state = $1 WHERE (source_id = $2 AND destination_id = $3) OR (source_id = $3 AND destination_id = $2)`, newRole, groupID, userID)
 	if err != nil {
@@ -748,14 +754,7 @@ func DemoteMember(ctx context.Context, pool *pgxpool.Pool, kickerID, userID, gro
 	}
 	defer tx.Rollback(ctx)
 
-	var kickerRole, targetRole int
-	err = tx.QueryRow(ctx, `SELECT state FROM group_edge WHERE source_id = $1 AND destination_id = $2`, groupID, kickerID).Scan(&kickerRole)
-	if err != nil {
-		return errors.New("kicker is not a member")
-	}
-	if kickerRole > RoleAdmin {
-		return errors.New("insufficient permissions to demote")
-	}
+	var targetRole int
 	err = tx.QueryRow(ctx, `SELECT state FROM group_edge WHERE source_id = $1 AND destination_id = $2`, groupID, userID).Scan(&targetRole)
 	if err != nil {
 		return errors.New("target is not a member")
@@ -763,9 +762,21 @@ func DemoteMember(ctx context.Context, pool *pgxpool.Pool, kickerID, userID, gro
 	if targetRole >= RoleMember || targetRole < RoleSuperAdmin {
 		return errors.New("cannot demote target")
 	}
-	if kickerRole >= targetRole {
-		return errors.New("cannot demote equal or higher ranking members")
+
+	if kickerID != "" {
+		var kickerRole int
+		err = tx.QueryRow(ctx, `SELECT state FROM group_edge WHERE source_id = $1 AND destination_id = $2`, groupID, kickerID).Scan(&kickerRole)
+		if err != nil {
+			return errors.New("kicker is not a member")
+		}
+		if kickerRole > RoleAdmin {
+			return errors.New("insufficient permissions to demote")
+		}
+		if kickerRole >= targetRole {
+			return errors.New("cannot demote equal or higher ranking members")
+		}
 	}
+
 	if targetRole == RoleSuperAdmin {
 		var superCount int
 		_ = tx.QueryRow(ctx, `SELECT COUNT(*) FROM group_edge WHERE source_id = $1 AND state = $2`, groupID, RoleSuperAdmin).Scan(&superCount)

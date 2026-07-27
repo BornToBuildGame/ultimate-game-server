@@ -17,6 +17,7 @@ import (
 
 func TestConnectionRegistry_ConcurrencyAndGracePeriod(t *testing.T) {
 	reg := NewConnectionRegistry()
+	reg.GracePeriod = 30 * time.Millisecond // opt-in grace for reconnection window
 
 	userID := "user-999"
 	sessionID := "session-999"
@@ -53,8 +54,8 @@ func TestConnectionRegistry_ConcurrencyAndGracePeriod(t *testing.T) {
 		t.Error("expected session to be marked inactive during grace period")
 	}
 
-	// Wait 100ms: timer is for 30s, so it should NOT be cleaned up yet
-	time.Sleep(100 * time.Millisecond)
+	// Wait 10ms: timer is for 30ms grace, so it should NOT be cleaned up yet
+	time.Sleep(10 * time.Millisecond)
 	if cleanedUp {
 		t.Error("unexpected early cleanup of session during grace period")
 	}

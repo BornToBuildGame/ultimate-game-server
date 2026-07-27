@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"ultimate-game-server/internal/auth"
+	"ultimate-game-server/internal/metrics"
 
 	"github.com/google/uuid"
 )
@@ -94,7 +95,7 @@ func BodyLimitMiddleware(maxBytes int64) func(http.Handler) http.Handler {
 }
 
 // RateLimitMiddleware blocks requests when the rate limit for the client IP is exceeded.
-func RateLimitMiddleware(limiter *IPTokenBucketRateLimiter) func(http.Handler) http.Handler {
+func RateLimitMiddleware(limiter RateLimiter) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ip := r.Header.Get("X-Forwarded-For")
@@ -109,8 +110,7 @@ func RateLimitMiddleware(limiter *IPTokenBucketRateLimiter) func(http.Handler) h
 				}
 			}
 
-			tb := limiter.GetLimiter(ip)
-			allowed, remaining, resetAt := tb.AllowWithInfo()
+			allowed, remaining, resetAt := limiter.AllowWithInfo(ip)
 			limit := int(math.Floor(limiter.MaxTokens()))
 			w.Header().Set("X-RateLimit-Limit", strconv.Itoa(limit))
 			w.Header().Set("X-RateLimit-Remaining", strconv.Itoa(int(math.Floor(remaining))))
@@ -130,6 +130,30 @@ func RateLimitMiddleware(limiter *IPTokenBucketRateLimiter) func(http.Handler) h
 			next.ServeHTTP(w, r)
 		})
 	}
+}
+
+type statusRecorder struct {
+	http.ResponseWriter
+	status int
+}
+
+func (r *statusRecorder) WriteHeader(code int) {
+	r.status = code
+	r.ResponseWriter.WriteHeader(code)
+}
+
+// MetricsMiddleware records HTTP request counts for Prometheus.
+func MetricsMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		rec := &statusRecorder{ResponseWriter: w, status: http.StatusOK}
+		next.ServeHTTP(rec, r)
+		code := strconv.Itoa(rec.status)
+		path := r.URL.Path
+		if r.Pattern != "" {
+			path = r.Pattern
+		}
+		metrics.ObserveHTTP(r.Method, path, code)
+	})
 }
 
 // AuthMiddleware extracts and validates Bearer JWT token from Authorization header.

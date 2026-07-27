@@ -17,9 +17,11 @@ import (
 	"ultimate-game-server/internal/api/storagepb"
 	"ultimate-game-server/internal/auth"
 	"ultimate-game-server/internal/chat"
+	"ultimate-game-server/internal/cluster"
 	"ultimate-game-server/internal/economy"
 	"ultimate-game-server/internal/leaderboard"
 	"ultimate-game-server/internal/match"
+	"ultimate-game-server/internal/metrics"
 	"ultimate-game-server/internal/matchmaker"
 	"ultimate-game-server/internal/notification"
 	"ultimate-game-server/internal/party"
@@ -67,7 +69,7 @@ type Server struct {
 	dbPool         *pgxpool.Pool
 	tokenMgr       *auth.TokenManager
 	sessReg        *auth.SessionRegistry
-	rateLimiter    *IPTokenBucketRateLimiter
+	rateLimiter    RateLimiter
 	authRateLimit  *IPTokenBucketRateLimiter
 	loginLockout   *auth.LoginLockout
 	SocketRegistry *socket.ConnectionRegistry
@@ -219,6 +221,11 @@ func NewServer(logger *zap.Logger, cfg Config, dbPool *pgxpool.Pool) (*Server, e
 
 	matchRouter := match.NewRouter()
 	sockRegistry := socket.NewConnectionRegistry()
+	if v := os.Getenv("UGE_SESSION_RTT_GRACE_PERIOD_MS"); v != "" {
+		if ms, err := strconv.Atoi(v); err == nil && ms > 0 {
+			sockRegistry.GracePeriod = time.Duration(ms) * time.Millisecond
+		}
+	}
 	onlineIndex := presence.NewOnlineIndex()
 	streamTracker := presence.NewLocalTracker()
 	msgRouter := presence.NewLocalMessageRouter(sockRegistry)
@@ -285,6 +292,11 @@ func NewServer(logger *zap.Logger, cfg Config, dbPool *pgxpool.Pool) (*Server, e
 	}
 	pingCancel()
 
+	var rateLimiter RateLimiter = NewIPRateLimiter(cfg.RateLimitMax, cfg.RateLimitRefill)
+	if rdb != nil {
+		rateLimiter = NewRedisIPRateLimiter(rdb, cfg.RateLimitMax, cfg.RateLimitRefill, time.Minute)
+	}
+
 	matchRouter.SetSessionRegistry(sockRegistry)
 	nodeID := match.ResolveNodeID()
 	sockGateway.SetNodeID(nodeID)
@@ -295,6 +307,23 @@ func NewServer(logger *zap.Logger, cfg Config, dbPool *pgxpool.Pool) (*Server, e
 		matchRouter.StartClusterSignalListener(context.Background())
 		sockGateway.SetRedisClient(rdb)
 		sockGateway.StartRelayFanoutListener(context.Background())
+
+		mesh := cluster.NewMesh(rdb, nodeID, logger)
+		mesh.SetStreamHandler(func(msg cluster.StreamSendMessage) {
+			streamMgr.StreamSend(msg.Mode, msg.Subject, msg.Subcontext, msg.Label, msg.Data, msg.SessionIDs, true)
+		})
+		mesh.SetChatHandler(func(msg cluster.ChatMessage) {
+			sockGateway.DeliverClusterChat(msg.ChannelID, msg.Payload)
+		})
+		mesh.SetPresenceHandler(func(msg cluster.PresenceEventMessage) {
+			sockGateway.DeliverClusterPresence(msg.Kind, msg.Payload)
+		})
+		mesh.SetPartyHandler(func(msg cluster.PartyMessage) {
+			sockGateway.DeliverClusterParty(msg.PartyID, msg.Payload)
+		})
+		mesh.Start(context.Background())
+		streamMgr.SetClusterMesh(mesh, nodeID)
+		sockGateway.SetClusterMesh(mesh)
 	}
 
 	sessStore := auth.NewSessionStoreFromRedis(rdb)
@@ -304,7 +333,7 @@ func NewServer(logger *zap.Logger, cfg Config, dbPool *pgxpool.Pool) (*Server, e
 		dbPool:          dbPool,
 		tokenMgr:        tm,
 		sessReg:         auth.NewSessionRegistryWithStore(sessStore),
-		rateLimiter:     NewIPRateLimiter(cfg.RateLimitMax, cfg.RateLimitRefill),
+		rateLimiter:     rateLimiter,
 		authRateLimit:   NewIPRateLimiter(10, 10.0/60.0), // 10 auth req/min/IP
 		loginLockout:    auth.NewLoginLockout(),
 		SocketRegistry:  sockRegistry,
@@ -438,6 +467,11 @@ func (s *Server) StartLifecycle(parent context.Context) {
 	if s.RuntimeManager != nil {
 		s.wireSchedulerHooks()
 	}
+	if s.rdb != nil && s.TournamentScheduler != nil {
+		nodeID := match.ResolveNodeID()
+		s.TournamentScheduler.SetTournamentLeaderLock(runtime.NewNamedClusterLock(s.rdb, nodeID, "uge:tournament:leader"))
+		s.TournamentScheduler.SetLeaderboardLeaderLock(runtime.NewNamedClusterLock(s.rdb, nodeID, "uge:leaderboard:leader"))
+	}
 	s.TournamentScheduler.Start(30 * time.Second)
 }
 
@@ -475,6 +509,7 @@ func (s *Server) Start(ctx context.Context) error {
 
 	// Wrap handlers in global middlewares (outermost first when nesting)
 	var handler http.Handler = mux
+	handler = MetricsMiddleware(handler)
 	handler = RateLimitMiddleware(s.rateLimiter)(handler)
 	handler = BodyLimitMiddleware(s.cfg.BodyLimitBytes)(handler)
 	handler = CORSMiddleware(s.cfg.CORSOrigins)(handler)
@@ -496,7 +531,12 @@ func (s *Server) Start(ctx context.Context) error {
 	// 2. Setup gRPC Server
 	var opts []grpc.ServerOption
 	if s.RuntimeManager != nil {
-		opts = append(opts, grpc.UnaryInterceptor(GRPCHookUnaryInterceptor(s.RuntimeManager, s.LuaVM, s.JSVM)))
+		opts = append(opts, grpc.ChainUnaryInterceptor(
+			GRPCMetricsUnaryInterceptor(),
+			GRPCHookUnaryInterceptor(s.RuntimeManager, s.LuaVM, s.JSVM),
+		))
+	} else {
+		opts = append(opts, grpc.ChainUnaryInterceptor(GRPCMetricsUnaryInterceptor()))
 	}
 	s.gRPCServer = grpc.NewServer(opts...)
 	storagepb.RegisterStorageServiceServer(s.gRPCServer, NewStorageServer(s.dbPool, s.tokenMgr))
@@ -655,6 +695,7 @@ func (s *Server) registerRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /healthcheck", s.handleHealthcheck)
 	mux.HandleFunc("GET /health", s.handleHealthDeprecated)
 	mux.HandleFunc("GET /ready", s.handleReady)
+	mux.HandleFunc("GET /metrics", s.handleMetrics)
 	mux.HandleFunc("POST /v2/account/authenticate/email", s.handleAuthenticateEmail)
 	mux.HandleFunc("POST /v2/account/authenticate/custom", s.handleAuthenticateCustom)
 	mux.HandleFunc("POST /v2/account/authenticate/device", s.handleAuthenticateDevice)
@@ -752,16 +793,16 @@ func (s *Server) registerRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /v2/user/{user_id}/group", s.handleListUserGroups)
 
 	// Realtime / Match Routes
-	mux.HandleFunc("POST /v2/match", s.handleCreateMatch)
-	mux.HandleFunc("GET /v2/match", s.handleListMatches)
+	mux.HandleFunc("POST /v2/match", deprecatedOptional(s.handleCreateMatch))
+	mux.HandleFunc("GET /v2/match", deprecatedOptional(s.handleListMatches))
 	mux.HandleFunc("GET /v2/party", s.handleListParties)
 	mux.HandleFunc("GET /v2/channel/{channel_id}", s.handleListChannelMessages)
 	mux.HandleFunc("GET /v2/notification", s.handleListNotifications)
 	mux.HandleFunc("DELETE /v2/notification", s.handleDeleteNotifications)
 	mux.HandleFunc("GET /v2/rpc/{id}", s.handleRPC)
 	mux.HandleFunc("POST /v2/rpc/{id}", s.handleRPC)
-	mux.HandleFunc("GET /v2/wallet", s.handleGetWallet)
-	mux.HandleFunc("GET /v2/wallet/ledger", s.handleListWalletLedger)
+	mux.HandleFunc("GET /v2/wallet", deprecatedOptional(s.handleGetWallet))
+	mux.HandleFunc("GET /v2/wallet/ledger", deprecatedOptional(s.handleListWalletLedger))
 	mux.HandleFunc("POST /v2/iap/purchase/apple", s.handleValidatePurchaseApple)
 	mux.HandleFunc("POST /v2/iap/purchase/google", s.handleValidatePurchaseGoogle)
 	mux.HandleFunc("POST /v2/iap/purchase/huawei", s.handleValidatePurchaseHuawei)
@@ -771,15 +812,27 @@ func (s *Server) registerRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /v2/iap/subscription/google", s.handleValidateSubscriptionGoogle)
 	mux.HandleFunc("POST /v2/iap/subscription", s.handleListSubscriptions)
 	mux.HandleFunc("GET /v2/iap/subscription/{product_id}", s.handleGetSubscription)
-	mux.HandleFunc("GET /v2/match/{match_id}", s.handleGetMatch)
-	mux.HandleFunc("POST /v2/match/{match_id}/signal", s.handleMatchSignal)
+	mux.HandleFunc("GET /v2/match/{match_id}", deprecatedOptional(s.handleGetMatch))
+	mux.HandleFunc("POST /v2/match/{match_id}/signal", deprecatedOptional(s.handleMatchSignal))
 
 	// Matchmaker Routes
-	mux.HandleFunc("POST /v2/matchmaker/ticket", s.handleSubmitMatchmakerTicket)
-	mux.HandleFunc("DELETE /v2/matchmaker/ticket/{ticket_id}", s.handleCancelMatchmakerTicket)
-	mux.HandleFunc("GET /v2/matchmaker/ticket/{ticket_id}", s.handleGetMatchmakerTicket)
-	mux.HandleFunc("GET /v2/matchmaker/stats/{queue_name}", s.handleGetQueueStats)
-	mux.HandleFunc("GET /v2/matchmaker/stats", s.handleGetMatchmakerStats)
+	mux.HandleFunc("POST /v2/matchmaker/ticket", deprecatedOptional(s.handleSubmitMatchmakerTicket))
+	mux.HandleFunc("DELETE /v2/matchmaker/ticket/{ticket_id}", deprecatedOptional(s.handleCancelMatchmakerTicket))
+	mux.HandleFunc("GET /v2/matchmaker/ticket/{ticket_id}", deprecatedOptional(s.handleGetMatchmakerTicket))
+	mux.HandleFunc("GET /v2/matchmaker/stats/{queue_name}", deprecatedOptional(s.handleGetQueueStats))
+	mux.HandleFunc("GET /v2/matchmaker/stats", deprecatedOptional(s.handleGetMatchmakerStats))
+}
+
+func deprecatedOptional(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Deprecation", "true")
+		next(w, r)
+	}
+}
+
+func (s *Server) handleMetrics(w http.ResponseWriter, r *http.Request) {
+	metrics.UpdateDBPool(s.dbPool)
+	metrics.Handler().ServeHTTP(w, r)
 }
 
 func (s *Server) handleHealthcheck(w http.ResponseWriter, r *http.Request) {

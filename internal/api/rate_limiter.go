@@ -115,3 +115,8 @@ func (lim *IPTokenBucketRateLimiter) GetLimiter(key string) *TokenBucket {
 func (lim *IPTokenBucketRateLimiter) Allow(key string) bool {
 	return lim.GetLimiter(key).Allow()
 }
+
+// AllowWithInfo implements RateLimiter.
+func (lim *IPTokenBucketRateLimiter) AllowWithInfo(key string) (bool, float64, time.Time) {
+	return lim.GetLimiter(key).AllowWithInfo()
+}

@@ -263,6 +263,9 @@ func WriteStorageObjects(ctx context.Context, pool *pgxpool.Pool, authoritative 
 	for _, obj := range objects {
 		IndexStorageObject(obj)
 	}
+	if idx := defaultIndexWriter(); idx != nil {
+		idx.WriteStorageAcks(ctx, acks, objects)
+	}
 	return acks, nil
 }
 
@@ -452,6 +455,9 @@ func DeleteStorageObjects(ctx context.Context, pool *pgxpool.Pool, authoritative
 	}
 	for _, req := range reqs {
 		DeleteIndexedStorageObject(req.Collection, req.UserID, req.Key)
+	}
+	if idx := defaultIndexWriter(); idx != nil {
+		idx.DeleteStorage(ctx, reqs)
 	}
 	return nil
 }

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"ultimate-game-server/internal/cronexpr"
+	"ultimate-game-server/internal/fleet"
 )
 
 // Logger provides structured logging for runtime modules.
@@ -142,6 +143,10 @@ type RuntimeModule interface {
 	// RPC
 	RpcCall(ctx context.Context, id, payload string) (string, error)
 
+	// Atomic multi-update (account + storage + wallet)
+	MultiUpdate(ctx context.Context, accountUpdates []*AccountUpdateParams, storageWrites []*StorageWrite, storageDeletes []*StorageDelete, walletUpdates []*WalletUpdateParams, updateLedger bool) ([]*StorageObjectAck, []*WalletUpdateResultView, error)
+	StorageIndexList(ctx context.Context, callerID, indexName, query string, limit int, order []string, cursor string) ([]*StorageObject, string, error)
+
 	// Cron utilities (UTC, ADR-0025)
 	CronNext(expression string, timestamp int64) (int64, error)
 	CronPrev(expression string, timestamp int64) (int64, error)
@@ -178,6 +183,18 @@ type MatchInfo struct {
 	Size          int    `json:"size"`
 	MaxSize       int    `json:"max_size"`
 	HandlerName   string `json:"handler_name,omitempty"`
+}
+
+// AccountUpdateParams updates account fields in MultiUpdate.
+type AccountUpdateParams struct {
+	UserID      string  `json:"user_id"`
+	Username    *string `json:"username,omitempty"`
+	DisplayName *string `json:"display_name,omitempty"`
+	AvatarURL   *string `json:"avatar_url,omitempty"`
+	LangTag     *string `json:"lang_tag,omitempty"`
+	Location    *string `json:"location,omitempty"`
+	Timezone    *string `json:"timezone,omitempty"`
+	Metadata    *string `json:"metadata,omitempty"`
 }
 
 // WalletUpdateParams is a batch wallet mutation for runtime WalletsUpdate.
@@ -552,15 +569,48 @@ type Initializer interface {
 
 	// Specific type-safe before hooks
 	RegisterBeforeAuthenticateEmail(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *AuthenticateEmailRequest) (*AuthenticateEmailRequest, error)) error
+	RegisterBeforeAuthenticateDevice(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *AuthenticateDeviceRequest) (*AuthenticateDeviceRequest, error)) error
+	RegisterBeforeAuthenticateCustom(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *AuthenticateCustomRequest) (*AuthenticateCustomRequest, error)) error
+	RegisterBeforeAuthenticateApple(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *AuthenticateAppleRequest) (*AuthenticateAppleRequest, error)) error
+	RegisterBeforeAuthenticateGoogle(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *AuthenticateGoogleRequest) (*AuthenticateGoogleRequest, error)) error
+	RegisterBeforeAuthenticateFacebook(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *AuthenticateFacebookRequest) (*AuthenticateFacebookRequest, error)) error
+	RegisterBeforeAuthenticateSteam(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *AuthenticateSteamRequest) (*AuthenticateSteamRequest, error)) error
+	RegisterBeforeSessionRefresh(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *SessionRefreshRequest) (*SessionRefreshRequest, error)) error
+	RegisterBeforeSessionLogout(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *SessionLogoutRequest) (*SessionLogoutRequest, error)) error
 	RegisterBeforeWriteStorageObjects(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *WriteStorageObjectsRequest) (*WriteStorageObjectsRequest, error)) error
+	RegisterBeforeReadStorageObjects(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *ReadStorageObjectsRequest) (*ReadStorageObjectsRequest, error)) error
+	RegisterBeforeDeleteStorageObjects(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *DeleteStorageObjectsRequest) (*DeleteStorageObjectsRequest, error)) error
+	RegisterBeforeListStorageObjects(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *ListStorageObjectsRequest) (*ListStorageObjectsRequest, error)) error
 	RegisterBeforeAddFriends(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *AddFriendsRequest) (*AddFriendsRequest, error)) error
+	RegisterBeforeDeleteFriends(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *DeleteFriendsRequest) (*DeleteFriendsRequest, error)) error
+	RegisterBeforeListFriends(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *ListFriendsRequest) (*ListFriendsRequest, error)) error
+	RegisterBeforeBlockFriends(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *BlockFriendsRequest) (*BlockFriendsRequest, error)) error
+	RegisterBeforeWriteLeaderboardRecord(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *WriteLeaderboardRecordRequest) (*WriteLeaderboardRecordRequest, error)) error
+	RegisterBeforeListLeaderboardRecords(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *ListLeaderboardRecordsRequest) (*ListLeaderboardRecordsRequest, error)) error
+	RegisterBeforeJoinTournament(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *JoinTournamentRequest) (*JoinTournamentRequest, error)) error
+	RegisterBeforeWriteTournamentRecord(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *WriteTournamentRecordRequest) (*WriteTournamentRecordRequest, error)) error
 	RegisterBeforeJoinGroup(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *JoinGroupRequest) (*JoinGroupRequest, error)) error
+	RegisterBeforeCreateGroup(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *CreateGroupRequest) (*CreateGroupRequest, error)) error
+	RegisterBeforeLeaveGroup(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *LeaveGroupRequest) (*LeaveGroupRequest, error)) error
+	RegisterBeforeCreateMatch(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *CreateMatchRequest) (*CreateMatchRequest, error)) error
+	RegisterBeforeListMatches(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *ListMatchesRequest) (*ListMatchesRequest, error)) error
+	RegisterBeforeListChannelMessages(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *ListChannelMessagesRequest) (*ListChannelMessagesRequest, error)) error
+	RegisterBeforeEvent(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *EventRequest) (*EventRequest, error)) error
+	RegisterBeforeGetAccount(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *GetAccountRequest) (*GetAccountRequest, error)) error
+	RegisterBeforeUpdateAccount(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *UpdateAccountRequest) (*UpdateAccountRequest, error)) error
+	RegisterBeforeDeleteAccount(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *DeleteAccountRequest) (*DeleteAccountRequest, error)) error
+	RegisterBeforeGetWallet(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *GetWalletRequest) (*GetWalletRequest, error)) error
+	RegisterBeforeListWalletLedger(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *ListWalletLedgerRequest) (*ListWalletLedgerRequest, error)) error
 
 	// Specific type-safe after hooks
 	RegisterAfterAuthenticateEmail(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, out *Session, in *AuthenticateEmailRequest) error) error
 	RegisterAfterWriteStorageObjects(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, out *StorageObjectAcks, in *WriteStorageObjectsRequest) error) error
 	RegisterAfterAddFriends(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *AddFriendsRequest) error) error
 	RegisterAfterJoinGroup(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *JoinGroupRequest) error) error
+
+	RegisterStorageIndex(name, collection, key string, fields, sortableFields []string, maxEntries int, indexOnly bool) error
+	RegisterStorageIndexFilter(indexName string, fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, write *StorageWrite) bool) error
+	RegisterFleetManager(fm fleet.Manager) error
 }
 
 // HookRegistry stores registered custom RPCs, before/after hooks, and cron jobs.
@@ -702,6 +752,9 @@ func (hr *HookRegistry) GetMatch(name string) (MatchHandlerFactory, bool) {
 // RegisterCron registers a scheduled background cron job.
 // Schedule must be a valid cronexpr (5–7 fields). Invalid schedules are rejected.
 func (hr *HookRegistry) RegisterCron(jobName string, cron *CronJob) error {
+	if !RegisterCronEnabled() {
+		return fmt.Errorf("RegisterCron is disabled; set UGE_ENABLE_REGISTER_CRON=true to enable")
+	}
 	if jobName == "" {
 		return fmt.Errorf("cron job name must not be empty")
 	}

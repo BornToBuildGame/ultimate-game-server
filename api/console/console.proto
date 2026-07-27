@@ -1,0 +1,293 @@
+syntax = "proto3";
+
+package ultimate.server.console;
+
+option go_package = "ultimate-game-server/internal/console/consolepb";
+
+import "google/protobuf/empty.proto";
+
+// Console is the admin console service (reference-aligned surface).
+service Console {
+  rpc Authenticate(AuthenticateRequest) returns (ConsoleSession);
+  rpc AuthenticateLogout(AuthenticateLogoutRequest) returns (google.protobuf.Empty);
+
+  rpc ListGroups(ListGroupsRequest) returns (GroupList);
+  rpc GetGroup(GroupId) returns (Group);
+  rpc DeleteGroup(GroupId) returns (google.protobuf.Empty);
+  rpc ListGroupMembers(GroupId) returns (GroupUserList);
+  rpc AddGroupUsers(AddGroupUsersRequest) returns (google.protobuf.Empty);
+  rpc DeleteGroupUser(DeleteGroupUserRequest) returns (google.protobuf.Empty);
+  rpc PromoteGroupMember(GroupUserId) returns (google.protobuf.Empty);
+  rpc DemoteGroupMember(GroupUserId) returns (google.protobuf.Empty);
+
+  rpc ListChannelMessages(ListChannelMessagesRequest) returns (ChannelMessageList);
+  rpc DeleteChannelMessages(DeleteChannelMessagesRequest) returns (google.protobuf.Empty);
+
+  rpc ListNotifications(ListNotificationsRequest) returns (NotificationList);
+  rpc DeleteNotification(NotificationId) returns (google.protobuf.Empty);
+  rpc SendNotification(SendNotificationRequest) returns (google.protobuf.Empty);
+
+  rpc UnlinkAccount(UnlinkAccountRequest) returns (google.protobuf.Empty);
+  rpc ExportAccount(AccountId) returns (AccountExport);
+  rpc ImportAccount(AccountImport) returns (google.protobuf.Empty);
+  rpc DeleteAllData(google.protobuf.Empty) returns (google.protobuf.Empty);
+
+  rpc SatoriListTemplates(SatoriListTemplatesRequest) returns (SatoriListTemplatesResponse);
+  rpc SatoriSendDirectMessage(SatoriSendDirectMessageRequest) returns (SatoriSendDirectMessageResponse);
+
+  rpc GetConfig(google.protobuf.Empty) returns (Config);
+  rpc GetRuntime(google.protobuf.Empty) returns (RuntimeInfo);
+  rpc ListApiEndpoints(google.protobuf.Empty) returns (EndpointList);
+  rpc CallApiEndpoint(CallApiEndpointRequest) returns (CallApiEndpointResponse);
+  rpc CallRpcEndpoint(CallRpcEndpointRequest) returns (CallRpcEndpointResponse);
+
+  rpc ListAclTemplates(google.protobuf.Empty) returns (AclTemplateList);
+  rpc AddAclTemplate(AclTemplate) returns (AclTemplate);
+  rpc DeleteAclTemplate(AclTemplateId) returns (google.protobuf.Empty);
+
+  rpc ListSettings(google.protobuf.Empty) returns (SettingList);
+  rpc UpdateSetting(Setting) returns (Setting);
+
+  rpc GetStatus(google.protobuf.Empty) returns (Status);
+}
+
+message AuthenticateRequest {
+  string username = 1;
+  string password = 2;
+  string totp = 3;
+}
+
+message ConsoleSession {
+  string token = 1;
+  string acl_bitmap = 2;
+}
+
+message AuthenticateLogoutRequest {
+  string token = 1;
+}
+
+message AccountId { string id = 1; }
+message GroupId { string id = 1; }
+message GroupUserId { string group_id = 1; string user_id = 2; }
+message NotificationId { string id = 1; }
+message AclTemplateId { string id = 1; }
+
+message ListGroupsRequest {
+  string name = 1;
+  int32 limit = 2;
+  string cursor = 3;
+}
+
+message Group {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  string lang_tag = 4;
+  bool open = 5;
+  int32 edge_count = 6;
+  int32 max_count = 7;
+}
+
+message GroupList {
+  repeated Group groups = 1;
+  string cursor = 2;
+}
+
+message GroupUser {
+  string user_id = 1;
+  string username = 2;
+  int32 state = 3;
+}
+
+message GroupUserList { repeated GroupUser users = 1; }
+
+message AddGroupUsersRequest {
+  string group_id = 1;
+  repeated string user_ids = 2;
+}
+
+message DeleteGroupUserRequest {
+  string group_id = 1;
+  string user_id = 2;
+}
+
+message ListChannelMessagesRequest {
+  string channel_id = 1;
+  int32 limit = 2;
+  string cursor = 3;
+}
+
+message ChannelMessage {
+  string message_id = 1;
+  string channel_id = 2;
+  string sender_id = 3;
+  string username = 4;
+  string content = 5;
+  int64 create_time = 6;
+}
+
+message ChannelMessageList {
+  repeated ChannelMessage messages = 1;
+  string next_cursor = 2;
+}
+
+message DeleteChannelMessagesRequest {
+  repeated string ids = 1;
+  int64 before = 2;
+}
+
+message ListNotificationsRequest {
+  string user_id = 1;
+  int32 limit = 2;
+  string cursor = 3;
+}
+
+message Notification {
+  string id = 1;
+  string user_id = 2;
+  string subject = 3;
+  string content = 4;
+  int32 code = 5;
+}
+
+message NotificationList {
+  repeated Notification notifications = 1;
+  string cursor = 2;
+}
+
+message SendNotificationRequest {
+  repeated string user_ids = 1;
+  string subject = 2;
+  string content = 3;
+  int32 code = 4;
+  bool persistent = 5;
+}
+
+message UnlinkAccountRequest {
+  string user_id = 1;
+  string provider = 2; // email|device|apple|google|facebook|steam|custom|gamecenter|facebookinstantgame
+}
+
+message AccountExport {
+  string user_id = 1;
+  string payload_json = 2;
+}
+
+message AccountImport {
+  string id = 1;
+  string payload_json = 2;
+}
+
+message SatoriListTemplatesRequest {
+  int32 limit = 1;
+  string cursor = 2;
+}
+
+message SatoriTemplate {
+  string id = 1;
+  string name = 2;
+  string title = 3;
+  string value = 4;
+}
+
+message SatoriListTemplatesResponse {
+  repeated SatoriTemplate templates = 1;
+  string cursor = 2;
+}
+
+message SatoriSendDirectMessageRequest {
+  string identity_id = 1;
+  string title = 2;
+  string body = 3;
+  string template_id = 4;
+}
+
+message SatoriSendDirectMessageResponse {
+  bool ok = 1;
+  string error = 2;
+}
+
+message Config {
+  string json = 1;
+}
+
+message RuntimeInfo {
+  repeated string rpc_ids = 1;
+}
+
+message EndpointList {
+  repeated string methods = 1;
+}
+
+message CallApiEndpointRequest {
+  string method = 1;
+  string user_id = 2;
+  string body_json = 3;
+}
+
+message CallApiEndpointResponse {
+  string body_json = 1;
+}
+
+message CallRpcEndpointRequest {
+  string id = 1;
+  string user_id = 2;
+  string payload = 3;
+}
+
+message CallRpcEndpointResponse {
+  string payload = 1;
+}
+
+message AclTemplate {
+  string id = 1;
+  string name = 2;
+  string acl_bitmap = 3;
+}
+
+message AclTemplateList { repeated AclTemplate templates = 1; }
+
+message Setting {
+  string name = 1;
+  string value_json = 2;
+}
+
+message SettingList { repeated Setting settings = 1; }
+
+message Status {
+  string json = 1;
+}
+
+// ATTENTION: Do not modify the order of this enum. Append only.
+enum AclResources {
+  ACCOUNT = 0;
+  ACCOUNT_WALLET = 1;
+  ACCOUNT_EXPORT = 2;
+  ACCOUNT_FRIENDS = 3;
+  ACCOUNT_GROUPS = 4;
+  ACCOUNT_NOTES = 5;
+  ACL_TEMPLATE = 6;
+  ALL_ACCOUNTS = 7;
+  ALL_DATA = 8;
+  ALL_STORAGE = 9;
+  API_EXPLORER = 10;
+  AUDIT_LOG = 11;
+  CONFIGURATION = 12;
+  CHANNEL_MESSAGE = 13;
+  USER = 14;
+  GROUP = 15;
+  IN_APP_PURCHASE = 16;
+  LEADERBOARD = 17;
+  LEADERBOARD_RECORD = 18;
+  MATCH = 19;
+  NOTIFICATION = 20;
+  SATORI_MESSAGE = 21;
+  SETTINGS = 22;
+  STORAGE_DATA = 23;
+  STORAGE_DATA_IMPORT = 24;
+  HIRO_INVENTORY = 25;
+  HIRO_PROGRESSION = 26;
+  HIRO_ECONOMY = 27;
+  HIRO_STATS = 28;
+  HIRO_ENERGY = 29;
+}

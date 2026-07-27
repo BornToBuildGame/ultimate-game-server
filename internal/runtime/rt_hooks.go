@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"strings"
 	"sync"
 
 	"github.com/dop251/goja"
@@ -42,9 +43,55 @@ func NewRtHookExecutor(reg *HookRegistry, logger Logger, db *sql.DB, nk RuntimeM
 	}
 }
 
+// rtProtobufHookAliases maps protobuf type names to JSON envelope hook keys.
+var rtProtobufHookAliases = map[string]string{
+	"StatusUpdate":       "status_update",
+	"StatusFollow":       "status_follow",
+	"StatusUnfollow":     "status_unfollow",
+	"MatchCreate":        "match_create",
+	"MatchJoin":          "match_join",
+	"MatchLeave":         "match_leave",
+	"MatchDataSend":      "match_data_send",
+	"MatchmakerAdd":      "matchmaker_add",
+	"MatchmakerRemove":   "matchmaker_remove",
+	"ChannelJoin":        "channel_join",
+	"ChannelLeave":       "channel_leave",
+	"ChannelMessageSend": "channel_message_send",
+	"PartyCreate":        "party_create",
+	"PartyJoin":          "party_join",
+	"PartyLeave":         "party_leave",
+	"Rpc":                "rpc",
+}
+
+// ResolveRtHookID normalizes protobuf hook IDs to runtime registry keys.
+func ResolveRtHookID(hookID string) string {
+	if hookID == "" {
+		return ""
+	}
+	if v, ok := rtProtobufHookAliases[hookID]; ok {
+		return v
+	}
+	if strings.Contains(hookID, "_") {
+		return hookID
+	}
+	var b strings.Builder
+	for i, r := range hookID {
+		if r >= 'A' && r <= 'Z' {
+			if i > 0 {
+				b.WriteByte('_')
+			}
+			b.WriteByte(byte(r + ('a' - 'A')))
+			continue
+		}
+		b.WriteRune(r)
+	}
+	return b.String()
+}
+
 // RunBeforeRt invokes a before realtime hook. Returns modified envelope map (or original) and error.
 func (e *RtHookExecutor) RunBeforeRt(ctx context.Context, hookID string, envelope map[string]interface{}) (map[string]interface{}, error) {
-	if e == nil || e.Registry == nil || hookID == "" || hookID == "rpc" {
+	hookID = ResolveRtHookID(hookID)
+	if e == nil || e.Registry == nil || hookID == "" {
 		return envelope, nil
 	}
 	gHook, runtimeType, fnName, found := e.Registry.GetBeforeHook(hookID)
@@ -107,7 +154,8 @@ func (e *RtHookExecutor) RunBeforeRt(ctx context.Context, hookID string, envelop
 
 // RunAfterRt invokes an after realtime hook (caller should run async).
 func (e *RtHookExecutor) RunAfterRt(ctx context.Context, hookID string, out, in map[string]interface{}) error {
-	if e == nil || e.Registry == nil || hookID == "" || hookID == "rpc" {
+	hookID = ResolveRtHookID(hookID)
+	if e == nil || e.Registry == nil || hookID == "" {
 		return nil
 	}
 	aHook, runtimeType, fnName, found := e.Registry.GetAfterHook(hookID)

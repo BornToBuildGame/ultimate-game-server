@@ -11,8 +11,10 @@ import (
 	"time"
 
 	"ultimate-game-server/internal/auth"
+	"ultimate-game-server/internal/cluster"
 	"ultimate-game-server/internal/match"
 	"ultimate-game-server/internal/matchmaker"
+	"ultimate-game-server/internal/metrics"
 	"ultimate-game-server/internal/party"
 	"ultimate-game-server/internal/presence"
 	"ultimate-game-server/internal/runtime"
@@ -120,7 +122,7 @@ func NewConnectionRegistry() *ConnectionRegistry {
 		sessions:     make(map[string]*Session),
 		userSessions: make(map[string]map[string]*Session),
 		graceTimers:  make(map[string]*time.Timer),
-		GracePeriod:  30 * time.Second, // Default grace period
+		GracePeriod:  0, // Reference default: immediate cleanup; opt-in via session.rtt_grace_period_ms
 	}
 }
 
@@ -146,6 +148,13 @@ func (cr *ConnectionRegistry) Add(s *Session) {
 	userMap[s.ID] = s
 }
 
+// ActiveSessionCount returns sessions currently tracked (including grace-period recovery).
+func (cr *ConnectionRegistry) ActiveSessionCount() int {
+	cr.mu.RLock()
+	defer cr.mu.RUnlock()
+	return len(cr.sessions)
+}
+
 // StartGracePeriod kicks off the connection recovery window.
 func (cr *ConnectionRegistry) StartGracePeriod(sessionID string, cleanupFn func()) {
 	cr.mu.Lock()
@@ -165,7 +174,9 @@ func (cr *ConnectionRegistry) StartGracePeriod(sessionID string, cleanupFn func(
 
 	gracePeriod := cr.GracePeriod
 	if gracePeriod <= 0 {
-		gracePeriod = 30 * time.Second
+		delete(cr.graceTimers, sessionID)
+		go cleanupFn()
+		return
 	}
 
 	// Start recovery timer
@@ -307,6 +318,7 @@ type GatewayHandler struct {
 	channelMeta     map[string]map[string]channelMemberMeta
 	rdb             *redis.Client
 	nodeID          string
+	mesh            *cluster.Mesh
 	relayCancel     context.CancelFunc
 	rpcInvoker      func(ctx context.Context, userID, username, id, payload string) (result string, code int, err error)
 	rtHookExecutor  *runtime.RtHookExecutor
@@ -390,6 +402,19 @@ func (gh *GatewayHandler) SetNodeID(nodeID string) {
 		nodeID = match.ResolveNodeID()
 	}
 	gh.nodeID = nodeID
+}
+
+// SetClusterMesh attaches the Redis social mesh for chat/presence/party fan-out.
+func (gh *GatewayHandler) SetClusterMesh(mesh *cluster.Mesh) {
+	gh.mu.Lock()
+	defer gh.mu.Unlock()
+	gh.mesh = mesh
+}
+
+func (gh *GatewayHandler) clusterMesh() *cluster.Mesh {
+	gh.mu.RLock()
+	defer gh.mu.RUnlock()
+	return gh.mesh
 }
 
 // StartRelayFanoutListener subscribes to cross-node relayed match envelopes and delivers locally.
@@ -640,6 +665,8 @@ func (gh *GatewayHandler) Upgrade(w http.ResponseWriter, r *http.Request) {
 	if gh.onConnect != nil {
 		gh.onConnect(session)
 	}
+	metrics.IncWSOpened()
+	metrics.SetWSSessions(float64(gh.registry.ActiveSessionCount()))
 
 	// Spawn reader and writer loops
 	go gh.writePump(session)
@@ -702,6 +729,7 @@ func (gh *GatewayHandler) writePump(s *Session) {
 }
 
 func (gh *GatewayHandler) handleDisconnect(s *Session) {
+	metrics.IncWSClosed()
 	s.CloseOnce.Do(func() {
 		s.IsActive = false
 		close(s.Send)
@@ -713,13 +741,15 @@ func (gh *GatewayHandler) handleDisconnect(s *Session) {
 	gh.leaveAllChannels(s)
 	gh.leaveAllParties(s)
 
-	// Start 30-second connection recovery grace period
+	// Presence/session_end fire immediately (reference immediate Untrack on disconnect).
+	if gh.onDisconnect != nil {
+		gh.onDisconnect(s.ID, s.UserID, s.Username)
+	}
+
+	// Optional grace window for matchmaker/match cleanup and session registry eviction.
 	gh.registry.StartGracePeriod(s.ID, func() {
 		if gh.Matchmaker != nil {
 			_ = gh.Matchmaker.RemoveSessionAll(context.Background(), s.ID)
-		}
-		if gh.onDisconnect != nil {
-			gh.onDisconnect(s.ID, s.UserID, s.Username)
 		}
 
 		s.mu.RLock()
@@ -784,6 +814,7 @@ func (gh *GatewayHandler) handleDisconnect(s *Session) {
 			}
 		}
 	})
+	metrics.SetWSSessions(float64(gh.registry.ActiveSessionCount()))
 }
 
 // Envelope defines client-to-server and server-to-client WS structures.
@@ -983,9 +1014,37 @@ func (gh *GatewayHandler) RouteMessage(s *Session, payload []byte) {
 	}
 
 	if env.Rpc != nil {
+		envMap, _ := runtime.ParseEnvelopeMap(payload)
+		hookID := "rpc"
 		gh.mu.RLock()
+		ex := gh.rtHookExecutor
 		invoker := gh.rpcInvoker
 		gh.mu.RUnlock()
+		if ex != nil {
+			modified, err := ex.RunBeforeRt(context.Background(), hookID, envMap)
+			if err != nil {
+				res := map[string]interface{}{"cid": env.Cid, "error": err.Error()}
+				resBytes, _ := json.Marshal(res)
+				s.TrySend(resBytes)
+				return
+			}
+			if modified != nil {
+				envMap = modified
+				if rpcVal, ok := modified["rpc"].(map[string]interface{}); ok {
+					if id, ok := rpcVal["id"].(string); ok {
+						env.Rpc.ID = id
+					}
+					if pl, ok := rpcVal["payload"].(string); ok {
+						env.Rpc.Payload = pl
+					}
+				}
+			}
+			defer func(in map[string]interface{}) {
+				go func() {
+					_ = ex.RunAfterRt(context.Background(), hookID, nil, in)
+				}()
+			}(envMap)
+		}
 		res := map[string]interface{}{"cid": env.Cid}
 		if invoker == nil {
 			res["error"] = map[string]interface{}{"message": "RPC not available", "code": 14}

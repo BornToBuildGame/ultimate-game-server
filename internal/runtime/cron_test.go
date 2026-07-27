@@ -34,6 +34,7 @@ func TestCronNextPrev(t *testing.T) {
 }
 
 func TestRegisterCronRejectsInvalid(t *testing.T) {
+	t.Setenv("UGE_ENABLE_REGISTER_CRON", "true")
 	reg := NewHookRegistry()
 	err := reg.RegisterCron("bad", &CronJob{
 		Schedule: "not-cron",
@@ -45,6 +46,7 @@ func TestRegisterCronRejectsInvalid(t *testing.T) {
 }
 
 func TestCronSchedulerFiresAndSkipIfRunning(t *testing.T) {
+	t.Setenv("UGE_ENABLE_REGISTER_CRON", "true")
 	reg := NewHookRegistry()
 	var fires atomic.Int32
 	block := make(chan struct{})

@@ -208,6 +208,86 @@ func MapJSNK(vm *goja.Runtime, nk RuntimeModule, timeout time.Duration, registry
 	})
 	_ = nkObj.Set("walletsUpdate", nkObj.Get("wallets_update"))
 
+	multiUpdateFn := func(call goja.FunctionCall) goja.Value {
+		accounts := parseJSAccountUpdates(call.Argument(0).Export())
+		writes := parseJSStorageWrites(call.Argument(1).Export())
+		deletes := parseJSStorageDeletes(call.Argument(2).Export())
+		wallets := parseJSWalletUpdates(call.Argument(3).Export())
+		updateLedger := true
+		if !goja.IsUndefined(call.Argument(4)) && !goja.IsNull(call.Argument(4)) {
+			updateLedger = call.Argument(4).ToBoolean()
+		}
+		acks, results, err := nk.MultiUpdate(context.Background(), accounts, writes, deletes, wallets, updateLedger)
+		if err != nil {
+			panic(vm.NewGoError(err))
+		}
+		return vm.ToValue(map[string]interface{}{"acks": acks, "wallets": results})
+	}
+	_ = nkObj.Set("multi_update", multiUpdateFn)
+	_ = nkObj.Set("multiUpdate", multiUpdateFn)
+
+	storageIndexListFn := func(call goja.FunctionCall) goja.Value {
+		callerID := ""
+		if !goja.IsUndefined(call.Argument(0)) && !goja.IsNull(call.Argument(0)) {
+			callerID = call.Argument(0).String()
+		}
+		indexName := call.Argument(1).String()
+		query := "*"
+		if !goja.IsUndefined(call.Argument(2)) && !goja.IsNull(call.Argument(2)) {
+			query = call.Argument(2).String()
+		}
+		limit := 10
+		if !goja.IsUndefined(call.Argument(3)) && !goja.IsNull(call.Argument(3)) {
+			limit = int(call.Argument(3).ToInteger())
+		}
+		var order []string
+		if raw := call.Argument(4).Export(); raw != nil {
+			if arr, ok := raw.([]interface{}); ok {
+				for _, v := range arr {
+					order = append(order, fmt.Sprint(v))
+				}
+			}
+		}
+		cursor := ""
+		if !goja.IsUndefined(call.Argument(5)) && !goja.IsNull(call.Argument(5)) {
+			cursor = call.Argument(5).String()
+		}
+		objs, next, err := nk.StorageIndexList(context.Background(), callerID, indexName, query, limit, order, cursor)
+		if err != nil {
+			panic(vm.NewGoError(err))
+		}
+		return vm.ToValue(map[string]interface{}{"objects": objs, "cursor": next})
+	}
+	_ = nkObj.Set("storage_index_list", storageIndexListFn)
+	_ = nkObj.Set("storageIndexList", storageIndexListFn)
+
+	if grm, ok := nk.(*GoRuntimeModule); ok {
+		registerStorageIndexFn := func(call goja.FunctionCall) goja.Value {
+			name := call.Argument(0).String()
+			collection := call.Argument(1).String()
+			key := ""
+			if !goja.IsUndefined(call.Argument(2)) && !goja.IsNull(call.Argument(2)) {
+				key = call.Argument(2).String()
+			}
+			fields := jsStringSlice(call.Argument(3).Export())
+			sortable := jsStringSlice(call.Argument(4).Export())
+			maxEntries := 1000
+			if !goja.IsUndefined(call.Argument(5)) && !goja.IsNull(call.Argument(5)) {
+				maxEntries = int(call.Argument(5).ToInteger())
+			}
+			indexOnly := false
+			if !goja.IsUndefined(call.Argument(6)) && !goja.IsNull(call.Argument(6)) {
+				indexOnly = call.Argument(6).ToBoolean()
+			}
+			if err := grm.RegisterStorageIndex(name, collection, key, fields, sortable, maxEntries, indexOnly); err != nil {
+				panic(vm.NewGoError(err))
+			}
+			return goja.Undefined()
+		}
+		_ = nkObj.Set("register_storage_index", registerStorageIndexFn)
+		_ = nkObj.Set("registerStorageIndex", registerStorageIndexFn)
+	}
+
 	_ = nkObj.Set("wallet_ledger_list", func(call goja.FunctionCall) goja.Value {
 		userID := call.Argument(0).String()
 		limit := int(call.Argument(1).ToInteger())
@@ -1440,4 +1520,90 @@ func jsOptBool(v goja.Value, def bool) bool {
 		return def
 	}
 	return v.ToBoolean()
+}
+
+func parseJSAccountUpdates(raw interface{}) []*AccountUpdateParams {
+	arr, _ := raw.([]interface{})
+	out := make([]*AccountUpdateParams, 0, len(arr))
+	for _, item := range arr {
+		m, ok := item.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		u := &AccountUpdateParams{UserID: fmt.Sprint(m["user_id"])}
+		if v, ok := m["username"].(string); ok {
+			u.Username = &v
+		}
+		if v, ok := m["display_name"].(string); ok {
+			u.DisplayName = &v
+		}
+		out = append(out, u)
+	}
+	return out
+}
+
+func parseJSStorageWrites(raw interface{}) []*StorageWrite {
+	arr, _ := raw.([]interface{})
+	out := make([]*StorageWrite, 0, len(arr))
+	for _, item := range arr {
+		m, ok := item.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		w := &StorageWrite{
+			Collection: fmt.Sprint(m["collection"]),
+			Key:        fmt.Sprint(m["key"]),
+			UserID:     fmt.Sprint(m["user_id"]),
+			Version:    fmt.Sprint(m["version"]),
+		}
+		switch v := m["value"].(type) {
+		case string:
+			w.Value = v
+		default:
+			b, _ := json.Marshal(v)
+			w.Value = string(b)
+		}
+		out = append(out, w)
+	}
+	return out
+}
+
+func parseJSStorageDeletes(raw interface{}) []*StorageDelete {
+	arr, _ := raw.([]interface{})
+	out := make([]*StorageDelete, 0, len(arr))
+	for _, item := range arr {
+		m, ok := item.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		out = append(out, &StorageDelete{
+			Collection: fmt.Sprint(m["collection"]),
+			Key:        fmt.Sprint(m["key"]),
+			UserID:     fmt.Sprint(m["user_id"]),
+			Version:    fmt.Sprint(m["version"]),
+		})
+	}
+	return out
+}
+
+func parseJSWalletUpdates(raw interface{}) []*WalletUpdateParams {
+	arr, _ := raw.([]interface{})
+	out := make([]*WalletUpdateParams, 0, len(arr))
+	for _, item := range arr {
+		m, ok := item.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		u := &WalletUpdateParams{UserID: fmt.Sprint(m["user_id"])}
+		if cs, ok := m["changeset"].(map[string]interface{}); ok {
+			u.Changeset = make(map[string]int64)
+			for k, v := range cs {
+				if f, ok := v.(float64); ok {
+					u.Changeset[k] = int64(f)
+				}
+			}
+		}
+		out = append(out, u)
+	}
+	return out
 }
