@@ -107,6 +107,9 @@ func (s *Server) SetRuntimeManager(rm *runtime.GoRuntimeManager) {
 	if rm != nil {
 		if s.MatchRouter != nil {
 			s.MatchRouter.SetDependencies(rm.Registry(), rm.Logger(), s.logger, rm.DB(), rm.NK())
+			if s.cfg.RuntimePath != "" {
+				s.MatchRouter.SetLuaModulePath(s.cfg.RuntimePath)
+			}
 		}
 		if grm, ok := rm.NK().(*runtime.GoRuntimeModule); ok && s.MatchRouter != nil {
 			grm.SetMatchRegistry(s.MatchRouter)
@@ -506,6 +509,9 @@ func (s *Server) Start(ctx context.Context) error {
 	// 1. Setup HTTP Server
 	mux := http.NewServeMux()
 	s.registerRoutes(mux)
+	if s.RuntimeManager != nil {
+		runtime.MountHTTPHandlers(mux, s.RuntimeManager.Registry().HTTPHandlers())
+	}
 
 	// Wrap handlers in global middlewares (outermost first when nesting)
 	var handler http.Handler = mux
@@ -544,7 +550,16 @@ func (s *Server) Start(ctx context.Context) error {
 	apipb.RegisterTournamentServiceServer(s.gRPCServer, NewTournamentServer(s.dbPool, s.rdb, s.tokenMgr))
 	apipb.RegisterFriendsServiceServer(s.gRPCServer, NewFriendsServer(s.dbPool, s.tokenMgr, s.presenceTracker))
 	apipb.RegisterGroupServiceServer(s.gRPCServer, NewGroupServer(s.dbPool, s.tokenMgr))
-	apipb.RegisterMatchmakerServiceServer(s.gRPCServer, NewMatchmakerServer(s.Matchmaker, s.tokenMgr))
+	apipb.RegisterMatchmakerServiceServer(s.gRPCServer, NewMatchmakerServer(s.Matchmaker, s.tokenMgr, func(userID string) string {
+		if s.SocketRegistry == nil {
+			return ""
+		}
+		ids := s.SocketRegistry.GetUserSessionIDs(userID)
+		if len(ids) == 0 {
+			return ""
+		}
+		return ids[0]
+	}))
 	apipb.RegisterRealtimeServiceServer(s.gRPCServer, NewRealtimeServer(s.logger, s.MatchRouter, s.rdb, s.tokenMgr))
 	apipb.RegisterPartyServiceServer(s.gRPCServer, NewPartyServer(s.PartyRegistry, s.tokenMgr))
 	apipb.RegisterChatServiceServer(s.gRPCServer, NewChannelServer(s.dbPool, s.tokenMgr, nil))
@@ -1421,11 +1436,17 @@ func (s *Server) handleSubmitMatchmakerTicket(w http.ResponseWriter, r *http.Req
 		queueName = "default"
 	}
 
+	sessionID := ""
+	if s.SocketRegistry != nil {
+		if ids := s.SocketRegistry.GetUserSessionIDs(userID); len(ids) > 0 {
+			sessionID = ids[0]
+		}
+	}
 	t := &matchmaker.Ticket{
 		ID:                uuid.New().String(),
 		UserID:            userID,
 		Username:          username,
-		SessionID:         userID,
+		SessionID:         sessionID,
 		Region:            req.StringProperties["region"],
 		CreatedAt:         time.Now(),
 		Query:             req.Query,

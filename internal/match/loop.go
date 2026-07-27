@@ -475,7 +475,11 @@ func (ml *MatchLoop) tick() (finished bool) {
 					ml.goState = res
 				}
 			} else if ml.luaMatchJoinAttempt != nil && ml.sandbox != nil {
-				accept, err = ml.luaJoinAttemptCall(presence, req.metadata)
+				var reason string
+				accept, reason, err = ml.luaJoinAttemptCall(presence, req.metadata)
+				if rejectReason == "" {
+					rejectReason = reason
+				}
 			}
 
 			if accept && err == nil {
@@ -711,8 +715,7 @@ func (ml *MatchLoop) terminate() {
 	}
 	if ml.luaMatchTerminate != nil && ml.sandbox != nil {
 		L := ml.sandbox.L
-		ctxTbl := L.NewTable()
-		L.SetField(ctxTbl, "match_id", lua.LString(ml.MatchID))
+		ctxTbl := ml.luaMatchCtx(L, "", "")
 		luaDispatcher := ml.pushLuaDispatcher(L, dispatcher)
 
 		stateBytes, _ := json.Marshal(ml.state)
@@ -870,43 +873,65 @@ func (ml *MatchLoop) GetPresences() []*PresenceImpl {
 func (ml *MatchLoop) pushLuaDispatcher(L *lua.LState, dispatcher *GoMatchDispatcher) *lua.LTable {
 	tbl := L.NewTable()
 
+	parsePresences := func(arg lua.LValue) []runtime.Presence {
+		pt, ok := arg.(*lua.LTable)
+		if !ok || pt == nil {
+			return nil
+		}
+		var out []runtime.Presence
+		pt.ForEach(func(_, v lua.LValue) {
+			row, ok := v.(*lua.LTable)
+			if !ok {
+				return
+			}
+			out = append(out, &PresenceImpl{
+				UserID:    lua.LVAsString(L.GetField(row, "user_id")),
+				SessionID: lua.LVAsString(L.GetField(row, "session_id")),
+				Username:  lua.LVAsString(L.GetField(row, "username")),
+			})
+		})
+		return out
+	}
+	parseSender := func(arg lua.LValue) runtime.Presence {
+		row, ok := arg.(*lua.LTable)
+		if !ok || row == nil {
+			return nil
+		}
+		return &PresenceImpl{
+			UserID:    lua.LVAsString(L.GetField(row, "user_id")),
+			SessionID: lua.LVAsString(L.GetField(row, "session_id")),
+			Username:  lua.LVAsString(L.GetField(row, "username")),
+		}
+	}
+
 	L.SetField(tbl, "broadcast_message", L.NewFunction(func(L *lua.LState) int {
 		opCode := int64(L.CheckNumber(1))
 		data := L.CheckString(2)
+		presences := parsePresences(L.Get(3))
+		sender := parseSender(L.Get(4))
 		reliable := true
 		if L.GetTop() >= 5 {
 			reliable = L.OptBool(5, true)
 		}
-		_ = dispatcher.BroadcastMessage(opCode, []byte(data), nil, nil, reliable)
+		_ = dispatcher.BroadcastMessage(opCode, []byte(data), presences, sender, reliable)
 		return 0
 	}))
 
 	L.SetField(tbl, "broadcast_message_deferred", L.NewFunction(func(L *lua.LState) int {
 		opCode := int64(L.CheckNumber(1))
 		data := L.CheckString(2)
+		presences := parsePresences(L.Get(3))
+		sender := parseSender(L.Get(4))
 		reliable := true
 		if L.GetTop() >= 5 {
 			reliable = L.OptBool(5, true)
 		}
-		_ = dispatcher.BroadcastMessageDeferred(opCode, []byte(data), nil, nil, reliable)
+		_ = dispatcher.BroadcastMessageDeferred(opCode, []byte(data), presences, sender, reliable)
 		return 0
 	}))
 
 	L.SetField(tbl, "match_kick", L.NewFunction(func(L *lua.LState) int {
-		presencesArg := L.Get(1)
-		var presences []runtime.Presence
-		if pt, ok := presencesArg.(*lua.LTable); ok {
-			pt.ForEach(func(_, v lua.LValue) {
-				if row, ok := v.(*lua.LTable); ok {
-					presences = append(presences, &PresenceImpl{
-						UserID:    lua.LVAsString(L.GetField(row, "user_id")),
-						SessionID: lua.LVAsString(L.GetField(row, "session_id")),
-						Username:  lua.LVAsString(L.GetField(row, "username")),
-					})
-				}
-			})
-		}
-		_ = dispatcher.MatchKick(presences)
+		_ = dispatcher.MatchKick(parsePresences(L.Get(1)))
 		return 0
 	}))
 
@@ -919,16 +944,71 @@ func (ml *MatchLoop) pushLuaDispatcher(L *lua.LState, dispatcher *GoMatchDispatc
 	return tbl
 }
 
-func (ml *MatchLoop) luaJoinAttemptCall(presence *PresenceImpl, metadata map[string]string) (bool, error) {
-	L := ml.sandbox.L
+func (ml *MatchLoop) luaMatchCtx(L *lua.LState, userID, sessionID string) *lua.LTable {
 	ctxTbl := L.NewTable()
 	L.SetField(ctxTbl, "match_id", lua.LString(ml.MatchID))
+	if userID != "" {
+		L.SetField(ctxTbl, "user_id", lua.LString(userID))
+	}
+	if sessionID != "" {
+		L.SetField(ctxTbl, "session_id", lua.LString(sessionID))
+	}
+	return ctxTbl
+}
+
+// callLuaMatchInit runs match_init(ctx, params) -> state, tick_rate, label.
+func (ml *MatchLoop) callLuaMatchInit(params map[string]interface{}) (int, string, error) {
+	if ml.luaMatchInit == nil || ml.sandbox == nil || ml.sandbox.L == nil {
+		return 0, "", fmt.Errorf("match_init not defined")
+	}
+	L := ml.sandbox.L
+	ctxTbl := ml.luaMatchCtx(L, "", "")
+	paramsVal := runtime.ToLuaValue(L, params)
+	if params == nil {
+		paramsVal = lua.LNil
+	}
+
+	err := L.CallByParam(lua.P{
+		Fn: ml.luaMatchInit, NRet: 3, Protect: true,
+	}, ctxTbl, paramsVal)
+	if err != nil {
+		return 0, "", err
+	}
+	labelVal := L.Get(-1)
+	rateVal := L.Get(-2)
+	stateVal := L.Get(-3)
+	L.Pop(3)
+
+	if stateVal.Type() == lua.LTNil {
+		return 0, "", fmt.Errorf("match_init returned nil state")
+	}
+	rate := int(lua.LVAsNumber(rateVal))
+	if rate < 1 || rate > 60 {
+		return 0, "", fmt.Errorf("match_init tick rate must be 1-60, got %d", rate)
+	}
+	label := lua.LVAsString(labelVal)
+	if len(label) > maxLabelBytes {
+		return 0, "", fmt.Errorf("match_init label exceeds %d bytes", maxLabelBytes)
+	}
+	if tbl, ok := stateVal.(*lua.LTable); ok {
+		goStateVal := runtime.ToGoValue(tbl)
+		if bytes, err := json.Marshal(goStateVal); err == nil {
+			_ = json.Unmarshal(bytes, &ml.state)
+		}
+	}
+	return rate, label, nil
+}
+
+func (ml *MatchLoop) luaJoinAttemptCall(presence *PresenceImpl, metadata map[string]string) (bool, string, error) {
+	L := ml.sandbox.L
+	ctxTbl := ml.luaMatchCtx(L, presence.UserID, presence.SessionID)
 	dispatcher := ml.pushLuaDispatcher(L, &GoMatchDispatcher{loop: ml})
 
 	presenceTbl := L.NewTable()
 	L.SetField(presenceTbl, "user_id", lua.LString(presence.UserID))
 	L.SetField(presenceTbl, "username", lua.LString(presence.Username))
 	L.SetField(presenceTbl, "session_id", lua.LString(presence.SessionID))
+	L.SetField(presenceTbl, "node", lua.LString(presence.NodeID))
 
 	metaTbl := L.NewTable()
 	for k, v := range metadata {
@@ -942,17 +1022,18 @@ func (ml *MatchLoop) luaJoinAttemptCall(presence *PresenceImpl, metadata map[str
 
 	err := L.CallByParam(lua.P{
 		Fn:      ml.luaMatchJoinAttempt,
-		NRet:    2,
+		NRet:    3,
 		Protect: true,
 	}, ctxTbl, dispatcher, lua.LNumber(ml.state.Tick), luaState, presenceTbl, metaTbl)
 
 	if err != nil {
-		return false, err
+		return false, "", err
 	}
 
-	retState := L.Get(-2)
-	retAccept := L.Get(-1)
-	L.Pop(2)
+	retReason := L.Get(-1)
+	retAccept := L.Get(-2)
+	retState := L.Get(-3)
+	L.Pop(3)
 
 	if tbl, ok := retState.(*lua.LTable); ok {
 		goStateVal := runtime.ToGoValue(tbl)
@@ -961,13 +1042,16 @@ func (ml *MatchLoop) luaJoinAttemptCall(presence *PresenceImpl, metadata map[str
 		}
 	}
 
-	return lua.LVAsBool(retAccept), nil
+	reason := ""
+	if retReason.Type() != lua.LTNil {
+		reason = retReason.String()
+	}
+	return lua.LVAsBool(retAccept), reason, nil
 }
 
 func (ml *MatchLoop) luaJoinCall(presences []interface{}) {
 	L := ml.sandbox.L
-	ctxTbl := L.NewTable()
-	L.SetField(ctxTbl, "match_id", lua.LString(ml.MatchID))
+	ctxTbl := ml.luaMatchCtx(L, "", "")
 	dispatcher := ml.pushLuaDispatcher(L, &GoMatchDispatcher{loop: ml})
 
 	presencesTbl := L.NewTable()
@@ -977,6 +1061,7 @@ func (ml *MatchLoop) luaJoinCall(presences []interface{}) {
 		L.SetField(pObj, "user_id", lua.LString(pImpl.UserID))
 		L.SetField(pObj, "username", lua.LString(pImpl.Username))
 		L.SetField(pObj, "session_id", lua.LString(pImpl.SessionID))
+		L.SetField(pObj, "node", lua.LString(pImpl.NodeID))
 		presencesTbl.Append(pObj)
 	}
 
@@ -1005,8 +1090,7 @@ func (ml *MatchLoop) luaJoinCall(presences []interface{}) {
 
 func (ml *MatchLoop) luaLeaveCall(presences []interface{}) {
 	L := ml.sandbox.L
-	ctxTbl := L.NewTable()
-	L.SetField(ctxTbl, "match_id", lua.LString(ml.MatchID))
+	ctxTbl := ml.luaMatchCtx(L, "", "")
 	dispatcher := ml.pushLuaDispatcher(L, &GoMatchDispatcher{loop: ml})
 
 	presencesTbl := L.NewTable()
@@ -1016,6 +1100,7 @@ func (ml *MatchLoop) luaLeaveCall(presences []interface{}) {
 		L.SetField(pObj, "user_id", lua.LString(pImpl.UserID))
 		L.SetField(pObj, "username", lua.LString(pImpl.Username))
 		L.SetField(pObj, "session_id", lua.LString(pImpl.SessionID))
+		L.SetField(pObj, "node", lua.LString(pImpl.NodeID))
 		presencesTbl.Append(pObj)
 	}
 
@@ -1044,8 +1129,7 @@ func (ml *MatchLoop) luaLeaveCall(presences []interface{}) {
 
 func (ml *MatchLoop) luaSignalCall(data string) string {
 	L := ml.sandbox.L
-	ctxTbl := L.NewTable()
-	L.SetField(ctxTbl, "match_id", lua.LString(ml.MatchID))
+	ctxTbl := ml.luaMatchCtx(L, "", "")
 	dispatcher := ml.pushLuaDispatcher(L, &GoMatchDispatcher{loop: ml})
 
 	stateBytes, _ := json.Marshal(ml.state)
@@ -1100,8 +1184,7 @@ func (ml *MatchLoop) luaLoopCall(inputs []MatchInput) {
 	_ = json.Unmarshal(stateBytes, &stateRaw)
 	luaState := runtime.ToLuaValue(L, stateRaw)
 
-	ctxTbl := L.NewTable()
-	L.SetField(ctxTbl, "match_id", lua.LString(ml.MatchID))
+	ctxTbl := ml.luaMatchCtx(L, "", "")
 
 	err := L.CallByParam(lua.P{
 		Fn:      ml.luaMatchLoop,

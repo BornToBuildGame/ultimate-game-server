@@ -173,6 +173,53 @@ func TestGoInitializer(t *testing.T) {
 	}
 }
 
+func TestRegisterAfterListFriends_ConvertsOut(t *testing.T) {
+	registry := NewHookRegistry()
+	init := &goInitializer{registry: registry}
+
+	var gotOut *FriendList
+	err := init.RegisterAfterListFriends(func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, out *FriendList, in *ListFriendsRequest) error {
+		gotOut = out
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("unexpected registration error: %v", err)
+	}
+
+	hook, exists := registry.GetAfter("ListFriends")
+	if !exists {
+		t.Fatal("expected after hook to be registered")
+	}
+
+	err = hook(context.Background(), &testLogger{t: t}, nil, nil,
+		map[string]interface{}{
+			"friends": []map[string]interface{}{
+				{
+					"user": map[string]interface{}{
+						"id":       "u1",
+						"username": "alice",
+					},
+					"state": 2,
+				},
+			},
+			"next_cursor": "cursor1",
+		},
+		map[string]interface{}{"limit": 10},
+	)
+	if err != nil {
+		t.Fatalf("unexpected after hook error: %v", err)
+	}
+	if gotOut == nil {
+		t.Fatal("expected typed out to be non-nil")
+	}
+	if gotOut.NextCursor != "cursor1" {
+		t.Fatalf("expected next cursor to round-trip, got %q", gotOut.NextCursor)
+	}
+	if len(gotOut.Friends) != 1 || gotOut.Friends[0].User == nil || gotOut.Friends[0].User.Username != "alice" {
+		t.Fatalf("expected friend payload to convert, got %#v", gotOut)
+	}
+}
+
 func TestGoRuntimeManager_PanicRecovery(t *testing.T) {
 	logger := &testLogger{t: t}
 	manager := NewGoRuntimeManager(logger, nil, nil)

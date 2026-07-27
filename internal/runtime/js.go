@@ -8,6 +8,9 @@ import (
 	"strings"
 	"time"
 
+	"ultimate-game-server/internal/satori"
+	"ultimate-game-server/internal/storage"
+
 	"github.com/dop251/goja"
 )
 
@@ -286,6 +289,29 @@ func MapJSNK(vm *goja.Runtime, nk RuntimeModule, timeout time.Duration, registry
 		}
 		_ = nkObj.Set("register_storage_index", registerStorageIndexFn)
 		_ = nkObj.Set("registerStorageIndex", registerStorageIndexFn)
+
+		registerStorageIndexFilterFn := func(call goja.FunctionCall) goja.Value {
+			indexName := call.Argument(0).String()
+			fn, ok := goja.AssertFunction(call.Argument(1))
+			if !ok {
+				panic(vm.NewGoError(fmt.Errorf("register_storage_index_filter requires a function")))
+			}
+			if err := grm.RegisterStorageIndexFilter(indexName, func(ctx context.Context, write *storage.StorageObject) (bool, error) {
+				ret, err := fn(goja.Undefined(), vm.ToValue(write))
+				if err != nil {
+					return false, err
+				}
+				if goja.IsUndefined(ret) || goja.IsNull(ret) {
+					return true, nil
+				}
+				return ret.ToBoolean(), nil
+			}); err != nil {
+				panic(vm.NewGoError(err))
+			}
+			return goja.Undefined()
+		}
+		_ = nkObj.Set("register_storage_index_filter", registerStorageIndexFilterFn)
+		_ = nkObj.Set("registerStorageIndexFilter", registerStorageIndexFilterFn)
 	}
 
 	_ = nkObj.Set("wallet_ledger_list", func(call goja.FunctionCall) goja.Value {
@@ -937,6 +963,157 @@ func MapJSNK(vm *goja.Runtime, nk RuntimeModule, timeout time.Duration, registry
 	})
 	_ = nkObj.Set("rpc_call", nkObj.Get("rpc"))
 	_ = nkObj.Set("rpcCall", nkObj.Get("rpc"))
+	_ = nkObj.Set("getSatori", func(call goja.FunctionCall) goja.Value {
+		client := nk.GetSatori()
+		if client == nil {
+			return goja.Null()
+		}
+		obj := vm.NewObject()
+		argStrings := func(v goja.Value) []string {
+			if goja.IsUndefined(v) || goja.IsNull(v) {
+				return nil
+			}
+			return jsStringSlice(v.Export())
+		}
+		_ = obj.Set("authenticate", func(call goja.FunctionCall) goja.Value {
+			var def, custom map[string]string
+			_ = vm.ExportTo(call.Argument(1), &def)
+			_ = vm.ExportTo(call.Argument(2), &custom)
+			noSession := false
+			if !goja.IsUndefined(call.Argument(3)) {
+				noSession = call.Argument(3).ToBoolean()
+			}
+			out, err := client.Authenticate(context.Background(), call.Argument(0).String(), def, custom, noSession)
+			if err != nil {
+				panic(vm.NewGoError(err))
+			}
+			return vm.ToValue(out)
+		})
+		_ = obj.Set("identityDelete", func(call goja.FunctionCall) goja.Value {
+			if err := client.IdentityDelete(context.Background(), call.Argument(0).String()); err != nil {
+				panic(vm.NewGoError(err))
+			}
+			return goja.Undefined()
+		})
+		_ = obj.Set("propertiesGet", func(call goja.FunctionCall) goja.Value {
+			out, err := client.PropertiesGet(context.Background(), call.Argument(0).String())
+			if err != nil {
+				panic(vm.NewGoError(err))
+			}
+			return vm.ToValue(out)
+		})
+		_ = obj.Set("propertiesUpdate", func(call goja.FunctionCall) goja.Value {
+			upd := &satori.PropertiesUpdate{}
+			_ = vm.ExportTo(call.Argument(1), &upd.Default)
+			_ = vm.ExportTo(call.Argument(2), &upd.Custom)
+			if err := client.PropertiesUpdate(context.Background(), call.Argument(0).String(), upd); err != nil {
+				panic(vm.NewGoError(err))
+			}
+			return goja.Undefined()
+		})
+		_ = obj.Set("eventsPublish", func(call goja.FunctionCall) goja.Value {
+			var events []*satori.Event
+			_ = vm.ExportTo(call.Argument(1), &events)
+			if err := client.EventsPublish(context.Background(), call.Argument(0).String(), events); err != nil {
+				panic(vm.NewGoError(err))
+			}
+			return goja.Undefined()
+		})
+		_ = obj.Set("serverEventsPublish", func(call goja.FunctionCall) goja.Value {
+			var events []*satori.Event
+			_ = vm.ExportTo(call.Argument(0), &events)
+			if err := client.ServerEventsPublish(context.Background(), events); err != nil {
+				panic(vm.NewGoError(err))
+			}
+			return goja.Undefined()
+		})
+		_ = obj.Set("experimentsList", func(call goja.FunctionCall) goja.Value {
+			out, err := client.ExperimentsList(context.Background(), call.Argument(0).String(), argStrings(call.Argument(1)), argStrings(call.Argument(2)))
+			if err != nil {
+				panic(vm.NewGoError(err))
+			}
+			return vm.ToValue(out)
+		})
+		_ = obj.Set("flagsList", func(call goja.FunctionCall) goja.Value {
+			out, err := client.FlagsList(context.Background(), call.Argument(0).String(), argStrings(call.Argument(1)), argStrings(call.Argument(2)))
+			if err != nil {
+				panic(vm.NewGoError(err))
+			}
+			return vm.ToValue(out)
+		})
+		_ = obj.Set("flagsOverridesList", func(call goja.FunctionCall) goja.Value {
+			out, err := client.FlagsOverridesList(context.Background(), call.Argument(0).String(), argStrings(call.Argument(1)), argStrings(call.Argument(2)))
+			if err != nil {
+				panic(vm.NewGoError(err))
+			}
+			return vm.ToValue(out)
+		})
+		_ = obj.Set("liveEventsList", func(call goja.FunctionCall) goja.Value {
+			out, err := client.LiveEventsList(context.Background(), call.Argument(0).String(), argStrings(call.Argument(1)), argStrings(call.Argument(2)),
+				int32(call.Argument(3).ToInteger()), int32(call.Argument(4).ToInteger()), call.Argument(5).ToInteger(), call.Argument(6).ToInteger())
+			if err != nil {
+				panic(vm.NewGoError(err))
+			}
+			return vm.ToValue(out)
+		})
+		_ = obj.Set("liveEventJoin", func(call goja.FunctionCall) goja.Value {
+			if err := client.LiveEventJoin(context.Background(), call.Argument(0).String(), call.Argument(1).String()); err != nil {
+				panic(vm.NewGoError(err))
+			}
+			return goja.Undefined()
+		})
+		_ = obj.Set("messagesList", func(call goja.FunctionCall) goja.Value {
+			limit := 100
+			if !goja.IsUndefined(call.Argument(1)) {
+				limit = int(call.Argument(1).ToInteger())
+			}
+			forward := true
+			if !goja.IsUndefined(call.Argument(2)) {
+				forward = call.Argument(2).ToBoolean()
+			}
+			cursor := ""
+			if !goja.IsUndefined(call.Argument(3)) {
+				cursor = call.Argument(3).String()
+			}
+			out, err := client.MessagesList(context.Background(), call.Argument(0).String(), limit, forward, cursor, argStrings(call.Argument(4)))
+			if err != nil {
+				panic(vm.NewGoError(err))
+			}
+			return vm.ToValue(out)
+		})
+		_ = obj.Set("messageUpdate", func(call goja.FunctionCall) goja.Value {
+			if err := client.MessageUpdate(context.Background(), call.Argument(0).String(), call.Argument(1).String(), call.Argument(2).ToInteger(), call.Argument(3).ToInteger()); err != nil {
+				panic(vm.NewGoError(err))
+			}
+			return goja.Undefined()
+		})
+		_ = obj.Set("messageDelete", func(call goja.FunctionCall) goja.Value {
+			if err := client.MessageDelete(context.Background(), call.Argument(0).String(), call.Argument(1).String()); err != nil {
+				panic(vm.NewGoError(err))
+			}
+			return goja.Undefined()
+		})
+		for _, pair := range [][2]string{
+			{"authenticate", "authenticate"},
+			{"identityDelete", "identity_delete"},
+			{"propertiesGet", "properties_get"},
+			{"propertiesUpdate", "properties_update"},
+			{"eventsPublish", "events_publish"},
+			{"serverEventsPublish", "server_events_publish"},
+			{"experimentsList", "experiments_list"},
+			{"flagsList", "flags_list"},
+			{"flagsOverridesList", "flags_overrides_list"},
+			{"liveEventsList", "live_events_list"},
+			{"liveEventJoin", "live_event_join"},
+			{"messagesList", "messages_list"},
+			{"messageUpdate", "message_update"},
+			{"messageDelete", "message_delete"},
+		} {
+			_ = obj.Set(pair[1], obj.Get(pair[0]))
+		}
+		return obj
+	})
+	_ = nkObj.Set("get_satori", nkObj.Get("getSatori"))
 
 	if len(registry) > 0 && registry[0] != nil {
 		reg := registry[0]
@@ -984,6 +1161,55 @@ func MapJSNK(vm *goja.Runtime, nk RuntimeModule, timeout time.Duration, registry
 		_ = nkObj.Set("register_rt_after", registerAfter)
 		_ = nkObj.Set("registerRtAfter", registerAfter)
 
+		_ = nkObj.Set("registerPurchaseNotificationApple", func(call goja.FunctionCall) goja.Value {
+			fn, ok := goja.AssertFunction(call.Argument(0))
+			if !ok {
+				panic(vm.NewGoError(fmt.Errorf("expects a function")))
+			}
+			reg.RegisterPurchaseNotificationApple(func(ctx context.Context, logger Logger, db *sql.DB, nkMod RuntimeModule, notificationType int, purchase *ValidatedPurchaseView, rawPayload string) error {
+				_, err := fn(goja.Undefined(), vm.ToValue(notificationType), vm.ToValue(purchase), vm.ToValue(rawPayload))
+				return err
+			})
+			return goja.Undefined()
+		})
+		_ = nkObj.Set("register_purchase_notification_apple", nkObj.Get("registerPurchaseNotificationApple"))
+		_ = nkObj.Set("registerPurchaseNotificationGoogle", func(call goja.FunctionCall) goja.Value {
+			fn, ok := goja.AssertFunction(call.Argument(0))
+			if !ok {
+				panic(vm.NewGoError(fmt.Errorf("expects a function")))
+			}
+			reg.RegisterPurchaseNotificationGoogle(func(ctx context.Context, logger Logger, db *sql.DB, nkMod RuntimeModule, notificationType int, purchase *ValidatedPurchaseView, rawPayload string) error {
+				_, err := fn(goja.Undefined(), vm.ToValue(notificationType), vm.ToValue(purchase), vm.ToValue(rawPayload))
+				return err
+			})
+			return goja.Undefined()
+		})
+		_ = nkObj.Set("register_purchase_notification_google", nkObj.Get("registerPurchaseNotificationGoogle"))
+		_ = nkObj.Set("registerSubscriptionNotificationApple", func(call goja.FunctionCall) goja.Value {
+			fn, ok := goja.AssertFunction(call.Argument(0))
+			if !ok {
+				panic(vm.NewGoError(fmt.Errorf("expects a function")))
+			}
+			reg.RegisterSubscriptionNotificationApple(func(ctx context.Context, logger Logger, db *sql.DB, nkMod RuntimeModule, notificationType int, subscription *ValidatedSubscriptionView, rawPayload string) error {
+				_, err := fn(goja.Undefined(), vm.ToValue(notificationType), vm.ToValue(subscription), vm.ToValue(rawPayload))
+				return err
+			})
+			return goja.Undefined()
+		})
+		_ = nkObj.Set("register_subscription_notification_apple", nkObj.Get("registerSubscriptionNotificationApple"))
+		_ = nkObj.Set("registerSubscriptionNotificationGoogle", func(call goja.FunctionCall) goja.Value {
+			fn, ok := goja.AssertFunction(call.Argument(0))
+			if !ok {
+				panic(vm.NewGoError(fmt.Errorf("expects a function")))
+			}
+			reg.RegisterSubscriptionNotificationGoogle(func(ctx context.Context, logger Logger, db *sql.DB, nkMod RuntimeModule, notificationType int, subscription *ValidatedSubscriptionView, rawPayload string) error {
+				_, err := fn(goja.Undefined(), vm.ToValue(notificationType), vm.ToValue(subscription), vm.ToValue(rawPayload))
+				return err
+			})
+			return goja.Undefined()
+		})
+		_ = nkObj.Set("register_subscription_notification_google", nkObj.Get("registerSubscriptionNotificationGoogle"))
+
 		_ = nkObj.Set("register_matchmaker_matched", func(call goja.FunctionCall) goja.Value {
 			fn, ok := goja.AssertFunction(call.Argument(0))
 			if !ok {
@@ -1002,6 +1228,72 @@ func MapJSNK(vm *goja.Runtime, nk RuntimeModule, timeout time.Duration, registry
 			return goja.Undefined()
 		})
 		_ = nkObj.Set("registerMatchmakerMatched", nkObj.Get("register_matchmaker_matched"))
+
+		_ = nkObj.Set("register_matchmaker_override", func(call goja.FunctionCall) goja.Value {
+			fn, ok := goja.AssertFunction(call.Argument(0))
+			if !ok {
+				panic(vm.NewGoError(fmt.Errorf("register_matchmaker_override requires a function")))
+			}
+			reg.RegisterMatchmakerOverride(func(ctx context.Context, matches [][]interface{}) [][]interface{} {
+				ret, err := fn(goja.Undefined(), vm.ToValue(matches))
+				if err != nil || goja.IsUndefined(ret) || goja.IsNull(ret) {
+					return matches
+				}
+				exported := ret.Export()
+				outer, ok := exported.([]interface{})
+				if !ok {
+					return matches
+				}
+				result := make([][]interface{}, 0, len(outer))
+				for _, g := range outer {
+					if slice, ok := g.([]interface{}); ok {
+						result = append(result, slice)
+					}
+				}
+				return result
+			})
+			return goja.Undefined()
+		})
+		_ = nkObj.Set("registerMatchmakerOverride", nkObj.Get("register_matchmaker_override"))
+
+		_ = nkObj.Set("register_matchmaker_processor", func(call goja.FunctionCall) goja.Value {
+			fn, ok := goja.AssertFunction(call.Argument(0))
+			if !ok {
+				panic(vm.NewGoError(fmt.Errorf("register_matchmaker_processor requires a function")))
+			}
+			reg.RegisterMatchmakerProcessor(func(ctx context.Context, tickets []interface{}) [][]interface{} {
+				ret, err := fn(goja.Undefined(), vm.ToValue(tickets))
+				if err != nil || goja.IsUndefined(ret) || goja.IsNull(ret) {
+					return nil
+				}
+				exported := ret.Export()
+				outer, ok := exported.([]interface{})
+				if !ok {
+					return nil
+				}
+				result := make([][]interface{}, 0, len(outer))
+				for _, g := range outer {
+					if slice, ok := g.([]interface{}); ok {
+						result = append(result, slice)
+					}
+				}
+				return result
+			})
+			return goja.Undefined()
+		})
+		_ = nkObj.Set("registerMatchmakerProcessor", nkObj.Get("register_matchmaker_processor"))
+
+		_ = nkObj.Set("register_shutdown", func(call goja.FunctionCall) goja.Value {
+			fn, ok := goja.AssertFunction(call.Argument(0))
+			if !ok {
+				panic(vm.NewGoError(fmt.Errorf("register_shutdown requires a function")))
+			}
+			reg.RegisterShutdown(func(ctx context.Context, logger Logger, db *sql.DB, nkMod RuntimeModule) {
+				_, _ = fn(goja.Undefined())
+			})
+			return goja.Undefined()
+		})
+		_ = nkObj.Set("registerShutdown", nkObj.Get("register_shutdown"))
 
 		_ = nkObj.Set("registerCron", func(call goja.FunctionCall) goja.Value {
 			name := call.Argument(0).String()
@@ -1053,7 +1345,7 @@ func MapJSNK(vm *goja.Runtime, nk RuntimeModule, timeout time.Duration, registry
 		sortOrder := call.Argument(2).ToInteger()
 		operator := call.Argument(3).ToInteger()
 		resetSchedule := call.Argument(4).String()
-		
+
 		var metadata map[string]interface{}
 		if metadataVal := call.Argument(5).Export(); metadataVal != nil {
 			if m, ok := metadataVal.(map[string]interface{}); ok {
@@ -1332,6 +1624,9 @@ func MapJSNK(vm *goja.Runtime, nk RuntimeModule, timeout time.Duration, registry
 			return goja.Undefined()
 		})
 	}
+
+	mapJSNKBatch1(vm, nkObj, nk)
+	mapJSNKBatch2a(vm, nkObj, nk)
 
 	_ = vm.Set("nk", nkObj)
 }

@@ -33,6 +33,10 @@ type Router struct {
 	DB           *sql.DB
 	NK           runtime.RuntimeModule
 	Registry     SessionRegistry
+
+	// LuaModulePath is the directory for Lua match modules (e.g. data/modules).
+	LuaModulePath   string
+	luaMatchSources map[string]string
 }
 
 // NewRouter creates a new match Router.
@@ -60,7 +64,7 @@ func (r *Router) SetDependencies(hr *runtime.HookRegistry, logger runtime.Logger
 	r.NK = nk
 }
 
-// CreateAndRegisterMatch instantiates a Go native match and registers its MatchLoop.
+// CreateAndRegisterMatch instantiates a Go or Lua match and registers its MatchLoop.
 func (r *Router) CreateAndRegisterMatch(ctx context.Context, matchID string, module string, params map[string]interface{}) error {
 	r.mu.RLock()
 	hr := r.HookRegistry
@@ -81,7 +85,7 @@ func (r *Router) CreateAndRegisterMatch(ctx context.Context, matchID string, mod
 
 	factory, ok := hr.GetMatch(module)
 	if !ok {
-		return fmt.Errorf("match handler factory %q not found", module)
+		return r.createAndRegisterLuaMatch(matchID, module, params)
 	}
 
 	goMatch, err := factory(ctx, logger, db, nk)

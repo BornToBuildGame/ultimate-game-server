@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"ultimate-game-server/internal/satori"
+
 	"github.com/dop251/goja"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -179,6 +181,12 @@ func (m *mockRuntimeModule) StreamUserJoin(mode int16, subject, subcontext, labe
 func (m *mockRuntimeModule) StreamUserLeave(mode int16, subject, subcontext, label, userID, sessionID string) error {
 	return nil
 }
+func (m *mockRuntimeModule) StreamUserGet(mode int16, subject, subcontext, label, userID, sessionID string) (*StreamPresenceView, error) {
+	return &StreamPresenceView{UserID: userID, SessionID: sessionID}, nil
+}
+func (m *mockRuntimeModule) StreamClose(mode int16, subject, subcontext, label string) error {
+	return nil
+}
 func (m *mockRuntimeModule) StreamCount(mode int16, subject, subcontext, label string) (int, error) {
 	return 0, nil
 }
@@ -204,9 +212,39 @@ func (m *mockRuntimeModule) CronPrev(expression string, timestamp int64) (int64,
 	return timestamp, nil
 }
 
+func (m *mockRuntimeModule) GetSatori() satori.Satori {
+	return nil
+}
+
 func (m *mockRuntimeModule) AccountGetId(ctx context.Context, userID string) (*Account, error) {
 	return &Account{ID: userID, Username: "test_user"}, nil
 }
+func (m *mockRuntimeModule) UsersGetId(ctx context.Context, userIDs []string) ([]*UserView, error) {
+	out := make([]*UserView, 0, len(userIDs))
+	for _, id := range userIDs {
+		out = append(out, &UserView{ID: id, Username: "user_" + id})
+	}
+	return out, nil
+}
+func (m *mockRuntimeModule) UsersGetUsername(ctx context.Context, usernames []string) ([]*UserView, error) {
+	out := make([]*UserView, 0, len(usernames))
+	for _, name := range usernames {
+		out = append(out, &UserView{ID: "id_" + name, Username: name})
+	}
+	return out, nil
+}
+func (m *mockRuntimeModule) UsersGetRandom(ctx context.Context, count int) ([]*UserView, error) {
+	if count <= 0 {
+		count = 1
+	}
+	out := make([]*UserView, count)
+	for i := 0; i < count; i++ {
+		out[i] = &UserView{ID: "rand", Username: "random"}
+	}
+	return out, nil
+}
+func (m *mockRuntimeModule) UsersBanId(ctx context.Context, userIDs []string) error   { return nil }
+func (m *mockRuntimeModule) UsersUnbanId(ctx context.Context, userIDs []string) error { return nil }
 
 func (m *mockRuntimeModule) LeaderboardRecordWrite(ctx context.Context, id, ownerID, username string, score, subscore int64, metadata map[string]interface{}) (*LeaderboardRecord, error) {
 	return &LeaderboardRecord{
@@ -238,7 +276,7 @@ func (m *mockRuntimeModule) NotificationsUpdate(ctx context.Context, updates []*
 	return nil
 }
 func (m *mockRuntimeModule) NotificationsGetId(ctx context.Context, userID string, ids []string) ([]*NotificationView, error) {
-	return nil, nil
+	return []*NotificationView{}, nil
 }
 func (m *mockRuntimeModule) NotificationsDeleteId(ctx context.Context, userID string, ids []string) error {
 	return nil
@@ -277,7 +315,11 @@ func (m *mockRuntimeModule) PartyList(ctx context.Context, limit int, open *bool
 }
 
 func (m *mockRuntimeModule) GroupsGetId(ctx context.Context, groupIDs []string) ([]*GroupView, error) {
-	return nil, nil
+	out := make([]*GroupView, 0, len(groupIDs))
+	for _, id := range groupIDs {
+		out = append(out, &GroupView{ID: id, Name: "g_" + id})
+	}
+	return out, nil
 }
 func (m *mockRuntimeModule) GroupCreate(ctx context.Context, userID, name, description, avatarURL, langTag, metadata string, open bool, maxCount int) (*GroupView, error) {
 	return &GroupView{ID: "g1", Name: name, Open: open}, nil
@@ -285,7 +327,9 @@ func (m *mockRuntimeModule) GroupCreate(ctx context.Context, userID, name, descr
 func (m *mockRuntimeModule) GroupUpdate(ctx context.Context, groupID, userID, name, description, avatarURL, langTag, metadata string, open bool, maxCount int) error {
 	return nil
 }
-func (m *mockRuntimeModule) GroupDelete(ctx context.Context, groupID, userID string) error { return nil }
+func (m *mockRuntimeModule) GroupDelete(ctx context.Context, groupID, userID string) error {
+	return nil
+}
 func (m *mockRuntimeModule) GroupUsersAdd(ctx context.Context, groupID, callerID string, userIDs []string) error {
 	return nil
 }
@@ -302,7 +346,7 @@ func (m *mockRuntimeModule) GroupUsersDemote(ctx context.Context, groupID, calle
 	return nil
 }
 func (m *mockRuntimeModule) GroupUsersList(ctx context.Context, groupID string, limit int, cursor string) ([]*GroupUserView, string, error) {
-	return nil, "", nil
+	return []*GroupUserView{}, "", nil
 }
 func (m *mockRuntimeModule) GroupsList(ctx context.Context, name, langTag string, open *bool, members, limit int, cursor string) ([]*GroupView, string, error) {
 	return nil, "", nil
@@ -311,7 +355,14 @@ func (m *mockRuntimeModule) UserGroupsList(ctx context.Context, userID string, l
 	return nil, "", nil
 }
 func (m *mockRuntimeModule) GroupsGetRandom(ctx context.Context, count int) ([]*GroupView, error) {
-	return nil, nil
+	if count <= 0 {
+		count = 1
+	}
+	out := make([]*GroupView, count)
+	for i := 0; i < count; i++ {
+		out[i] = &GroupView{ID: "rg", Name: "random"}
+	}
+	return out, nil
 }
 
 func (m *mockRuntimeModule) ChannelIdBuild(ctx context.Context, userID, target string, chanType int) (string, error) {
@@ -347,7 +398,11 @@ func (m *mockRuntimeModule) LeaderboardList(ctx context.Context, limit int, curs
 }
 
 func (m *mockRuntimeModule) LeaderboardsGetId(ctx context.Context, ids []string) ([]*Leaderboard, error) {
-	return nil, nil
+	out := make([]*Leaderboard, 0, len(ids))
+	for _, id := range ids {
+		out = append(out, &Leaderboard{ID: id})
+	}
+	return out, nil
 }
 
 func (m *mockRuntimeModule) LeaderboardRanksDisable(ctx context.Context, id string) error {
@@ -363,11 +418,15 @@ func (m *mockRuntimeModule) TournamentDelete(ctx context.Context, id string) err
 }
 
 func (m *mockRuntimeModule) TournamentList(ctx context.Context, categoryStart, categoryEnd int, startTime, endTime int64, limit int, cursor string, active bool) ([]*TournamentView, string, error) {
-	return nil, "", nil
+	return []*TournamentView{{Leaderboard: &Leaderboard{ID: "tour1"}}}, "", nil
 }
 
 func (m *mockRuntimeModule) TournamentsGetId(ctx context.Context, ids []string) ([]*Leaderboard, error) {
-	return nil, nil
+	out := make([]*Leaderboard, 0, len(ids))
+	for _, id := range ids {
+		out = append(out, &Leaderboard{ID: id})
+	}
+	return out, nil
 }
 
 func (m *mockRuntimeModule) TournamentRanksDisable(ctx context.Context, id string) error {
@@ -483,6 +542,59 @@ func TestLuaVM_NK_Bindings(t *testing.T) {
 		nk.tournament_create("tour_temp", true, 1, 0, "", {}, "Title", "Desc", 1, 0, 0, 3600, 100, 3, true, true)
 		nk.tournament_join("tour_temp", "user1", "gamer1")
 		nk.tournament_delete("tour_temp")
+
+		-- Round 6 batch 1
+		local acct = nk.account_get_id("user1")
+		assert(acct.id == "user1")
+		local users = nk.users_get_id({"u1"})
+		assert(#users == 1 and users[1].id == "u1")
+		users = nk.users_get_username({"alice"})
+		assert(#users == 1 and users[1].username == "alice")
+		users = nk.users_get_random(2)
+		assert(#users == 2)
+		nk.users_ban_id({"u1"})
+		nk.users_unban_id({"u1"})
+		local groups = nk.groups_get_id({"g1"})
+		assert(#groups == 1)
+		nk.group_update("g1", "user1", "n", "d", "", "en", "{}", true, 10)
+		nk.group_delete("g1", "user1")
+		local gus, _ = nk.group_users_list("g1", 10, "")
+		assert(gus ~= nil)
+		nk.group_users_kick("g1", "user1", {"u2"})
+		local presence = nk.stream_user_get(1, "s", "", "", "user1", "sess1")
+		assert(presence.user_id == "user1")
+		nk.stream_close(1, "s", "", "")
+		local notes = nk.notifications_get_id("user1", {"n1"})
+		assert(notes ~= nil)
+		nk.notifications_update({{id = "n1", subject = "hi"}})
+		nk.notifications_delete_id("user1", {"n1"})
+		local lbs = nk.leaderboards_get_id({"lb1"})
+		assert(#lbs == 1 and lbs[1].id == "lb1")
+		local tours, _ = nk.tournament_list(0, 0, 0, 0, 10, "", false)
+		assert(#tours == 1)
+		tours = nk.tournaments_get_id({"tour1"})
+		assert(#tours == 1)
+		local enc = nk.json_encode({a = 1})
+		assert(type(enc) == "string")
+		local dec = nk.json_decode('{"a":1}')
+		assert(dec.a == 1)
+
+		-- Round 7 batch 2a
+		nk.group_users_add("g1", "user1", {"u2"})
+		nk.group_users_ban("g1", "user1", {"u2"})
+		nk.group_users_promote("g1", "user1", {"u2"})
+		nk.group_users_demote("g1", "user1", {"u2"})
+		local rgroups = nk.groups_get_random(2)
+		assert(#rgroups == 2)
+		local acks2 = nk.storage_write_retry({
+			{collection = "inventory", key = "sword", user_id = "user1"}
+		}, function(objs)
+			return {{
+				collection = "inventory", key = "sword", user_id = "user1",
+				value = '{"damage": 99}', permission_read = 1, permission_write = 1
+			}}
+		end, 3)
+		assert(#acks2 == 1)
 	`
 
 	err := L.DoString(script)
@@ -555,6 +667,59 @@ func TestGojaVM_NK_Bindings(t *testing.T) {
 		nk.tournament_create("tour_temp", true, 1, 0, "", {}, "Title", "Desc", 1, 0, 0, 3600, 100, 3, true, true);
 		nk.tournament_join("tour_temp", "user1", "gamer1");
 		nk.tournament_delete("tour_temp");
+
+		// Round 6 batch 1
+		var acct = nk.account_get_id("user1");
+		if (!acct || acct.id !== "user1") throw new Error("account_get_id failed");
+		var users = nk.users_get_id(["u1"]);
+		if (!users || users.length !== 1 || users[0].id !== "u1") throw new Error("users_get_id failed");
+		users = nk.users_get_username(["alice"]);
+		if (!users || users[0].username !== "alice") throw new Error("users_get_username failed");
+		users = nk.users_get_random(2);
+		if (!users || users.length !== 2) throw new Error("users_get_random failed");
+		nk.users_ban_id(["u1"]);
+		nk.users_unban_id(["u1"]);
+		var groups = nk.groups_get_id(["g1"]);
+		if (!groups || groups.length !== 1) throw new Error("groups_get_id failed");
+		nk.group_update("g1", "user1", "n", "d", "", "en", "{}", true, 10);
+		nk.group_delete("g1", "user1");
+		nk.group_users_list("g1", 10, "");
+		nk.group_users_kick("g1", "user1", ["u2"]);
+		var presence = nk.stream_user_get(1, "s", "", "", "user1", "sess1");
+		if (!presence || presence.user_id !== "user1") throw new Error("stream_user_get failed");
+		nk.stream_close(1, "s", "", "");
+		nk.notifications_get_id("user1", ["n1"]);
+		nk.notifications_update([{id: "n1", subject: "hi"}]);
+		nk.notifications_delete_id("user1", ["n1"]);
+		var lbs = nk.leaderboards_get_id(["lb1"]);
+		if (!lbs || lbs.length !== 1 || lbs[0].id !== "lb1") throw new Error("leaderboards_get_id failed");
+		var tours = nk.tournament_list(0, 0, 0, 0, 10, "", false);
+		if (!tours || !tours.tournaments || tours.tournaments.length !== 1) throw new Error("tournament_list failed");
+		tours = nk.tournaments_get_id(["tour1"]);
+		if (!tours || tours.length !== 1) throw new Error("tournaments_get_id failed");
+		var enc = nk.json_encode({a: 1});
+		if (typeof enc !== "string") throw new Error("json_encode failed");
+		var dec = nk.json_decode('{"a":1}');
+		if (!dec || dec.a !== 1) throw new Error("json_decode failed");
+
+		// Round 7 batch 2a
+		nk.group_users_add("g1", "user1", ["u2"]);
+		nk.group_users_ban("g1", "user1", ["u2"]);
+		nk.group_users_promote("g1", "user1", ["u2"]);
+		nk.group_users_demote("g1", "user1", ["u2"]);
+		var rgroups = nk.groups_get_random(2);
+		if (!rgroups || rgroups.length !== 2) throw new Error("groups_get_random failed");
+		var acks2 = nk.storage_write_retry(
+			[{collection: "inventory", key: "shield", user_id: "user1"}],
+			function(objs) {
+				return [{
+					collection: "inventory", key: "shield", user_id: "user1",
+					value: '{"defense": 99}', permission_read: 1, permission_write: 1
+				}];
+			},
+			3
+		);
+		if (!acks2 || acks2.length !== 1) throw new Error("storage_write_retry failed");
 	`
 
 	_, err := vm.RunString(script)
@@ -566,7 +731,7 @@ func TestHookPrecedenceResolution(t *testing.T) {
 	registry := NewHookRegistry()
 
 	// Register before hooks in all runtimes
-	registry.RegisterBefore("WriteStorageObjects", func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in interface{}) (interface{} , error) {
+	registry.RegisterBefore("WriteStorageObjects", func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in interface{}) (interface{}, error) {
 		return "go_native", nil
 	})
 	registry.RegisterLuaBefore("WriteStorageObjects", "luaBeforeWrite")

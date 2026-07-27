@@ -523,3 +523,125 @@ func TestJoinAttemptAlreadyMember(t *testing.T) {
 		t.Fatalf("expected already-member to skip JoinAttempt handler, attempts %d -> %d", firstAttempts, secondAttempts)
 	}
 }
+
+func TestCreateAndRegisterMatch_LuaModule(t *testing.T) {
+	r := NewRouter()
+	hr := runtime.NewHookRegistry()
+	r.SetDependencies(hr, nil, zap.NewNop(), nil, nil)
+	r.RegisterLuaMatchSource("echo_match", `
+		function match_init(ctx, params)
+			local label = "{}"
+			if params and params.label then label = params.label end
+			return { tick = 0, score = {}, positions = {}, is_finished = false }, 15, label
+		end
+		function match_join_attempt(ctx, dispatcher, tick, state, presence, metadata)
+			if presence.user_id == "banned" then
+				return state, false, "not allowed"
+			end
+			assert(ctx.user_id == presence.user_id)
+			assert(ctx.session_id == presence.session_id)
+			return state, true, nil
+		end
+		function match_loop(ctx, dispatcher, tick, state, messages)
+			return state
+		end
+	`)
+
+	matchID := "lua-match-1"
+	err := r.CreateAndRegisterMatch(context.Background(), matchID, "echo_match", map[string]interface{}{"label": `{"map":"a"}`})
+	if err != nil {
+		t.Fatalf("CreateAndRegisterMatch lua: %v", err)
+	}
+	loop, ok := r.GetMatchLoop(matchID)
+	if !ok || loop == nil {
+		t.Fatal("expected match loop registered")
+	}
+	if loop.tickRate != 15 {
+		t.Fatalf("tick rate want 15 got %d", loop.tickRate)
+	}
+	if loop.label != `{"map":"a"}` {
+		t.Fatalf("label mismatch: %q", loop.label)
+	}
+
+	accept, err := loop.JoinAttempt("u1", "alice", "sess-1", nil)
+	if err != nil || !accept {
+		t.Fatalf("join expected accept: %v %v", accept, err)
+	}
+	accept, err = loop.JoinAttempt("banned", "bad", "sess-2", nil)
+	if err == nil && accept {
+		t.Fatal("expected reject for banned user")
+	}
+	if err == nil || !strings.Contains(err.Error(), "not allowed") {
+		t.Fatalf("expected reject reason, got err=%v accept=%v", err, accept)
+	}
+
+	r.Unregister(matchID)
+}
+
+func TestLuaBroadcastPresenceFilter(t *testing.T) {
+	script := `
+		function match_init(ctx, params)
+			return { tick = 0, score = {}, positions = {}, is_finished = false }, 10, "{}"
+		end
+		function match_join_attempt(ctx, dispatcher, tick, state, presence, metadata)
+			return state, true, nil
+		end
+		function match_loop(ctx, dispatcher, tick, state, messages)
+			for _, msg in ipairs(messages) do
+				if msg.action == "ping" then
+					dispatcher.broadcast_message(1, "hi", {{
+						user_id = "u2", session_id = "s2", username = "bob"
+					}}, {
+						user_id = msg.user_id, session_id = "s1", username = "alice"
+					}, true)
+				end
+			end
+			return state
+		end
+	`
+	reg := &recordingRegistry{}
+	ml := NewMatchLoop("m-bcast", nil, 20, zap.NewNop(), reg)
+	sb := runtime.NewSandbox(64*1024*1024, 5*time.Second)
+	defer sb.Close()
+	_ = sb.L.DoString(script)
+	ml.SetSandbox(sb)
+	_, _, err := ml.callLuaMatchInit(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ml.presences["s1"] = &PresenceImpl{UserID: "u1", SessionID: "s1", Username: "alice"}
+	ml.presences["s2"] = &PresenceImpl{UserID: "u2", SessionID: "s2", Username: "bob"}
+	ml.presences["s3"] = &PresenceImpl{UserID: "u3", SessionID: "s3", Username: "carol"}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go ml.Start(ctx)
+	time.Sleep(20 * time.Millisecond)
+	ml.SubmitInput(MatchInput{UserID: "u1", Action: "ping", Payload: "x"})
+	time.Sleep(50 * time.Millisecond)
+
+	reg.mu.Lock()
+	defer reg.mu.Unlock()
+	if len(reg.sent) == 0 {
+		t.Fatal("expected broadcast")
+	}
+	for sid := range reg.sent {
+		if sid != "s2" {
+			t.Fatalf("expected only s2 targeted, got %v", reg.sent)
+		}
+	}
+}
+
+type recordingRegistry struct {
+	mu   sync.Mutex
+	sent map[string][]byte
+}
+
+func (r *recordingRegistry) SendToSession(sessionID string, data []byte) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.sent == nil {
+		r.sent = map[string][]byte{}
+	}
+	r.sent[sessionID] = append([]byte(nil), data...)
+}

@@ -3,8 +3,10 @@ package runtime
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -198,8 +200,23 @@ func TestStreamUserJoinSendDisconnect(t *testing.T) {
 	sender.mu.Lock()
 	got := sender.msgs["sess-1"]
 	sender.mu.Unlock()
-	if len(got) != 1 || string(got[0]) != `{"hello":1}` {
+	if len(got) != 1 {
 		t.Fatalf("msgs=%v", got)
+	}
+	var env map[string]interface{}
+	if err := json.Unmarshal(got[0], &env); err != nil {
+		t.Fatal(err)
+	}
+	sd, ok := env["stream_data"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("missing stream_data: %s", got[0])
+	}
+	if sd["data"] != `{"hello":1}` {
+		t.Fatalf("data=%v", sd["data"])
+	}
+	streamMeta, _ := sd["stream"].(map[string]interface{})
+	if streamMeta == nil || streamMeta["subject"] != "subj" {
+		t.Fatalf("stream meta=%v", streamMeta)
 	}
 	if err := sm.SessionDisconnect("sess-1"); err != nil {
 		t.Fatal(err)
@@ -228,6 +245,58 @@ func TestNotificationHookIDsPascalCase(t *testing.T) {
 	}
 }
 
+func TestRunBeforeReqRpcFuncRejectAndModify(t *testing.T) {
+	reg := NewHookRegistry()
+	reg.RegisterBefore(RpcFuncHookID, func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in interface{}) (interface{}, error) {
+		return nil, errors.New("rpc blocked")
+	})
+	ex := NewRtHookExecutor(reg, &testLogger{t: t}, nil, nil, nil, nil, nil, nil)
+	_, err := ex.RunBeforeReq(context.Background(), RpcFuncHookID, map[string]interface{}{
+		"id": "echo", "payload": "{}",
+	})
+	if err == nil || err.Error() != "rpc blocked" {
+		t.Fatalf("expected rpc blocked, got %v", err)
+	}
+
+	reg2 := NewHookRegistry()
+	reg2.RegisterBefore(RpcFuncHookID, func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in interface{}) (interface{}, error) {
+		m := in.(map[string]interface{})
+		m["payload"] = `{"rewritten":true}`
+		m["id"] = "other"
+		return m, nil
+	})
+	ex2 := NewRtHookExecutor(reg2, &testLogger{t: t}, nil, nil, nil, nil, nil, nil)
+	out, err := ex2.RunBeforeReq(context.Background(), RpcFuncHookID, map[string]interface{}{
+		"id": "echo", "payload": "{}",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	req := ApplyRpcFuncBeforeResult(nil, out)
+	if req["id"] != "other" || req["payload"] != `{"rewritten":true}` {
+		t.Fatalf("req=%v", req)
+	}
+
+	var afterCalled atomic.Bool
+	done := make(chan struct{}, 1)
+	reg2.RegisterAfter(RpcFuncHookID, func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, out, in interface{}) error {
+		afterCalled.Store(true)
+		done <- struct{}{}
+		return nil
+	})
+	if err := ex2.RunAfterReq(context.Background(), RpcFuncHookID, map[string]interface{}{"payload": "ok"}, req); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatal("timeout waiting for after RpcFunc")
+	}
+	if !afterCalled.Load() {
+		t.Fatal("after RpcFunc not called")
+	}
+}
+
 func TestLuaRegisterReqBefore(t *testing.T) {
 	reg := NewHookRegistry()
 	L := lua.NewState()
@@ -246,5 +315,113 @@ func TestLuaRegisterReqBefore(t *testing.T) {
 	fn := reg.GetMatchmakerMatched()
 	if fn == nil {
 		t.Fatal("matchmaker matched not registered")
+	}
+}
+
+func TestRegisterBeforeCreatePartyDualRT(t *testing.T) {
+	reg := NewHookRegistry()
+	init := &goInitializer{registry: reg}
+	called := false
+	if err := init.RegisterBeforeCreateParty(func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *CreatePartyRequest) (*CreatePartyRequest, error) {
+		called = true
+		if in.MaxSize != 8 {
+			t.Fatalf("max_size=%d", in.MaxSize)
+		}
+		in.Open = true
+		return in, nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := reg.GetBefore("CreateParty"); !ok {
+		t.Fatal("CreateParty not registered")
+	}
+	if _, ok := reg.GetBefore("party_create"); !ok {
+		t.Fatal("party_create not registered")
+	}
+	ex := NewRtHookExecutor(reg, &testLogger{t: t}, nil, nil, nil, nil, nil, nil)
+	out, err := ex.RunBeforeRt(context.Background(), "party_create", map[string]interface{}{
+		"party_create": map[string]interface{}{"open": false, "max_size": float64(8)},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !called {
+		t.Fatal("typed before not called via RT id")
+	}
+	pc := out["party_create"].(map[string]interface{})
+	if pc["open"] != true {
+		t.Fatalf("open=%v", pc["open"])
+	}
+}
+
+func TestLifecycleSessionShutdownHttp(t *testing.T) {
+	reg := NewHookRegistry()
+	init := &goInitializer{registry: reg}
+
+	var sawStart, sawEnd atomic.Bool
+	done := make(chan struct{}, 2)
+	_ = init.RegisterEventSessionStart(func(ctx context.Context, logger Logger, evt *Event) {
+		sawStart.Store(true)
+		done <- struct{}{}
+	})
+	_ = init.RegisterEventSessionEnd(func(ctx context.Context, logger Logger, evt *Event) {
+		sawEnd.Store(true)
+		done <- struct{}{}
+	})
+
+	var shut atomic.Bool
+	_ = init.RegisterShutdown(func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule) {
+		shut.Store(true)
+	})
+	_ = init.RegisterHttp("/v2/custom/ping", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("pong"))
+	}, "GET")
+	_ = init.RegisterConsoleHttp("/v2/console/custom", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+	})
+
+	reg.DispatchEvent(context.Background(), &testLogger{t: t}, &Event{Name: "session_start"})
+	reg.DispatchEvent(context.Background(), &testLogger{t: t}, &Event{Name: "session_end"})
+	for i := 0; i < 2; i++ {
+		select {
+		case <-done:
+		case <-time.After(2 * time.Second):
+			t.Fatal("timeout waiting for session lifecycle events")
+		}
+	}
+	if !sawStart.Load() || !sawEnd.Load() {
+		t.Fatalf("start=%v end=%v", sawStart.Load(), sawEnd.Load())
+	}
+
+	reg.InvokeShutdown(context.Background(), &testLogger{t: t}, nil, nil)
+	if !shut.Load() {
+		t.Fatal("shutdown handler not invoked")
+	}
+	if len(reg.HTTPHandlers()) != 1 || len(reg.ConsoleHTTPHandlers()) != 1 {
+		t.Fatalf("http=%d console=%d", len(reg.HTTPHandlers()), len(reg.ConsoleHTTPHandlers()))
+	}
+}
+
+func TestLuaRegisterMatchmakerOverrideAndShutdown(t *testing.T) {
+	reg := NewHookRegistry()
+	L := lua.NewState()
+	defer L.Close()
+	MapLuaNK(L, &mockRuntimeModule{}, reg)
+	if err := L.DoString(`
+		nk.register_matchmaker_override(function(matches) return matches end)
+		nk.register_matchmaker_processor(function(tickets) return {tickets} end)
+		nk.register_shutdown(function() end)
+	`); err != nil {
+		t.Fatal(err)
+	}
+	if reg.GetMatchmakerOverride() == nil {
+		t.Fatal("override not registered")
+	}
+	if reg.GetMatchmakerProcessor() == nil {
+		t.Fatal("processor not registered")
+	}
+	if len(reg.ShutdownHandlers()) != 1 {
+		t.Fatal("shutdown not registered")
 	}
 }

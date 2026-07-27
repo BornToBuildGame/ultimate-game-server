@@ -242,13 +242,13 @@ func (i *goInitializer) RegisterBeforeListFriendsOfFriends(fn func(ctx context.C
 }
 
 func (i *goInitializer) RegisterBeforeCreateParty(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *CreatePartyRequest) (*CreatePartyRequest, error)) error {
-	return registerBeforeTyped(i, "CreateParty", fn)
+	return registerBeforeTypedDual(i, "CreateParty", "party_create", fn)
 }
 func (i *goInitializer) RegisterBeforeJoinParty(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *JoinPartyRequest) (*JoinPartyRequest, error)) error {
-	return registerBeforeTyped(i, "JoinParty", fn)
+	return registerBeforeTypedDual(i, "JoinParty", "party_join", fn)
 }
 func (i *goInitializer) RegisterBeforeLeaveParty(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *LeavePartyRequest) (*LeavePartyRequest, error)) error {
-	return registerBeforeTyped(i, "LeaveParty", fn)
+	return registerBeforeTypedDual(i, "LeaveParty", "party_leave", fn)
 }
 func (i *goInitializer) RegisterBeforeListTournaments(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *ListTournamentsRequest) (*ListTournamentsRequest, error)) error {
 	return registerBeforeTyped(i, "ListTournaments", fn)

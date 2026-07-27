@@ -7,6 +7,9 @@ import (
 	"fmt"
 	"strings"
 
+	"ultimate-game-server/internal/satori"
+	"ultimate-game-server/internal/storage"
+
 	"github.com/yuin/gopher-lua"
 )
 
@@ -270,6 +273,25 @@ func MapLuaNK(L *lua.LState, nk RuntimeModule, registry ...*HookRegistry) {
 			if err := grm.RegisterStorageIndex(name, collection, key, fields, sortable, maxEntries, indexOnly); err != nil {
 				L.RaiseError("register_storage_index failed: %v", err)
 				return 0
+			}
+			return 0
+		}))
+		L.SetField(nkTable, "register_storage_index_filter", L.NewFunction(func(L *lua.LState) int {
+			indexName := L.CheckString(1)
+			fn := L.CheckFunction(2)
+			if err := grm.RegisterStorageIndexFilter(indexName, func(ctx context.Context, write *storage.StorageObject) (bool, error) {
+				L.SetContext(ctx)
+				if err := L.CallByParam(lua.P{Fn: fn, NRet: 1, Protect: true}, ToLuaValue(L, write)); err != nil {
+					return false, err
+				}
+				ret := L.Get(-1)
+				L.Pop(1)
+				if ret.Type() == lua.LTBool {
+					return bool(ret.(lua.LBool)), nil
+				}
+				return true, nil
+			}); err != nil {
+				L.RaiseError("register_storage_index_filter failed: %v", err)
 			}
 			return 0
 		}))
@@ -1000,6 +1022,163 @@ func MapLuaNK(L *lua.LState, nk RuntimeModule, registry ...*HookRegistry) {
 		return 1
 	}))
 	L.SetField(nkTable, "rpc_call", L.GetField(nkTable, "rpc"))
+	L.SetField(nkTable, "get_satori", L.NewFunction(func(L *lua.LState) int {
+		client := nk.GetSatori()
+		if client == nil {
+			L.Push(lua.LNil)
+			return 1
+		}
+		tbl := L.NewTable()
+		luaStringSliceArg := func(idx int) []string {
+			if L.GetTop() < idx || L.Get(idx).Type() == lua.LTNil {
+				return nil
+			}
+			if t, ok := L.Get(idx).(*lua.LTable); ok {
+				return luaStringSlice(t)
+			}
+			return nil
+		}
+		L.SetField(tbl, "authenticate", L.NewFunction(func(L *lua.LState) int {
+			id := L.CheckString(1)
+			def := luaStringMap(L.OptTable(2, nil))
+			custom := luaStringMap(L.OptTable(3, nil))
+			noSession := L.OptBool(4, false)
+			out, err := client.Authenticate(L.Context(), id, def, custom, noSession)
+			if err != nil {
+				L.RaiseError("authenticate failed: %v", err)
+				return 0
+			}
+			L.Push(ToLuaValue(L, out))
+			return 1
+		}))
+		L.SetField(tbl, "identity_delete", L.NewFunction(func(L *lua.LState) int {
+			if err := client.IdentityDelete(L.Context(), L.CheckString(1)); err != nil {
+				L.RaiseError("identity_delete failed: %v", err)
+			}
+			return 0
+		}))
+		L.SetField(tbl, "properties_get", L.NewFunction(func(L *lua.LState) int {
+			out, err := client.PropertiesGet(L.Context(), L.CheckString(1))
+			if err != nil {
+				L.RaiseError("properties_get failed: %v", err)
+				return 0
+			}
+			L.Push(ToLuaValue(L, out))
+			return 1
+		}))
+		L.SetField(tbl, "properties_update", L.NewFunction(func(L *lua.LState) int {
+			id := L.CheckString(1)
+			upd := &satori.PropertiesUpdate{
+				Default: luaStringMap(L.OptTable(2, nil)),
+				Custom:  luaStringMap(L.OptTable(3, nil)),
+			}
+			if err := client.PropertiesUpdate(L.Context(), id, upd); err != nil {
+				L.RaiseError("properties_update failed: %v", err)
+			}
+			return 0
+		}))
+		L.SetField(tbl, "events_publish", L.NewFunction(func(L *lua.LState) int {
+			id := L.CheckString(1)
+			events := luaSatoriEvents(L.CheckTable(2))
+			if err := client.EventsPublish(L.Context(), id, events); err != nil {
+				L.RaiseError("events_publish failed: %v", err)
+			}
+			return 0
+		}))
+		L.SetField(tbl, "server_events_publish", L.NewFunction(func(L *lua.LState) int {
+			events := luaSatoriEvents(L.CheckTable(1))
+			if err := client.ServerEventsPublish(L.Context(), events); err != nil {
+				L.RaiseError("server_events_publish failed: %v", err)
+			}
+			return 0
+		}))
+		L.SetField(tbl, "experiments_list", L.NewFunction(func(L *lua.LState) int {
+			out, err := client.ExperimentsList(L.Context(), L.CheckString(1), luaStringSliceArg(2), luaStringSliceArg(3))
+			if err != nil {
+				L.RaiseError("experiments_list failed: %v", err)
+				return 0
+			}
+			L.Push(ToLuaValue(L, out))
+			return 1
+		}))
+		L.SetField(tbl, "flags_list", L.NewFunction(func(L *lua.LState) int {
+			out, err := client.FlagsList(L.Context(), L.CheckString(1), luaStringSliceArg(2), luaStringSliceArg(3))
+			if err != nil {
+				L.RaiseError("flags_list failed: %v", err)
+				return 0
+			}
+			L.Push(ToLuaValue(L, out))
+			return 1
+		}))
+		L.SetField(tbl, "flags_overrides_list", L.NewFunction(func(L *lua.LState) int {
+			out, err := client.FlagsOverridesList(L.Context(), L.CheckString(1), luaStringSliceArg(2), luaStringSliceArg(3))
+			if err != nil {
+				L.RaiseError("flags_overrides_list failed: %v", err)
+				return 0
+			}
+			L.Push(ToLuaValue(L, out))
+			return 1
+		}))
+		L.SetField(tbl, "live_events_list", L.NewFunction(func(L *lua.LState) int {
+			out, err := client.LiveEventsList(L.Context(), L.CheckString(1), luaStringSliceArg(2), luaStringSliceArg(3),
+				int32(L.OptInt(4, 0)), int32(L.OptInt(5, 0)), L.OptInt64(6, 0), L.OptInt64(7, 0))
+			if err != nil {
+				L.RaiseError("live_events_list failed: %v", err)
+				return 0
+			}
+			L.Push(ToLuaValue(L, out))
+			return 1
+		}))
+		L.SetField(tbl, "live_event_join", L.NewFunction(func(L *lua.LState) int {
+			if err := client.LiveEventJoin(L.Context(), L.CheckString(1), L.CheckString(2)); err != nil {
+				L.RaiseError("live_event_join failed: %v", err)
+			}
+			return 0
+		}))
+		L.SetField(tbl, "messages_list", L.NewFunction(func(L *lua.LState) int {
+			out, err := client.MessagesList(L.Context(), L.CheckString(1), L.OptInt(2, 100), L.OptBool(3, true), L.OptString(4, ""), luaStringSliceArg(5))
+			if err != nil {
+				L.RaiseError("messages_list failed: %v", err)
+				return 0
+			}
+			L.Push(ToLuaValue(L, out))
+			return 1
+		}))
+		L.SetField(tbl, "message_update", L.NewFunction(func(L *lua.LState) int {
+			if err := client.MessageUpdate(L.Context(), L.CheckString(1), L.CheckString(2), L.OptInt64(3, 0), L.OptInt64(4, 0)); err != nil {
+				L.RaiseError("message_update failed: %v", err)
+			}
+			return 0
+		}))
+		L.SetField(tbl, "message_delete", L.NewFunction(func(L *lua.LState) int {
+			if err := client.MessageDelete(L.Context(), L.CheckString(1), L.CheckString(2)); err != nil {
+				L.RaiseError("message_delete failed: %v", err)
+			}
+			return 0
+		}))
+		// camelCase aliases
+		for _, pair := range [][2]string{
+			{"authenticate", "authenticate"},
+			{"identity_delete", "identityDelete"},
+			{"properties_get", "propertiesGet"},
+			{"properties_update", "propertiesUpdate"},
+			{"events_publish", "eventsPublish"},
+			{"server_events_publish", "serverEventsPublish"},
+			{"experiments_list", "experimentsList"},
+			{"flags_list", "flagsList"},
+			{"flags_overrides_list", "flagsOverridesList"},
+			{"live_events_list", "liveEventsList"},
+			{"live_event_join", "liveEventJoin"},
+			{"messages_list", "messagesList"},
+			{"message_update", "messageUpdate"},
+			{"message_delete", "messageDelete"},
+		} {
+			L.SetField(tbl, pair[1], L.GetField(tbl, pair[0]))
+		}
+		L.Push(tbl)
+		return 1
+	}))
+	L.SetField(nkTable, "getSatori", L.GetField(nkTable, "get_satori"))
 
 	if len(registry) > 0 && registry[0] != nil {
 		reg := registry[0]
@@ -1043,6 +1222,42 @@ func MapLuaNK(L *lua.LState, nk RuntimeModule, registry ...*HookRegistry) {
 			reg.RegisterLuaAfter(id, globalName)
 			return 0
 		}))
+		L.SetField(nkTable, "register_purchase_notification_apple", L.NewFunction(func(L *lua.LState) int {
+			fn := L.CheckFunction(1)
+			reg.RegisterPurchaseNotificationApple(func(ctx context.Context, logger Logger, db *sql.DB, nkMod RuntimeModule, notificationType int, purchase *ValidatedPurchaseView, rawPayload string) error {
+				L.SetContext(ctx)
+				return L.CallByParam(lua.P{Fn: fn, NRet: 0, Protect: true},
+					lua.LNumber(notificationType), ToLuaValue(L, purchase), lua.LString(rawPayload))
+			})
+			return 0
+		}))
+		L.SetField(nkTable, "register_purchase_notification_google", L.NewFunction(func(L *lua.LState) int {
+			fn := L.CheckFunction(1)
+			reg.RegisterPurchaseNotificationGoogle(func(ctx context.Context, logger Logger, db *sql.DB, nkMod RuntimeModule, notificationType int, purchase *ValidatedPurchaseView, rawPayload string) error {
+				L.SetContext(ctx)
+				return L.CallByParam(lua.P{Fn: fn, NRet: 0, Protect: true},
+					lua.LNumber(notificationType), ToLuaValue(L, purchase), lua.LString(rawPayload))
+			})
+			return 0
+		}))
+		L.SetField(nkTable, "register_subscription_notification_apple", L.NewFunction(func(L *lua.LState) int {
+			fn := L.CheckFunction(1)
+			reg.RegisterSubscriptionNotificationApple(func(ctx context.Context, logger Logger, db *sql.DB, nkMod RuntimeModule, notificationType int, subscription *ValidatedSubscriptionView, rawPayload string) error {
+				L.SetContext(ctx)
+				return L.CallByParam(lua.P{Fn: fn, NRet: 0, Protect: true},
+					lua.LNumber(notificationType), ToLuaValue(L, subscription), lua.LString(rawPayload))
+			})
+			return 0
+		}))
+		L.SetField(nkTable, "register_subscription_notification_google", L.NewFunction(func(L *lua.LState) int {
+			fn := L.CheckFunction(1)
+			reg.RegisterSubscriptionNotificationGoogle(func(ctx context.Context, logger Logger, db *sql.DB, nkMod RuntimeModule, notificationType int, subscription *ValidatedSubscriptionView, rawPayload string) error {
+				L.SetContext(ctx)
+				return L.CallByParam(lua.P{Fn: fn, NRet: 0, Protect: true},
+					lua.LNumber(notificationType), ToLuaValue(L, subscription), lua.LString(rawPayload))
+			})
+			return 0
+		}))
 		L.SetField(nkTable, "register_matchmaker_matched", L.NewFunction(func(L *lua.LState) int {
 			fn := L.CheckFunction(1)
 			reg.RegisterMatchmakerMatched(func(ctx context.Context, logger Logger, db *sql.DB, nkMod RuntimeModule, entries []interface{}) (string, error) {
@@ -1060,6 +1275,72 @@ func MapLuaNK(L *lua.LState, nk RuntimeModule, registry ...*HookRegistry) {
 					return ret.String(), nil
 				}
 				return "", nil
+			})
+			return 0
+		}))
+		L.SetField(nkTable, "register_matchmaker_override", L.NewFunction(func(L *lua.LState) int {
+			fn := L.CheckFunction(1)
+			reg.RegisterMatchmakerOverride(func(ctx context.Context, matches [][]interface{}) [][]interface{} {
+				L.SetContext(ctx)
+				tbl := L.NewTable()
+				for i, group := range matches {
+					inner := L.NewTable()
+					for j, e := range group {
+						inner.RawSetInt(j+1, ToLuaValue(L, e))
+					}
+					tbl.RawSetInt(i+1, inner)
+				}
+				if err := L.CallByParam(lua.P{Fn: fn, NRet: 1, Protect: true}, tbl); err != nil {
+					return matches
+				}
+				ret := L.Get(-1)
+				L.Pop(1)
+				out, ok := ToGoValue(ret).([]interface{})
+				if !ok {
+					return matches
+				}
+				result := make([][]interface{}, 0, len(out))
+				for _, g := range out {
+					if slice, ok := g.([]interface{}); ok {
+						result = append(result, slice)
+					}
+				}
+				return result
+			})
+			return 0
+		}))
+		L.SetField(nkTable, "register_matchmaker_processor", L.NewFunction(func(L *lua.LState) int {
+			fn := L.CheckFunction(1)
+			reg.RegisterMatchmakerProcessor(func(ctx context.Context, tickets []interface{}) [][]interface{} {
+				L.SetContext(ctx)
+				tbl := L.NewTable()
+				for i, e := range tickets {
+					tbl.RawSetInt(i+1, ToLuaValue(L, e))
+				}
+				if err := L.CallByParam(lua.P{Fn: fn, NRet: 1, Protect: true}, tbl); err != nil {
+					return nil
+				}
+				ret := L.Get(-1)
+				L.Pop(1)
+				out, ok := ToGoValue(ret).([]interface{})
+				if !ok {
+					return nil
+				}
+				result := make([][]interface{}, 0, len(out))
+				for _, g := range out {
+					if slice, ok := g.([]interface{}); ok {
+						result = append(result, slice)
+					}
+				}
+				return result
+			})
+			return 0
+		}))
+		L.SetField(nkTable, "register_shutdown", L.NewFunction(func(L *lua.LState) int {
+			fn := L.CheckFunction(1)
+			reg.RegisterShutdown(func(ctx context.Context, logger Logger, db *sql.DB, nkMod RuntimeModule) {
+				L.SetContext(ctx)
+				_ = L.CallByParam(lua.P{Fn: fn, NRet: 0, Protect: true})
 			})
 			return 0
 		}))
@@ -1414,6 +1695,9 @@ func MapLuaNK(L *lua.LState, nk RuntimeModule, registry ...*HookRegistry) {
 		}))
 	}
 
+	mapLuaNKBatch1(L, nkTable, nk)
+	mapLuaNKBatch2a(L, nkTable, nk)
+
 	L.SetGlobal("nk", nkTable)
 }
 
@@ -1594,6 +1878,50 @@ func luaStringSlice(tbl *lua.LTable) []string {
 		}
 	})
 	return out
+}
+
+func luaStringMap(tbl *lua.LTable) map[string]string {
+	if tbl == nil {
+		return nil
+	}
+	out := make(map[string]string)
+	tbl.ForEach(func(k, v lua.LValue) {
+		if ks, ok := k.(lua.LString); ok {
+			out[string(ks)] = v.String()
+		}
+	})
+	return out
+}
+
+func luaSatoriEvents(tbl *lua.LTable) []*satori.Event {
+	if tbl == nil {
+		return nil
+	}
+	raw := ToGoValue(tbl)
+	arr, ok := raw.([]interface{})
+	if !ok {
+		return nil
+	}
+	events := make([]*satori.Event, 0, len(arr))
+	for _, item := range arr {
+		m, ok := item.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		e := &satori.Event{
+			Name:  fmt.Sprint(m["name"]),
+			Id:    fmt.Sprint(m["id"]),
+			Value: fmt.Sprint(m["value"]),
+		}
+		if meta, ok := m["metadata"].(map[string]interface{}); ok {
+			e.Metadata = make(map[string]string, len(meta))
+			for k, v := range meta {
+				e.Metadata[k] = fmt.Sprint(v)
+			}
+		}
+		events = append(events, e)
+	}
+	return events
 }
 
 func ToGoValue(val lua.LValue) interface{} {

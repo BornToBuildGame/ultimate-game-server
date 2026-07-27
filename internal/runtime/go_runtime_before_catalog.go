@@ -3,6 +3,8 @@ package runtime
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
+	"fmt"
 )
 
 // Priority typed before-hook request shapes (HTTP/gRPC method-name IDs).
@@ -192,6 +194,50 @@ func registerBeforeTyped[T any](i *goInitializer, hookID string, fn func(ctx con
 	return nil
 }
 
+// registerBeforeTypedDual registers a typed before-hook under a REST/gRPC id and an RT envelope id.
+// The RT adapter extracts envelope[rtKey], runs fn, and writes the result back into the envelope.
+func registerBeforeTypedDual[T any](i *goInitializer, restID, rtKey string, fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *T) (*T, error)) error {
+	if err := registerBeforeTyped(i, restID, fn); err != nil {
+		return err
+	}
+	rtWrapped := func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in interface{}) (interface{}, error) {
+		env, ok := in.(map[string]interface{})
+		if !ok {
+			if p, ok := in.(*map[string]interface{}); ok && p != nil {
+				env = *p
+			} else {
+				return nil, fmt.Errorf("rt before %s: expected envelope map", rtKey)
+			}
+		}
+		payload := env[rtKey]
+		if payload == nil {
+			payload = map[string]interface{}{}
+		}
+		var req T
+		if err := convertHookParam(payload, &req); err != nil {
+			return nil, err
+		}
+		res, err := fn(ctx, logger, db, nk, &req)
+		if err != nil {
+			return nil, err
+		}
+		if res != nil {
+			b, err := json.Marshal(res)
+			if err != nil {
+				return nil, err
+			}
+			var outPayload interface{}
+			if err := json.Unmarshal(b, &outPayload); err != nil {
+				return nil, err
+			}
+			env[rtKey] = outPayload
+		}
+		return env, nil
+	}
+	i.registry.RegisterBefore(rtKey, rtWrapped)
+	return nil
+}
+
 func (i *goInitializer) RegisterBeforeAuthenticateDevice(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *AuthenticateDeviceRequest) (*AuthenticateDeviceRequest, error)) error {
 	return registerBeforeTyped(i, "AuthenticateDevice", fn)
 }
@@ -253,7 +299,7 @@ func (i *goInitializer) RegisterBeforeLeaveGroup(fn func(ctx context.Context, lo
 	return registerBeforeTyped(i, "LeaveGroup", fn)
 }
 func (i *goInitializer) RegisterBeforeCreateMatch(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *CreateMatchRequest) (*CreateMatchRequest, error)) error {
-	return registerBeforeTyped(i, "CreateMatch", fn)
+	return registerBeforeTypedDual(i, "CreateMatch", "match_create", fn)
 }
 func (i *goInitializer) RegisterBeforeListMatches(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *ListMatchesRequest) (*ListMatchesRequest, error)) error {
 	return registerBeforeTyped(i, "ListMatches", fn)

@@ -109,7 +109,10 @@ func (m *GoRuntimeModule) SetSatoriClient(c *satori.Client) {
 	m.satoriClient = c
 }
 
-func (m *GoRuntimeModule) GetSatori() *satori.Client {
+func (m *GoRuntimeModule) GetSatori() satori.Satori {
+	if m.satoriClient == nil {
+		return nil
+	}
 	return m.satoriClient
 }
 
@@ -515,6 +518,97 @@ func (m *GoRuntimeModule) AccountGetId(ctx context.Context, userID string) (*Acc
 	}, nil
 }
 
+func userToView(u *auth.User) *UserView {
+	if u == nil {
+		return nil
+	}
+	return &UserView{
+		ID: u.ID.String(), Username: u.Username, DisplayName: u.DisplayName, AvatarURL: u.AvatarURL,
+		LangTag: u.LangTag, Location: u.Location, Timezone: u.Timezone, Metadata: u.Metadata,
+		CreateTime: u.CreateTime, UpdateTime: u.UpdateTime,
+	}
+}
+
+func (m *GoRuntimeModule) UsersGetId(ctx context.Context, userIDs []string) ([]*UserView, error) {
+	users, err := auth.GetUsersPublic(ctx, m.dbPool, userIDs, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]*UserView, 0, len(users))
+	for _, u := range users {
+		out = append(out, userToView(u))
+	}
+	return out, nil
+}
+
+func (m *GoRuntimeModule) UsersGetUsername(ctx context.Context, usernames []string) ([]*UserView, error) {
+	users, err := auth.GetUsersPublic(ctx, m.dbPool, nil, usernames, nil)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]*UserView, 0, len(users))
+	for _, u := range users {
+		out = append(out, userToView(u))
+	}
+	return out, nil
+}
+
+func (m *GoRuntimeModule) UsersGetRandom(ctx context.Context, count int) ([]*UserView, error) {
+	if count <= 0 {
+		count = 1
+	}
+	if count > 100 {
+		count = 100
+	}
+	rows, err := m.dbPool.Query(ctx, `
+		SELECT id, username, COALESCE(display_name,''), COALESCE(avatar_url,''), lang_tag,
+		       COALESCE(location,''), COALESCE(timezone,''), COALESCE(metadata::text,'{}'),
+		       create_time, update_time
+		FROM users WHERE disable_time <= '1970-01-01 00:00:01 UTC'
+		ORDER BY random() LIMIT $1`, count)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []*UserView
+	for rows.Next() {
+		var u UserView
+		var id uuid.UUID
+		if err := rows.Scan(&id, &u.Username, &u.DisplayName, &u.AvatarURL, &u.LangTag, &u.Location, &u.Timezone, &u.Metadata, &u.CreateTime, &u.UpdateTime); err != nil {
+			return nil, err
+		}
+		u.ID = id.String()
+		out = append(out, &u)
+	}
+	return out, rows.Err()
+}
+
+func (m *GoRuntimeModule) UsersBanId(ctx context.Context, userIDs []string) error {
+	for _, idStr := range userIDs {
+		uid, err := uuid.Parse(idStr)
+		if err != nil {
+			continue
+		}
+		if _, err := m.dbPool.Exec(ctx, `UPDATE users SET disable_time = now(), update_time = now() WHERE id = $1`, uid); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (m *GoRuntimeModule) UsersUnbanId(ctx context.Context, userIDs []string) error {
+	for _, idStr := range userIDs {
+		uid, err := uuid.Parse(idStr)
+		if err != nil {
+			continue
+		}
+		if _, err := m.dbPool.Exec(ctx, `UPDATE users SET disable_time = '1970-01-01 00:00:00 UTC', update_time = now() WHERE id = $1`, uid); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (m *GoRuntimeModule) LeaderboardRecordWrite(ctx context.Context, id, ownerID, username string, score, subscore int64, metadata map[string]interface{}) (*LeaderboardRecord, error) {
 	metadataStr := "{}"
 	if len(metadata) > 0 {
@@ -733,6 +827,20 @@ func (m *GoRuntimeModule) StreamUserLeave(mode int16, subject, subcontext, label
 		return fmt.Errorf("stream manager not configured")
 	}
 	return m.streamManager.StreamUserLeave(mode, subject, subcontext, label, userID, sessionID)
+}
+
+func (m *GoRuntimeModule) StreamUserGet(mode int16, subject, subcontext, label, userID, sessionID string) (*StreamPresenceView, error) {
+	if m.streamManager == nil {
+		return nil, fmt.Errorf("stream manager not configured")
+	}
+	return m.streamManager.StreamUserGet(mode, subject, subcontext, label, userID, sessionID)
+}
+
+func (m *GoRuntimeModule) StreamClose(mode int16, subject, subcontext, label string) error {
+	if m.streamManager == nil {
+		return fmt.Errorf("stream manager not configured")
+	}
+	return m.streamManager.StreamClose(mode, subject, subcontext, label)
 }
 
 func (m *GoRuntimeModule) StreamCount(mode int16, subject, subcontext, label string) (int, error) {

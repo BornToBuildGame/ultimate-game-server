@@ -1020,8 +1020,9 @@ func (gh *GatewayHandler) RouteMessage(s *Session, payload []byte) {
 		ex := gh.rtHookExecutor
 		invoker := gh.rpcInvoker
 		gh.mu.RUnlock()
+		ctx := context.Background()
 		if ex != nil {
-			modified, err := ex.RunBeforeRt(context.Background(), hookID, envMap)
+			modified, err := ex.RunBeforeRt(ctx, hookID, envMap)
 			if err != nil {
 				res := map[string]interface{}{"cid": env.Cid, "error": err.Error()}
 				resBytes, _ := json.Marshal(res)
@@ -1039,22 +1040,43 @@ func (gh *GatewayHandler) RouteMessage(s *Session, payload []byte) {
 					}
 				}
 			}
-			defer func(in map[string]interface{}) {
-				go func() {
-					_ = ex.RunAfterRt(context.Background(), hookID, nil, in)
-				}()
-			}(envMap)
+		}
+		// Request-hook id RpcFunc (parity with REST /v2/rpc/* and gRPC RpcFunc).
+		rpcReq := map[string]interface{}{"id": env.Rpc.ID, "payload": env.Rpc.Payload}
+		if ex != nil {
+			reqOut, err := ex.RunBeforeReq(ctx, runtime.RpcFuncHookID, rpcReq)
+			if err != nil {
+				res := map[string]interface{}{"cid": env.Cid, "error": err.Error()}
+				resBytes, _ := json.Marshal(res)
+				s.TrySend(resBytes)
+				return
+			}
+			rpcReq = runtime.ApplyRpcFuncBeforeResult(rpcReq, reqOut)
+			if id, ok := rpcReq["id"].(string); ok {
+				env.Rpc.ID = id
+			}
+			if pl, ok := rpcReq["payload"].(string); ok {
+				env.Rpc.Payload = pl
+			}
 		}
 		res := map[string]interface{}{"cid": env.Cid}
+		var rpcOut interface{}
 		if invoker == nil {
 			res["error"] = map[string]interface{}{"message": "RPC not available", "code": 14}
 		} else {
-			result, code, err := invoker(context.Background(), s.UserID, s.Username, env.Rpc.ID, env.Rpc.Payload)
+			result, code, err := invoker(ctx, s.UserID, s.Username, env.Rpc.ID, env.Rpc.Payload)
 			if err != nil {
 				res["error"] = map[string]interface{}{"message": err.Error(), "code": code}
 			} else {
-				res["rpc"] = map[string]interface{}{"id": env.Rpc.ID, "payload": result}
+				rpcOut = map[string]interface{}{"id": env.Rpc.ID, "payload": result}
+				res["rpc"] = rpcOut
 			}
+		}
+		if ex != nil {
+			go func(inEnv map[string]interface{}, inReq map[string]interface{}, out interface{}) {
+				_ = ex.RunAfterReq(context.Background(), runtime.RpcFuncHookID, out, inReq)
+				_ = ex.RunAfterRt(context.Background(), hookID, nil, inEnv)
+			}(envMap, rpcReq, rpcOut)
 		}
 		resBytes, _ := json.Marshal(res)
 		s.TrySend(resBytes)

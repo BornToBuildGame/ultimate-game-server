@@ -76,6 +76,7 @@ func (s *Server) registerV2ConsoleRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /v2/console/account/{id}/unlink/{provider}", s.handleUnlinkAccount)
 	mux.HandleFunc("GET /v2/console/account/{id}/export", s.handleExportAccount)
 	mux.HandleFunc("PUT /v2/console/account/{id}/import", s.handleImportAccount)
+	mux.HandleFunc("POST /v2/console/account", s.handleImportAccountFull)
 	mux.HandleFunc("DELETE /v2/console/all", s.handleDeleteAllData)
 
 	mux.HandleFunc("GET /v2/console/config", s.handleGetConfig)
@@ -488,7 +489,7 @@ func (s *Server) handleGetConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	cfg := map[string]interface{}{
-		"name": "ultimate-game-server",
+		"name":         "ultimate-game-server",
 		"console_addr": "********",
 		"jwt_secret":   "********",
 		"database":     "********",
@@ -583,8 +584,8 @@ func (s *Server) handleAddACLTemplate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req struct {
-		Name      string `json:"name"`
-		ACLBitmap string `json:"acl_bitmap"`
+		Name      string                 `json:"name"`
+		ACLBitmap string                 `json:"acl_bitmap"`
 		ACL       map[string]interface{} `json:"acl"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Name == "" {

@@ -345,7 +345,7 @@ func (mm *Matchmaker) submitLocked(ctx context.Context, t *Ticket) error {
 		t.QueueName = "default"
 	}
 	if t.SessionID == "" {
-		t.SessionID = t.UserID
+		t.SessionID = uuid.New().String()
 	}
 	if t.Query == "" {
 		t.Query = "*"

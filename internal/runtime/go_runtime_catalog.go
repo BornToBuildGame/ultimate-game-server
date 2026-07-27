@@ -8,6 +8,10 @@ func (i *goInitializer) RegisterFleetManager(fm fleet.Manager) error {
 	if fm == nil || i.nk == nil {
 		return nil
 	}
+	if init, ok := fm.(fleet.Initializer); ok {
+		handler := fleet.NewLocalFmCallbackHandler()
+		_ = init.Init(i.nk, handler)
+	}
 	if grm, ok := i.nk.(*GoRuntimeModule); ok {
 		grm.SetFleetManager(fm)
 	}

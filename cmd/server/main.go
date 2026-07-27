@@ -149,7 +149,10 @@ func main() {
 			APIKey:     os.Getenv("SATORI_API_KEY"),
 		}))
 	}
-	nk.SetFleetManager(&fleet.LocalStub{})
+	nk.SetFleetManager(fleet.NewLocalStub())
+	if fm, ok := nk.GetFleetManager().(fleet.Initializer); ok {
+		_ = fm.Init(nk, fleet.NewLocalFmCallbackHandler())
+	}
 	rm := runtime.NewGoRuntimeManager(rtLogger, sqlDB, nk)
 	if err := rm.LoadPlugins(ctx, rtPath); err != nil {
 		logger.Warn("LoadPlugins completed with errors", zap.Error(err))
@@ -200,6 +203,7 @@ func main() {
 				APIKey:     os.Getenv("SATORI_API_KEY"),
 			}))
 		}
+		cs.SetRuntimeRegistry(rm.Registry())
 		if err := cs.Start(consoleListen); err != nil {
 			logger.Fatal("Failed to start console admin", zap.Error(err), zap.String("addr", consoleListen))
 		}
@@ -224,6 +228,8 @@ func main() {
 
 	teardownCtx, teardownCancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer teardownCancel()
+
+	rm.Registry().InvokeShutdown(teardownCtx, rtLogger, sqlDB, nk)
 
 	if consoleServer != nil {
 		consoleServer.Close()

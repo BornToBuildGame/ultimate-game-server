@@ -1617,6 +1617,134 @@ func (x *AccountImport) GetPayloadJson() string {
 	return ""
 }
 
+type StorageImportObject struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	Collection      string                 `protobuf:"bytes,1,opt,name=collection,proto3" json:"collection,omitempty"`
+	Key             string                 `protobuf:"bytes,2,opt,name=key,proto3" json:"key,omitempty"`
+	UserId          string                 `protobuf:"bytes,3,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	Value           string                 `protobuf:"bytes,4,opt,name=value,proto3" json:"value,omitempty"`
+	PermissionRead  int32                  `protobuf:"varint,5,opt,name=permission_read,json=permissionRead,proto3" json:"permission_read,omitempty"`
+	PermissionWrite int32                  `protobuf:"varint,6,opt,name=permission_write,json=permissionWrite,proto3" json:"permission_write,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *StorageImportObject) Reset() {
+	*x = StorageImportObject{}
+	mi := &file_api_console_console_proto_msgTypes[26]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StorageImportObject) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StorageImportObject) ProtoMessage() {}
+
+func (x *StorageImportObject) ProtoReflect() protoreflect.Message {
+	mi := &file_api_console_console_proto_msgTypes[26]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StorageImportObject.ProtoReflect.Descriptor instead.
+func (*StorageImportObject) Descriptor() ([]byte, []int) {
+	return file_api_console_console_proto_rawDescGZIP(), []int{26}
+}
+
+func (x *StorageImportObject) GetCollection() string {
+	if x != nil {
+		return x.Collection
+	}
+	return ""
+}
+
+func (x *StorageImportObject) GetKey() string {
+	if x != nil {
+		return x.Key
+	}
+	return ""
+}
+
+func (x *StorageImportObject) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *StorageImportObject) GetValue() string {
+	if x != nil {
+		return x.Value
+	}
+	return ""
+}
+
+func (x *StorageImportObject) GetPermissionRead() int32 {
+	if x != nil {
+		return x.PermissionRead
+	}
+	return 0
+}
+
+func (x *StorageImportObject) GetPermissionWrite() int32 {
+	if x != nil {
+		return x.PermissionWrite
+	}
+	return 0
+}
+
+type StorageImport struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Objects       []*StorageImportObject `protobuf:"bytes,1,rep,name=objects,proto3" json:"objects,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *StorageImport) Reset() {
+	*x = StorageImport{}
+	mi := &file_api_console_console_proto_msgTypes[27]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StorageImport) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StorageImport) ProtoMessage() {}
+
+func (x *StorageImport) ProtoReflect() protoreflect.Message {
+	mi := &file_api_console_console_proto_msgTypes[27]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StorageImport.ProtoReflect.Descriptor instead.
+func (*StorageImport) Descriptor() ([]byte, []int) {
+	return file_api_console_console_proto_rawDescGZIP(), []int{27}
+}
+
+func (x *StorageImport) GetObjects() []*StorageImportObject {
+	if x != nil {
+		return x.Objects
+	}
+	return nil
+}
+
 type SatoriListTemplatesRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Limit         int32                  `protobuf:"varint,1,opt,name=limit,proto3" json:"limit,omitempty"`
@@ -1627,7 +1755,7 @@ type SatoriListTemplatesRequest struct {
 
 func (x *SatoriListTemplatesRequest) Reset() {
 	*x = SatoriListTemplatesRequest{}
-	mi := &file_api_console_console_proto_msgTypes[26]
+	mi := &file_api_console_console_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1639,7 +1767,7 @@ func (x *SatoriListTemplatesRequest) String() string {
 func (*SatoriListTemplatesRequest) ProtoMessage() {}
 
 func (x *SatoriListTemplatesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_console_console_proto_msgTypes[26]
+	mi := &file_api_console_console_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1652,7 +1780,7 @@ func (x *SatoriListTemplatesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SatoriListTemplatesRequest.ProtoReflect.Descriptor instead.
 func (*SatoriListTemplatesRequest) Descriptor() ([]byte, []int) {
-	return file_api_console_console_proto_rawDescGZIP(), []int{26}
+	return file_api_console_console_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *SatoriListTemplatesRequest) GetLimit() int32 {
@@ -1681,7 +1809,7 @@ type SatoriTemplate struct {
 
 func (x *SatoriTemplate) Reset() {
 	*x = SatoriTemplate{}
-	mi := &file_api_console_console_proto_msgTypes[27]
+	mi := &file_api_console_console_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1693,7 +1821,7 @@ func (x *SatoriTemplate) String() string {
 func (*SatoriTemplate) ProtoMessage() {}
 
 func (x *SatoriTemplate) ProtoReflect() protoreflect.Message {
-	mi := &file_api_console_console_proto_msgTypes[27]
+	mi := &file_api_console_console_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1706,7 +1834,7 @@ func (x *SatoriTemplate) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SatoriTemplate.ProtoReflect.Descriptor instead.
 func (*SatoriTemplate) Descriptor() ([]byte, []int) {
-	return file_api_console_console_proto_rawDescGZIP(), []int{27}
+	return file_api_console_console_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *SatoriTemplate) GetId() string {
@@ -1747,7 +1875,7 @@ type SatoriListTemplatesResponse struct {
 
 func (x *SatoriListTemplatesResponse) Reset() {
 	*x = SatoriListTemplatesResponse{}
-	mi := &file_api_console_console_proto_msgTypes[28]
+	mi := &file_api_console_console_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1759,7 +1887,7 @@ func (x *SatoriListTemplatesResponse) String() string {
 func (*SatoriListTemplatesResponse) ProtoMessage() {}
 
 func (x *SatoriListTemplatesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_console_console_proto_msgTypes[28]
+	mi := &file_api_console_console_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1772,7 +1900,7 @@ func (x *SatoriListTemplatesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SatoriListTemplatesResponse.ProtoReflect.Descriptor instead.
 func (*SatoriListTemplatesResponse) Descriptor() ([]byte, []int) {
-	return file_api_console_console_proto_rawDescGZIP(), []int{28}
+	return file_api_console_console_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *SatoriListTemplatesResponse) GetTemplates() []*SatoriTemplate {
@@ -1801,7 +1929,7 @@ type SatoriSendDirectMessageRequest struct {
 
 func (x *SatoriSendDirectMessageRequest) Reset() {
 	*x = SatoriSendDirectMessageRequest{}
-	mi := &file_api_console_console_proto_msgTypes[29]
+	mi := &file_api_console_console_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1813,7 +1941,7 @@ func (x *SatoriSendDirectMessageRequest) String() string {
 func (*SatoriSendDirectMessageRequest) ProtoMessage() {}
 
 func (x *SatoriSendDirectMessageRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_console_console_proto_msgTypes[29]
+	mi := &file_api_console_console_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1826,7 +1954,7 @@ func (x *SatoriSendDirectMessageRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SatoriSendDirectMessageRequest.ProtoReflect.Descriptor instead.
 func (*SatoriSendDirectMessageRequest) Descriptor() ([]byte, []int) {
-	return file_api_console_console_proto_rawDescGZIP(), []int{29}
+	return file_api_console_console_proto_rawDescGZIP(), []int{31}
 }
 
 func (x *SatoriSendDirectMessageRequest) GetIdentityId() string {
@@ -1867,7 +1995,7 @@ type SatoriSendDirectMessageResponse struct {
 
 func (x *SatoriSendDirectMessageResponse) Reset() {
 	*x = SatoriSendDirectMessageResponse{}
-	mi := &file_api_console_console_proto_msgTypes[30]
+	mi := &file_api_console_console_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1879,7 +2007,7 @@ func (x *SatoriSendDirectMessageResponse) String() string {
 func (*SatoriSendDirectMessageResponse) ProtoMessage() {}
 
 func (x *SatoriSendDirectMessageResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_console_console_proto_msgTypes[30]
+	mi := &file_api_console_console_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1892,7 +2020,7 @@ func (x *SatoriSendDirectMessageResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SatoriSendDirectMessageResponse.ProtoReflect.Descriptor instead.
 func (*SatoriSendDirectMessageResponse) Descriptor() ([]byte, []int) {
-	return file_api_console_console_proto_rawDescGZIP(), []int{30}
+	return file_api_console_console_proto_rawDescGZIP(), []int{32}
 }
 
 func (x *SatoriSendDirectMessageResponse) GetOk() bool {
@@ -1918,7 +2046,7 @@ type Config struct {
 
 func (x *Config) Reset() {
 	*x = Config{}
-	mi := &file_api_console_console_proto_msgTypes[31]
+	mi := &file_api_console_console_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1930,7 +2058,7 @@ func (x *Config) String() string {
 func (*Config) ProtoMessage() {}
 
 func (x *Config) ProtoReflect() protoreflect.Message {
-	mi := &file_api_console_console_proto_msgTypes[31]
+	mi := &file_api_console_console_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1943,7 +2071,7 @@ func (x *Config) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Config.ProtoReflect.Descriptor instead.
 func (*Config) Descriptor() ([]byte, []int) {
-	return file_api_console_console_proto_rawDescGZIP(), []int{31}
+	return file_api_console_console_proto_rawDescGZIP(), []int{33}
 }
 
 func (x *Config) GetJson() string {
@@ -1962,7 +2090,7 @@ type RuntimeInfo struct {
 
 func (x *RuntimeInfo) Reset() {
 	*x = RuntimeInfo{}
-	mi := &file_api_console_console_proto_msgTypes[32]
+	mi := &file_api_console_console_proto_msgTypes[34]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1974,7 +2102,7 @@ func (x *RuntimeInfo) String() string {
 func (*RuntimeInfo) ProtoMessage() {}
 
 func (x *RuntimeInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_api_console_console_proto_msgTypes[32]
+	mi := &file_api_console_console_proto_msgTypes[34]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1987,7 +2115,7 @@ func (x *RuntimeInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RuntimeInfo.ProtoReflect.Descriptor instead.
 func (*RuntimeInfo) Descriptor() ([]byte, []int) {
-	return file_api_console_console_proto_rawDescGZIP(), []int{32}
+	return file_api_console_console_proto_rawDescGZIP(), []int{34}
 }
 
 func (x *RuntimeInfo) GetRpcIds() []string {
@@ -2006,7 +2134,7 @@ type EndpointList struct {
 
 func (x *EndpointList) Reset() {
 	*x = EndpointList{}
-	mi := &file_api_console_console_proto_msgTypes[33]
+	mi := &file_api_console_console_proto_msgTypes[35]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2018,7 +2146,7 @@ func (x *EndpointList) String() string {
 func (*EndpointList) ProtoMessage() {}
 
 func (x *EndpointList) ProtoReflect() protoreflect.Message {
-	mi := &file_api_console_console_proto_msgTypes[33]
+	mi := &file_api_console_console_proto_msgTypes[35]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2031,7 +2159,7 @@ func (x *EndpointList) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EndpointList.ProtoReflect.Descriptor instead.
 func (*EndpointList) Descriptor() ([]byte, []int) {
-	return file_api_console_console_proto_rawDescGZIP(), []int{33}
+	return file_api_console_console_proto_rawDescGZIP(), []int{35}
 }
 
 func (x *EndpointList) GetMethods() []string {
@@ -2052,7 +2180,7 @@ type CallApiEndpointRequest struct {
 
 func (x *CallApiEndpointRequest) Reset() {
 	*x = CallApiEndpointRequest{}
-	mi := &file_api_console_console_proto_msgTypes[34]
+	mi := &file_api_console_console_proto_msgTypes[36]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2064,7 +2192,7 @@ func (x *CallApiEndpointRequest) String() string {
 func (*CallApiEndpointRequest) ProtoMessage() {}
 
 func (x *CallApiEndpointRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_console_console_proto_msgTypes[34]
+	mi := &file_api_console_console_proto_msgTypes[36]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2077,7 +2205,7 @@ func (x *CallApiEndpointRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CallApiEndpointRequest.ProtoReflect.Descriptor instead.
 func (*CallApiEndpointRequest) Descriptor() ([]byte, []int) {
-	return file_api_console_console_proto_rawDescGZIP(), []int{34}
+	return file_api_console_console_proto_rawDescGZIP(), []int{36}
 }
 
 func (x *CallApiEndpointRequest) GetMethod() string {
@@ -2110,7 +2238,7 @@ type CallApiEndpointResponse struct {
 
 func (x *CallApiEndpointResponse) Reset() {
 	*x = CallApiEndpointResponse{}
-	mi := &file_api_console_console_proto_msgTypes[35]
+	mi := &file_api_console_console_proto_msgTypes[37]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2122,7 +2250,7 @@ func (x *CallApiEndpointResponse) String() string {
 func (*CallApiEndpointResponse) ProtoMessage() {}
 
 func (x *CallApiEndpointResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_console_console_proto_msgTypes[35]
+	mi := &file_api_console_console_proto_msgTypes[37]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2135,7 +2263,7 @@ func (x *CallApiEndpointResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CallApiEndpointResponse.ProtoReflect.Descriptor instead.
 func (*CallApiEndpointResponse) Descriptor() ([]byte, []int) {
-	return file_api_console_console_proto_rawDescGZIP(), []int{35}
+	return file_api_console_console_proto_rawDescGZIP(), []int{37}
 }
 
 func (x *CallApiEndpointResponse) GetBodyJson() string {
@@ -2156,7 +2284,7 @@ type CallRpcEndpointRequest struct {
 
 func (x *CallRpcEndpointRequest) Reset() {
 	*x = CallRpcEndpointRequest{}
-	mi := &file_api_console_console_proto_msgTypes[36]
+	mi := &file_api_console_console_proto_msgTypes[38]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2168,7 +2296,7 @@ func (x *CallRpcEndpointRequest) String() string {
 func (*CallRpcEndpointRequest) ProtoMessage() {}
 
 func (x *CallRpcEndpointRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_console_console_proto_msgTypes[36]
+	mi := &file_api_console_console_proto_msgTypes[38]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2181,7 +2309,7 @@ func (x *CallRpcEndpointRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CallRpcEndpointRequest.ProtoReflect.Descriptor instead.
 func (*CallRpcEndpointRequest) Descriptor() ([]byte, []int) {
-	return file_api_console_console_proto_rawDescGZIP(), []int{36}
+	return file_api_console_console_proto_rawDescGZIP(), []int{38}
 }
 
 func (x *CallRpcEndpointRequest) GetId() string {
@@ -2214,7 +2342,7 @@ type CallRpcEndpointResponse struct {
 
 func (x *CallRpcEndpointResponse) Reset() {
 	*x = CallRpcEndpointResponse{}
-	mi := &file_api_console_console_proto_msgTypes[37]
+	mi := &file_api_console_console_proto_msgTypes[39]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2226,7 +2354,7 @@ func (x *CallRpcEndpointResponse) String() string {
 func (*CallRpcEndpointResponse) ProtoMessage() {}
 
 func (x *CallRpcEndpointResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_console_console_proto_msgTypes[37]
+	mi := &file_api_console_console_proto_msgTypes[39]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2239,7 +2367,7 @@ func (x *CallRpcEndpointResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CallRpcEndpointResponse.ProtoReflect.Descriptor instead.
 func (*CallRpcEndpointResponse) Descriptor() ([]byte, []int) {
-	return file_api_console_console_proto_rawDescGZIP(), []int{37}
+	return file_api_console_console_proto_rawDescGZIP(), []int{39}
 }
 
 func (x *CallRpcEndpointResponse) GetPayload() string {
@@ -2260,7 +2388,7 @@ type AclTemplate struct {
 
 func (x *AclTemplate) Reset() {
 	*x = AclTemplate{}
-	mi := &file_api_console_console_proto_msgTypes[38]
+	mi := &file_api_console_console_proto_msgTypes[40]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2272,7 +2400,7 @@ func (x *AclTemplate) String() string {
 func (*AclTemplate) ProtoMessage() {}
 
 func (x *AclTemplate) ProtoReflect() protoreflect.Message {
-	mi := &file_api_console_console_proto_msgTypes[38]
+	mi := &file_api_console_console_proto_msgTypes[40]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2285,7 +2413,7 @@ func (x *AclTemplate) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AclTemplate.ProtoReflect.Descriptor instead.
 func (*AclTemplate) Descriptor() ([]byte, []int) {
-	return file_api_console_console_proto_rawDescGZIP(), []int{38}
+	return file_api_console_console_proto_rawDescGZIP(), []int{40}
 }
 
 func (x *AclTemplate) GetId() string {
@@ -2318,7 +2446,7 @@ type AclTemplateList struct {
 
 func (x *AclTemplateList) Reset() {
 	*x = AclTemplateList{}
-	mi := &file_api_console_console_proto_msgTypes[39]
+	mi := &file_api_console_console_proto_msgTypes[41]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2330,7 +2458,7 @@ func (x *AclTemplateList) String() string {
 func (*AclTemplateList) ProtoMessage() {}
 
 func (x *AclTemplateList) ProtoReflect() protoreflect.Message {
-	mi := &file_api_console_console_proto_msgTypes[39]
+	mi := &file_api_console_console_proto_msgTypes[41]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2343,7 +2471,7 @@ func (x *AclTemplateList) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AclTemplateList.ProtoReflect.Descriptor instead.
 func (*AclTemplateList) Descriptor() ([]byte, []int) {
-	return file_api_console_console_proto_rawDescGZIP(), []int{39}
+	return file_api_console_console_proto_rawDescGZIP(), []int{41}
 }
 
 func (x *AclTemplateList) GetTemplates() []*AclTemplate {
@@ -2363,7 +2491,7 @@ type Setting struct {
 
 func (x *Setting) Reset() {
 	*x = Setting{}
-	mi := &file_api_console_console_proto_msgTypes[40]
+	mi := &file_api_console_console_proto_msgTypes[42]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2375,7 +2503,7 @@ func (x *Setting) String() string {
 func (*Setting) ProtoMessage() {}
 
 func (x *Setting) ProtoReflect() protoreflect.Message {
-	mi := &file_api_console_console_proto_msgTypes[40]
+	mi := &file_api_console_console_proto_msgTypes[42]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2388,7 +2516,7 @@ func (x *Setting) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Setting.ProtoReflect.Descriptor instead.
 func (*Setting) Descriptor() ([]byte, []int) {
-	return file_api_console_console_proto_rawDescGZIP(), []int{40}
+	return file_api_console_console_proto_rawDescGZIP(), []int{42}
 }
 
 func (x *Setting) GetName() string {
@@ -2414,7 +2542,7 @@ type SettingList struct {
 
 func (x *SettingList) Reset() {
 	*x = SettingList{}
-	mi := &file_api_console_console_proto_msgTypes[41]
+	mi := &file_api_console_console_proto_msgTypes[43]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2426,7 +2554,7 @@ func (x *SettingList) String() string {
 func (*SettingList) ProtoMessage() {}
 
 func (x *SettingList) ProtoReflect() protoreflect.Message {
-	mi := &file_api_console_console_proto_msgTypes[41]
+	mi := &file_api_console_console_proto_msgTypes[43]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2439,7 +2567,7 @@ func (x *SettingList) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SettingList.ProtoReflect.Descriptor instead.
 func (*SettingList) Descriptor() ([]byte, []int) {
-	return file_api_console_console_proto_rawDescGZIP(), []int{41}
+	return file_api_console_console_proto_rawDescGZIP(), []int{43}
 }
 
 func (x *SettingList) GetSettings() []*Setting {
@@ -2458,7 +2586,7 @@ type Status struct {
 
 func (x *Status) Reset() {
 	*x = Status{}
-	mi := &file_api_console_console_proto_msgTypes[42]
+	mi := &file_api_console_console_proto_msgTypes[44]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2470,7 +2598,7 @@ func (x *Status) String() string {
 func (*Status) ProtoMessage() {}
 
 func (x *Status) ProtoReflect() protoreflect.Message {
-	mi := &file_api_console_console_proto_msgTypes[42]
+	mi := &file_api_console_console_proto_msgTypes[44]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2483,7 +2611,7 @@ func (x *Status) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Status.ProtoReflect.Descriptor instead.
 func (*Status) Descriptor() ([]byte, []int) {
-	return file_api_console_console_proto_rawDescGZIP(), []int{42}
+	return file_api_console_console_proto_rawDescGZIP(), []int{44}
 }
 
 func (x *Status) GetJson() string {
@@ -2598,7 +2726,18 @@ const file_api_console_console_proto_rawDesc = "" +
 	"\fpayload_json\x18\x02 \x01(\tR\vpayloadJson\"B\n" +
 	"\rAccountImport\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12!\n" +
-	"\fpayload_json\x18\x02 \x01(\tR\vpayloadJson\"J\n" +
+	"\fpayload_json\x18\x02 \x01(\tR\vpayloadJson\"\xca\x01\n" +
+	"\x13StorageImportObject\x12\x1e\n" +
+	"\n" +
+	"collection\x18\x01 \x01(\tR\n" +
+	"collection\x12\x10\n" +
+	"\x03key\x18\x02 \x01(\tR\x03key\x12\x17\n" +
+	"\auser_id\x18\x03 \x01(\tR\x06userId\x12\x14\n" +
+	"\x05value\x18\x04 \x01(\tR\x05value\x12'\n" +
+	"\x0fpermission_read\x18\x05 \x01(\x05R\x0epermissionRead\x12)\n" +
+	"\x10permission_write\x18\x06 \x01(\x05R\x0fpermissionWrite\"W\n" +
+	"\rStorageImport\x12F\n" +
+	"\aobjects\x18\x01 \x03(\v2,.ultimate.server.console.StorageImportObjectR\aobjects\"J\n" +
 	"\x1aSatoriListTemplatesRequest\x12\x14\n" +
 	"\x05limit\x18\x01 \x01(\x05R\x05limit\x12\x16\n" +
 	"\x06cursor\x18\x02 \x01(\tR\x06cursor\"`\n" +
@@ -2685,7 +2824,7 @@ const file_api_console_console_proto_rawDesc = "" +
 	"\fHIRO_ECONOMY\x10\x1b\x12\x0e\n" +
 	"\n" +
 	"HIRO_STATS\x10\x1c\x12\x0f\n" +
-	"\vHIRO_ENERGY\x10\x1d2\xa5\x17\n" +
+	"\vHIRO_ENERGY\x10\x1d2\x8c\x19\n" +
 	"\aConsole\x12e\n" +
 	"\fAuthenticate\x12,.ultimate.server.console.AuthenticateRequest\x1a'.ultimate.server.console.ConsoleSession\x12`\n" +
 	"\x12AuthenticateLogout\x122.ultimate.server.console.AuthenticateLogoutRequest\x1a\x16.google.protobuf.Empty\x12\\\n" +
@@ -2705,8 +2844,11 @@ const file_api_console_console_proto_rawDesc = "" +
 	"\x10SendNotification\x120.ultimate.server.console.SendNotificationRequest\x1a\x16.google.protobuf.Empty\x12V\n" +
 	"\rUnlinkAccount\x12-.ultimate.server.console.UnlinkAccountRequest\x1a\x16.google.protobuf.Empty\x12[\n" +
 	"\rExportAccount\x12\".ultimate.server.console.AccountId\x1a&.ultimate.server.console.AccountExport\x12O\n" +
-	"\rImportAccount\x12&.ultimate.server.console.AccountImport\x1a\x16.google.protobuf.Empty\x12?\n" +
-	"\rDeleteAllData\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.Empty\x12\x80\x01\n" +
+	"\rImportAccount\x12&.ultimate.server.console.AccountImport\x1a\x16.google.protobuf.Empty\x12S\n" +
+	"\x11ImportAccountFull\x12&.ultimate.server.console.AccountImport\x1a\x16.google.protobuf.Empty\x12?\n" +
+	"\rDeleteAllData\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.Empty\x12?\n" +
+	"\rDeleteStorage\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.Empty\x12O\n" +
+	"\rImportStorage\x12&.ultimate.server.console.StorageImport\x1a\x16.google.protobuf.Empty\x12\x80\x01\n" +
 	"\x13SatoriListTemplates\x123.ultimate.server.console.SatoriListTemplatesRequest\x1a4.ultimate.server.console.SatoriListTemplatesResponse\x12\x8c\x01\n" +
 	"\x17SatoriSendDirectMessage\x127.ultimate.server.console.SatoriSendDirectMessageRequest\x1a8.ultimate.server.console.SatoriSendDirectMessageResponse\x12D\n" +
 	"\tGetConfig\x12\x16.google.protobuf.Empty\x1a\x1f.ultimate.server.console.Config\x12J\n" +
@@ -2735,7 +2877,7 @@ func file_api_console_console_proto_rawDescGZIP() []byte {
 }
 
 var file_api_console_console_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_api_console_console_proto_msgTypes = make([]protoimpl.MessageInfo, 43)
+var file_api_console_console_proto_msgTypes = make([]protoimpl.MessageInfo, 45)
 var file_api_console_console_proto_goTypes = []any{
 	(AclResources)(0),                       // 0: ultimate.server.console.AclResources
 	(*AuthenticateRequest)(nil),             // 1: ultimate.server.console.AuthenticateRequest
@@ -2764,102 +2906,111 @@ var file_api_console_console_proto_goTypes = []any{
 	(*UnlinkAccountRequest)(nil),            // 24: ultimate.server.console.UnlinkAccountRequest
 	(*AccountExport)(nil),                   // 25: ultimate.server.console.AccountExport
 	(*AccountImport)(nil),                   // 26: ultimate.server.console.AccountImport
-	(*SatoriListTemplatesRequest)(nil),      // 27: ultimate.server.console.SatoriListTemplatesRequest
-	(*SatoriTemplate)(nil),                  // 28: ultimate.server.console.SatoriTemplate
-	(*SatoriListTemplatesResponse)(nil),     // 29: ultimate.server.console.SatoriListTemplatesResponse
-	(*SatoriSendDirectMessageRequest)(nil),  // 30: ultimate.server.console.SatoriSendDirectMessageRequest
-	(*SatoriSendDirectMessageResponse)(nil), // 31: ultimate.server.console.SatoriSendDirectMessageResponse
-	(*Config)(nil),                          // 32: ultimate.server.console.Config
-	(*RuntimeInfo)(nil),                     // 33: ultimate.server.console.RuntimeInfo
-	(*EndpointList)(nil),                    // 34: ultimate.server.console.EndpointList
-	(*CallApiEndpointRequest)(nil),          // 35: ultimate.server.console.CallApiEndpointRequest
-	(*CallApiEndpointResponse)(nil),         // 36: ultimate.server.console.CallApiEndpointResponse
-	(*CallRpcEndpointRequest)(nil),          // 37: ultimate.server.console.CallRpcEndpointRequest
-	(*CallRpcEndpointResponse)(nil),         // 38: ultimate.server.console.CallRpcEndpointResponse
-	(*AclTemplate)(nil),                     // 39: ultimate.server.console.AclTemplate
-	(*AclTemplateList)(nil),                 // 40: ultimate.server.console.AclTemplateList
-	(*Setting)(nil),                         // 41: ultimate.server.console.Setting
-	(*SettingList)(nil),                     // 42: ultimate.server.console.SettingList
-	(*Status)(nil),                          // 43: ultimate.server.console.Status
-	(*emptypb.Empty)(nil),                   // 44: google.protobuf.Empty
+	(*StorageImportObject)(nil),             // 27: ultimate.server.console.StorageImportObject
+	(*StorageImport)(nil),                   // 28: ultimate.server.console.StorageImport
+	(*SatoriListTemplatesRequest)(nil),      // 29: ultimate.server.console.SatoriListTemplatesRequest
+	(*SatoriTemplate)(nil),                  // 30: ultimate.server.console.SatoriTemplate
+	(*SatoriListTemplatesResponse)(nil),     // 31: ultimate.server.console.SatoriListTemplatesResponse
+	(*SatoriSendDirectMessageRequest)(nil),  // 32: ultimate.server.console.SatoriSendDirectMessageRequest
+	(*SatoriSendDirectMessageResponse)(nil), // 33: ultimate.server.console.SatoriSendDirectMessageResponse
+	(*Config)(nil),                          // 34: ultimate.server.console.Config
+	(*RuntimeInfo)(nil),                     // 35: ultimate.server.console.RuntimeInfo
+	(*EndpointList)(nil),                    // 36: ultimate.server.console.EndpointList
+	(*CallApiEndpointRequest)(nil),          // 37: ultimate.server.console.CallApiEndpointRequest
+	(*CallApiEndpointResponse)(nil),         // 38: ultimate.server.console.CallApiEndpointResponse
+	(*CallRpcEndpointRequest)(nil),          // 39: ultimate.server.console.CallRpcEndpointRequest
+	(*CallRpcEndpointResponse)(nil),         // 40: ultimate.server.console.CallRpcEndpointResponse
+	(*AclTemplate)(nil),                     // 41: ultimate.server.console.AclTemplate
+	(*AclTemplateList)(nil),                 // 42: ultimate.server.console.AclTemplateList
+	(*Setting)(nil),                         // 43: ultimate.server.console.Setting
+	(*SettingList)(nil),                     // 44: ultimate.server.console.SettingList
+	(*Status)(nil),                          // 45: ultimate.server.console.Status
+	(*emptypb.Empty)(nil),                   // 46: google.protobuf.Empty
 }
 var file_api_console_console_proto_depIdxs = []int32{
 	10, // 0: ultimate.server.console.GroupList.groups:type_name -> ultimate.server.console.Group
 	12, // 1: ultimate.server.console.GroupUserList.users:type_name -> ultimate.server.console.GroupUser
 	17, // 2: ultimate.server.console.ChannelMessageList.messages:type_name -> ultimate.server.console.ChannelMessage
 	21, // 3: ultimate.server.console.NotificationList.notifications:type_name -> ultimate.server.console.Notification
-	28, // 4: ultimate.server.console.SatoriListTemplatesResponse.templates:type_name -> ultimate.server.console.SatoriTemplate
-	39, // 5: ultimate.server.console.AclTemplateList.templates:type_name -> ultimate.server.console.AclTemplate
-	41, // 6: ultimate.server.console.SettingList.settings:type_name -> ultimate.server.console.Setting
-	1,  // 7: ultimate.server.console.Console.Authenticate:input_type -> ultimate.server.console.AuthenticateRequest
-	3,  // 8: ultimate.server.console.Console.AuthenticateLogout:input_type -> ultimate.server.console.AuthenticateLogoutRequest
-	9,  // 9: ultimate.server.console.Console.ListGroups:input_type -> ultimate.server.console.ListGroupsRequest
-	5,  // 10: ultimate.server.console.Console.GetGroup:input_type -> ultimate.server.console.GroupId
-	5,  // 11: ultimate.server.console.Console.DeleteGroup:input_type -> ultimate.server.console.GroupId
-	5,  // 12: ultimate.server.console.Console.ListGroupMembers:input_type -> ultimate.server.console.GroupId
-	14, // 13: ultimate.server.console.Console.AddGroupUsers:input_type -> ultimate.server.console.AddGroupUsersRequest
-	15, // 14: ultimate.server.console.Console.DeleteGroupUser:input_type -> ultimate.server.console.DeleteGroupUserRequest
-	6,  // 15: ultimate.server.console.Console.PromoteGroupMember:input_type -> ultimate.server.console.GroupUserId
-	6,  // 16: ultimate.server.console.Console.DemoteGroupMember:input_type -> ultimate.server.console.GroupUserId
-	16, // 17: ultimate.server.console.Console.ListChannelMessages:input_type -> ultimate.server.console.ListChannelMessagesRequest
-	19, // 18: ultimate.server.console.Console.DeleteChannelMessages:input_type -> ultimate.server.console.DeleteChannelMessagesRequest
-	20, // 19: ultimate.server.console.Console.ListNotifications:input_type -> ultimate.server.console.ListNotificationsRequest
-	7,  // 20: ultimate.server.console.Console.DeleteNotification:input_type -> ultimate.server.console.NotificationId
-	23, // 21: ultimate.server.console.Console.SendNotification:input_type -> ultimate.server.console.SendNotificationRequest
-	24, // 22: ultimate.server.console.Console.UnlinkAccount:input_type -> ultimate.server.console.UnlinkAccountRequest
-	4,  // 23: ultimate.server.console.Console.ExportAccount:input_type -> ultimate.server.console.AccountId
-	26, // 24: ultimate.server.console.Console.ImportAccount:input_type -> ultimate.server.console.AccountImport
-	44, // 25: ultimate.server.console.Console.DeleteAllData:input_type -> google.protobuf.Empty
-	27, // 26: ultimate.server.console.Console.SatoriListTemplates:input_type -> ultimate.server.console.SatoriListTemplatesRequest
-	30, // 27: ultimate.server.console.Console.SatoriSendDirectMessage:input_type -> ultimate.server.console.SatoriSendDirectMessageRequest
-	44, // 28: ultimate.server.console.Console.GetConfig:input_type -> google.protobuf.Empty
-	44, // 29: ultimate.server.console.Console.GetRuntime:input_type -> google.protobuf.Empty
-	44, // 30: ultimate.server.console.Console.ListApiEndpoints:input_type -> google.protobuf.Empty
-	35, // 31: ultimate.server.console.Console.CallApiEndpoint:input_type -> ultimate.server.console.CallApiEndpointRequest
-	37, // 32: ultimate.server.console.Console.CallRpcEndpoint:input_type -> ultimate.server.console.CallRpcEndpointRequest
-	44, // 33: ultimate.server.console.Console.ListAclTemplates:input_type -> google.protobuf.Empty
-	39, // 34: ultimate.server.console.Console.AddAclTemplate:input_type -> ultimate.server.console.AclTemplate
-	8,  // 35: ultimate.server.console.Console.DeleteAclTemplate:input_type -> ultimate.server.console.AclTemplateId
-	44, // 36: ultimate.server.console.Console.ListSettings:input_type -> google.protobuf.Empty
-	41, // 37: ultimate.server.console.Console.UpdateSetting:input_type -> ultimate.server.console.Setting
-	44, // 38: ultimate.server.console.Console.GetStatus:input_type -> google.protobuf.Empty
-	2,  // 39: ultimate.server.console.Console.Authenticate:output_type -> ultimate.server.console.ConsoleSession
-	44, // 40: ultimate.server.console.Console.AuthenticateLogout:output_type -> google.protobuf.Empty
-	11, // 41: ultimate.server.console.Console.ListGroups:output_type -> ultimate.server.console.GroupList
-	10, // 42: ultimate.server.console.Console.GetGroup:output_type -> ultimate.server.console.Group
-	44, // 43: ultimate.server.console.Console.DeleteGroup:output_type -> google.protobuf.Empty
-	13, // 44: ultimate.server.console.Console.ListGroupMembers:output_type -> ultimate.server.console.GroupUserList
-	44, // 45: ultimate.server.console.Console.AddGroupUsers:output_type -> google.protobuf.Empty
-	44, // 46: ultimate.server.console.Console.DeleteGroupUser:output_type -> google.protobuf.Empty
-	44, // 47: ultimate.server.console.Console.PromoteGroupMember:output_type -> google.protobuf.Empty
-	44, // 48: ultimate.server.console.Console.DemoteGroupMember:output_type -> google.protobuf.Empty
-	18, // 49: ultimate.server.console.Console.ListChannelMessages:output_type -> ultimate.server.console.ChannelMessageList
-	44, // 50: ultimate.server.console.Console.DeleteChannelMessages:output_type -> google.protobuf.Empty
-	22, // 51: ultimate.server.console.Console.ListNotifications:output_type -> ultimate.server.console.NotificationList
-	44, // 52: ultimate.server.console.Console.DeleteNotification:output_type -> google.protobuf.Empty
-	44, // 53: ultimate.server.console.Console.SendNotification:output_type -> google.protobuf.Empty
-	44, // 54: ultimate.server.console.Console.UnlinkAccount:output_type -> google.protobuf.Empty
-	25, // 55: ultimate.server.console.Console.ExportAccount:output_type -> ultimate.server.console.AccountExport
-	44, // 56: ultimate.server.console.Console.ImportAccount:output_type -> google.protobuf.Empty
-	44, // 57: ultimate.server.console.Console.DeleteAllData:output_type -> google.protobuf.Empty
-	29, // 58: ultimate.server.console.Console.SatoriListTemplates:output_type -> ultimate.server.console.SatoriListTemplatesResponse
-	31, // 59: ultimate.server.console.Console.SatoriSendDirectMessage:output_type -> ultimate.server.console.SatoriSendDirectMessageResponse
-	32, // 60: ultimate.server.console.Console.GetConfig:output_type -> ultimate.server.console.Config
-	33, // 61: ultimate.server.console.Console.GetRuntime:output_type -> ultimate.server.console.RuntimeInfo
-	34, // 62: ultimate.server.console.Console.ListApiEndpoints:output_type -> ultimate.server.console.EndpointList
-	36, // 63: ultimate.server.console.Console.CallApiEndpoint:output_type -> ultimate.server.console.CallApiEndpointResponse
-	38, // 64: ultimate.server.console.Console.CallRpcEndpoint:output_type -> ultimate.server.console.CallRpcEndpointResponse
-	40, // 65: ultimate.server.console.Console.ListAclTemplates:output_type -> ultimate.server.console.AclTemplateList
-	39, // 66: ultimate.server.console.Console.AddAclTemplate:output_type -> ultimate.server.console.AclTemplate
-	44, // 67: ultimate.server.console.Console.DeleteAclTemplate:output_type -> google.protobuf.Empty
-	42, // 68: ultimate.server.console.Console.ListSettings:output_type -> ultimate.server.console.SettingList
-	41, // 69: ultimate.server.console.Console.UpdateSetting:output_type -> ultimate.server.console.Setting
-	43, // 70: ultimate.server.console.Console.GetStatus:output_type -> ultimate.server.console.Status
-	39, // [39:71] is the sub-list for method output_type
-	7,  // [7:39] is the sub-list for method input_type
-	7,  // [7:7] is the sub-list for extension type_name
-	7,  // [7:7] is the sub-list for extension extendee
-	0,  // [0:7] is the sub-list for field type_name
+	27, // 4: ultimate.server.console.StorageImport.objects:type_name -> ultimate.server.console.StorageImportObject
+	30, // 5: ultimate.server.console.SatoriListTemplatesResponse.templates:type_name -> ultimate.server.console.SatoriTemplate
+	41, // 6: ultimate.server.console.AclTemplateList.templates:type_name -> ultimate.server.console.AclTemplate
+	43, // 7: ultimate.server.console.SettingList.settings:type_name -> ultimate.server.console.Setting
+	1,  // 8: ultimate.server.console.Console.Authenticate:input_type -> ultimate.server.console.AuthenticateRequest
+	3,  // 9: ultimate.server.console.Console.AuthenticateLogout:input_type -> ultimate.server.console.AuthenticateLogoutRequest
+	9,  // 10: ultimate.server.console.Console.ListGroups:input_type -> ultimate.server.console.ListGroupsRequest
+	5,  // 11: ultimate.server.console.Console.GetGroup:input_type -> ultimate.server.console.GroupId
+	5,  // 12: ultimate.server.console.Console.DeleteGroup:input_type -> ultimate.server.console.GroupId
+	5,  // 13: ultimate.server.console.Console.ListGroupMembers:input_type -> ultimate.server.console.GroupId
+	14, // 14: ultimate.server.console.Console.AddGroupUsers:input_type -> ultimate.server.console.AddGroupUsersRequest
+	15, // 15: ultimate.server.console.Console.DeleteGroupUser:input_type -> ultimate.server.console.DeleteGroupUserRequest
+	6,  // 16: ultimate.server.console.Console.PromoteGroupMember:input_type -> ultimate.server.console.GroupUserId
+	6,  // 17: ultimate.server.console.Console.DemoteGroupMember:input_type -> ultimate.server.console.GroupUserId
+	16, // 18: ultimate.server.console.Console.ListChannelMessages:input_type -> ultimate.server.console.ListChannelMessagesRequest
+	19, // 19: ultimate.server.console.Console.DeleteChannelMessages:input_type -> ultimate.server.console.DeleteChannelMessagesRequest
+	20, // 20: ultimate.server.console.Console.ListNotifications:input_type -> ultimate.server.console.ListNotificationsRequest
+	7,  // 21: ultimate.server.console.Console.DeleteNotification:input_type -> ultimate.server.console.NotificationId
+	23, // 22: ultimate.server.console.Console.SendNotification:input_type -> ultimate.server.console.SendNotificationRequest
+	24, // 23: ultimate.server.console.Console.UnlinkAccount:input_type -> ultimate.server.console.UnlinkAccountRequest
+	4,  // 24: ultimate.server.console.Console.ExportAccount:input_type -> ultimate.server.console.AccountId
+	26, // 25: ultimate.server.console.Console.ImportAccount:input_type -> ultimate.server.console.AccountImport
+	26, // 26: ultimate.server.console.Console.ImportAccountFull:input_type -> ultimate.server.console.AccountImport
+	46, // 27: ultimate.server.console.Console.DeleteAllData:input_type -> google.protobuf.Empty
+	46, // 28: ultimate.server.console.Console.DeleteStorage:input_type -> google.protobuf.Empty
+	28, // 29: ultimate.server.console.Console.ImportStorage:input_type -> ultimate.server.console.StorageImport
+	29, // 30: ultimate.server.console.Console.SatoriListTemplates:input_type -> ultimate.server.console.SatoriListTemplatesRequest
+	32, // 31: ultimate.server.console.Console.SatoriSendDirectMessage:input_type -> ultimate.server.console.SatoriSendDirectMessageRequest
+	46, // 32: ultimate.server.console.Console.GetConfig:input_type -> google.protobuf.Empty
+	46, // 33: ultimate.server.console.Console.GetRuntime:input_type -> google.protobuf.Empty
+	46, // 34: ultimate.server.console.Console.ListApiEndpoints:input_type -> google.protobuf.Empty
+	37, // 35: ultimate.server.console.Console.CallApiEndpoint:input_type -> ultimate.server.console.CallApiEndpointRequest
+	39, // 36: ultimate.server.console.Console.CallRpcEndpoint:input_type -> ultimate.server.console.CallRpcEndpointRequest
+	46, // 37: ultimate.server.console.Console.ListAclTemplates:input_type -> google.protobuf.Empty
+	41, // 38: ultimate.server.console.Console.AddAclTemplate:input_type -> ultimate.server.console.AclTemplate
+	8,  // 39: ultimate.server.console.Console.DeleteAclTemplate:input_type -> ultimate.server.console.AclTemplateId
+	46, // 40: ultimate.server.console.Console.ListSettings:input_type -> google.protobuf.Empty
+	43, // 41: ultimate.server.console.Console.UpdateSetting:input_type -> ultimate.server.console.Setting
+	46, // 42: ultimate.server.console.Console.GetStatus:input_type -> google.protobuf.Empty
+	2,  // 43: ultimate.server.console.Console.Authenticate:output_type -> ultimate.server.console.ConsoleSession
+	46, // 44: ultimate.server.console.Console.AuthenticateLogout:output_type -> google.protobuf.Empty
+	11, // 45: ultimate.server.console.Console.ListGroups:output_type -> ultimate.server.console.GroupList
+	10, // 46: ultimate.server.console.Console.GetGroup:output_type -> ultimate.server.console.Group
+	46, // 47: ultimate.server.console.Console.DeleteGroup:output_type -> google.protobuf.Empty
+	13, // 48: ultimate.server.console.Console.ListGroupMembers:output_type -> ultimate.server.console.GroupUserList
+	46, // 49: ultimate.server.console.Console.AddGroupUsers:output_type -> google.protobuf.Empty
+	46, // 50: ultimate.server.console.Console.DeleteGroupUser:output_type -> google.protobuf.Empty
+	46, // 51: ultimate.server.console.Console.PromoteGroupMember:output_type -> google.protobuf.Empty
+	46, // 52: ultimate.server.console.Console.DemoteGroupMember:output_type -> google.protobuf.Empty
+	18, // 53: ultimate.server.console.Console.ListChannelMessages:output_type -> ultimate.server.console.ChannelMessageList
+	46, // 54: ultimate.server.console.Console.DeleteChannelMessages:output_type -> google.protobuf.Empty
+	22, // 55: ultimate.server.console.Console.ListNotifications:output_type -> ultimate.server.console.NotificationList
+	46, // 56: ultimate.server.console.Console.DeleteNotification:output_type -> google.protobuf.Empty
+	46, // 57: ultimate.server.console.Console.SendNotification:output_type -> google.protobuf.Empty
+	46, // 58: ultimate.server.console.Console.UnlinkAccount:output_type -> google.protobuf.Empty
+	25, // 59: ultimate.server.console.Console.ExportAccount:output_type -> ultimate.server.console.AccountExport
+	46, // 60: ultimate.server.console.Console.ImportAccount:output_type -> google.protobuf.Empty
+	46, // 61: ultimate.server.console.Console.ImportAccountFull:output_type -> google.protobuf.Empty
+	46, // 62: ultimate.server.console.Console.DeleteAllData:output_type -> google.protobuf.Empty
+	46, // 63: ultimate.server.console.Console.DeleteStorage:output_type -> google.protobuf.Empty
+	46, // 64: ultimate.server.console.Console.ImportStorage:output_type -> google.protobuf.Empty
+	31, // 65: ultimate.server.console.Console.SatoriListTemplates:output_type -> ultimate.server.console.SatoriListTemplatesResponse
+	33, // 66: ultimate.server.console.Console.SatoriSendDirectMessage:output_type -> ultimate.server.console.SatoriSendDirectMessageResponse
+	34, // 67: ultimate.server.console.Console.GetConfig:output_type -> ultimate.server.console.Config
+	35, // 68: ultimate.server.console.Console.GetRuntime:output_type -> ultimate.server.console.RuntimeInfo
+	36, // 69: ultimate.server.console.Console.ListApiEndpoints:output_type -> ultimate.server.console.EndpointList
+	38, // 70: ultimate.server.console.Console.CallApiEndpoint:output_type -> ultimate.server.console.CallApiEndpointResponse
+	40, // 71: ultimate.server.console.Console.CallRpcEndpoint:output_type -> ultimate.server.console.CallRpcEndpointResponse
+	42, // 72: ultimate.server.console.Console.ListAclTemplates:output_type -> ultimate.server.console.AclTemplateList
+	41, // 73: ultimate.server.console.Console.AddAclTemplate:output_type -> ultimate.server.console.AclTemplate
+	46, // 74: ultimate.server.console.Console.DeleteAclTemplate:output_type -> google.protobuf.Empty
+	44, // 75: ultimate.server.console.Console.ListSettings:output_type -> ultimate.server.console.SettingList
+	43, // 76: ultimate.server.console.Console.UpdateSetting:output_type -> ultimate.server.console.Setting
+	45, // 77: ultimate.server.console.Console.GetStatus:output_type -> ultimate.server.console.Status
+	43, // [43:78] is the sub-list for method output_type
+	8,  // [8:43] is the sub-list for method input_type
+	8,  // [8:8] is the sub-list for extension type_name
+	8,  // [8:8] is the sub-list for extension extendee
+	0,  // [0:8] is the sub-list for field type_name
 }
 
 func init() { file_api_console_console_proto_init() }
@@ -2873,7 +3024,7 @@ func file_api_console_console_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_api_console_console_proto_rawDesc), len(file_api_console_console_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   43,
+			NumMessages:   45,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

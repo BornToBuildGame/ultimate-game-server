@@ -6636,10 +6636,13 @@ func (x *ValidatePurchaseAppleRequest) GetPersist() bool {
 }
 
 type ValidatePurchaseGoogleRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ProductId     string                 `protobuf:"bytes,1,opt,name=product_id,json=productId,proto3" json:"product_id,omitempty"`
-	PurchaseToken string                 `protobuf:"bytes,2,opt,name=purchase_token,json=purchaseToken,proto3" json:"purchase_token,omitempty"`
-	Persist       *bool                  `protobuf:"varint,3,opt,name=persist,proto3,oneof" json:"persist,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Reference-shaped JSON purchase blob (productId/product_id + purchaseToken/purchase_token).
+	Purchase string `protobuf:"bytes,1,opt,name=purchase,proto3" json:"purchase,omitempty"`
+	// Legacy fields retained for one-release dual-accept.
+	ProductId     string `protobuf:"bytes,2,opt,name=product_id,json=productId,proto3" json:"product_id,omitempty"`
+	PurchaseToken string `protobuf:"bytes,3,opt,name=purchase_token,json=purchaseToken,proto3" json:"purchase_token,omitempty"`
+	Persist       *bool  `protobuf:"varint,4,opt,name=persist,proto3,oneof" json:"persist,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -6674,6 +6677,13 @@ func (*ValidatePurchaseGoogleRequest) Descriptor() ([]byte, []int) {
 	return file_api_api_proto_rawDescGZIP(), []int{99}
 }
 
+func (x *ValidatePurchaseGoogleRequest) GetPurchase() string {
+	if x != nil {
+		return x.Purchase
+	}
+	return ""
+}
+
 func (x *ValidatePurchaseGoogleRequest) GetProductId() string {
 	if x != nil {
 		return x.ProductId
@@ -6696,10 +6706,12 @@ func (x *ValidatePurchaseGoogleRequest) GetPersist() bool {
 }
 
 type ValidatePurchaseHuaweiRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	PurchaseData  string                 `protobuf:"bytes,1,opt,name=purchase_data,json=purchaseData,proto3" json:"purchase_data,omitempty"`
-	Signature     string                 `protobuf:"bytes,2,opt,name=signature,proto3" json:"signature,omitempty"`
-	Persist       *bool                  `protobuf:"varint,3,opt,name=persist,proto3,oneof" json:"persist,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Reference field name; also accept purchase_data in HTTP JSON.
+	Purchase      string `protobuf:"bytes,1,opt,name=purchase,proto3" json:"purchase,omitempty"`
+	PurchaseData  string `protobuf:"bytes,2,opt,name=purchase_data,json=purchaseData,proto3" json:"purchase_data,omitempty"`
+	Signature     string `protobuf:"bytes,3,opt,name=signature,proto3" json:"signature,omitempty"`
+	Persist       *bool  `protobuf:"varint,4,opt,name=persist,proto3,oneof" json:"persist,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -6732,6 +6744,13 @@ func (x *ValidatePurchaseHuaweiRequest) ProtoReflect() protoreflect.Message {
 // Deprecated: Use ValidatePurchaseHuaweiRequest.ProtoReflect.Descriptor instead.
 func (*ValidatePurchaseHuaweiRequest) Descriptor() ([]byte, []int) {
 	return file_api_api_proto_rawDescGZIP(), []int{100}
+}
+
+func (x *ValidatePurchaseHuaweiRequest) GetPurchase() string {
+	if x != nil {
+		return x.Purchase
+	}
+	return ""
 }
 
 func (x *ValidatePurchaseHuaweiRequest) GetPurchaseData() string {
@@ -8275,18 +8294,20 @@ const file_api_api_proto_rawDesc = "" +
 	"\areceipt\x18\x01 \x01(\tR\areceipt\x12\x1d\n" +
 	"\apersist\x18\x02 \x01(\bH\x00R\apersist\x88\x01\x01B\n" +
 	"\n" +
-	"\b_persist\"\x90\x01\n" +
-	"\x1dValidatePurchaseGoogleRequest\x12\x1d\n" +
+	"\b_persist\"\xac\x01\n" +
+	"\x1dValidatePurchaseGoogleRequest\x12\x1a\n" +
+	"\bpurchase\x18\x01 \x01(\tR\bpurchase\x12\x1d\n" +
 	"\n" +
-	"product_id\x18\x01 \x01(\tR\tproductId\x12%\n" +
-	"\x0epurchase_token\x18\x02 \x01(\tR\rpurchaseToken\x12\x1d\n" +
-	"\apersist\x18\x03 \x01(\bH\x00R\apersist\x88\x01\x01B\n" +
+	"product_id\x18\x02 \x01(\tR\tproductId\x12%\n" +
+	"\x0epurchase_token\x18\x03 \x01(\tR\rpurchaseToken\x12\x1d\n" +
+	"\apersist\x18\x04 \x01(\bH\x00R\apersist\x88\x01\x01B\n" +
 	"\n" +
-	"\b_persist\"\x8d\x01\n" +
-	"\x1dValidatePurchaseHuaweiRequest\x12#\n" +
-	"\rpurchase_data\x18\x01 \x01(\tR\fpurchaseData\x12\x1c\n" +
-	"\tsignature\x18\x02 \x01(\tR\tsignature\x12\x1d\n" +
-	"\apersist\x18\x03 \x01(\bH\x00R\apersist\x88\x01\x01B\n" +
+	"\b_persist\"\xa9\x01\n" +
+	"\x1dValidatePurchaseHuaweiRequest\x12\x1a\n" +
+	"\bpurchase\x18\x01 \x01(\tR\bpurchase\x12#\n" +
+	"\rpurchase_data\x18\x02 \x01(\tR\fpurchaseData\x12\x1c\n" +
+	"\tsignature\x18\x03 \x01(\tR\tsignature\x12\x1d\n" +
+	"\apersist\x18\x04 \x01(\bH\x00R\apersist\x88\x01\x01B\n" +
 	"\n" +
 	"\b_persist\"z\n" +
 	"&ValidatePurchaseFacebookInstantRequest\x12%\n" +

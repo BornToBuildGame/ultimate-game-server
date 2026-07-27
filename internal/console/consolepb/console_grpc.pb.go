@@ -38,7 +38,10 @@ const (
 	Console_UnlinkAccount_FullMethodName           = "/ultimate.server.console.Console/UnlinkAccount"
 	Console_ExportAccount_FullMethodName           = "/ultimate.server.console.Console/ExportAccount"
 	Console_ImportAccount_FullMethodName           = "/ultimate.server.console.Console/ImportAccount"
+	Console_ImportAccountFull_FullMethodName       = "/ultimate.server.console.Console/ImportAccountFull"
 	Console_DeleteAllData_FullMethodName           = "/ultimate.server.console.Console/DeleteAllData"
+	Console_DeleteStorage_FullMethodName           = "/ultimate.server.console.Console/DeleteStorage"
+	Console_ImportStorage_FullMethodName           = "/ultimate.server.console.Console/ImportStorage"
 	Console_SatoriListTemplates_FullMethodName     = "/ultimate.server.console.Console/SatoriListTemplates"
 	Console_SatoriSendDirectMessage_FullMethodName = "/ultimate.server.console.Console/SatoriSendDirectMessage"
 	Console_GetConfig_FullMethodName               = "/ultimate.server.console.Console/GetConfig"
@@ -78,7 +81,10 @@ type ConsoleClient interface {
 	UnlinkAccount(ctx context.Context, in *UnlinkAccountRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	ExportAccount(ctx context.Context, in *AccountId, opts ...grpc.CallOption) (*AccountExport, error)
 	ImportAccount(ctx context.Context, in *AccountImport, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	ImportAccountFull(ctx context.Context, in *AccountImport, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	DeleteAllData(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	DeleteStorage(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	ImportStorage(ctx context.Context, in *StorageImport, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	SatoriListTemplates(ctx context.Context, in *SatoriListTemplatesRequest, opts ...grpc.CallOption) (*SatoriListTemplatesResponse, error)
 	SatoriSendDirectMessage(ctx context.Context, in *SatoriSendDirectMessageRequest, opts ...grpc.CallOption) (*SatoriSendDirectMessageResponse, error)
 	GetConfig(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*Config, error)
@@ -282,10 +288,40 @@ func (c *consoleClient) ImportAccount(ctx context.Context, in *AccountImport, op
 	return out, nil
 }
 
+func (c *consoleClient) ImportAccountFull(ctx context.Context, in *AccountImport, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, Console_ImportAccountFull_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *consoleClient) DeleteAllData(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(emptypb.Empty)
 	err := c.cc.Invoke(ctx, Console_DeleteAllData_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *consoleClient) DeleteStorage(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, Console_DeleteStorage_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *consoleClient) ImportStorage(ctx context.Context, in *StorageImport, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, Console_ImportStorage_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -446,7 +482,10 @@ type ConsoleServer interface {
 	UnlinkAccount(context.Context, *UnlinkAccountRequest) (*emptypb.Empty, error)
 	ExportAccount(context.Context, *AccountId) (*AccountExport, error)
 	ImportAccount(context.Context, *AccountImport) (*emptypb.Empty, error)
+	ImportAccountFull(context.Context, *AccountImport) (*emptypb.Empty, error)
 	DeleteAllData(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
+	DeleteStorage(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
+	ImportStorage(context.Context, *StorageImport) (*emptypb.Empty, error)
 	SatoriListTemplates(context.Context, *SatoriListTemplatesRequest) (*SatoriListTemplatesResponse, error)
 	SatoriSendDirectMessage(context.Context, *SatoriSendDirectMessageRequest) (*SatoriSendDirectMessageResponse, error)
 	GetConfig(context.Context, *emptypb.Empty) (*Config, error)
@@ -524,8 +563,17 @@ func (UnimplementedConsoleServer) ExportAccount(context.Context, *AccountId) (*A
 func (UnimplementedConsoleServer) ImportAccount(context.Context, *AccountImport) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ImportAccount not implemented")
 }
+func (UnimplementedConsoleServer) ImportAccountFull(context.Context, *AccountImport) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ImportAccountFull not implemented")
+}
 func (UnimplementedConsoleServer) DeleteAllData(context.Context, *emptypb.Empty) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteAllData not implemented")
+}
+func (UnimplementedConsoleServer) DeleteStorage(context.Context, *emptypb.Empty) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteStorage not implemented")
+}
+func (UnimplementedConsoleServer) ImportStorage(context.Context, *StorageImport) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ImportStorage not implemented")
 }
 func (UnimplementedConsoleServer) SatoriListTemplates(context.Context, *SatoriListTemplatesRequest) (*SatoriListTemplatesResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SatoriListTemplates not implemented")
@@ -911,6 +959,24 @@ func _Console_ImportAccount_Handler(srv interface{}, ctx context.Context, dec fu
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Console_ImportAccountFull_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AccountImport)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ConsoleServer).ImportAccountFull(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Console_ImportAccountFull_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ConsoleServer).ImportAccountFull(ctx, req.(*AccountImport))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Console_DeleteAllData_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(emptypb.Empty)
 	if err := dec(in); err != nil {
@@ -925,6 +991,42 @@ func _Console_DeleteAllData_Handler(srv interface{}, ctx context.Context, dec fu
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ConsoleServer).DeleteAllData(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Console_DeleteStorage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ConsoleServer).DeleteStorage(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Console_DeleteStorage_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ConsoleServer).DeleteStorage(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Console_ImportStorage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(StorageImport)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ConsoleServer).ImportStorage(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Console_ImportStorage_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ConsoleServer).ImportStorage(ctx, req.(*StorageImport))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1243,8 +1345,20 @@ var Console_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Console_ImportAccount_Handler,
 		},
 		{
+			MethodName: "ImportAccountFull",
+			Handler:    _Console_ImportAccountFull_Handler,
+		},
+		{
 			MethodName: "DeleteAllData",
 			Handler:    _Console_DeleteAllData_Handler,
+		},
+		{
+			MethodName: "DeleteStorage",
+			Handler:    _Console_DeleteStorage_Handler,
+		},
+		{
+			MethodName: "ImportStorage",
+			Handler:    _Console_ImportStorage_Handler,
 		},
 		{
 			MethodName: "SatoriListTemplates",

@@ -2,6 +2,7 @@ package runtime
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"ultimate-game-server/internal/cluster"
@@ -20,8 +21,10 @@ type StreamPresenceView struct {
 // StreamManager backs RuntimeModule stream_* APIs (ADR-0020 / ADR-0019).
 type StreamManager interface {
 	StreamUserList(mode int16, subject, subcontext, label string, includeHidden, includeNotHidden bool) ([]StreamPresenceView, error)
+	StreamUserGet(mode int16, subject, subcontext, label, userID, sessionID string) (*StreamPresenceView, error)
 	StreamUserJoin(mode int16, subject, subcontext, label, userID, sessionID string, hidden, persistence bool, status string) (bool, error)
 	StreamUserLeave(mode int16, subject, subcontext, label, userID, sessionID string) error
+	StreamClose(mode int16, subject, subcontext, label string) error
 	StreamCount(mode int16, subject, subcontext, label string) (int, error)
 	StreamSend(mode int16, subject, subcontext, label, data string, sessionIDs []string, reliable bool) error
 	SessionDisconnect(sessionID string) error
@@ -80,6 +83,25 @@ func (m *LocalStreamManager) StreamUserList(mode int16, subject, subcontext, lab
 	return out, nil
 }
 
+func (m *LocalStreamManager) StreamUserGet(mode int16, subject, subcontext, label, userID, sessionID string) (*StreamPresenceView, error) {
+	list, err := m.StreamUserList(mode, subject, subcontext, label, true, true)
+	if err != nil {
+		return nil, err
+	}
+	for i := range list {
+		p := &list[i]
+		if userID != "" && p.UserID != userID {
+			continue
+		}
+		if sessionID != "" && p.SessionID != sessionID {
+			continue
+		}
+		cp := *p
+		return &cp, nil
+	}
+	return nil, nil
+}
+
 func (m *LocalStreamManager) StreamUserJoin(mode int16, subject, subcontext, label, userID, sessionID string, hidden, persistence bool, status string) (bool, error) {
 	if m == nil || m.Tracker == nil {
 		return false, fmt.Errorf("stream tracker not configured")
@@ -101,6 +123,17 @@ func (m *LocalStreamManager) StreamUserLeave(mode int16, subject, subcontext, la
 	_ = userID
 	key := streamKey(mode, subject, subcontext, label)
 	_, _ = m.Tracker.Untrack(sessionID, key)
+	return nil
+}
+
+func (m *LocalStreamManager) StreamClose(mode int16, subject, subcontext, label string) error {
+	list, err := m.StreamUserList(mode, subject, subcontext, label, true, true)
+	if err != nil {
+		return err
+	}
+	for _, p := range list {
+		_ = m.StreamUserLeave(mode, subject, subcontext, label, p.UserID, p.SessionID)
+	}
 	return nil
 }
 
@@ -148,7 +181,23 @@ func (m *LocalStreamManager) streamSendLocal(mode int16, subject, subcontext, la
 	if len(targets) == 0 {
 		return
 	}
-	m.Router.SendToSessionIDs(targets, []byte(data))
+	// Reference-shaped stream_data envelope so clients can decode custom streams.
+	env, err := json.Marshal(map[string]interface{}{
+		"stream_data": map[string]interface{}{
+			"stream": map[string]interface{}{
+				"mode":       mode,
+				"subject":    subject,
+				"subcontext": subcontext,
+				"label":      label,
+			},
+			"data":     data,
+			"reliable": true,
+		},
+	})
+	if err != nil {
+		return
+	}
+	m.Router.SendToSessionIDs(targets, env)
 }
 
 func (m *LocalStreamManager) SessionDisconnect(sessionID string) error {

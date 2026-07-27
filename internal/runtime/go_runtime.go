@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"path/filepath"
 	"plugin"
@@ -496,6 +497,31 @@ func (i *goInitializer) RegisterAfterJoinGroup(fn func(ctx context.Context, logg
 
 func (i *goInitializer) RegisterEvent(fn EventHandler) error {
 	i.registry.RegisterEvent(fn)
+	return nil
+}
+
+func (i *goInitializer) RegisterEventSessionStart(fn EventHandler) error {
+	i.registry.RegisterEventSessionStart(fn)
+	return nil
+}
+
+func (i *goInitializer) RegisterEventSessionEnd(fn EventHandler) error {
+	i.registry.RegisterEventSessionEnd(fn)
+	return nil
+}
+
+func (i *goInitializer) RegisterShutdown(fn ShutdownHandler) error {
+	i.registry.RegisterShutdown(fn)
+	return nil
+}
+
+func (i *goInitializer) RegisterHttp(pathPattern string, handler func(http.ResponseWriter, *http.Request), methods ...string) error {
+	i.registry.RegisterHttp(pathPattern, handler, methods...)
+	return nil
+}
+
+func (i *goInitializer) RegisterConsoleHttp(pathPattern string, handler func(http.ResponseWriter, *http.Request), methods ...string) error {
+	i.registry.RegisterConsoleHttp(pathPattern, handler, methods...)
 	return nil
 }
 

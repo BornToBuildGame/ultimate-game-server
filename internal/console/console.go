@@ -12,6 +12,7 @@ import (
 
 	"ultimate-game-server/internal/console/acl"
 	"ultimate-game-server/internal/console/consolepb"
+	"ultimate-game-server/internal/runtime"
 	"ultimate-game-server/internal/satori"
 
 	"github.com/blevesearch/bleve/v2"
@@ -69,6 +70,7 @@ type Server struct {
 	statusProvider StatusProvider
 	satoriClient   *satori.Client
 	iapNotify      IAPNotificationDeps
+	runtimeRegistry *runtime.HookRegistry
 
 	revokedTokens sync.Map // token string -> struct{}
 }
@@ -115,6 +117,9 @@ func (s *Server) SetStatusProvider(p StatusProvider) { s.statusProvider = p }
 
 // SetSatoriClient wires Satori console RPCs.
 func (s *Server) SetSatoriClient(c *satori.Client) { s.satoriClient = c }
+
+// SetRuntimeRegistry enables mounting RegisterConsoleHttp handlers on the console mux.
+func (s *Server) SetRuntimeRegistry(reg *runtime.HookRegistry) { s.runtimeRegistry = reg }
 
 // Logger interface matching our requirements.
 type Logger interface {
@@ -183,6 +188,10 @@ func (s *Server) Start(addr string) error {
 	s.registerDeferredRoutes(mux)
 	s.registerV2ConsoleRoutes(mux)
 	s.registerIAPNotificationRoutes(mux)
+	s.registerStorageAdminRoutes(mux)
+	if s.runtimeRegistry != nil {
+		runtime.MountHTTPHandlers(mux, s.runtimeRegistry.ConsoleHTTPHandlers())
+	}
 
 	s.httpServer = &http.Server{
 		Handler:      mux,

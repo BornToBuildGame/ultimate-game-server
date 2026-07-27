@@ -17,19 +17,38 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
+// SessionIDResolver resolves an active WebSocket session ID for a user.
+// Used so REST/gRPC matchmaker tickets notify the correct socket on match.
+type SessionIDResolver func(userID string) string
+
 // MatchmakerServer implements the apipb.MatchmakerServiceServer interface.
 type MatchmakerServer struct {
 	apipb.UnimplementedMatchmakerServiceServer
 	mm       *matchmaker.Matchmaker
 	tokenMgr *auth.TokenManager
+	resolveSession SessionIDResolver
 }
 
 // NewMatchmakerServer creates a new MatchmakerServer instance.
-func NewMatchmakerServer(mm *matchmaker.Matchmaker, tm *auth.TokenManager) *MatchmakerServer {
-	return &MatchmakerServer{
-		mm:       mm,
-		tokenMgr: tm,
+func NewMatchmakerServer(mm *matchmaker.Matchmaker, tm *auth.TokenManager, resolveSession ...SessionIDResolver) *MatchmakerServer {
+	var resolver SessionIDResolver
+	if len(resolveSession) > 0 {
+		resolver = resolveSession[0]
 	}
+	return &MatchmakerServer{
+		mm:             mm,
+		tokenMgr:       tm,
+		resolveSession: resolver,
+	}
+}
+
+func (s *MatchmakerServer) sessionIDFor(userID string) string {
+	if s.resolveSession != nil {
+		if id := s.resolveSession(userID); id != "" {
+			return id
+		}
+	}
+	return ""
 }
 
 func (s *MatchmakerServer) authenticate(ctx context.Context) (*auth.Claims, error) {
@@ -65,7 +84,7 @@ func (s *MatchmakerServer) AddMatchmaker(ctx context.Context, req *apipb.AddMatc
 		ID:                uuid.New().String(),
 		UserID:            claims.UserID,
 		Username:          claims.Username,
-		SessionID:         claims.UserID,
+		SessionID:         s.sessionIDFor(claims.UserID),
 		Region:            req.GetStringProperties()["region"],
 		CreatedAt:         time.Now(),
 		Query:             req.GetQuery(),

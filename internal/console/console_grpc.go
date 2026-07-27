@@ -67,6 +67,29 @@ func (g *GRPCConsole) ImportAccount(ctx context.Context, in *consolepb.AccountIm
 	return &emptypb.Empty{}, nil
 }
 
+func (g *GRPCConsole) ImportAccountFull(ctx context.Context, in *consolepb.AccountImport) (*emptypb.Empty, error) {
+	if g.Server == nil || g.Server.pool == nil {
+		return nil, status.Error(codes.Unavailable, "console not ready")
+	}
+	if in == nil || in.GetPayloadJson() == "" {
+		return nil, status.Error(codes.InvalidArgument, "payload_json required")
+	}
+	var data AccountExport
+	if err := json.Unmarshal([]byte(in.GetPayloadJson()), &data); err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid payload_json: %v", err)
+	}
+	if data.UserID == "" {
+		data.UserID = in.GetId()
+	}
+	if data.UserID == "" {
+		return nil, status.Error(codes.InvalidArgument, "account id required")
+	}
+	if err := ImportAccount(ctx, g.Server.pool, &data); err != nil {
+		return nil, status.Errorf(codes.Internal, "import account: %v", err)
+	}
+	return &emptypb.Empty{}, nil
+}
+
 func (g *GRPCConsole) SatoriListTemplates(ctx context.Context, in *consolepb.SatoriListTemplatesRequest) (*consolepb.SatoriListTemplatesResponse, error) {
 	if g.Server == nil || g.Server.satoriClient == nil {
 		return nil, status.Error(codes.FailedPrecondition, "Satori not configured")
@@ -96,7 +119,7 @@ func (g *GRPCConsole) SatoriSendDirectMessage(ctx context.Context, in *consolepb
 	if in.GetTemplateId() != "" && title == "" {
 		title = in.GetTemplateId()
 	}
-	if err := g.Server.satoriClient.ConsoleDirectMessageSend(ctx, in.GetIdentityId(), title, body); err != nil {
+	if err := g.Server.satoriClient.ConsoleDirectMessageSendSimple(ctx, in.GetIdentityId(), title, body); err != nil {
 		return &consolepb.SatoriSendDirectMessageResponse{Ok: false, Error: err.Error()}, nil
 	}
 	return &consolepb.SatoriSendDirectMessageResponse{Ok: true}, nil

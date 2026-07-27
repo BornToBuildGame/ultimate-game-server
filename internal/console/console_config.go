@@ -140,3 +140,27 @@ func (s *Server) handleImportAccount(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(http.StatusNoContent)
 }
+
+func (s *Server) handleImportAccountFull(w http.ResponseWriter, r *http.Request) {
+	claims, err := s.authenticateRequest(r)
+	if err != nil || !s.requirePerm(w, claims, acl.ResourceStorageDataImport, acl.PermissionWrite) {
+		if err != nil {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		}
+		return
+	}
+	var data AccountExport
+	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
+		http.Error(w, "invalid body", http.StatusBadRequest)
+		return
+	}
+	if data.UserID == "" {
+		http.Error(w, "account id required", http.StatusBadRequest)
+		return
+	}
+	if err := ImportAccount(r.Context(), s.pool, &data); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}

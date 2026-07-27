@@ -4,12 +4,14 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"net/http"
 	"strings"
 	"sync"
 	"time"
 
 	"ultimate-game-server/internal/cronexpr"
 	"ultimate-game-server/internal/fleet"
+	"ultimate-game-server/internal/satori"
 )
 
 // Logger provides structured logging for runtime modules.
@@ -50,6 +52,11 @@ type RuntimeModule interface {
 
 	// Account operations
 	AccountGetId(ctx context.Context, userID string) (*Account, error)
+	UsersGetId(ctx context.Context, userIDs []string) ([]*UserView, error)
+	UsersGetUsername(ctx context.Context, usernames []string) ([]*UserView, error)
+	UsersGetRandom(ctx context.Context, count int) ([]*UserView, error)
+	UsersBanId(ctx context.Context, userIDs []string) error
+	UsersUnbanId(ctx context.Context, userIDs []string) error
 
 	// Leaderboard operations
 	LeaderboardCreate(ctx context.Context, id string, authoritative bool, sortOrder int, operator int, resetSchedule string, metadata map[string]interface{}, enableRanks bool) error
@@ -134,8 +141,10 @@ type RuntimeModule interface {
 
 	// Stream Tracker (ADR-0020)
 	StreamUserList(mode int16, subject, subcontext, label string, includeHidden, includeNotHidden bool) ([]StreamPresenceView, error)
+	StreamUserGet(mode int16, subject, subcontext, label, userID, sessionID string) (*StreamPresenceView, error)
 	StreamUserJoin(mode int16, subject, subcontext, label, userID, sessionID string, hidden, persistence bool, status string) (bool, error)
 	StreamUserLeave(mode int16, subject, subcontext, label, userID, sessionID string) error
+	StreamClose(mode int16, subject, subcontext, label string) error
 	StreamCount(mode int16, subject, subcontext, label string) (int, error)
 	StreamSend(mode int16, subject, subcontext, label, data string, sessionIDs []string, reliable bool) error
 	SessionDisconnect(sessionID string) error
@@ -146,6 +155,7 @@ type RuntimeModule interface {
 	// Atomic multi-update (account + storage + wallet)
 	MultiUpdate(ctx context.Context, accountUpdates []*AccountUpdateParams, storageWrites []*StorageWrite, storageDeletes []*StorageDelete, walletUpdates []*WalletUpdateParams, updateLedger bool) ([]*StorageObjectAck, []*WalletUpdateResultView, error)
 	StorageIndexList(ctx context.Context, callerID, indexName, query string, limit int, order []string, cursor string) ([]*StorageObject, string, error)
+	GetSatori() satori.Satori
 
 	// Cron utilities (UTC, ADR-0025)
 	CronNext(expression string, timestamp int64) (int64, error)
@@ -266,11 +276,35 @@ type StorageObjectAck struct {
 	UpdateTime time.Time `json:"update_time"`
 }
 
+type StorageObjectList struct {
+	Objects []*StorageObject `json:"objects"`
+	Cursor  string           `json:"cursor,omitempty"`
+}
+
 type Account struct {
 	ID         string    `json:"id"`
 	Username   string    `json:"username"`
 	CreateTime time.Time `json:"create_time"`
 	UpdateTime time.Time `json:"update_time"`
+}
+
+type UserView struct {
+	ID          string    `json:"id"`
+	Username    string    `json:"username"`
+	DisplayName string    `json:"display_name"`
+	AvatarURL   string    `json:"avatar_url"`
+	LangTag     string    `json:"lang_tag"`
+	Location    string    `json:"location"`
+	Timezone    string    `json:"timezone"`
+	Metadata    string    `json:"metadata"`
+	Online      bool      `json:"online"`
+	EdgeCount   int       `json:"edge_count"`
+	CreateTime  time.Time `json:"create_time"`
+	UpdateTime  time.Time `json:"update_time"`
+}
+
+type UsersList struct {
+	Users []*UserView `json:"users"`
 }
 
 type LeaderboardRecord struct {
@@ -320,6 +354,18 @@ type TournamentView struct {
 	NextReset   int64 `json:"next_reset"`
 }
 
+type LeaderboardRecordList struct {
+	Records      []*LeaderboardRecord `json:"records,omitempty"`
+	OwnerRecords []*LeaderboardRecord `json:"owner_records,omitempty"`
+	NextCursor   string               `json:"next_cursor,omitempty"`
+	PrevCursor   string               `json:"prev_cursor,omitempty"`
+}
+
+type TournamentList struct {
+	Tournaments []*TournamentView `json:"tournaments"`
+	NextCursor  string            `json:"next_cursor,omitempty"`
+}
+
 type AuthenticateEmailRequest struct {
 	Email       string `json:"email"`
 	Password    string `json:"password"`
@@ -345,12 +391,24 @@ type AddFriendsRequest struct {
 
 // FriendEdge is a runtime representation of a friend list entry.
 type FriendEdge struct {
-	UserID     string    `json:"user_id"`
-	Username   string    `json:"username"`
-	DisplayName string   `json:"display_name"`
+	UserID      string    `json:"user_id"`
+	Username    string    `json:"username"`
+	DisplayName string    `json:"display_name"`
+	State       int       `json:"state"`
+	UpdateTime  time.Time `json:"update_time"`
+	Metadata    string    `json:"metadata"`
+}
+
+type Friend struct {
+	User       *UserView `json:"user"`
 	State      int       `json:"state"`
 	UpdateTime time.Time `json:"update_time"`
 	Metadata   string    `json:"metadata"`
+}
+
+type FriendList struct {
+	Friends    []*Friend `json:"friends"`
+	NextCursor string    `json:"next_cursor,omitempty"`
 }
 
 // FriendOfFriendEdge is a runtime FoF entry.
@@ -360,6 +418,16 @@ type FriendOfFriendEdge struct {
 	Username string `json:"username"`
 }
 
+type FriendOfFriend struct {
+	Referrer string    `json:"referrer"`
+	User     *UserView `json:"user"`
+}
+
+type FriendsOfFriendsList struct {
+	FriendsOfFriends []*FriendOfFriend `json:"friends_of_friends"`
+	Cursor           string            `json:"cursor,omitempty"`
+}
+
 // PartyListEntry is a discoverable party for runtime PartyList.
 type PartyListEntry struct {
 	ID      string `json:"id"`
@@ -367,6 +435,11 @@ type PartyListEntry struct {
 	Hidden  bool   `json:"hidden"`
 	MaxSize int    `json:"max_size"`
 	Label   string `json:"label"`
+}
+
+type PartyListView struct {
+	Parties []*PartyListEntry `json:"parties"`
+	Cursor  string            `json:"cursor,omitempty"`
 }
 
 // ChannelMessageAckView is returned by runtime channel send/update/remove.
@@ -401,6 +474,13 @@ type ChannelMessageView struct {
 	UserIDTwo  string    `json:"user_id_two,omitempty"`
 }
 
+type ChannelMessageList struct {
+	Messages        []*ChannelMessageView `json:"messages"`
+	NextCursor      string                `json:"next_cursor,omitempty"`
+	PrevCursor      string                `json:"prev_cursor,omitempty"`
+	CacheableCursor string                `json:"cacheable_cursor,omitempty"`
+}
+
 // NotificationView is a runtime notification record.
 type NotificationView struct {
 	ID         string    `json:"id"`
@@ -411,6 +491,11 @@ type NotificationView struct {
 	SenderID   string    `json:"sender_id"`
 	CreateTime time.Time `json:"create_time"`
 	Persistent bool      `json:"persistent"`
+}
+
+type NotificationList struct {
+	Notifications   []*NotificationView `json:"notifications"`
+	CacheableCursor string              `json:"cacheable_cursor,omitempty"`
 }
 
 // NotificationSendParams is a batch send entry.
@@ -445,6 +530,11 @@ type GroupView struct {
 	MaxCount    int    `json:"max_count"`
 }
 
+type GroupList struct {
+	Groups     []*GroupView `json:"groups"`
+	NextCursor string       `json:"next_cursor,omitempty"`
+}
+
 // GroupUserView is a runtime group member row.
 type GroupUserView struct {
 	UserID   string `json:"user_id"`
@@ -452,10 +542,49 @@ type GroupUserView struct {
 	State    int    `json:"state"`
 }
 
+type GroupUser struct {
+	User  *UserView `json:"user"`
+	State int       `json:"state"`
+}
+
+type GroupUserList struct {
+	GroupUsers []*GroupUser `json:"group_users"`
+	NextCursor string       `json:"next_cursor,omitempty"`
+}
+
 // UserGroupView is a runtime user→group relation.
 type UserGroupView struct {
 	Group *GroupView `json:"group"`
 	State int        `json:"state"`
+}
+
+type UserGroupList struct {
+	UserGroups []*UserGroupView `json:"user_groups"`
+	NextCursor string           `json:"next_cursor,omitempty"`
+}
+
+type ValidatePurchaseResponse struct {
+	ValidatedPurchases []*ValidatedPurchaseView `json:"validated_purchases"`
+}
+
+type ValidateSubscriptionResponse struct {
+	ValidatedSubscription *ValidatedSubscriptionView `json:"validated_subscription"`
+}
+
+type SubscriptionList struct {
+	ValidatedSubscriptions []*ValidatedSubscriptionView `json:"validated_subscriptions"`
+	Cursor                 string                       `json:"cursor,omitempty"`
+	PrevCursor             string                       `json:"prev_cursor,omitempty"`
+}
+
+type MatchList struct {
+	Matches []*MatchInfo `json:"matches"`
+}
+
+type MatchmakerStatsView struct {
+	TicketCount            int    `json:"ticket_count"`
+	OldestTicketCreateTime string `json:"oldest_ticket_create_time"`
+	CompletionCount        int    `json:"completion_count"`
 }
 
 type JoinGroupRequest struct {
@@ -544,6 +673,16 @@ type TournamentEndHandler func(ctx context.Context, logger Logger, db *sql.DB, n
 // TournamentResetHandler handles tournament reset events.
 type TournamentResetHandler func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, tournamentID string, end int64, reset int64) error
 
+// ShutdownHandler runs once when the server receives a termination signal.
+type ShutdownHandler func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule)
+
+// RuntimeHTTPHandler is a custom HTTP route registered by a Go runtime module.
+type RuntimeHTTPHandler struct {
+	PathPattern string
+	Handler     func(http.ResponseWriter, *http.Request)
+	Methods     []string
+}
+
 // CronJob represents a scheduled event job (UGE extension; ADR-0025).
 type CronJob struct {
 	Schedule string
@@ -565,6 +704,11 @@ type Initializer interface {
 	RegisterTournamentEnd(fn TournamentEndHandler) error
 	RegisterTournamentReset(fn TournamentResetHandler) error
 	RegisterEvent(fn EventHandler) error
+	RegisterEventSessionStart(fn EventHandler) error
+	RegisterEventSessionEnd(fn EventHandler) error
+	RegisterShutdown(fn ShutdownHandler) error
+	RegisterHttp(pathPattern string, handler func(http.ResponseWriter, *http.Request), methods ...string) error
+	RegisterConsoleHttp(pathPattern string, handler func(http.ResponseWriter, *http.Request), methods ...string) error
 	RegisterCron(name, schedule string, fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule) error) error
 
 	// Specific type-safe before hooks
@@ -638,6 +782,28 @@ type Initializer interface {
 	RegisterBeforeLeaveParty(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *LeavePartyRequest) (*LeavePartyRequest, error)) error
 	RegisterBeforeListTournaments(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *ListTournamentsRequest) (*ListTournamentsRequest, error)) error
 
+	RegisterBeforeAuthenticateGameCenter(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *AuthenticateGameCenterRequest) (*AuthenticateGameCenterRequest, error)) error
+	RegisterBeforeAuthenticateFacebookInstantGame(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *AuthenticateFacebookInstantGameRequest) (*AuthenticateFacebookInstantGameRequest, error)) error
+	RegisterBeforeLinkGameCenter(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *LinkGameCenterRequest) (*LinkGameCenterRequest, error)) error
+	RegisterBeforeLinkFacebookInstantGame(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *LinkFacebookInstantGameRequest) (*LinkFacebookInstantGameRequest, error)) error
+	RegisterBeforeUnlinkGameCenter(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *UnlinkGameCenterRequest) (*UnlinkGameCenterRequest, error)) error
+	RegisterBeforeUnlinkFacebookInstantGame(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *UnlinkFacebookInstantGameRequest) (*UnlinkFacebookInstantGameRequest, error)) error
+	RegisterBeforeValidatePurchaseFacebookInstant(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *ValidatePurchaseFacebookInstantRequest) (*ValidatePurchaseFacebookInstantRequest, error)) error
+	RegisterBeforeValidatePurchaseSamsung(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *ValidatePurchaseSamsungRequest) (*ValidatePurchaseSamsungRequest, error)) error
+	RegisterBeforeGetSubscription(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *GetSubscriptionRequest) (*GetSubscriptionRequest, error)) error
+	RegisterBeforeListSubscriptions(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *ListSubscriptionsRequest) (*ListSubscriptionsRequest, error)) error
+	RegisterBeforeGetMatchmakerStats(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *GetMatchmakerStatsRequest) (*GetMatchmakerStatsRequest, error)) error
+	RegisterBeforeListParties(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *ListPartiesRequest) (*ListPartiesRequest, error)) error
+	RegisterBeforeGetUsers(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *GetUsersRequest) (*GetUsersRequest, error)) error
+	RegisterBeforeListGroups(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *ListGroupsRequest) (*ListGroupsRequest, error)) error
+	RegisterBeforeDeleteLeaderboardRecord(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *DeleteLeaderboardRecordRequest) (*DeleteLeaderboardRecordRequest, error)) error
+	RegisterBeforeDeleteTournamentRecord(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *DeleteTournamentRecordRequest) (*DeleteTournamentRecordRequest, error)) error
+	RegisterBeforeListLeaderboardRecordsAroundOwner(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *ListLeaderboardRecordsAroundOwnerRequest) (*ListLeaderboardRecordsAroundOwnerRequest, error)) error
+	RegisterBeforeListTournamentRecords(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *ListTournamentRecordsRequest) (*ListTournamentRecordsRequest, error)) error
+	RegisterBeforeListTournamentRecordsAroundOwner(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *ListTournamentRecordsAroundOwnerRequest) (*ListTournamentRecordsAroundOwnerRequest, error)) error
+	RegisterBeforeImportFacebookFriends(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *ImportFacebookFriendsRequest) (*ImportFacebookFriendsRequest, error)) error
+	RegisterBeforeImportSteamFriends(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *ImportSteamFriendsRequest) (*ImportSteamFriendsRequest, error)) error
+
 	// Specific type-safe after hooks
 	RegisterAfterAuthenticateEmail(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, out *Session, in *AuthenticateEmailRequest) error) error
 	RegisterAfterWriteStorageObjects(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, out *StorageObjectAcks, in *WriteStorageObjectsRequest) error) error
@@ -650,22 +816,77 @@ type Initializer interface {
 	RegisterAfterAuthenticateFacebook(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, out *Session, in *AuthenticateFacebookRequest) error) error
 	RegisterAfterAuthenticateSteam(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, out *Session, in *AuthenticateSteamRequest) error) error
 	RegisterAfterSessionRefresh(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, out *Session, in *SessionRefreshRequest) error) error
-	RegisterAfterReadStorageObjects(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *ReadStorageObjectsRequest) error) error
+	RegisterAfterReadStorageObjects(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, out *StorageObjectList, in *ReadStorageObjectsRequest) error) error
 	RegisterAfterDeleteStorageObjects(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *DeleteStorageObjectsRequest) error) error
 	RegisterAfterDeleteFriends(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *DeleteFriendsRequest) error) error
 	RegisterAfterBlockFriends(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *BlockFriendsRequest) error) error
-	RegisterAfterWriteLeaderboardRecord(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *WriteLeaderboardRecordRequest) error) error
+	RegisterAfterWriteLeaderboardRecord(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, out *LeaderboardRecord, in *WriteLeaderboardRecordRequest) error) error
 	RegisterAfterJoinTournament(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *JoinTournamentRequest) error) error
-	RegisterAfterCreateGroup(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *CreateGroupRequest) error) error
+	RegisterAfterCreateGroup(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, out *GroupView, in *CreateGroupRequest) error) error
 	RegisterAfterLeaveGroup(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *LeaveGroupRequest) error) error
 	RegisterAfterBanGroupUsers(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *BanGroupUsersRequest) error) error
 	RegisterAfterKickGroupUsers(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *KickGroupUsersRequest) error) error
-	RegisterAfterValidatePurchaseApple(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *ValidatePurchaseAppleRequest) error) error
-	RegisterAfterValidatePurchaseGoogle(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *ValidatePurchaseGoogleRequest) error) error
+	RegisterAfterValidatePurchaseApple(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, out *ValidatePurchaseResponse, in *ValidatePurchaseAppleRequest) error) error
+	RegisterAfterValidatePurchaseGoogle(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, out *ValidatePurchaseResponse, in *ValidatePurchaseGoogleRequest) error) error
 	RegisterAfterLinkApple(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *LinkAppleRequest) error) error
 	RegisterAfterLinkGoogle(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *LinkGoogleRequest) error) error
 	RegisterAfterUpdateAccount(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *UpdateAccountRequest) error) error
 	RegisterAfterDeleteNotifications(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *DeleteNotificationsRequest) error) error
+	RegisterAfterAuthenticateGameCenter(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, out *Session, in *AuthenticateGameCenterRequest) error) error
+	RegisterAfterAuthenticateFacebookInstantGame(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, out *Session, in *AuthenticateFacebookInstantGameRequest) error) error
+	RegisterAfterLinkFacebook(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *LinkFacebookRequest) error) error
+	RegisterAfterLinkSteam(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *LinkSteamRequest) error) error
+	RegisterAfterLinkDevice(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *LinkDeviceRequest) error) error
+	RegisterAfterLinkCustom(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *LinkCustomRequest) error) error
+	RegisterAfterLinkEmail(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *LinkEmailRequest) error) error
+	RegisterAfterLinkGameCenter(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *LinkGameCenterRequest) error) error
+	RegisterAfterLinkFacebookInstantGame(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *LinkFacebookInstantGameRequest) error) error
+	RegisterAfterUnlinkApple(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *UnlinkAppleRequest) error) error
+	RegisterAfterUnlinkGoogle(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *UnlinkGoogleRequest) error) error
+	RegisterAfterUnlinkFacebook(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *UnlinkFacebookRequest) error) error
+	RegisterAfterUnlinkSteam(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *UnlinkSteamRequest) error) error
+	RegisterAfterUnlinkDevice(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *UnlinkDeviceRequest) error) error
+	RegisterAfterUnlinkCustom(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *UnlinkCustomRequest) error) error
+	RegisterAfterUnlinkEmail(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *UnlinkEmailRequest) error) error
+	RegisterAfterUnlinkGameCenter(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *UnlinkGameCenterRequest) error) error
+	RegisterAfterUnlinkFacebookInstantGame(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *UnlinkFacebookInstantGameRequest) error) error
+	RegisterAfterListStorageObjects(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, out *StorageObjectList, in *ListStorageObjectsRequest) error) error
+	RegisterAfterListFriends(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, out *FriendList, in *ListFriendsRequest) error) error
+	RegisterAfterListFriendsOfFriends(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, out *FriendsOfFriendsList, in *ListFriendsOfFriendsRequest) error) error
+	RegisterAfterListLeaderboardRecords(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, out *LeaderboardRecordList, in *ListLeaderboardRecordsRequest) error) error
+	RegisterAfterListLeaderboardRecordsAroundOwner(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, out *LeaderboardRecordList, in *ListLeaderboardRecordsAroundOwnerRequest) error) error
+	RegisterAfterDeleteLeaderboardRecord(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *DeleteLeaderboardRecordRequest) error) error
+	RegisterAfterWriteTournamentRecord(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, out *LeaderboardRecord, in *WriteTournamentRecordRequest) error) error
+	RegisterAfterListTournaments(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, out *TournamentList, in *ListTournamentsRequest) error) error
+	RegisterAfterListTournamentRecords(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, out *LeaderboardRecordList, in *ListTournamentRecordsRequest) error) error
+	RegisterAfterListTournamentRecordsAroundOwner(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, out *LeaderboardRecordList, in *ListTournamentRecordsAroundOwnerRequest) error) error
+	RegisterAfterDeleteTournamentRecord(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *DeleteTournamentRecordRequest) error) error
+	RegisterAfterPromoteGroupUsers(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *PromoteGroupUsersRequest) error) error
+	RegisterAfterDemoteGroupUsers(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *DemoteGroupUsersRequest) error) error
+	RegisterAfterAddGroupUsers(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *AddGroupUsersRequest) error) error
+	RegisterAfterUpdateGroup(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *UpdateGroupRequest) error) error
+	RegisterAfterDeleteGroup(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *DeleteGroupRequest) error) error
+	RegisterAfterListGroupUsers(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, out *GroupUserList, in *ListGroupUsersRequest) error) error
+	RegisterAfterListUserGroups(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, out *UserGroupList, in *ListUserGroupsRequest) error) error
+	RegisterAfterListGroups(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, out *GroupList, in *ListGroupsRequest) error) error
+	RegisterAfterListNotifications(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, out *NotificationList, in *ListNotificationsRequest) error) error
+	RegisterAfterValidatePurchaseHuawei(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, out *ValidatePurchaseResponse, in *ValidatePurchaseHuaweiRequest) error) error
+	RegisterAfterValidatePurchaseFacebookInstant(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, out *ValidatePurchaseResponse, in *ValidatePurchaseFacebookInstantRequest) error) error
+	RegisterAfterValidatePurchaseSamsung(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, out *ValidatePurchaseResponse, in *ValidatePurchaseSamsungRequest) error) error
+	RegisterAfterValidateSubscriptionApple(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, out *ValidateSubscriptionResponse, in *ValidateSubscriptionAppleRequest) error) error
+	RegisterAfterValidateSubscriptionGoogle(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, out *ValidateSubscriptionResponse, in *ValidateSubscriptionGoogleRequest) error) error
+	RegisterAfterGetSubscription(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, out *ValidatedSubscriptionView, in *GetSubscriptionRequest) error) error
+	RegisterAfterListSubscriptions(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, out *SubscriptionList, in *ListSubscriptionsRequest) error) error
+	RegisterAfterGetUsers(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, out *UsersList, in *GetUsersRequest) error) error
+	RegisterAfterGetAccount(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, out *Account, in *GetAccountRequest) error) error
+	RegisterAfterDeleteAccount(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *DeleteAccountRequest) error) error
+	RegisterAfterSessionLogout(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *SessionLogoutRequest) error) error
+	RegisterAfterImportFacebookFriends(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *ImportFacebookFriendsRequest) error) error
+	RegisterAfterImportSteamFriends(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *ImportSteamFriendsRequest) error) error
+	RegisterAfterListMatches(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, out *MatchList, in *ListMatchesRequest) error) error
+	RegisterAfterListChannelMessages(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, out *ChannelMessageList, in *ListChannelMessagesRequest) error) error
+	RegisterAfterGetMatchmakerStats(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, out *MatchmakerStatsView, in *GetMatchmakerStatsRequest) error) error
+	RegisterAfterListParties(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, out *PartyListView, in *ListPartiesRequest) error) error
 
 	RegisterStorageIndex(name, collection, key string, fields, sortableFields []string, maxEntries int, indexOnly bool) error
 	RegisterStorageIndexFilter(indexName string, fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, write *StorageWrite) bool) error
@@ -691,25 +912,30 @@ type SubscriptionNotificationGoogleHandler func(ctx context.Context, logger Logg
 
 // HookRegistry stores registered custom RPCs, before/after hooks, and cron jobs.
 type HookRegistry struct {
-	mu                       sync.RWMutex
-	beforeHooks              map[string]BeforeHook
-	afterHooks               map[string]AfterHook
-	rpcHooks                 map[string]RPCHandler
-	luaBeforeHooks           map[string]string
-	luaAfterHooks            map[string]string
-	luaRpcHooks              map[string]string
-	jsBeforeHooks            map[string]string
-	jsAfterHooks             map[string]string
-	jsRpcHooks               map[string]string
-	eventHandlers            []EventHandler
-	matchHandlers            map[string]MatchHandlerFactory
-	cronJobs                 map[string]*CronJob
-	matchmakerMatchedHandler   MatchmakerMatchedHandler
-	matchmakerOverrideHandler  MatchmakerOverrideHandler
-	matchmakerProcessorHandler MatchmakerProcessorHandler
-	leaderboardResetHandler    LeaderboardResetHandler
-	tournamentEndHandler       TournamentEndHandler
-	tournamentResetHandler     TournamentResetHandler
+	mu                             sync.RWMutex
+	beforeHooks                    map[string]BeforeHook
+	afterHooks                     map[string]AfterHook
+	rpcHooks                       map[string]RPCHandler
+	luaBeforeHooks                 map[string]string
+	luaAfterHooks                  map[string]string
+	luaRpcHooks                    map[string]string
+	jsBeforeHooks                  map[string]string
+	jsAfterHooks                   map[string]string
+	jsRpcHooks                     map[string]string
+	eventHandlers                  []EventHandler
+	sessionStartHandlers           []EventHandler
+	sessionEndHandlers             []EventHandler
+	shutdownHandlers               []ShutdownHandler
+	httpHandlers                   []*RuntimeHTTPHandler
+	consoleHTTPHandlers            []*RuntimeHTTPHandler
+	matchHandlers                  map[string]MatchHandlerFactory
+	cronJobs                       map[string]*CronJob
+	matchmakerMatchedHandler       MatchmakerMatchedHandler
+	matchmakerOverrideHandler      MatchmakerOverrideHandler
+	matchmakerProcessorHandler     MatchmakerProcessorHandler
+	leaderboardResetHandler        LeaderboardResetHandler
+	tournamentEndHandler           TournamentEndHandler
+	tournamentResetHandler         TournamentResetHandler
 	purchaseNotificationApple      PurchaseNotificationAppleHandler
 	purchaseNotificationGoogle     PurchaseNotificationGoogleHandler
 	subscriptionNotificationApple  SubscriptionNotificationAppleHandler
@@ -807,6 +1033,151 @@ func (hr *HookRegistry) DispatchEvent(ctx context.Context, logger Logger, evt *E
 			defer func() { _ = recover() }()
 			h(ctx, logger, evt)
 		}()
+	}
+	if evt.Name == "session_start" {
+		for _, h := range hr.SessionStartHandlers() {
+			h := h
+			go func() {
+				defer func() { _ = recover() }()
+				h(ctx, logger, evt)
+			}()
+		}
+	}
+	if evt.Name == "session_end" {
+		for _, h := range hr.SessionEndHandlers() {
+			h := h
+			go func() {
+				defer func() { _ = recover() }()
+				h(ctx, logger, evt)
+			}()
+		}
+	}
+}
+
+// RegisterEventSessionStart registers a session_start-specific handler.
+func (hr *HookRegistry) RegisterEventSessionStart(handler EventHandler) {
+	hr.mu.Lock()
+	defer hr.mu.Unlock()
+	hr.sessionStartHandlers = append(hr.sessionStartHandlers, handler)
+}
+
+// SessionStartHandlers returns a snapshot of session_start handlers.
+func (hr *HookRegistry) SessionStartHandlers() []EventHandler {
+	hr.mu.RLock()
+	defer hr.mu.RUnlock()
+	out := make([]EventHandler, len(hr.sessionStartHandlers))
+	copy(out, hr.sessionStartHandlers)
+	return out
+}
+
+// RegisterEventSessionEnd registers a session_end-specific handler.
+func (hr *HookRegistry) RegisterEventSessionEnd(handler EventHandler) {
+	hr.mu.Lock()
+	defer hr.mu.Unlock()
+	hr.sessionEndHandlers = append(hr.sessionEndHandlers, handler)
+}
+
+// SessionEndHandlers returns a snapshot of session_end handlers.
+func (hr *HookRegistry) SessionEndHandlers() []EventHandler {
+	hr.mu.RLock()
+	defer hr.mu.RUnlock()
+	out := make([]EventHandler, len(hr.sessionEndHandlers))
+	copy(out, hr.sessionEndHandlers)
+	return out
+}
+
+// RegisterShutdown registers a shutdown handler.
+func (hr *HookRegistry) RegisterShutdown(fn ShutdownHandler) {
+	hr.mu.Lock()
+	defer hr.mu.Unlock()
+	hr.shutdownHandlers = append(hr.shutdownHandlers, fn)
+}
+
+// ShutdownHandlers returns a snapshot of shutdown handlers.
+func (hr *HookRegistry) ShutdownHandlers() []ShutdownHandler {
+	hr.mu.RLock()
+	defer hr.mu.RUnlock()
+	out := make([]ShutdownHandler, len(hr.shutdownHandlers))
+	copy(out, hr.shutdownHandlers)
+	return out
+}
+
+// InvokeShutdown runs all shutdown handlers synchronously with panic recovery.
+func (hr *HookRegistry) InvokeShutdown(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule) {
+	if hr == nil {
+		return
+	}
+	for _, fn := range hr.ShutdownHandlers() {
+		func() {
+			defer func() { _ = recover() }()
+			fn(ctx, logger, db, nk)
+		}()
+	}
+}
+
+// RegisterHttp stores a custom client-API HTTP handler.
+func (hr *HookRegistry) RegisterHttp(pathPattern string, handler func(http.ResponseWriter, *http.Request), methods ...string) {
+	hr.mu.Lock()
+	defer hr.mu.Unlock()
+	hr.httpHandlers = append(hr.httpHandlers, &RuntimeHTTPHandler{
+		PathPattern: pathPattern,
+		Handler:     handler,
+		Methods:     methods,
+	})
+}
+
+// HTTPHandlers returns a snapshot of client-API custom HTTP handlers.
+func (hr *HookRegistry) HTTPHandlers() []*RuntimeHTTPHandler {
+	hr.mu.RLock()
+	defer hr.mu.RUnlock()
+	out := make([]*RuntimeHTTPHandler, len(hr.httpHandlers))
+	copy(out, hr.httpHandlers)
+	return out
+}
+
+// RegisterConsoleHttp stores a custom console HTTP handler.
+func (hr *HookRegistry) RegisterConsoleHttp(pathPattern string, handler func(http.ResponseWriter, *http.Request), methods ...string) {
+	hr.mu.Lock()
+	defer hr.mu.Unlock()
+	hr.consoleHTTPHandlers = append(hr.consoleHTTPHandlers, &RuntimeHTTPHandler{
+		PathPattern: pathPattern,
+		Handler:     handler,
+		Methods:     methods,
+	})
+}
+
+// ConsoleHTTPHandlers returns a snapshot of console custom HTTP handlers.
+func (hr *HookRegistry) ConsoleHTTPHandlers() []*RuntimeHTTPHandler {
+	hr.mu.RLock()
+	defer hr.mu.RUnlock()
+	out := make([]*RuntimeHTTPHandler, len(hr.consoleHTTPHandlers))
+	copy(out, hr.consoleHTTPHandlers)
+	return out
+}
+
+// MountHTTPHandlers registers custom handlers onto mux.
+func MountHTTPHandlers(mux *http.ServeMux, handlers []*RuntimeHTTPHandler) {
+	for _, h := range handlers {
+		if h == nil || h.Handler == nil || h.PathPattern == "" {
+			continue
+		}
+		handler := h.Handler
+		methods := h.Methods
+		if len(methods) == 0 {
+			mux.HandleFunc(h.PathPattern, handler)
+			continue
+		}
+		allowed := make(map[string]struct{}, len(methods))
+		for _, m := range methods {
+			allowed[strings.ToUpper(m)] = struct{}{}
+		}
+		mux.HandleFunc(h.PathPattern, func(w http.ResponseWriter, r *http.Request) {
+			if _, ok := allowed[r.Method]; !ok {
+				http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+				return
+			}
+			handler(w, r)
+		})
 	}
 }
 

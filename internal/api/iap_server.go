@@ -165,7 +165,8 @@ func (s *IAPServer) ValidatePurchaseGoogle(ctx context.Context, req *apipb.Valid
 	} else if casted, ok := in.(*apipb.ValidatePurchaseGoogleRequest); ok {
 		req = casted
 	}
-	vp, err := economy.ValidatePurchaseGoogle(ctx, s.dbPool, s.cfg, userID, req.GetProductId(), req.GetPurchaseToken(), grpcPersist(req.Persist))
+	productID, token := resolveGooglePurchaseFields(req)
+	vp, err := economy.ValidatePurchaseGoogle(ctx, s.dbPool, s.cfg, userID, productID, token, grpcPersist(req.Persist))
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
@@ -184,7 +185,11 @@ func (s *IAPServer) ValidatePurchaseHuawei(ctx context.Context, req *apipb.Valid
 	} else if casted, ok := in.(*apipb.ValidatePurchaseHuaweiRequest); ok {
 		req = casted
 	}
-	vp, err := economy.ValidatePurchaseHuawei(ctx, s.dbPool, s.cfg, userID, req.GetPurchaseData(), req.GetSignature(), grpcPersist(req.Persist))
+	purchaseData := req.GetPurchaseData()
+	if purchaseData == "" {
+		purchaseData = req.GetPurchase()
+	}
+	vp, err := economy.ValidatePurchaseHuawei(ctx, s.dbPool, s.cfg, userID, purchaseData, req.GetSignature(), grpcPersist(req.Persist))
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
@@ -356,6 +361,7 @@ func (s *Server) handleValidatePurchaseGoogle(w http.ResponseWriter, r *http.Req
 		return
 	}
 	var req struct {
+		Purchase      string `json:"purchase"`
 		ProductID     string `json:"product_id"`
 		PurchaseToken string `json:"purchase_token"`
 		Persist       *bool  `json:"persist"`
@@ -364,7 +370,8 @@ func (s *Server) handleValidatePurchaseGoogle(w http.ResponseWriter, r *http.Req
 		http.Error(w, "bad request", http.StatusBadRequest)
 		return
 	}
-	vp, err := economy.ValidatePurchaseGoogle(r.Context(), s.dbPool, s.iapCfg(), userID, req.ProductID, req.PurchaseToken, persistFlag(r, req.Persist))
+	productID, token := parseGooglePurchaseBlob(req.Purchase, req.ProductID, req.PurchaseToken)
+	vp, err := economy.ValidatePurchaseGoogle(r.Context(), s.dbPool, s.iapCfg(), userID, productID, token, persistFlag(r, req.Persist))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -379,6 +386,7 @@ func (s *Server) handleValidatePurchaseHuawei(w http.ResponseWriter, r *http.Req
 		return
 	}
 	var req struct {
+		Purchase     string `json:"purchase"`
 		PurchaseData string `json:"purchase_data"`
 		Signature    string `json:"signature"`
 		Persist      *bool  `json:"persist"`
@@ -387,7 +395,11 @@ func (s *Server) handleValidatePurchaseHuawei(w http.ResponseWriter, r *http.Req
 		http.Error(w, "bad request", http.StatusBadRequest)
 		return
 	}
-	vp, err := economy.ValidatePurchaseHuawei(r.Context(), s.dbPool, s.iapCfg(), userID, req.PurchaseData, req.Signature, persistFlag(r, req.Persist))
+	purchaseData := req.PurchaseData
+	if purchaseData == "" {
+		purchaseData = req.Purchase
+	}
+	vp, err := economy.ValidatePurchaseHuawei(r.Context(), s.dbPool, s.iapCfg(), userID, purchaseData, req.Signature, persistFlag(r, req.Persist))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -603,4 +615,42 @@ func subToMap(sub *economy.ValidatedSubscription) map[string]interface{} {
 		m["refund_time"] = sub.RefundTime.UTC().Format("2006-01-02T15:04:05.999999999Z07:00")
 	}
 	return m
+}
+
+func resolveGooglePurchaseFields(req *apipb.ValidatePurchaseGoogleRequest) (productID, token string) {
+	if req == nil {
+		return "", ""
+	}
+	return parseGooglePurchaseBlob(req.GetPurchase(), req.GetProductId(), req.GetPurchaseToken())
+}
+
+func parseGooglePurchaseBlob(purchase, productID, token string) (string, string) {
+	if productID != "" && token != "" {
+		return productID, token
+	}
+	if purchase == "" {
+		return productID, token
+	}
+	var m map[string]interface{}
+	if err := json.Unmarshal([]byte(purchase), &m); err != nil {
+		return productID, token
+	}
+	if productID == "" {
+		productID = stringField(m, "productId", "product_id")
+	}
+	if token == "" {
+		token = stringField(m, "purchaseToken", "purchase_token")
+	}
+	return productID, token
+}
+
+func stringField(m map[string]interface{}, keys ...string) string {
+	for _, k := range keys {
+		if v, ok := m[k]; ok {
+			if s, ok := v.(string); ok {
+				return s
+			}
+		}
+	}
+	return ""
 }

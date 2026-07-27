@@ -846,15 +846,20 @@ message ValidatePurchaseAppleRequest {
 }
 
 message ValidatePurchaseGoogleRequest {
-  string product_id = 1;
-  string purchase_token = 2;
-  optional bool persist = 3;
+  // Reference-shaped JSON purchase blob (productId/product_id + purchaseToken/purchase_token).
+  string purchase = 1;
+  // Legacy fields retained for one-release dual-accept.
+  string product_id = 2;
+  string purchase_token = 3;
+  optional bool persist = 4;
 }
 
 message ValidatePurchaseHuaweiRequest {
-  string purchase_data = 1;
-  string signature = 2;
-  optional bool persist = 3;
+  // Reference field name; also accept purchase_data in HTTP JSON.
+  string purchase = 1;
+  string purchase_data = 2;
+  string signature = 3;
+  optional bool persist = 4;
 }
 
 message ValidatePurchaseFacebookInstantRequest {

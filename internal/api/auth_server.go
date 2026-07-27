@@ -2,11 +2,13 @@ package api
 
 import (
 	"context"
+	"encoding/json"
 	"strings"
 	"time"
 
 	"ultimate-game-server/internal/api/apipb"
 	"ultimate-game-server/internal/auth"
+	"ultimate-game-server/internal/economy"
 	"ultimate-game-server/internal/leaderboard"
 
 	"github.com/google/uuid"
@@ -89,7 +91,7 @@ func (s *AuthServer) AuthenticateDevice(ctx context.Context, req *apipb.Authenti
 	return s.issue(user, created)
 }
 
-func (s *AuthServer) socialAuth(ctx context.Context, provider, token, username string) (*apipb.Session, error) {
+func (s *AuthServer) socialAuth(ctx context.Context, provider, token, username string, create bool) (*apipb.Session, error) {
 	var verifyErr error
 	var providerID string
 	switch provider {
@@ -105,7 +107,7 @@ func (s *AuthServer) socialAuth(ctx context.Context, provider, token, username s
 	if verifyErr != nil {
 		return nil, status.Error(codes.Unauthenticated, verifyErr.Error())
 	}
-	user, created, err := auth.AuthenticateSocialWithOpts(ctx, s.api.dbPool, provider, providerID, auth.AuthOptions{Create: true, Username: username})
+	user, created, err := auth.AuthenticateSocialWithOpts(ctx, s.api.dbPool, provider, providerID, auth.AuthOptions{Create: create, Username: username})
 	if err != nil {
 		return nil, status.Error(codes.Unauthenticated, err.Error())
 	}
@@ -113,13 +115,13 @@ func (s *AuthServer) socialAuth(ctx context.Context, provider, token, username s
 }
 
 func (s *AuthServer) AuthenticateApple(ctx context.Context, req *apipb.AuthenticateAppleRequest) (*apipb.Session, error) {
-	return s.socialAuth(ctx, "apple", req.GetToken(), req.GetUsername())
+	return s.socialAuth(ctx, "apple", req.GetToken(), req.GetUsername(), req.GetCreate())
 }
 func (s *AuthServer) AuthenticateGoogle(ctx context.Context, req *apipb.AuthenticateGoogleRequest) (*apipb.Session, error) {
-	return s.socialAuth(ctx, "google", req.GetToken(), req.GetUsername())
+	return s.socialAuth(ctx, "google", req.GetToken(), req.GetUsername(), req.GetCreate())
 }
 func (s *AuthServer) AuthenticateFacebook(ctx context.Context, req *apipb.AuthenticateFacebookRequest) (*apipb.Session, error) {
-	return s.socialAuth(ctx, "facebook", req.GetToken(), req.GetUsername())
+	return s.socialAuth(ctx, "facebook", req.GetToken(), req.GetUsername(), req.GetCreate())
 }
 
 func (s *AuthServer) AuthenticateSteam(ctx context.Context, req *apipb.AuthenticateSteamRequest) (*apipb.Session, error) {
@@ -127,7 +129,7 @@ func (s *AuthServer) AuthenticateSteam(ctx context.Context, req *apipb.Authentic
 	if err != nil {
 		return nil, status.Error(codes.Unauthenticated, err.Error())
 	}
-	user, created, err := auth.AuthenticateSocialWithOpts(ctx, s.api.dbPool, "steam", id, auth.AuthOptions{Create: true, Username: req.GetUsername()})
+	user, created, err := auth.AuthenticateSocialWithOpts(ctx, s.api.dbPool, "steam", id, auth.AuthOptions{Create: req.GetCreate(), Username: req.GetUsername()})
 	if err != nil {
 		return nil, status.Error(codes.Unauthenticated, err.Error())
 	}
@@ -162,7 +164,7 @@ func (s *AuthServer) AuthenticateFacebookInstantGame(ctx context.Context, req *a
 }
 
 func (s *AuthServer) AuthenticateCustom(ctx context.Context, req *apipb.AuthenticateCustomRequest) (*apipb.Session, error) {
-	user, created, err := auth.AuthenticateCustomWithOpts(ctx, s.api.dbPool, req.GetId(), auth.AuthOptions{Create: true, Username: req.GetUsername()})
+	user, created, err := auth.AuthenticateCustomWithOpts(ctx, s.api.dbPool, req.GetId(), auth.AuthOptions{Create: req.GetCreate(), Username: req.GetUsername()})
 	if err != nil {
 		return nil, status.Error(codes.Unauthenticated, err.Error())
 	}
@@ -240,6 +242,8 @@ func (s *AuthServer) GetAccount(ctx context.Context, _ *emptypb.Empty) (*apipb.A
 	for _, d := range acct.Devices {
 		devices = append(devices, &apipb.Device{Id: d})
 	}
+	walletMap, _ := economy.GetWallet(ctx, s.api.dbPool, claims.UserID)
+	walletJSON, _ := json.Marshal(walletMap)
 	return &apipb.Account{
 		User: &apipb.User{
 			Id: acct.ID.String(), Username: acct.Username, DisplayName: acct.DisplayName,
@@ -247,7 +251,7 @@ func (s *AuthServer) GetAccount(ctx context.Context, _ *emptypb.Empty) (*apipb.A
 			Timezone: acct.Timezone, Metadata: acct.Metadata,
 			CreateTime: timestamppb.New(acct.CreateTime), UpdateTime: timestamppb.New(acct.UpdateTime),
 		},
-		Devices: devices, Email: email, CustomId: custom,
+		Devices: devices, Email: email, CustomId: custom, Wallet: string(walletJSON),
 	}, nil
 }
 

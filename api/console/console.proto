@@ -30,7 +30,10 @@ service Console {
   rpc UnlinkAccount(UnlinkAccountRequest) returns (google.protobuf.Empty);
   rpc ExportAccount(AccountId) returns (AccountExport);
   rpc ImportAccount(AccountImport) returns (google.protobuf.Empty);
+  rpc ImportAccountFull(AccountImport) returns (google.protobuf.Empty);
   rpc DeleteAllData(google.protobuf.Empty) returns (google.protobuf.Empty);
+  rpc DeleteStorage(google.protobuf.Empty) returns (google.protobuf.Empty);
+  rpc ImportStorage(StorageImport) returns (google.protobuf.Empty);
 
   rpc SatoriListTemplates(SatoriListTemplatesRequest) returns (SatoriListTemplatesResponse);
   rpc SatoriSendDirectMessage(SatoriSendDirectMessageRequest) returns (SatoriSendDirectMessageResponse);
@@ -176,6 +179,19 @@ message AccountExport {
 message AccountImport {
   string id = 1;
   string payload_json = 2;
+}
+
+message StorageImportObject {
+  string collection = 1;
+  string key = 2;
+  string user_id = 3;
+  string value = 4;
+  int32 permission_read = 5;
+  int32 permission_write = 6;
+}
+
+message StorageImport {
+  repeated StorageImportObject objects = 1;
 }
 
 message SatoriListTemplatesRequest {
