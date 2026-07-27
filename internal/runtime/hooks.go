@@ -7,6 +7,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"ultimate-game-server/internal/cronexpr"
 )
 
 // Logger provides structured logging for runtime modules.
@@ -139,6 +141,10 @@ type RuntimeModule interface {
 
 	// RPC
 	RpcCall(ctx context.Context, id, payload string) (string, error)
+
+	// Cron utilities (UTC, ADR-0025)
+	CronNext(expression string, timestamp int64) (int64, error)
+	CronPrev(expression string, timestamp int64) (int64, error)
 }
 
 type StorageRead struct {
@@ -521,10 +527,11 @@ type TournamentEndHandler func(ctx context.Context, logger Logger, db *sql.DB, n
 // TournamentResetHandler handles tournament reset events.
 type TournamentResetHandler func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, tournamentID string, end int64, reset int64) error
 
-// CronJob represents a scheduled event job.
+// CronJob represents a scheduled event job (UGE extension; ADR-0025).
 type CronJob struct {
 	Schedule string
 	Handler  func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule) error
+	Expr     *cronexpr.Expression // parsed at RegisterCron
 }
 
 // Initializer provides registration methods during module initialization.
@@ -541,6 +548,7 @@ type Initializer interface {
 	RegisterTournamentEnd(fn TournamentEndHandler) error
 	RegisterTournamentReset(fn TournamentResetHandler) error
 	RegisterEvent(fn EventHandler) error
+	RegisterCron(name, schedule string, fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule) error) error
 
 	// Specific type-safe before hooks
 	RegisterBeforeAuthenticateEmail(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *AuthenticateEmailRequest) (*AuthenticateEmailRequest, error)) error
@@ -692,7 +700,23 @@ func (hr *HookRegistry) GetMatch(name string) (MatchHandlerFactory, bool) {
 }
 
 // RegisterCron registers a scheduled background cron job.
+// Schedule must be a valid cronexpr (5–7 fields). Invalid schedules are rejected.
 func (hr *HookRegistry) RegisterCron(jobName string, cron *CronJob) error {
+	if jobName == "" {
+		return fmt.Errorf("cron job name must not be empty")
+	}
+	if cron == nil || cron.Handler == nil {
+		return fmt.Errorf("cron job %q requires a handler", jobName)
+	}
+	if strings.TrimSpace(cron.Schedule) == "" {
+		return fmt.Errorf("cron job %q requires a schedule", jobName)
+	}
+	expr, err := cronexpr.Parse(cron.Schedule)
+	if err != nil {
+		return fmt.Errorf("cron job %q invalid schedule: %w", jobName, err)
+	}
+	cron.Expr = expr
+
 	hr.mu.Lock()
 	defer hr.mu.Unlock()
 	if _, exists := hr.cronJobs[jobName]; exists {
@@ -700,6 +724,17 @@ func (hr *HookRegistry) RegisterCron(jobName string, cron *CronJob) error {
 	}
 	hr.cronJobs[jobName] = cron
 	return nil
+}
+
+// ListCronJobs returns a snapshot of registered cron jobs.
+func (hr *HookRegistry) ListCronJobs() map[string]*CronJob {
+	hr.mu.RLock()
+	defer hr.mu.RUnlock()
+	out := make(map[string]*CronJob, len(hr.cronJobs))
+	for k, v := range hr.cronJobs {
+		out[k] = v
+	}
+	return out
 }
 
 // GetBeforeHook retrieves a before hook, returning runtime type and script function name if script-based.

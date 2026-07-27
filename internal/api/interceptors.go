@@ -137,6 +137,81 @@ func resolveHTTPHookID(method, path string) string {
 			return "GetSubscription"
 		}
 	}
+
+	// Account GET/PUT/DELETE use manual invokeBefore in handlers — do not map here (avoid double-fire).
+	// Authenticate/link/unlink similarly use manual hooks. SessionLogout is mapped above via /v2/session/logout.
+
+	if strings.HasPrefix(path, "/v2/group") {
+		parts := strings.Split(strings.Trim(path, "/"), "/")
+		// parts: ["v2","group", ...]
+		switch {
+		case method == http.MethodPost && len(parts) == 2:
+			return "CreateGroup"
+		case method == http.MethodGet && len(parts) == 2:
+			return "ListGroups"
+		case method == http.MethodPut && len(parts) == 3:
+			return "UpdateGroup"
+		case method == http.MethodDelete && len(parts) == 3:
+			return "DeleteGroup"
+		case method == http.MethodPost && len(parts) == 4 && parts[3] == "join":
+			return "JoinGroup"
+		case method == http.MethodPost && len(parts) == 4 && parts[3] == "leave":
+			return "LeaveGroup"
+		case method == http.MethodPost && len(parts) == 4 && parts[3] == "add":
+			return "AddGroupUsers"
+		case method == http.MethodPost && len(parts) == 4 && parts[3] == "kick":
+			return "KickGroupUsers"
+		case method == http.MethodPost && len(parts) == 4 && parts[3] == "ban":
+			return "BanGroupUsers"
+		case method == http.MethodPost && len(parts) == 4 && parts[3] == "promote":
+			return "PromoteGroupUsers"
+		case method == http.MethodPost && len(parts) == 4 && parts[3] == "demote":
+			return "DemoteGroupUsers"
+		case method == http.MethodGet && len(parts) == 4 && parts[3] == "user":
+			return "ListGroupUsers"
+		}
+	}
+	if strings.HasPrefix(path, "/v2/user/") && strings.HasSuffix(path, "/group") && method == http.MethodGet {
+		return "ListUserGroups"
+	}
+
+	if path == "/v2/notification" {
+		switch method {
+		case http.MethodGet:
+			return "ListNotifications"
+		case http.MethodDelete:
+			return "DeleteNotifications"
+		}
+	}
+
+	if path == "/v2/wallet" && method == http.MethodGet {
+		return "GetWallet"
+	}
+	if path == "/v2/wallet/ledger" && method == http.MethodGet {
+		return "ListWalletLedger"
+	}
+
+	if path == "/v2/match" {
+		switch method {
+		case http.MethodPost:
+			return "CreateMatch"
+		case http.MethodGet:
+			return "ListMatches"
+		}
+	}
+	if strings.HasPrefix(path, "/v2/match/") && method == http.MethodGet {
+		return "GetMatch"
+	}
+
+	if path == "/v2/party" && method == http.MethodGet {
+		return "ListParties"
+	}
+
+	if strings.HasPrefix(path, "/v2/channel/") && method == http.MethodGet {
+		return "ListChannelMessages"
+	}
+
+	// /v2/rpc/{id} intentionally returns "" — custom RPC skips before/after (reference-aligned).
 	return ""
 }
 

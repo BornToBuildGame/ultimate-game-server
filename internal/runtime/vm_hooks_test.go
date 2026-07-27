@@ -191,6 +191,12 @@ func (m *mockRuntimeModule) SessionDisconnect(sessionID string) error {
 func (m *mockRuntimeModule) RpcCall(ctx context.Context, id, payload string) (string, error) {
 	return payload, nil
 }
+func (m *mockRuntimeModule) CronNext(expression string, timestamp int64) (int64, error) {
+	return timestamp, nil
+}
+func (m *mockRuntimeModule) CronPrev(expression string, timestamp int64) (int64, error) {
+	return timestamp, nil
+}
 
 func (m *mockRuntimeModule) AccountGetId(ctx context.Context, userID string) (*Account, error) {
 	return &Account{ID: userID, Username: "test_user"}, nil

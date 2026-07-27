@@ -149,6 +149,9 @@ func main() {
 	runtime.MapJSNK(jsVM, nk, 5*time.Second, rm.Registry())
 	server.SetVMs(luaVM, jsVM)
 
+	cronSched := runtime.NewCronScheduler(rm.Registry(), rtLogger, sqlDB, nk)
+	cronSched.Start(ctx)
+
 	consoleListen := strings.TrimSpace(*consoleAddr)
 	if v := os.Getenv("CONSOLE_ADDR"); v != "" {
 		consoleListen = strings.TrimSpace(v)
@@ -194,6 +197,7 @@ func main() {
 	if consoleServer != nil {
 		consoleServer.Close()
 	}
+	cronSched.Stop()
 	luaVM.Close()
 	if err := server.Stop(teardownCtx); err != nil {
 		logger.Error("Failed to shutdown server cleanly", zap.Error(err))

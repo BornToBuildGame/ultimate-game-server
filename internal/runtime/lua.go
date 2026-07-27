@@ -997,7 +997,46 @@ func MapLuaNK(L *lua.LState, nk RuntimeModule, registry ...*HookRegistry) {
 			})
 			return 0
 		}))
+		L.SetField(nkTable, "register_cron", L.NewFunction(func(L *lua.LState) int {
+			name := L.CheckString(1)
+			schedule := L.CheckString(2)
+			fn := L.CheckFunction(3)
+			err := reg.RegisterCron(name, &CronJob{
+				Schedule: schedule,
+				Handler: func(ctx context.Context, logger Logger, db *sql.DB, nkMod RuntimeModule) error {
+					L.SetContext(ctx)
+					return L.CallByParam(lua.P{Fn: fn, NRet: 0, Protect: true})
+				},
+			})
+			if err != nil {
+				L.RaiseError("%v", err)
+			}
+			return 0
+		}))
 	}
+
+	L.SetField(nkTable, "cron_next", L.NewFunction(func(L *lua.LState) int {
+		expr := L.CheckString(1)
+		ts := L.CheckInt64(2)
+		next, err := nk.CronNext(expr, ts)
+		if err != nil {
+			L.RaiseError("%v", err)
+			return 0
+		}
+		L.Push(lua.LNumber(next))
+		return 1
+	}))
+	L.SetField(nkTable, "cron_prev", L.NewFunction(func(L *lua.LState) int {
+		expr := L.CheckString(1)
+		ts := L.CheckInt64(2)
+		prev, err := nk.CronPrev(expr, ts)
+		if err != nil {
+			L.RaiseError("%v", err)
+			return 0
+		}
+		L.Push(lua.LNumber(prev))
+		return 1
+	}))
 
 	// 8. Leaderboard Create
 	L.SetField(nkTable, "leaderboard_create", L.NewFunction(func(L *lua.LState) int {

@@ -232,16 +232,16 @@ func (m *GoRuntimeManager) HasRPC(id string) bool {
 	return exists
 }
 
-// HasBeforeHook checks if a Go before hook is registered for the given name.
+// HasBeforeHook checks if a before hook is registered (Go → Lua → JS).
 func (m *GoRuntimeManager) HasBeforeHook(name string) bool {
-	_, exists := m.registry.GetBefore(name)
-	return exists
+	_, _, _, found := m.registry.GetBeforeHook(name)
+	return found
 }
 
-// HasAfterHook checks if a Go after hook is registered for the given name.
+// HasAfterHook checks if an after hook is registered (Go → Lua → JS).
 func (m *GoRuntimeManager) HasAfterHook(name string) bool {
-	_, exists := m.registry.GetAfter(name)
-	return exists
+	_, _, _, found := m.registry.GetAfterHook(name)
+	return found
 }
 
 func (m *GoRuntimeManager) safeCall(fn func() error) (err error) {
@@ -490,4 +490,8 @@ func (i *goInitializer) RegisterAfterJoinGroup(fn func(ctx context.Context, logg
 func (i *goInitializer) RegisterEvent(fn EventHandler) error {
 	i.registry.RegisterEvent(fn)
 	return nil
+}
+
+func (i *goInitializer) RegisterCron(name, schedule string, fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule) error) error {
+	return i.registry.RegisterCron(name, &CronJob{Schedule: schedule, Handler: fn})
 }

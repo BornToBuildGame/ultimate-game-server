@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"ultimate-game-server/internal/chat"
+	"ultimate-game-server/internal/cronexpr"
 	"ultimate-game-server/internal/economy"
 	"ultimate-game-server/internal/leaderboard"
 	"ultimate-game-server/internal/notification"
@@ -1169,4 +1170,24 @@ func (m *GoRuntimeModule) ChannelMessagesList(ctx context.Context, channelID str
 		}
 	}
 	return out, list.NextCursor, list.PrevCursor, list.CacheableCursor, nil
+}
+
+// CronNext returns the next UTC unix timestamp matching expression after timestamp (ADR-0025).
+func (m *GoRuntimeModule) CronNext(expression string, timestamp int64) (int64, error) {
+	expr, err := cronexpr.Parse(expression)
+	if err != nil {
+		return 0, fmt.Errorf("expects a valid cron string")
+	}
+	t := time.Unix(timestamp, 0).UTC()
+	return expr.Next(t).UTC().Unix(), nil
+}
+
+// CronPrev returns the previous UTC unix timestamp matching expression before timestamp (ADR-0025).
+func (m *GoRuntimeModule) CronPrev(expression string, timestamp int64) (int64, error) {
+	expr, err := cronexpr.Parse(expression)
+	if err != nil {
+		return 0, fmt.Errorf("expects a valid cron string")
+	}
+	t := time.Unix(timestamp, 0).UTC()
+	return expr.Last(t).UTC().Unix(), nil
 }

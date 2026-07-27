@@ -922,7 +922,49 @@ func MapJSNK(vm *goja.Runtime, nk RuntimeModule, timeout time.Duration, registry
 			return goja.Undefined()
 		})
 		_ = nkObj.Set("registerMatchmakerMatched", nkObj.Get("register_matchmaker_matched"))
+
+		_ = nkObj.Set("registerCron", func(call goja.FunctionCall) goja.Value {
+			name := call.Argument(0).String()
+			schedule := call.Argument(1).String()
+			fn, ok := goja.AssertFunction(call.Argument(2))
+			if !ok {
+				panic(vm.NewGoError(fmt.Errorf("registerCron requires a function")))
+			}
+			err := reg.RegisterCron(name, &CronJob{
+				Schedule: schedule,
+				Handler: func(ctx context.Context, logger Logger, db *sql.DB, nkMod RuntimeModule) error {
+					_, err := fn(goja.Undefined())
+					return err
+				},
+			})
+			if err != nil {
+				panic(vm.NewGoError(err))
+			}
+			return goja.Undefined()
+		})
+		_ = nkObj.Set("register_cron", nkObj.Get("registerCron"))
 	}
+
+	_ = nkObj.Set("cronNext", func(call goja.FunctionCall) goja.Value {
+		expr := call.Argument(0).String()
+		ts := call.Argument(1).ToInteger()
+		next, err := nk.CronNext(expr, ts)
+		if err != nil {
+			panic(vm.NewGoError(err))
+		}
+		return vm.ToValue(next)
+	})
+	_ = nkObj.Set("cron_next", nkObj.Get("cronNext"))
+	_ = nkObj.Set("cronPrev", func(call goja.FunctionCall) goja.Value {
+		expr := call.Argument(0).String()
+		ts := call.Argument(1).ToInteger()
+		prev, err := nk.CronPrev(expr, ts)
+		if err != nil {
+			panic(vm.NewGoError(err))
+		}
+		return vm.ToValue(prev)
+	})
+	_ = nkObj.Set("cron_prev", nkObj.Get("cronPrev"))
 
 	// 8. Leaderboard Create
 	_ = nkObj.Set("leaderboard_create", func(call goja.FunctionCall) goja.Value {
