@@ -115,6 +115,22 @@ func TestAPI_Integration(t *testing.T) {
 		t.Errorf("health body=%v", healthBody)
 	}
 
+	readyResp, err := http.Get("http://127.0.0.1:17350/ready")
+	if err != nil {
+		t.Fatalf("failed to query ready endpoint: %v", err)
+	}
+	defer readyResp.Body.Close()
+	if readyResp.StatusCode != http.StatusOK {
+		t.Errorf("expected ready status 200, got: %d", readyResp.StatusCode)
+	}
+	var readyBody map[string]string
+	if err := json.NewDecoder(readyResp.Body).Decode(&readyBody); err != nil {
+		t.Fatalf("ready JSON: %v", err)
+	}
+	if readyBody["status"] != "ready" {
+		t.Errorf("ready body=%v", readyBody)
+	}
+
 	// 4. Test Body Limit Middleware (exceeding 256KB)
 	largeBody := make([]byte, 300000)
 	respLarge, err := http.Post("http://127.0.0.1:17350/v2/account/authenticate/email", "application/json", bytes.NewReader(largeBody))

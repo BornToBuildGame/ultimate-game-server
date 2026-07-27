@@ -41,6 +41,8 @@ func resolveHTTPHookID(method, path string) string {
 		return "SessionLogout"
 	case path == "/healthcheck" || path == "/health":
 		return "Healthcheck"
+	case path == "/ready":
+		return "Ready"
 	}
 
 	if strings.HasPrefix(path, "/v2/leaderboard") {
@@ -110,6 +112,31 @@ func resolveHTTPHookID(method, path string) string {
 			return "GetMatchmakerStats"
 		}
 	}
+
+	if strings.HasPrefix(path, "/v2/iap/") {
+		parts := strings.Split(strings.Trim(path, "/"), "/")
+		// parts: ["v2","iap", "purchase"|"subscription", ...]
+		switch {
+		case method == http.MethodPost && len(parts) == 4 && parts[2] == "purchase" && parts[3] == "apple":
+			return "ValidatePurchaseApple"
+		case method == http.MethodPost && len(parts) == 4 && parts[2] == "purchase" && parts[3] == "google":
+			return "ValidatePurchaseGoogle"
+		case method == http.MethodPost && len(parts) == 4 && parts[2] == "purchase" && parts[3] == "huawei":
+			return "ValidatePurchaseHuawei"
+		case method == http.MethodPost && len(parts) == 4 && parts[2] == "purchase" && parts[3] == "facebookinstant":
+			return "ValidatePurchaseFacebookInstant"
+		case method == http.MethodPost && len(parts) == 4 && parts[2] == "purchase" && parts[3] == "samsung":
+			return "ValidatePurchaseSamsung"
+		case method == http.MethodPost && len(parts) == 4 && parts[2] == "subscription" && parts[3] == "apple":
+			return "ValidateSubscriptionApple"
+		case method == http.MethodPost && len(parts) == 4 && parts[2] == "subscription" && parts[3] == "google":
+			return "ValidateSubscriptionGoogle"
+		case method == http.MethodPost && len(parts) == 3 && parts[2] == "subscription":
+			return "ListSubscriptions"
+		case method == http.MethodGet && len(parts) == 4 && parts[2] == "subscription":
+			return "GetSubscription"
+		}
+	}
 	return ""
 }
 
@@ -136,6 +163,9 @@ func buildHTTPHookRequest(r *http.Request, bodyBytes []byte) map[string]interfac
 		if ids, ok := reqVal["ids"]; !ok || ids == nil {
 			reqVal["ids"] = []string{userID}
 		}
+	}
+	if productID := r.PathValue("product_id"); productID != "" {
+		reqVal["product_id"] = productID
 	}
 	for k, vals := range r.URL.Query() {
 		if len(vals) == 1 {

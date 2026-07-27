@@ -1,18 +1,23 @@
 package economy
 
 import (
+	"bytes"
 	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/gob"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"time"
+
+	"ultimate-game-server/internal/iap"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -42,6 +47,7 @@ type IAPConfig struct {
 	AppleSharedPassword string
 	GoogleClientEmail   string
 	GooglePrivateKey    string
+	GooglePackageName   string
 	HuaweiPublicKey     string
 	HuaweiClientID      string
 	HuaweiClientSecret  string
@@ -49,8 +55,24 @@ type IAPConfig struct {
 	SamsungPackageName  string
 }
 
-// DefaultIAPConfig is set at server startup.
+// DefaultIAPConfig is set at server startup for runtime module helpers.
 var DefaultIAPConfig IAPConfig
+
+// LoadIAPConfigFromEnv reads IAP credentials from environment variables.
+// Empty values leave the corresponding field unset (dev/test-receipt paths still work).
+func LoadIAPConfigFromEnv() IAPConfig {
+	return IAPConfig{
+		AppleSharedPassword: os.Getenv("APPLE_SHARED_PASSWORD"),
+		GoogleClientEmail:   os.Getenv("GOOGLE_IAP_CLIENT_EMAIL"),
+		GooglePrivateKey:    os.Getenv("GOOGLE_IAP_PRIVATE_KEY"),
+		GooglePackageName:   os.Getenv("GOOGLE_IAP_PACKAGE_NAME"),
+		HuaweiPublicKey:     os.Getenv("HUAWEI_IAP_PUBLIC_KEY"),
+		HuaweiClientID:      os.Getenv("HUAWEI_CLIENT_ID"),
+		HuaweiClientSecret:  os.Getenv("HUAWEI_CLIENT_SECRET"),
+		FacebookAppSecret:   os.Getenv("FACEBOOK_APP_SECRET"),
+		SamsungPackageName:  os.Getenv("SAMSUNG_PACKAGE_NAME"),
+	}
+}
 
 // ValidatedPurchase is a persisted or validated one-time purchase.
 type ValidatedPurchase struct {
@@ -59,6 +81,8 @@ type ValidatedPurchase struct {
 	TransactionID string
 	Store         int
 	PurchaseTime  time.Time
+	CreateTime    time.Time
+	UpdateTime    time.Time
 	RefundTime    time.Time
 	Environment   int
 	SeenBefore    bool
@@ -67,17 +91,19 @@ type ValidatedPurchase struct {
 
 // ValidatedSubscription is a persisted subscription.
 type ValidatedSubscription struct {
-	UserID                 string
-	ProductID              string
-	OriginalTransactionID  string
-	Store                  int
-	PurchaseTime           time.Time
-	ExpireTime             time.Time
-	RefundTime             time.Time
-	Environment            int
-	Active                 bool
-	SeenBefore             bool
-	RawResponse            string
+	UserID                string
+	ProductID             string
+	OriginalTransactionID string
+	Store                 int
+	PurchaseTime          time.Time
+	ExpireTime            time.Time
+	CreateTime            time.Time
+	UpdateTime            time.Time
+	RefundTime            time.Time
+	Environment           int
+	Active                bool
+	SeenBefore            bool
+	RawResponse           string
 }
 
 // StorePurchase is a pre-parsed purchase used by persistence helpers / tests.
@@ -130,8 +156,8 @@ RETURNING user_id, create_time, update_time`,
 	seen := updateTime.After(createTime)
 	return &ValidatedPurchase{
 		UserID: outUser, ProductID: p.ProductID, TransactionID: p.TransactionID,
-		Store: store, PurchaseTime: purchaseTime, RefundTime: refund,
-		Environment: p.Environment, SeenBefore: seen, RawResponse: rawResponse,
+		Store: store, PurchaseTime: purchaseTime, CreateTime: createTime, UpdateTime: updateTime,
+		RefundTime: refund, Environment: p.Environment, SeenBefore: seen, RawResponse: rawResponse,
 	}, nil
 }
 
@@ -171,7 +197,8 @@ RETURNING user_id, product_id, create_time, update_time, expire_time, refund_tim
 	}
 	return &ValidatedSubscription{
 		UserID: outUser, ProductID: outProduct, OriginalTransactionID: originalTxID,
-		Store: store, PurchaseTime: purchaseTime, ExpireTime: outExpire, RefundTime: outRefund,
+		Store: store, PurchaseTime: purchaseTime, ExpireTime: outExpire,
+		CreateTime: createTime, UpdateTime: updateTime, RefundTime: outRefund,
 		Environment: env, Active: isActive(outExpire, outRefund),
 		SeenBefore: updateTime.After(createTime), RawResponse: raw,
 	}, nil
@@ -258,12 +285,34 @@ func validateAndPersistPurchase(ctx context.Context, pool *pgxpool.Pool, userID 
 	return PersistPurchase(ctx, pool, userID, store, p, raw)
 }
 
-// ValidatePurchaseApple validates Apple receipt (JWS/legacy when configured; JSON test receipt otherwise).
+// ValidatePurchaseApple validates Apple receipt (JWS, legacy verifyReceipt, or JSON test receipt).
 func ValidatePurchaseApple(ctx context.Context, pool *pgxpool.Pool, cfg IAPConfig, userID, receipt string, persist bool) (*ValidatedPurchase, error) {
 	if p, _, ok := parseTestReceipt(receipt); ok {
 		return validateAndPersistPurchase(ctx, pool, userID, StoreAppleAppStore, p, receipt, persist)
 	}
-	// Legacy verifyReceipt when shared password configured.
+	if iap.IsJWS(receipt) {
+		tx, err := iap.ParseAppleJWSTransaction(receipt)
+		if err != nil {
+			return nil, err
+		}
+		if tx.ExpiresDate != 0 {
+			return nil, errors.New("subscription receipt: use ValidateSubscriptionApple")
+		}
+		env := EnvProduction
+		if strings.EqualFold(tx.Environment, iap.AppleSandboxEnvironment) {
+			env = EnvSandbox
+		}
+		pt := time.Now().UTC()
+		if tx.PurchaseDate > 0 {
+			pt = time.UnixMilli(tx.PurchaseDate).UTC()
+		}
+		p := StorePurchase{
+			TransactionID: tx.TransactionID, ProductID: tx.ProductID,
+			PurchaseTime: pt, Environment: env,
+		}
+		raw, _ := json.Marshal(map[string]string{"jws": receipt})
+		return validateAndPersistPurchase(ctx, pool, userID, StoreAppleAppStore, p, string(raw), persist)
+	}
 	if cfg.AppleSharedPassword != "" {
 		body, err := appleVerifyReceipt(ctx, receipt, cfg.AppleSharedPassword, false)
 		if err != nil {
@@ -275,7 +324,7 @@ func ValidatePurchaseApple(ctx context.Context, pool *pgxpool.Pool, cfg IAPConfi
 		}
 		return validateAndPersistPurchase(ctx, pool, userID, StoreAppleAppStore, p, raw, persist)
 	}
-	return nil, errors.New("apple IAP not configured; provide JSON test receipt or AppleSharedPassword")
+	return nil, errors.New("apple IAP not configured; provide JSON test receipt, JWS, or AppleSharedPassword")
 }
 
 func appleVerifyReceipt(ctx context.Context, receipt, password string, sandbox bool) ([]byte, error) {
@@ -350,7 +399,7 @@ func parseAppleVerifyResponse(body []byte) (StorePurchase, string, error) {
 	return StorePurchase{}, "", errors.New("no one-time purchase found in apple receipt")
 }
 
-// ValidatePurchaseGoogle validates Google purchase (test JSON or configured service account path).
+// ValidatePurchaseGoogle validates Google purchase (test JSON, Publisher API, or dev token).
 func ValidatePurchaseGoogle(ctx context.Context, pool *pgxpool.Pool, cfg IAPConfig, userID, productID, purchaseToken string, persist bool) (*ValidatedPurchase, error) {
 	if p, _, ok := parseTestReceipt(purchaseToken); ok {
 		if productID != "" {
@@ -358,20 +407,56 @@ func ValidatePurchaseGoogle(ctx context.Context, pool *pgxpool.Pool, cfg IAPConf
 		}
 		return validateAndPersistPurchase(ctx, pool, userID, StoreGooglePlay, p, purchaseToken, persist)
 	}
-	// Without credentials, accept structured receipt only.
-	if cfg.GoogleClientEmail == "" || cfg.GooglePrivateKey == "" {
-		if productID == "" || purchaseToken == "" {
-			return nil, errors.New("google IAP not configured; provide JSON test receipt or credentials")
+	if cfg.GoogleClientEmail != "" && cfg.GooglePrivateKey != "" {
+		pkg := cfg.GooglePackageName
+		pid := productID
+		token := purchaseToken
+		if gr, err := iap.DecodeReceiptGoogle(purchaseToken); err == nil {
+			pkg = gr.PackageName
+			if pid == "" {
+				pid = gr.ProductID
+			}
+			token = gr.PurchaseToken
 		}
-		// Treat purchaseToken as transaction id for persistence in dev.
-		p := StorePurchase{
-			TransactionID: purchaseToken, ProductID: productID,
-			PurchaseTime: time.Now().UTC(), Environment: EnvUnknown,
+		if pkg == "" {
+			return nil, errors.New("google IAP requires GOOGLE_IAP_PACKAGE_NAME or JSON receipt with packageName")
 		}
-		raw, _ := json.Marshal(map[string]string{"product_id": productID, "purchase_token": purchaseToken})
+		if pid == "" || token == "" {
+			return nil, errors.New("google product_id and purchase_token required")
+		}
+		resp, raw, err := iap.ValidateProductGoogle(ctx, iap.HTTPClient, cfg.GoogleClientEmail, cfg.GooglePrivateKey, pkg, pid, token)
+		if err != nil {
+			return nil, err
+		}
+		env := EnvProduction
+		if resp.PurchaseType == 0 {
+			env = EnvSandbox
+		}
+		txID := resp.OrderID
+		if txID == "" {
+			txID = token
+		}
+		pt := time.Now().UTC()
+		if resp.PurchaseTimeMillis != "" {
+			var ms int64
+			fmt.Sscanf(resp.PurchaseTimeMillis, "%d", &ms)
+			if ms > 0 {
+				pt = time.UnixMilli(ms).UTC()
+			}
+		}
+		p := StorePurchase{TransactionID: txID, ProductID: pid, PurchaseTime: pt, Environment: env}
 		return validateAndPersistPurchase(ctx, pool, userID, StoreGooglePlay, p, string(raw), persist)
 	}
-	return nil, errors.New("google publisher API validation requires credentials; use JSON test receipt in local tests")
+	if productID == "" || purchaseToken == "" {
+		return nil, errors.New("google IAP not configured; provide JSON test receipt or credentials")
+	}
+	// Dev path: treat purchaseToken as transaction id without Publisher API.
+	p := StorePurchase{
+		TransactionID: purchaseToken, ProductID: productID,
+		PurchaseTime: time.Now().UTC(), Environment: EnvUnknown,
+	}
+	raw, _ := json.Marshal(map[string]string{"product_id": productID, "purchase_token": purchaseToken})
+	return validateAndPersistPurchase(ctx, pool, userID, StoreGooglePlay, p, string(raw), persist)
 }
 
 // ValidatePurchaseHuawei validates Huawei purchase signature/data or test JSON.
@@ -379,10 +464,33 @@ func ValidatePurchaseHuawei(ctx context.Context, pool *pgxpool.Pool, cfg IAPConf
 	if p, _, ok := parseTestReceipt(purchaseData); ok {
 		return validateAndPersistPurchase(ctx, pool, userID, StoreHuaweiAppGallery, p, purchaseData, persist)
 	}
+	if cfg.HuaweiPublicKey != "" || (cfg.HuaweiClientID != "" && cfg.HuaweiClientSecret != "") {
+		_, data, raw, err := iap.ValidateReceiptHuawei(ctx, iap.HTTPClient, cfg.HuaweiPublicKey, cfg.HuaweiClientID, cfg.HuaweiClientSecret, purchaseData, signature)
+		if err != nil {
+			return nil, err
+		}
+		if data.OrderID == "" || data.ProductID == "" {
+			return nil, errors.New("huawei purchase missing orderId/productId")
+		}
+		pt := time.Now().UTC()
+		if data.PurchaseTime > 0 {
+			pt = time.UnixMilli(data.PurchaseTime).UTC()
+		}
+		env := EnvProduction
+		if data.PurchaseType == 0 {
+			env = EnvSandbox
+		}
+		p := StorePurchase{TransactionID: data.OrderID, ProductID: data.ProductID, PurchaseTime: pt, Environment: env}
+		rawStr := purchaseData
+		if len(raw) > 0 {
+			rawStr = string(raw)
+		}
+		return validateAndPersistPurchase(ctx, pool, userID, StoreHuaweiAppGallery, p, rawStr, persist)
+	}
 	var data struct {
-		ProductID string `json:"productId"`
-		OrderID   string `json:"orderId"`
-		PurchaseTime int64 `json:"purchaseTime"`
+		ProductID    string `json:"productId"`
+		OrderID      string `json:"orderId"`
+		PurchaseTime int64  `json:"purchaseTime"`
 	}
 	if err := json.Unmarshal([]byte(purchaseData), &data); err != nil {
 		return nil, fmt.Errorf("invalid huawei purchase data: %w", err)
@@ -390,7 +498,6 @@ func ValidatePurchaseHuawei(ctx context.Context, pool *pgxpool.Pool, cfg IAPConf
 	if data.OrderID == "" || data.ProductID == "" {
 		return nil, errors.New("huawei purchase missing orderId/productId")
 	}
-	_ = signature // full RSA verify when HuaweiPublicKey set (deferred to config presence)
 	pt := time.Now().UTC()
 	if data.PurchaseTime > 0 {
 		pt = time.UnixMilli(data.PurchaseTime).UTC()
@@ -510,20 +617,99 @@ func ValidatePurchaseSamsung(ctx context.Context, pool *pgxpool.Pool, cfg IAPCon
 	return validateAndPersistPurchase(ctx, pool, userID, StoreSamsungGalaxyStore, p, string(body), persist)
 }
 
-// ValidateSubscriptionApple validates Apple subscription (test JSON or verifyReceipt).
+// ValidateSubscriptionApple validates Apple subscription (test JSON, JWS, or verifyReceipt).
 func ValidateSubscriptionApple(ctx context.Context, pool *pgxpool.Pool, cfg IAPConfig, userID, receipt string, persist bool) (*ValidatedSubscription, error) {
-	p, expire, ok := parseTestReceipt(receipt)
-	if !ok {
-		return nil, errors.New("apple subscription: provide JSON test receipt with expire_time (or configure AppleSharedPassword)")
+	var productID, originalTxID, raw string
+	var purchaseTime, expireTime time.Time
+	var env int
+
+	if p, expire, ok := parseTestReceipt(receipt); ok {
+		productID = p.ProductID
+		originalTxID = p.TransactionID
+		purchaseTime = p.PurchaseTime
+		expireTime = expire
+		env = p.Environment
+		raw = receipt
+		if expireTime.IsZero() {
+			expireTime = purchaseTime.Add(30 * 24 * time.Hour)
+		}
+	} else if iap.IsJWS(receipt) {
+		tx, err := iap.ParseAppleJWSTransaction(receipt)
+		if err != nil {
+			return nil, err
+		}
+		if tx.ExpiresDate == 0 {
+			return nil, errors.New("one-time purchase receipt: use ValidatePurchaseApple")
+		}
+		productID = tx.ProductID
+		originalTxID = tx.OriginalTransactionID
+		if originalTxID == "" {
+			originalTxID = tx.TransactionID
+		}
+		purchaseTime = time.UnixMilli(tx.PurchaseDate).UTC()
+		expireTime = time.UnixMilli(tx.ExpiresDate).UTC()
+		env = EnvProduction
+		if strings.EqualFold(tx.Environment, iap.AppleSandboxEnvironment) {
+			env = EnvSandbox
+		}
+		b, _ := json.Marshal(map[string]string{"jws": receipt})
+		raw = string(b)
+	} else if cfg.AppleSharedPassword != "" {
+		resp, body, err := iap.ValidateLegacyReceiptApple(ctx, iap.HTTPClient, cfg.AppleSharedPassword, receipt)
+		if err != nil {
+			return nil, err
+		}
+		if resp.Status != 0 {
+			return nil, fmt.Errorf("apple verifyReceipt status %d", resp.Status)
+		}
+		env = EnvProduction
+		if strings.EqualFold(resp.Environment, iap.AppleSandboxEnvironment) {
+			env = EnvSandbox
+		}
+		found := false
+		for _, item := range resp.LatestReceiptInfo {
+			if item.ExpiresDateMs == "" {
+				continue
+			}
+			productID = item.ProductID
+			originalTxID = item.OriginalTransactionID
+			if originalTxID == "" {
+				originalTxID = item.TransactionID
+			}
+			purchaseTime = iap.ParseMsTimestamp(item.PurchaseDateMs)
+			expireTime = iap.ParseMsTimestamp(item.ExpiresDateMs)
+			found = true
+			break
+		}
+		if !found && resp.Receipt != nil {
+			for _, item := range resp.Receipt.InApp {
+				if item.ExpiresDateMs == "" {
+					continue
+				}
+				productID = item.ProductID
+				originalTxID = item.OriginalTransactionID
+				if originalTxID == "" {
+					originalTxID = item.TransactionID
+				}
+				purchaseTime = iap.ParseMsTimestamp(item.PurchaseDateMs)
+				expireTime = iap.ParseMsTimestamp(item.ExpiresDateMs)
+				found = true
+				break
+			}
+		}
+		if !found {
+			return nil, errors.New("no subscription found in apple receipt")
+		}
+		raw = string(body)
+	} else {
+		return nil, errors.New("apple subscription: provide JSON test receipt, JWS, or AppleSharedPassword")
 	}
-	if expire.IsZero() {
-		expire = p.PurchaseTime.Add(30 * 24 * time.Hour)
-	}
+
 	if !persist {
 		return &ValidatedSubscription{
-			UserID: userID, ProductID: p.ProductID, OriginalTransactionID: p.TransactionID,
-			Store: StoreAppleAppStore, PurchaseTime: p.PurchaseTime, ExpireTime: expire,
-			Environment: p.Environment, Active: isActive(expire, epochRefund()), RawResponse: receipt,
+			UserID: userID, ProductID: productID, OriginalTransactionID: originalTxID,
+			Store: StoreAppleAppStore, PurchaseTime: purchaseTime, ExpireTime: expireTime,
+			Environment: env, Active: isActive(expireTime, epochRefund()), RawResponse: raw,
 		}, nil
 	}
 	tx, err := pool.Begin(ctx)
@@ -531,7 +717,7 @@ func ValidateSubscriptionApple(ctx context.Context, pool *pgxpool.Pool, cfg IAPC
 		return nil, err
 	}
 	defer tx.Rollback(ctx)
-	sub, err := upsertSubscription(ctx, tx, userID, StoreAppleAppStore, p.ProductID, p.TransactionID, receipt, p.PurchaseTime, expire, p.Environment)
+	sub, err := upsertSubscription(ctx, tx, userID, StoreAppleAppStore, productID, originalTxID, raw, purchaseTime, expireTime, env)
 	if err != nil {
 		return nil, err
 	}
@@ -543,11 +729,51 @@ func ValidateSubscriptionApple(ctx context.Context, pool *pgxpool.Pool, cfg IAPC
 
 // ValidateSubscriptionGoogle validates Google subscription.
 func ValidateSubscriptionGoogle(ctx context.Context, pool *pgxpool.Pool, cfg IAPConfig, userID, productID, purchaseToken string, persist bool) (*ValidatedSubscription, error) {
-	p, expire, ok := parseTestReceipt(purchaseToken)
-	if ok {
+	var p StorePurchase
+	var expire time.Time
+	var raw string
+
+	if parsed, et, ok := parseTestReceipt(purchaseToken); ok {
+		p = parsed
 		if productID != "" {
 			p.ProductID = productID
 		}
+		expire = et
+		raw = purchaseToken
+	} else if cfg.GoogleClientEmail != "" && cfg.GooglePrivateKey != "" {
+		pkg := cfg.GooglePackageName
+		token := purchaseToken
+		pid := productID
+		if gr, err := iap.DecodeReceiptGoogle(purchaseToken); err == nil {
+			pkg = gr.PackageName
+			token = gr.PurchaseToken
+			if pid == "" {
+				pid = gr.ProductID
+			}
+		}
+		if pkg == "" {
+			return nil, errors.New("google subscription requires GOOGLE_IAP_PACKAGE_NAME or JSON receipt with packageName")
+		}
+		resp, body, err := iap.ValidateSubscriptionGoogle(ctx, iap.HTTPClient, cfg.GoogleClientEmail, cfg.GooglePrivateKey, pkg, token)
+		if err != nil {
+			return nil, err
+		}
+		if len(resp.LineItems) == 0 {
+			return nil, errors.New("google subscription response missing lineItems")
+		}
+		item := resp.LineItems[0]
+		if pid == "" {
+			pid = item.ProductID
+		}
+		p = StorePurchase{
+			TransactionID: token, ProductID: pid,
+			PurchaseTime: resp.StartTime, Environment: EnvProduction,
+		}
+		if p.PurchaseTime.IsZero() {
+			p.PurchaseTime = time.Now().UTC()
+		}
+		expire = item.ExpiryTime
+		raw = string(body)
 	} else {
 		if productID == "" || purchaseToken == "" {
 			return nil, errors.New("google subscription requires product_id and purchase_token or JSON test receipt")
@@ -557,11 +783,15 @@ func ValidateSubscriptionGoogle(ctx context.Context, pool *pgxpool.Pool, cfg IAP
 			PurchaseTime: time.Now().UTC(), Environment: EnvUnknown,
 		}
 		expire = p.PurchaseTime.Add(30 * 24 * time.Hour)
+		b, _ := json.Marshal(map[string]string{"product_id": p.ProductID, "purchase_token": purchaseToken})
+		raw = string(b)
 	}
 	if expire.IsZero() {
 		expire = p.PurchaseTime.Add(30 * 24 * time.Hour)
 	}
-	raw := purchaseToken
+	if raw == "" {
+		raw = purchaseToken
+	}
 	if !json.Valid([]byte(raw)) {
 		b, _ := json.Marshal(map[string]string{"product_id": p.ProductID, "purchase_token": purchaseToken})
 		raw = string(b)
@@ -607,12 +837,11 @@ FROM purchase WHERE user_id = $1 ORDER BY purchase_time DESC, transaction_id DES
 	for rows.Next() {
 		vp := &ValidatedPurchase{}
 		var raw []byte
-		var createTime, updateTime time.Time
-		if err := rows.Scan(&vp.UserID, &vp.ProductID, &vp.TransactionID, &vp.Store, &vp.PurchaseTime, &vp.RefundTime, &vp.Environment, &raw, &createTime, &updateTime); err != nil {
+		if err := rows.Scan(&vp.UserID, &vp.ProductID, &vp.TransactionID, &vp.Store, &vp.PurchaseTime, &vp.RefundTime, &vp.Environment, &raw, &vp.CreateTime, &vp.UpdateTime); err != nil {
 			return nil, err
 		}
 		vp.RawResponse = string(raw)
-		vp.SeenBefore = updateTime.After(createTime)
+		vp.SeenBefore = vp.UpdateTime.After(vp.CreateTime)
 		out = append(out, vp)
 	}
 	return out, rows.Err()
@@ -622,64 +851,151 @@ FROM purchase WHERE user_id = $1 ORDER BY purchase_time DESC, transaction_id DES
 func GetPurchaseByTransactionID(ctx context.Context, pool *pgxpool.Pool, transactionID string) (*ValidatedPurchase, error) {
 	vp := &ValidatedPurchase{}
 	var raw []byte
-	var createTime, updateTime time.Time
 	err := pool.QueryRow(ctx, `
 SELECT user_id, product_id, transaction_id, store, purchase_time, refund_time, environment, raw_response, create_time, update_time
 FROM purchase WHERE transaction_id = $1`, transactionID).Scan(
-		&vp.UserID, &vp.ProductID, &vp.TransactionID, &vp.Store, &vp.PurchaseTime, &vp.RefundTime, &vp.Environment, &raw, &createTime, &updateTime)
+		&vp.UserID, &vp.ProductID, &vp.TransactionID, &vp.Store, &vp.PurchaseTime, &vp.RefundTime, &vp.Environment, &raw, &vp.CreateTime, &vp.UpdateTime)
 	if err != nil {
 		return nil, err
 	}
 	vp.RawResponse = string(raw)
-	vp.SeenBefore = updateTime.After(createTime)
+	vp.SeenBefore = vp.UpdateTime.After(vp.CreateTime)
 	return vp, nil
 }
 
-// ListSubscriptions lists subscriptions for a user.
-func ListSubscriptions(ctx context.Context, pool *pgxpool.Pool, userID string, limit int) ([]*ValidatedSubscription, error) {
+var ErrSubscriptionsListInvalidCursor = errors.New("subscriptions list cursor invalid")
+
+type subscriptionsListCursor struct {
+	UserID                string
+	PurchaseTime          time.Time
+	OriginalTransactionID string
+	IsNext                bool
+}
+
+type SubscriptionListResult struct {
+	Subscriptions []*ValidatedSubscription
+	Cursor        string
+	PrevCursor    string
+}
+
+func encodeSubCursor(c *subscriptionsListCursor) (string, error) {
+	if c == nil {
+		return "", nil
+	}
+	var buf bytes.Buffer
+	if err := gob.NewEncoder(&buf).Encode(c); err != nil {
+		return "", err
+	}
+	return base64.RawURLEncoding.EncodeToString(buf.Bytes()), nil
+}
+
+func decodeSubCursor(cursor string) (*subscriptionsListCursor, error) {
+	if cursor == "" {
+		return nil, nil
+	}
+	b, err := base64.RawURLEncoding.DecodeString(cursor)
+	if err != nil {
+		b, err = base64.URLEncoding.DecodeString(cursor)
+		if err != nil {
+			return nil, ErrSubscriptionsListInvalidCursor
+		}
+	}
+	out := &subscriptionsListCursor{}
+	if err := gob.NewDecoder(bytes.NewReader(b)).Decode(out); err != nil {
+		return nil, ErrSubscriptionsListInvalidCursor
+	}
+	return out, nil
+}
+
+// ListSubscriptions lists subscriptions for a user with optional gob cursor pagination.
+func ListSubscriptions(ctx context.Context, pool *pgxpool.Pool, userID string, limit int, cursor string) (*SubscriptionListResult, error) {
 	if limit <= 0 {
 		limit = 100
 	}
 	if limit > 100 {
 		limit = 100
 	}
-	rows, err := pool.Query(ctx, `
+	incoming, err := decodeSubCursor(cursor)
+	if err != nil {
+		return nil, err
+	}
+	if incoming != nil && incoming.UserID != "" && incoming.UserID != userID {
+		return nil, ErrSubscriptionsListInvalidCursor
+	}
+
+	fetch := limit + 1
+	var rows pgx.Rows
+	if incoming != nil {
+		rows, err = pool.Query(ctx, `
 SELECT user_id, product_id, original_transaction_id, store, purchase_time, expire_time, refund_time, environment, raw_response, create_time, update_time
-FROM subscription WHERE user_id = $1 ORDER BY purchase_time DESC LIMIT $2`, userID, limit)
+FROM subscription
+WHERE user_id = $1 AND (purchase_time, original_transaction_id) < ($2::TIMESTAMPTZ, $3)
+ORDER BY purchase_time DESC, original_transaction_id DESC LIMIT $4`,
+			userID, incoming.PurchaseTime, incoming.OriginalTransactionID, fetch)
+	} else {
+		rows, err = pool.Query(ctx, `
+SELECT user_id, product_id, original_transaction_id, store, purchase_time, expire_time, refund_time, environment, raw_response, create_time, update_time
+FROM subscription WHERE user_id = $1 ORDER BY purchase_time DESC, original_transaction_id DESC LIMIT $2`, userID, fetch)
+	}
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
+
 	var out []*ValidatedSubscription
 	for rows.Next() {
 		s := &ValidatedSubscription{}
 		var raw []byte
-		var createTime, updateTime time.Time
-		if err := rows.Scan(&s.UserID, &s.ProductID, &s.OriginalTransactionID, &s.Store, &s.PurchaseTime, &s.ExpireTime, &s.RefundTime, &s.Environment, &raw, &createTime, &updateTime); err != nil {
+		if err := rows.Scan(&s.UserID, &s.ProductID, &s.OriginalTransactionID, &s.Store, &s.PurchaseTime, &s.ExpireTime, &s.RefundTime, &s.Environment, &raw, &s.CreateTime, &s.UpdateTime); err != nil {
 			return nil, err
 		}
 		s.RawResponse = string(raw)
 		s.Active = isActive(s.ExpireTime, s.RefundTime)
-		s.SeenBefore = updateTime.After(createTime)
+		s.SeenBefore = s.UpdateTime.After(s.CreateTime)
 		out = append(out, s)
 	}
-	return out, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	result := &SubscriptionListResult{Subscriptions: out}
+	if len(out) > limit {
+		last := out[limit-1]
+		result.Subscriptions = out[:limit]
+		next, err := encodeSubCursor(&subscriptionsListCursor{
+			UserID: userID, PurchaseTime: last.PurchaseTime, OriginalTransactionID: last.OriginalTransactionID, IsNext: true,
+		})
+		if err != nil {
+			return nil, err
+		}
+		result.Cursor = next
+	}
+	if incoming != nil && len(result.Subscriptions) > 0 {
+		first := result.Subscriptions[0]
+		prev, err := encodeSubCursor(&subscriptionsListCursor{
+			UserID: userID, PurchaseTime: first.PurchaseTime, OriginalTransactionID: first.OriginalTransactionID, IsNext: false,
+		})
+		if err != nil {
+			return nil, err
+		}
+		result.PrevCursor = prev
+	}
+	return result, nil
 }
 
 // GetSubscriptionByProductID returns a user's subscription for a product.
 func GetSubscriptionByProductID(ctx context.Context, pool *pgxpool.Pool, userID, productID string) (*ValidatedSubscription, error) {
 	s := &ValidatedSubscription{}
 	var raw []byte
-	var createTime, updateTime time.Time
 	err := pool.QueryRow(ctx, `
 SELECT user_id, product_id, original_transaction_id, store, purchase_time, expire_time, refund_time, environment, raw_response, create_time, update_time
 FROM subscription WHERE user_id = $1 AND product_id = $2 ORDER BY update_time DESC LIMIT 1`, userID, productID).Scan(
-		&s.UserID, &s.ProductID, &s.OriginalTransactionID, &s.Store, &s.PurchaseTime, &s.ExpireTime, &s.RefundTime, &s.Environment, &raw, &createTime, &updateTime)
+		&s.UserID, &s.ProductID, &s.OriginalTransactionID, &s.Store, &s.PurchaseTime, &s.ExpireTime, &s.RefundTime, &s.Environment, &raw, &s.CreateTime, &s.UpdateTime)
 	if err != nil {
 		return nil, err
 	}
 	s.RawResponse = string(raw)
 	s.Active = isActive(s.ExpireTime, s.RefundTime)
-	s.SeenBefore = updateTime.After(createTime)
+	s.SeenBefore = s.UpdateTime.After(s.CreateTime)
 	return s, nil
 }

@@ -103,10 +103,18 @@ func TestConsole_Integration(t *testing.T) {
 	// 2. Seed Console Admin User
 	consoleUserID := uuid.New().String()
 	pwdHash, _ := bcrypt.GenerateFromPassword([]byte("adminpassword"), bcrypt.DefaultCost)
-	insertConsoleUser := `INSERT INTO console_user (id, username, email, password, mfa_required, mfa_secret) VALUES ($1, $2, $3, $4, $5, $6)`
-	_, err = pool.Exec(ctx, insertConsoleUser, consoleUserID, "admin_operator", "admin@game.com", pwdHash, true, []byte("mysecret"))
+	insertConsoleUser := `INSERT INTO console_user (id, username, email, password, mfa_required, mfa_secret, acl) VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb)`
+	_, err = pool.Exec(ctx, insertConsoleUser, consoleUserID, "admin_operator", "admin@game.com", pwdHash, true, []byte("mysecret"), `{"admin":true}`)
 	if err != nil {
 		t.Fatalf("failed to insert console user: %v", err)
+	}
+
+	// Restricted operator without write_players
+	restrictedID := uuid.New().String()
+	pwdHash2, _ := bcrypt.GenerateFromPassword([]byte("readonly"), bcrypt.DefaultCost)
+	_, err = pool.Exec(ctx, insertConsoleUser, restrictedID, "readonly_op", "ro@game.com", pwdHash2, false, nil, `{"read_players":true}`)
+	if err != nil {
+		t.Fatalf("failed to insert readonly console user: %v", err)
 	}
 
 	// Seed game user profile to ban later
@@ -215,5 +223,74 @@ func TestConsole_Integration(t *testing.T) {
 	// Verify Bleve returned hits
 	if !strings.Contains(rrSearch.Body.String(), `"hits":`) {
 		t.Errorf("expected hits count in search results, got: %s", rrSearch.Body.String())
+	}
+
+	// 6. Player search (DB)
+	reqPlayers := httptest.NewRequest("GET", "/console/api/users?q=player", nil)
+	reqPlayers.AddCookie(sessionCookie)
+	rrPlayers := httptest.NewRecorder()
+	srv.handleSearchPlayers(rrPlayers, reqPlayers)
+	if rrPlayers.Code != http.StatusOK {
+		t.Fatalf("player search status %d: %s", rrPlayers.Code, rrPlayers.Body.String())
+	}
+	if !strings.Contains(rrPlayers.Body.String(), "player_one") {
+		t.Errorf("expected player_one in search: %s", rrPlayers.Body.String())
+	}
+
+	// 7. Audit list
+	reqAudit := httptest.NewRequest("GET", "/console/api/audit?limit=10", nil)
+	reqAudit.AddCookie(sessionCookie)
+	rrAudit := httptest.NewRecorder()
+	srv.handleListAudit(rrAudit, reqAudit)
+	if rrAudit.Code != http.StatusOK {
+		t.Fatalf("audit list status %d: %s", rrAudit.Code, rrAudit.Body.String())
+	}
+
+	// 8. ACL deny: readonly cannot ban
+	authRO := url.Values{}
+	authRO.Set("username", "readonly_op")
+	authRO.Set("password", "readonly")
+	reqRO := httptest.NewRequest("POST", "/console/authenticate", strings.NewReader(authRO.Encode()))
+	reqRO.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rrRO := httptest.NewRecorder()
+	srv.handleAuthenticate(rrRO, reqRO)
+	if rrRO.Code != http.StatusOK {
+		t.Fatalf("readonly auth status %d: %s", rrRO.Code, rrRO.Body.String())
+	}
+	var roCookie *http.Cookie
+	for _, c := range rrRO.Result().Cookies() {
+		if c.Name == "session_token" {
+			roCookie = c
+			break
+		}
+	}
+	if roCookie == nil {
+		t.Fatal("expected readonly session cookie")
+	}
+	ban2 := url.Values{}
+	ban2.Set("user_id", gameUserID)
+	reqBan2 := httptest.NewRequest("POST", "/console/api/users/ban", strings.NewReader(ban2.Encode()))
+	reqBan2.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	reqBan2.AddCookie(roCookie)
+	rrBan2 := httptest.NewRecorder()
+	srv.handleBanUser(rrBan2, reqBan2)
+	if rrBan2.Code != http.StatusForbidden {
+		t.Fatalf("expected forbidden for readonly ban, got %d", rrBan2.Code)
+	}
+
+	// 9. Logout revokes token
+	reqLogout := httptest.NewRequest("POST", "/console/logout", nil)
+	reqLogout.AddCookie(sessionCookie)
+	rrLogout := httptest.NewRecorder()
+	srv.handleLogout(rrLogout, reqLogout)
+	if rrLogout.Code != http.StatusOK {
+		t.Fatalf("logout status %d", rrLogout.Code)
+	}
+	reqAfter := httptest.NewRequest("GET", "/console/api/audit", nil)
+	reqAfter.AddCookie(sessionCookie)
+	rrAfter := httptest.NewRecorder()
+	srv.handleListAudit(rrAfter, reqAfter)
+	if rrAfter.Code != http.StatusUnauthorized {
+		t.Fatalf("expected unauthorized after logout, got %d", rrAfter.Code)
 	}
 }

@@ -57,6 +57,7 @@ type Config struct {
 	RuntimePath     string        `json:"runtime_path" yaml:"runtime_path"`
 	PresenceMaxSubscriptions int  `json:"presence_max_subscriptions_per_user" yaml:"presence_max_subscriptions_per_user"`
 	PresenceMaxStatusBytes   int  `json:"presence_max_status_bytes" yaml:"presence_max_status_bytes"`
+	IAP             economy.IAPConfig `json:"iap" yaml:"iap"`
 }
 
 // Server handles HTTP and gRPC network interfaces.
@@ -92,6 +93,7 @@ type Server struct {
 	notificationServer *NotificationServer
 	economyServer      *EconomyServer
 	iapServer          *IAPServer
+	iapConfig          economy.IAPConfig
 	rpcServer          *RpcServer
 	eventServer        *EventServer
 	rpcCfg             runtime.RPCConfig
@@ -312,6 +314,7 @@ func NewServer(logger *zap.Logger, cfg Config, dbPool *pgxpool.Pool) (*Server, e
 		streamManager:   streamMgr,
 		rdb:             rdb,
 		rpcCfg:          rpcCfg,
+		iapConfig:       cfg.IAP,
 	}
 
 	// Matchmaker callbacks (notifying matched players over WebSockets)
@@ -507,7 +510,7 @@ func (s *Server) Start(ctx context.Context) error {
 	apipb.RegisterChatServiceServer(s.gRPCServer, NewChannelServer(s.dbPool, s.tokenMgr, nil))
 	s.notificationServer = NewNotificationServer(s.dbPool, s.tokenMgr, nil)
 	s.economyServer = NewEconomyServer(s.dbPool, s.tokenMgr, nil)
-	s.iapServer = NewIAPServer(s.dbPool, s.tokenMgr, nil, economy.DefaultIAPConfig)
+	s.iapServer = NewIAPServer(s.dbPool, s.tokenMgr, nil, s.iapConfig)
 	if s.RuntimeManager != nil {
 		s.notificationServer.SetHooks(s.RuntimeManager.Registry())
 		s.economyServer.SetHooks(s.RuntimeManager.Registry())
@@ -651,6 +654,7 @@ type authResponse struct {
 func (s *Server) registerRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /healthcheck", s.handleHealthcheck)
 	mux.HandleFunc("GET /health", s.handleHealthDeprecated)
+	mux.HandleFunc("GET /ready", s.handleReady)
 	mux.HandleFunc("POST /v2/account/authenticate/email", s.handleAuthenticateEmail)
 	mux.HandleFunc("POST /v2/account/authenticate/custom", s.handleAuthenticateCustom)
 	mux.HandleFunc("POST /v2/account/authenticate/device", s.handleAuthenticateDevice)
@@ -791,6 +795,32 @@ func (s *Server) handleHealthcheck(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleHealthDeprecated(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Deprecation", "true")
 	s.handleHealthcheck(w, r)
+}
+
+func (s *Server) handleReady(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	if s.dbPool == nil {
+		w.WriteHeader(http.StatusServiceUnavailable)
+		_ = json.NewEncoder(w).Encode(map[string]string{
+			"status": "not_ready",
+			"error":  "database unreachable",
+		})
+		return
+	}
+	pingCtx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
+	defer cancel()
+	if err := s.dbPool.Ping(pingCtx); err != nil {
+		w.WriteHeader(http.StatusServiceUnavailable)
+		_ = json.NewEncoder(w).Encode(map[string]string{
+			"status": "not_ready",
+			"error":  "database unreachable",
+		})
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(map[string]string{
+		"status": "ready",
+	})
 }
 
 func (s *Server) handleAuthenticateEmail(w http.ResponseWriter, r *http.Request) {

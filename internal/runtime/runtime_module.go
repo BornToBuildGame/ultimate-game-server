@@ -357,12 +357,12 @@ func (m *GoRuntimeModule) SubscriptionValidateGoogle(ctx context.Context, userID
 }
 
 func (m *GoRuntimeModule) SubscriptionsList(ctx context.Context, userID string, limit int) ([]*ValidatedSubscriptionView, error) {
-	list, err := economy.ListSubscriptions(ctx, m.dbPool, userID, limit)
+	list, err := economy.ListSubscriptions(ctx, m.dbPool, userID, limit, "")
 	if err != nil {
 		return nil, err
 	}
-	out := make([]*ValidatedSubscriptionView, 0, len(list))
-	for _, sub := range list {
+	out := make([]*ValidatedSubscriptionView, 0, len(list.Subscriptions))
+	for _, sub := range list.Subscriptions {
 		out = append(out, subView(sub))
 	}
 	return out, nil

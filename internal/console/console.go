@@ -2,6 +2,7 @@ package console
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
@@ -28,16 +29,25 @@ type ConsoleClaims struct {
 
 // Server encapsulates the Console Admin HTTP server.
 type Server struct {
-	logger          Logger
-	pool            *pgxpool.Pool
-	jwtSecret       []byte
-	listener        net.Listener
-	httpServer      *http.Server
-	bleveIndex      bleve.Index
-	auditChan       chan *AuditLogEntry
-	wg              sync.WaitGroup
-	mu              sync.Mutex
-	sessionRevoker  SessionRevoker
+	logger         Logger
+	pool           *pgxpool.Pool
+	jwtSecret      []byte
+	listener       net.Listener
+	httpServer     *http.Server
+	bleveIndex     bleve.Index
+	auditChan      chan *AuditLogEntry
+	wg             sync.WaitGroup
+	mu             sync.Mutex
+	sessionRevoker SessionRevoker
+	startTime      time.Time
+
+	// Optional deps for Phase 2c parity (set via setters).
+	matchLister   MatchLister
+	matchStater   MatchStater
+	rpcDispatcher RPCDispatcher
+	statusProvider StatusProvider
+
+	revokedTokens sync.Map // token string -> struct{}
 }
 
 // SessionRevoker invalidates player sessions (e.g. on ban).
@@ -45,10 +55,40 @@ type SessionRevoker interface {
 	RevokeAllSessions(userID string)
 }
 
-// SetSessionRevoker configures session revocation on ban/delete.
-func (s *Server) SetSessionRevoker(r SessionRevoker) {
-	s.sessionRevoker = r
+// MatchLister lists active matches for console status/ops.
+type MatchLister interface {
+	ListMatches() []map[string]interface{}
 }
+
+// MatchStater returns match state JSON for a match id.
+type MatchStater interface {
+	GetMatchState(matchID string) (map[string]interface{}, error)
+}
+
+// RPCDispatcher invokes a runtime RPC as an admin.
+type RPCDispatcher interface {
+	DispatchRPC(ctx context.Context, id, payload string, userID, username string) (string, error)
+}
+
+// StatusProvider supplies node status metrics.
+type StatusProvider interface {
+	ConsoleStatus() map[string]interface{}
+}
+
+// SetSessionRevoker configures session revocation on ban/delete.
+func (s *Server) SetSessionRevoker(r SessionRevoker) { s.sessionRevoker = r }
+
+// SetMatchDeps wires match list/state helpers.
+func (s *Server) SetMatchDeps(lister MatchLister, stater MatchStater) {
+	s.matchLister = lister
+	s.matchStater = stater
+}
+
+// SetRPCDispatcher wires CallRpc.
+func (s *Server) SetRPCDispatcher(d RPCDispatcher) { s.rpcDispatcher = d }
+
+// SetStatusProvider wires GET /console/api/status.
+func (s *Server) SetStatusProvider(p StatusProvider) { s.statusProvider = p }
 
 // Logger interface matching our requirements.
 type Logger interface {
@@ -69,9 +109,8 @@ type AuditLogEntry struct {
 	CreateTime      time.Time
 }
 
-// NewServer initializes the Console Admin server on port 7351.
+// NewServer initializes the Console Admin server.
 func NewServer(logger Logger, pool *pgxpool.Pool, jwtSecret []byte) (*Server, error) {
-	// Initialize in-memory Bleve index
 	mapping := bleve.NewIndexMapping()
 	index, err := bleve.NewMemOnly(mapping)
 	if err != nil {
@@ -84,9 +123,9 @@ func NewServer(logger Logger, pool *pgxpool.Pool, jwtSecret []byte) (*Server, er
 		jwtSecret:  jwtSecret,
 		bleveIndex: index,
 		auditChan:  make(chan *AuditLogEntry, 1000),
+		startTime:  time.Now().UTC(),
 	}
 
-	// Start async audit logger worker
 	s.wg.Add(1)
 	go s.auditWorker()
 
@@ -102,16 +141,20 @@ func (s *Server) Start(addr string) error {
 	s.listener = l
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/console/authenticate", s.handleAuthenticate)
-	mux.HandleFunc("/console/api/users/ban", s.handleBanUser)
-	mux.HandleFunc("/console/api/search", s.handleSearch)
+	mux.HandleFunc("POST /console/authenticate", s.handleAuthenticate)
+	mux.HandleFunc("POST /console/logout", s.handleLogout)
+	mux.HandleFunc("POST /console/api/users/ban", s.handleBanUser)
+	mux.HandleFunc("GET /console/api/search", s.handleSearch)
+	s.registerOperatorRoutes(mux)
+	s.registerPlayerRoutes(mux)
+	s.registerParityRoutes(mux)
 	s.registerLeaderboardRoutes(mux)
 	s.registerFriendsRoutes(mux)
 
 	s.httpServer = &http.Server{
 		Handler:      mux,
-		ReadTimeout:  5 * time.Second,
-		WriteTimeout: 5 * time.Second,
+		ReadTimeout:  15 * time.Second,
+		WriteTimeout: 30 * time.Second,
 	}
 
 	s.logger.Info("Console Admin server listening", "address", addr)
@@ -129,26 +172,87 @@ func (s *Server) Close() {
 	if s.httpServer != nil {
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 		defer cancel()
-		s.httpServer.Shutdown(ctx)
+		_ = s.httpServer.Shutdown(ctx)
 	}
 	if s.listener != nil {
-		s.listener.Close()
+		_ = s.listener.Close()
 	}
 	close(s.auditChan)
 	s.wg.Wait()
-	s.bleveIndex.Close()
+	_ = s.bleveIndex.Close()
 }
 
-// handleAuthenticate performs Bcrypt verification, TOTP checks, and issues a cookie-based JWT.
-func (s *Server) handleAuthenticate(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+func parseACL(dbAclBytes []byte) map[string]interface{} {
+	acl := make(map[string]interface{})
+	if len(dbAclBytes) > 0 {
+		_ = json.Unmarshal(dbAclBytes, &acl)
+	}
+	return acl
+}
+
+// hasACL returns true if claims include admin or the named flag set to true.
+func hasACL(claims *ConsoleClaims, flag string) bool {
+	if claims == nil || claims.ACL == nil {
+		return false
+	}
+	if v, ok := claims.ACL["admin"].(bool); ok && v {
+		return true
+	}
+	if flag == "" {
+		return false
+	}
+	v, ok := claims.ACL[flag].(bool)
+	return ok && v
+}
+
+func (s *Server) requireACL(w http.ResponseWriter, claims *ConsoleClaims, flag string) bool {
+	if hasACL(claims, flag) {
+		return true
+	}
+	http.Error(w, "Forbidden", http.StatusForbidden)
+	return false
+}
+
+func (s *Server) queueAudit(claims *ConsoleClaims, action, resource, message string, meta map[string]any) {
+	if claims == nil {
 		return
 	}
+	if meta == nil {
+		meta = map[string]any{}
+	}
+	audit := &AuditLogEntry{
+		ID:              uuid.New().String(),
+		ConsoleUserID:   claims.UserID,
+		ConsoleUsername: claims.Username,
+		Email:           claims.Email,
+		Action:          action,
+		Resource:        resource,
+		Message:         message,
+		Metadata:        meta,
+		CreateTime:      time.Now().UTC(),
+	}
+	select {
+	case s.auditChan <- audit:
+	default:
+		s.logger.Error("audit channel full; dropping entry", "action", action)
+	}
+	s.mu.Lock()
+	_ = s.bleveIndex.Index(audit.ID, audit)
+	s.mu.Unlock()
+}
 
+func (s *Server) handleAuthenticate(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "bad request", http.StatusBadRequest)
+		return
+	}
 	username := r.FormValue("username")
 	password := r.FormValue("password")
 	totpCode := r.FormValue("totp")
+	if username == "" || password == "" {
+		http.Error(w, "Unauthorized: invalid credentials", http.StatusUnauthorized)
+		return
+	}
 
 	var dbID, dbEmail, dbUsername string
 	var dbPassword, dbMfaSecret []byte
@@ -170,42 +274,34 @@ func (s *Server) handleAuthenticate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check if disabled
 	if dbDisableTime.After(time.Unix(0, 0)) {
 		http.Error(w, "Unauthorized: account disabled", http.StatusUnauthorized)
 		return
 	}
 
-	// Verify Bcrypt password
-	err = bcrypt.CompareHashAndPassword(dbPassword, []byte(password))
-	if err != nil {
+	if err = bcrypt.CompareHashAndPassword(dbPassword, []byte(password)); err != nil {
 		http.Error(w, "Unauthorized: invalid credentials", http.StatusUnauthorized)
 		return
 	}
 
-	// Verify MFA TOTP if required
 	if dbMfaRequired {
-		if len(dbMfaSecret) > 0 {
-			if !ValidateTOTP(dbMfaSecret, totpCode) {
-				http.Error(w, "Unauthorized: invalid MFA code", http.StatusUnauthorized)
-				return
-			}
+		if len(dbMfaSecret) == 0 || !ValidateTOTP(dbMfaSecret, totpCode) {
+			http.Error(w, "Unauthorized: invalid MFA code", http.StatusUnauthorized)
+			return
 		}
 	}
 
-	// Parse ACL JSON
-	acl := make(map[string]interface{})
-	// Set default fields if needed, but since db stores it we unmarshal
-	// (for test mocks, we can fall back to defaults)
-	acl["admin"] = true // default for simplicity or verify against dbAclBytes
-
+	acl := parseACL(dbAclBytes)
+	jti := uuid.New().String()
 	claims := &ConsoleClaims{
 		UserID:   dbID,
 		Username: dbUsername,
 		Email:    dbEmail,
 		ACL:      acl,
 		RegisteredClaims: jwt.RegisteredClaims{
+			ID:        jti,
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(12 * time.Hour)),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
 		},
 	}
 
@@ -216,7 +312,6 @@ func (s *Server) handleAuthenticate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Send secure HttpOnly SameSite=Strict cookie
 	http.SetCookie(w, &http.Cookie{
 		Name:     "session_token",
 		Value:    tokenString,
@@ -226,82 +321,71 @@ func (s *Server) handleAuthenticate(w http.ResponseWriter, r *http.Request) {
 		SameSite: http.SameSiteStrictMode,
 	})
 
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("Authenticated"))
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"ok": true, "username": dbUsername, "acl": acl,
+	})
 }
 
-// handleBanUser checks ACL permissions, bans the target user, and schedules asynchronous audit log.
-func (s *Server) handleBanUser(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
-		return
+func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
+	if cookie, err := r.Cookie("session_token"); err == nil && cookie.Value != "" {
+		s.revokedTokens.Store(cookie.Value, struct{}{})
 	}
+	http.SetCookie(w, &http.Cookie{
+		Name:     "session_token",
+		Value:    "",
+		Path:     "/",
+		MaxAge:   -1,
+		HttpOnly: true,
+		SameSite: http.SameSiteStrictMode,
+	})
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]bool{"ok": true})
+}
 
+func (s *Server) handleBanUser(w http.ResponseWriter, r *http.Request) {
 	claims, err := s.authenticateRequest(r)
 	if err != nil {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
-
-	// Verify ACL permission: must be admin
-	isAdmin, ok := claims.ACL["admin"].(bool)
-	if !ok || !isAdmin {
-		http.Error(w, "Forbidden", http.StatusForbidden)
+	if !s.requireACL(w, claims, "write_players") {
 		return
 	}
-
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "bad request", http.StatusBadRequest)
+		return
+	}
 	targetUserID := r.FormValue("user_id")
+	if targetUserID == "" {
+		targetUserID = r.URL.Query().Get("user_id")
+	}
 	if _, err := uuid.Parse(targetUserID); err != nil {
 		http.Error(w, "Invalid user_id", http.StatusBadRequest)
 		return
 	}
 
-	// Execute ban update on player
-	updateQuery := `UPDATE users SET disable_time = now(), update_time = now() WHERE id = $1`
-	_, err = s.pool.Exec(r.Context(), updateQuery, targetUserID)
+	_, err = s.pool.Exec(r.Context(), `UPDATE users SET disable_time = now(), update_time = now() WHERE id = $1`, targetUserID)
 	if err != nil {
 		http.Error(w, "Failed to ban player", http.StatusInternalServerError)
 		return
 	}
-
 	if s.sessionRevoker != nil {
 		s.sessionRevoker.RevokeAllSessions(targetUserID)
 	}
-
-	// Queue audit log asynchronously
-	audit := &AuditLogEntry{
-		ID:              uuid.New().String(),
-		ConsoleUserID:   claims.UserID,
-		ConsoleUsername: claims.Username,
-		Email:           claims.Email,
-		Action:          "ban_player",
-		Resource:        fmt.Sprintf("users/%s", targetUserID),
-		Message:         fmt.Sprintf("Banned user %s", targetUserID),
-		Metadata:        map[string]any{"target_user_id": targetUserID},
-		CreateTime:      time.Now(),
-	}
-
-	s.auditChan <- audit
-
-	// Add to Bleve index
-	s.mu.Lock()
-	s.bleveIndex.Index(audit.ID, audit)
-	s.mu.Unlock()
-
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("Player banned successfully"))
+	s.queueAudit(claims, "ban_player", "users/"+targetUserID, "Banned user "+targetUserID, map[string]any{"target_user_id": targetUserID})
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]string{"status": "banned", "user_id": targetUserID})
 }
 
-// handleSearch performs full-text queries against the Bleve search index.
 func (s *Server) handleSearch(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	_, err := s.authenticateRequest(r)
+	claims, err := s.authenticateRequest(r)
 	if err != nil {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	if !hasACL(claims, "admin") && !hasACL(claims, "write_players") && !hasACL(claims, "read_players") {
+		http.Error(w, "Forbidden", http.StatusForbidden)
 		return
 	}
 
@@ -311,18 +395,15 @@ func (s *Server) handleSearch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Enforce 5-second timeout on Bleve queries
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
 
-	// Perform Bleve index search
 	query := bleve.NewMatchQuery(queryStr)
 	searchRequest := bleve.NewSearchRequest(query)
 	searchRequest.Size = 50
 
 	resultsChan := make(chan *bleve.SearchResult, 1)
 	errChan := make(chan error, 1)
-
 	go func() {
 		s.mu.Lock()
 		res, err := s.bleveIndex.Search(searchRequest)
@@ -337,7 +418,7 @@ func (s *Server) handleSearch(w http.ResponseWriter, r *http.Request) {
 	select {
 	case res := <-resultsChan:
 		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(w, `{"hits": %d}`, res.Total)
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{"hits": res.Total, "note": "audit_index"})
 	case err := <-errChan:
 		s.logger.Error("Search failure", "err", err)
 		http.Error(w, "Search failed", http.StatusInternalServerError)
@@ -346,11 +427,13 @@ func (s *Server) handleSearch(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// authenticateRequest extracts JWT from session cookie and verifies signature.
 func (s *Server) authenticateRequest(r *http.Request) (*ConsoleClaims, error) {
 	cookie, err := r.Cookie("session_token")
 	if err != nil {
 		return nil, err
+	}
+	if _, revoked := s.revokedTokens.Load(cookie.Value); revoked {
+		return nil, errors.New("token revoked")
 	}
 
 	token, err := jwt.ParseWithClaims(cookie.Value, &ConsoleClaims{}, func(token *jwt.Token) (interface{}, error) {
@@ -364,19 +447,17 @@ func (s *Server) authenticateRequest(r *http.Request) (*ConsoleClaims, error) {
 	if !ok {
 		return nil, errors.New("invalid claims type")
 	}
-
 	return claims, nil
 }
 
-// auditWorker processes the audit queue and persists logs asynchronously to PostgreSQL.
 func (s *Server) auditWorker() {
 	defer s.wg.Done()
 
 	for entry := range s.auditChan {
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		meta, _ := json.Marshal(entry.Metadata)
 		query := `INSERT INTO console_audit_log (id, console_user_id, console_username, email, action, resource, message, metadata, create_time)
-		          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`
-
+		          VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9)`
 		_, err := s.pool.Exec(ctx, query,
 			entry.ID,
 			entry.ConsoleUserID,
@@ -385,7 +466,7 @@ func (s *Server) auditWorker() {
 			entry.Action,
 			entry.Resource,
 			entry.Message,
-			entry.Metadata,
+			string(meta),
 			entry.CreateTime,
 		)
 		cancel()
@@ -393,4 +474,11 @@ func (s *Server) auditWorker() {
 			s.logger.Error("failed to write console audit log", "err", err)
 		}
 	}
+}
+
+// writeJSON helper.
+func writeJSON(w http.ResponseWriter, status int, v interface{}) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(v)
 }

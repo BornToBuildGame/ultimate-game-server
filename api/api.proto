@@ -875,6 +875,10 @@ message ValidatedPurchase {
   google.protobuf.Timestamp purchase_time = 5;
   bool seen_before = 6;
   int32 environment = 7;
+  google.protobuf.Timestamp create_time = 8;
+  google.protobuf.Timestamp update_time = 9;
+  google.protobuf.Timestamp refund_time = 10;
+  string provider_response = 11;
 }
 
 message ValidatePurchaseResponse {
@@ -906,6 +910,10 @@ message ValidatedSubscription {
   bool active = 7;
   bool seen_before = 8;
   int32 environment = 9;
+  google.protobuf.Timestamp create_time = 10;
+  google.protobuf.Timestamp update_time = 11;
+  google.protobuf.Timestamp refund_time = 12;
+  string provider_response = 13;
 }
 
 message ListSubscriptionsRequest {
@@ -916,6 +924,7 @@ message ListSubscriptionsRequest {
 message SubscriptionList {
   repeated ValidatedSubscription validated_subscriptions = 1;
   string cursor = 2;
+  string prev_cursor = 3;
 }
 
 message GetSubscriptionRequest {

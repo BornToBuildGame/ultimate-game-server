@@ -91,6 +91,22 @@ func TestHealthcheckJSON(t *testing.T) {
 	}
 }
 
+func TestReadyProbeUnavailableWithoutPool(t *testing.T) {
+	srv := &Server{}
+	rr := httptest.NewRecorder()
+	srv.handleReady(rr, httptest.NewRequest(http.MethodGet, "/ready", nil))
+	if rr.Code != http.StatusServiceUnavailable {
+		t.Fatalf("status=%d", rr.Code)
+	}
+	var body map[string]string
+	if err := json.NewDecoder(rr.Body).Decode(&body); err != nil {
+		t.Fatal(err)
+	}
+	if body["status"] != "not_ready" || body["error"] != "database unreachable" {
+		t.Fatalf("body=%v", body)
+	}
+}
+
 func TestCORSAllowlist(t *testing.T) {
 	h := CORSMiddleware([]string{"https://game.example"})(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)

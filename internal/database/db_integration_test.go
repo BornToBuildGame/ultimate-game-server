@@ -69,6 +69,26 @@ func TestDatabase_Integration(t *testing.T) {
 		t.Errorf("expected migration %q to be marked as applied, but it was not", expectedVersion)
 	}
 
+	groupEdgeMigration := "0011_group_edge_indexes"
+	if !applied[groupEdgeMigration] {
+		t.Errorf("expected migration %q to be marked as applied, but it was not", groupEdgeMigration)
+	}
+
+	for _, idx := range []string{"idx_group_edge_source_lookup", "idx_group_edge_dest_lookup"} {
+		var exists bool
+		err = pool.QueryRow(ctx, `
+			SELECT EXISTS (
+				SELECT 1 FROM pg_indexes
+				WHERE schemaname = 'public' AND indexname = $1
+			)`, idx).Scan(&exists)
+		if err != nil {
+			t.Fatalf("failed to query pg_indexes for %s: %v", idx, err)
+		}
+		if !exists {
+			t.Errorf("expected index %q to exist", idx)
+		}
+	}
+
 	// Verify that schema_version table exists and can be queried directly
 	var count int
 	err = pool.QueryRow(ctx, "SELECT COUNT(*) FROM schema_version WHERE version = $1", expectedVersion).Scan(&count)

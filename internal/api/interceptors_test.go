@@ -43,3 +43,25 @@ func TestResolveHTTPHookID_LeaderboardTournament(t *testing.T) {
 		}
 	}
 }
+
+func TestResolveHTTPHookID_IAP(t *testing.T) {
+	cases := []struct {
+		method, path, want string
+	}{
+		{http.MethodPost, "/v2/iap/purchase/apple", "ValidatePurchaseApple"},
+		{http.MethodPost, "/v2/iap/purchase/google", "ValidatePurchaseGoogle"},
+		{http.MethodPost, "/v2/iap/purchase/huawei", "ValidatePurchaseHuawei"},
+		{http.MethodPost, "/v2/iap/purchase/facebookinstant", "ValidatePurchaseFacebookInstant"},
+		{http.MethodPost, "/v2/iap/purchase/samsung", "ValidatePurchaseSamsung"},
+		{http.MethodPost, "/v2/iap/subscription/apple", "ValidateSubscriptionApple"},
+		{http.MethodPost, "/v2/iap/subscription/google", "ValidateSubscriptionGoogle"},
+		{http.MethodPost, "/v2/iap/subscription", "ListSubscriptions"},
+		{http.MethodGet, "/v2/iap/subscription/sku_gold", "GetSubscription"},
+	}
+	for _, tc := range cases {
+		got := resolveHTTPHookID(tc.method, tc.path)
+		if got != tc.want {
+			t.Errorf("%s %s: got %q want %q", tc.method, tc.path, got, tc.want)
+		}
+	}
+}

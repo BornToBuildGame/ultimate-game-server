@@ -6860,16 +6860,20 @@ func (x *ValidatePurchaseSamsungRequest) GetPersist() bool {
 }
 
 type ValidatedPurchase struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	ProductId     string                 `protobuf:"bytes,2,opt,name=product_id,json=productId,proto3" json:"product_id,omitempty"`
-	TransactionId string                 `protobuf:"bytes,3,opt,name=transaction_id,json=transactionId,proto3" json:"transaction_id,omitempty"`
-	Store         int32                  `protobuf:"varint,4,opt,name=store,proto3" json:"store,omitempty"`
-	PurchaseTime  *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=purchase_time,json=purchaseTime,proto3" json:"purchase_time,omitempty"`
-	SeenBefore    bool                   `protobuf:"varint,6,opt,name=seen_before,json=seenBefore,proto3" json:"seen_before,omitempty"`
-	Environment   int32                  `protobuf:"varint,7,opt,name=environment,proto3" json:"environment,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	UserId           string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	ProductId        string                 `protobuf:"bytes,2,opt,name=product_id,json=productId,proto3" json:"product_id,omitempty"`
+	TransactionId    string                 `protobuf:"bytes,3,opt,name=transaction_id,json=transactionId,proto3" json:"transaction_id,omitempty"`
+	Store            int32                  `protobuf:"varint,4,opt,name=store,proto3" json:"store,omitempty"`
+	PurchaseTime     *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=purchase_time,json=purchaseTime,proto3" json:"purchase_time,omitempty"`
+	SeenBefore       bool                   `protobuf:"varint,6,opt,name=seen_before,json=seenBefore,proto3" json:"seen_before,omitempty"`
+	Environment      int32                  `protobuf:"varint,7,opt,name=environment,proto3" json:"environment,omitempty"`
+	CreateTime       *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=create_time,json=createTime,proto3" json:"create_time,omitempty"`
+	UpdateTime       *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=update_time,json=updateTime,proto3" json:"update_time,omitempty"`
+	RefundTime       *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=refund_time,json=refundTime,proto3" json:"refund_time,omitempty"`
+	ProviderResponse string                 `protobuf:"bytes,11,opt,name=provider_response,json=providerResponse,proto3" json:"provider_response,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *ValidatedPurchase) Reset() {
@@ -6949,6 +6953,34 @@ func (x *ValidatedPurchase) GetEnvironment() int32 {
 		return x.Environment
 	}
 	return 0
+}
+
+func (x *ValidatedPurchase) GetCreateTime() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreateTime
+	}
+	return nil
+}
+
+func (x *ValidatedPurchase) GetUpdateTime() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdateTime
+	}
+	return nil
+}
+
+func (x *ValidatedPurchase) GetRefundTime() *timestamppb.Timestamp {
+	if x != nil {
+		return x.RefundTime
+	}
+	return nil
+}
+
+func (x *ValidatedPurchase) GetProviderResponse() string {
+	if x != nil {
+		return x.ProviderResponse
+	}
+	return ""
 }
 
 type ValidatePurchaseResponse struct {
@@ -7162,6 +7194,10 @@ type ValidatedSubscription struct {
 	Active                bool                   `protobuf:"varint,7,opt,name=active,proto3" json:"active,omitempty"`
 	SeenBefore            bool                   `protobuf:"varint,8,opt,name=seen_before,json=seenBefore,proto3" json:"seen_before,omitempty"`
 	Environment           int32                  `protobuf:"varint,9,opt,name=environment,proto3" json:"environment,omitempty"`
+	CreateTime            *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=create_time,json=createTime,proto3" json:"create_time,omitempty"`
+	UpdateTime            *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=update_time,json=updateTime,proto3" json:"update_time,omitempty"`
+	RefundTime            *timestamppb.Timestamp `protobuf:"bytes,12,opt,name=refund_time,json=refundTime,proto3" json:"refund_time,omitempty"`
+	ProviderResponse      string                 `protobuf:"bytes,13,opt,name=provider_response,json=providerResponse,proto3" json:"provider_response,omitempty"`
 	unknownFields         protoimpl.UnknownFields
 	sizeCache             protoimpl.SizeCache
 }
@@ -7259,6 +7295,34 @@ func (x *ValidatedSubscription) GetEnvironment() int32 {
 	return 0
 }
 
+func (x *ValidatedSubscription) GetCreateTime() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreateTime
+	}
+	return nil
+}
+
+func (x *ValidatedSubscription) GetUpdateTime() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdateTime
+	}
+	return nil
+}
+
+func (x *ValidatedSubscription) GetRefundTime() *timestamppb.Timestamp {
+	if x != nil {
+		return x.RefundTime
+	}
+	return nil
+}
+
+func (x *ValidatedSubscription) GetProviderResponse() string {
+	if x != nil {
+		return x.ProviderResponse
+	}
+	return ""
+}
+
 type ListSubscriptionsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Limit         int32                  `protobuf:"varint,1,opt,name=limit,proto3" json:"limit,omitempty"`
@@ -7315,6 +7379,7 @@ type SubscriptionList struct {
 	state                  protoimpl.MessageState   `protogen:"open.v1"`
 	ValidatedSubscriptions []*ValidatedSubscription `protobuf:"bytes,1,rep,name=validated_subscriptions,json=validatedSubscriptions,proto3" json:"validated_subscriptions,omitempty"`
 	Cursor                 string                   `protobuf:"bytes,2,opt,name=cursor,proto3" json:"cursor,omitempty"`
+	PrevCursor             string                   `protobuf:"bytes,3,opt,name=prev_cursor,json=prevCursor,proto3" json:"prev_cursor,omitempty"`
 	unknownFields          protoimpl.UnknownFields
 	sizeCache              protoimpl.SizeCache
 }
@@ -7359,6 +7424,13 @@ func (x *SubscriptionList) GetValidatedSubscriptions() []*ValidatedSubscription 
 func (x *SubscriptionList) GetCursor() string {
 	if x != nil {
 		return x.Cursor
+	}
+	return ""
+}
+
+func (x *SubscriptionList) GetPrevCursor() string {
+	if x != nil {
+		return x.PrevCursor
 	}
 	return ""
 }
@@ -8227,7 +8299,7 @@ const file_api_api_proto_rawDesc = "" +
 	"purchaseId\x12\x1d\n" +
 	"\apersist\x18\x02 \x01(\bH\x00R\apersist\x88\x01\x01B\n" +
 	"\n" +
-	"\b_persist\"\x8c\x02\n" +
+	"\b_persist\"\xf0\x03\n" +
 	"\x11ValidatedPurchase\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x1d\n" +
 	"\n" +
@@ -8237,7 +8309,15 @@ const file_api_api_proto_rawDesc = "" +
 	"\rpurchase_time\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\fpurchaseTime\x12\x1f\n" +
 	"\vseen_before\x18\x06 \x01(\bR\n" +
 	"seenBefore\x12 \n" +
-	"\venvironment\x18\a \x01(\x05R\venvironment\"s\n" +
+	"\venvironment\x18\a \x01(\x05R\venvironment\x12;\n" +
+	"\vcreate_time\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"createTime\x12;\n" +
+	"\vupdate_time\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"updateTime\x12;\n" +
+	"\vrefund_time\x18\n" +
+	" \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"refundTime\x12+\n" +
+	"\x11provider_response\x18\v \x01(\tR\x10providerResponse\"s\n" +
 	"\x18ValidatePurchaseResponse\x12W\n" +
 	"\x13validated_purchases\x18\x01 \x03(\v2&.ultimate.server.api.ValidatedPurchaseR\x12validatedPurchases\"g\n" +
 	" ValidateSubscriptionAppleRequest\x12\x18\n" +
@@ -8253,7 +8333,7 @@ const file_api_api_proto_rawDesc = "" +
 	"\n" +
 	"\b_persist\"\x81\x01\n" +
 	"\x1cValidateSubscriptionResponse\x12a\n" +
-	"\x16validated_subscription\x18\x01 \x01(\v2*.ultimate.server.api.ValidatedSubscriptionR\x15validatedSubscription\"\xf6\x02\n" +
+	"\x16validated_subscription\x18\x01 \x01(\v2*.ultimate.server.api.ValidatedSubscriptionR\x15validatedSubscription\"\xda\x04\n" +
 	"\x15ValidatedSubscription\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x1d\n" +
 	"\n" +
@@ -8266,13 +8346,23 @@ const file_api_api_proto_rawDesc = "" +
 	"\x06active\x18\a \x01(\bR\x06active\x12\x1f\n" +
 	"\vseen_before\x18\b \x01(\bR\n" +
 	"seenBefore\x12 \n" +
-	"\venvironment\x18\t \x01(\x05R\venvironment\"H\n" +
+	"\venvironment\x18\t \x01(\x05R\venvironment\x12;\n" +
+	"\vcreate_time\x18\n" +
+	" \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"createTime\x12;\n" +
+	"\vupdate_time\x18\v \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"updateTime\x12;\n" +
+	"\vrefund_time\x18\f \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"refundTime\x12+\n" +
+	"\x11provider_response\x18\r \x01(\tR\x10providerResponse\"H\n" +
 	"\x18ListSubscriptionsRequest\x12\x14\n" +
 	"\x05limit\x18\x01 \x01(\x05R\x05limit\x12\x16\n" +
-	"\x06cursor\x18\x02 \x01(\tR\x06cursor\"\x8f\x01\n" +
+	"\x06cursor\x18\x02 \x01(\tR\x06cursor\"\xb0\x01\n" +
 	"\x10SubscriptionList\x12c\n" +
 	"\x17validated_subscriptions\x18\x01 \x03(\v2*.ultimate.server.api.ValidatedSubscriptionR\x16validatedSubscriptions\x12\x16\n" +
-	"\x06cursor\x18\x02 \x01(\tR\x06cursor\"7\n" +
+	"\x06cursor\x18\x02 \x01(\tR\x06cursor\x12\x1f\n" +
+	"\vprev_cursor\x18\x03 \x01(\tR\n" +
+	"prevCursor\"7\n" +
 	"\x16GetSubscriptionRequest\x12\x1d\n" +
 	"\n" +
 	"product_id\x18\x01 \x01(\tR\tproductId\"J\n" +
@@ -8612,210 +8702,216 @@ var file_api_api_proto_depIdxs = []int32{
 	121, // 45: ultimate.server.api.WalletLedgerItem.update_time:type_name -> google.protobuf.Timestamp
 	97,  // 46: ultimate.server.api.WalletLedgerList.items:type_name -> ultimate.server.api.WalletLedgerItem
 	121, // 47: ultimate.server.api.ValidatedPurchase.purchase_time:type_name -> google.protobuf.Timestamp
-	104, // 48: ultimate.server.api.ValidatePurchaseResponse.validated_purchases:type_name -> ultimate.server.api.ValidatedPurchase
-	109, // 49: ultimate.server.api.ValidateSubscriptionResponse.validated_subscription:type_name -> ultimate.server.api.ValidatedSubscription
-	121, // 50: ultimate.server.api.ValidatedSubscription.purchase_time:type_name -> google.protobuf.Timestamp
-	121, // 51: ultimate.server.api.ValidatedSubscription.expire_time:type_name -> google.protobuf.Timestamp
-	109, // 52: ultimate.server.api.SubscriptionList.validated_subscriptions:type_name -> ultimate.server.api.ValidatedSubscription
-	1,   // 53: ultimate.server.api.Users.users:type_name -> ultimate.server.api.User
-	120, // 54: ultimate.server.api.ClientEvent.properties:type_name -> ultimate.server.api.ClientEvent.PropertiesEntry
-	2,   // 55: ultimate.server.api.AuthenticationService.AuthenticateEmail:input_type -> ultimate.server.api.AuthenticateEmailRequest
-	3,   // 56: ultimate.server.api.AuthenticationService.AuthenticateDevice:input_type -> ultimate.server.api.AuthenticateDeviceRequest
-	4,   // 57: ultimate.server.api.AuthenticationService.AuthenticateApple:input_type -> ultimate.server.api.AuthenticateAppleRequest
-	5,   // 58: ultimate.server.api.AuthenticationService.AuthenticateGoogle:input_type -> ultimate.server.api.AuthenticateGoogleRequest
-	6,   // 59: ultimate.server.api.AuthenticationService.AuthenticateFacebook:input_type -> ultimate.server.api.AuthenticateFacebookRequest
-	7,   // 60: ultimate.server.api.AuthenticationService.AuthenticateSteam:input_type -> ultimate.server.api.AuthenticateSteamRequest
-	8,   // 61: ultimate.server.api.AuthenticationService.AuthenticateGameCenter:input_type -> ultimate.server.api.AuthenticateGameCenterRequest
-	9,   // 62: ultimate.server.api.AuthenticationService.AuthenticateFacebookInstantGame:input_type -> ultimate.server.api.AuthenticateFacebookInstantGameRequest
-	10,  // 63: ultimate.server.api.AuthenticationService.AuthenticateCustom:input_type -> ultimate.server.api.AuthenticateCustomRequest
-	11,  // 64: ultimate.server.api.AuthenticationService.SessionRefresh:input_type -> ultimate.server.api.SessionRefreshRequest
-	12,  // 65: ultimate.server.api.AuthenticationService.SessionLogout:input_type -> ultimate.server.api.SessionLogoutRequest
-	122, // 66: ultimate.server.api.AuthenticationService.GetAccount:input_type -> google.protobuf.Empty
-	16,  // 67: ultimate.server.api.AuthenticationService.UpdateAccount:input_type -> ultimate.server.api.UpdateAccountRequest
-	122, // 68: ultimate.server.api.AuthenticationService.DeleteAccount:input_type -> google.protobuf.Empty
-	2,   // 69: ultimate.server.api.AuthenticationService.LinkEmail:input_type -> ultimate.server.api.AuthenticateEmailRequest
-	3,   // 70: ultimate.server.api.AuthenticationService.LinkDevice:input_type -> ultimate.server.api.AuthenticateDeviceRequest
-	4,   // 71: ultimate.server.api.AuthenticationService.LinkApple:input_type -> ultimate.server.api.AuthenticateAppleRequest
-	5,   // 72: ultimate.server.api.AuthenticationService.LinkGoogle:input_type -> ultimate.server.api.AuthenticateGoogleRequest
-	6,   // 73: ultimate.server.api.AuthenticationService.LinkFacebook:input_type -> ultimate.server.api.AuthenticateFacebookRequest
-	7,   // 74: ultimate.server.api.AuthenticationService.LinkSteam:input_type -> ultimate.server.api.AuthenticateSteamRequest
-	10,  // 75: ultimate.server.api.AuthenticationService.LinkCustom:input_type -> ultimate.server.api.AuthenticateCustomRequest
-	8,   // 76: ultimate.server.api.AuthenticationService.LinkGameCenter:input_type -> ultimate.server.api.AuthenticateGameCenterRequest
-	9,   // 77: ultimate.server.api.AuthenticationService.LinkFacebookInstantGame:input_type -> ultimate.server.api.AuthenticateFacebookInstantGameRequest
-	17,  // 78: ultimate.server.api.AuthenticationService.UnlinkEmail:input_type -> ultimate.server.api.UnlinkRequest
-	17,  // 79: ultimate.server.api.AuthenticationService.UnlinkDevice:input_type -> ultimate.server.api.UnlinkRequest
-	17,  // 80: ultimate.server.api.AuthenticationService.UnlinkApple:input_type -> ultimate.server.api.UnlinkRequest
-	17,  // 81: ultimate.server.api.AuthenticationService.UnlinkGoogle:input_type -> ultimate.server.api.UnlinkRequest
-	17,  // 82: ultimate.server.api.AuthenticationService.UnlinkFacebook:input_type -> ultimate.server.api.UnlinkRequest
-	17,  // 83: ultimate.server.api.AuthenticationService.UnlinkSteam:input_type -> ultimate.server.api.UnlinkRequest
-	17,  // 84: ultimate.server.api.AuthenticationService.UnlinkCustom:input_type -> ultimate.server.api.UnlinkRequest
-	17,  // 85: ultimate.server.api.AuthenticationService.UnlinkGameCenter:input_type -> ultimate.server.api.UnlinkRequest
-	17,  // 86: ultimate.server.api.AuthenticationService.UnlinkFacebookInstantGame:input_type -> ultimate.server.api.UnlinkRequest
-	18,  // 87: ultimate.server.api.LeaderboardService.CreateLeaderboard:input_type -> ultimate.server.api.CreateLeaderboardRequest
-	22,  // 88: ultimate.server.api.LeaderboardService.DeleteLeaderboard:input_type -> ultimate.server.api.DeleteLeaderboardRequest
-	19,  // 89: ultimate.server.api.LeaderboardService.ListLeaderboards:input_type -> ultimate.server.api.ListLeaderboardsRequest
-	23,  // 90: ultimate.server.api.LeaderboardService.WriteLeaderboardRecord:input_type -> ultimate.server.api.WriteLeaderboardRecordRequest
-	25,  // 91: ultimate.server.api.LeaderboardService.ListLeaderboardRecords:input_type -> ultimate.server.api.ListLeaderboardRecordsRequest
-	26,  // 92: ultimate.server.api.LeaderboardService.ListLeaderboardRecordsAroundOwner:input_type -> ultimate.server.api.ListLeaderboardRecordsAroundOwnerRequest
-	28,  // 93: ultimate.server.api.LeaderboardService.DeleteLeaderboardRecord:input_type -> ultimate.server.api.DeleteLeaderboardRecordRequest
-	29,  // 94: ultimate.server.api.TournamentService.CreateTournament:input_type -> ultimate.server.api.CreateTournamentRequest
-	30,  // 95: ultimate.server.api.TournamentService.DeleteTournament:input_type -> ultimate.server.api.DeleteTournamentRequest
-	31,  // 96: ultimate.server.api.TournamentService.JoinTournament:input_type -> ultimate.server.api.JoinTournamentRequest
-	32,  // 97: ultimate.server.api.TournamentService.ListTournaments:input_type -> ultimate.server.api.ListTournamentsRequest
-	35,  // 98: ultimate.server.api.TournamentService.WriteTournamentRecord:input_type -> ultimate.server.api.WriteTournamentRecordRequest
-	36,  // 99: ultimate.server.api.TournamentService.ListTournamentRecords:input_type -> ultimate.server.api.ListTournamentRecordsRequest
-	37,  // 100: ultimate.server.api.TournamentService.ListTournamentRecordsAroundOwner:input_type -> ultimate.server.api.ListTournamentRecordsAroundOwnerRequest
-	38,  // 101: ultimate.server.api.TournamentService.DeleteTournamentRecord:input_type -> ultimate.server.api.DeleteTournamentRecordRequest
-	39,  // 102: ultimate.server.api.FriendsService.AddFriends:input_type -> ultimate.server.api.AddFriendsRequest
-	40,  // 103: ultimate.server.api.FriendsService.ListFriends:input_type -> ultimate.server.api.ListFriendsRequest
-	41,  // 104: ultimate.server.api.FriendsService.ListFriendsOfFriends:input_type -> ultimate.server.api.ListFriendsOfFriendsRequest
-	46,  // 105: ultimate.server.api.FriendsService.DeleteFriends:input_type -> ultimate.server.api.DeleteFriendsRequest
-	47,  // 106: ultimate.server.api.FriendsService.BlockFriends:input_type -> ultimate.server.api.BlockFriendsRequest
-	48,  // 107: ultimate.server.api.FriendsService.UnblockFriends:input_type -> ultimate.server.api.UnblockFriendsRequest
-	49,  // 108: ultimate.server.api.FriendsService.ImportFacebookFriends:input_type -> ultimate.server.api.ImportFacebookFriendsRequest
-	50,  // 109: ultimate.server.api.FriendsService.ImportSteamFriends:input_type -> ultimate.server.api.ImportSteamFriendsRequest
-	51,  // 110: ultimate.server.api.GroupService.CreateGroup:input_type -> ultimate.server.api.CreateGroupRequest
-	53,  // 111: ultimate.server.api.GroupService.UpdateGroup:input_type -> ultimate.server.api.UpdateGroupRequest
-	54,  // 112: ultimate.server.api.GroupService.DeleteGroup:input_type -> ultimate.server.api.DeleteGroupRequest
-	55,  // 113: ultimate.server.api.GroupService.ListGroups:input_type -> ultimate.server.api.ListGroupsRequest
-	57,  // 114: ultimate.server.api.GroupService.JoinGroup:input_type -> ultimate.server.api.JoinGroupRequest
-	58,  // 115: ultimate.server.api.GroupService.LeaveGroup:input_type -> ultimate.server.api.LeaveGroupRequest
-	59,  // 116: ultimate.server.api.GroupService.AddGroupUsers:input_type -> ultimate.server.api.AddGroupUsersRequest
-	60,  // 117: ultimate.server.api.GroupService.KickGroupUsers:input_type -> ultimate.server.api.KickGroupUsersRequest
-	61,  // 118: ultimate.server.api.GroupService.PromoteGroupUsers:input_type -> ultimate.server.api.PromoteGroupUsersRequest
-	62,  // 119: ultimate.server.api.GroupService.DemoteGroupUsers:input_type -> ultimate.server.api.DemoteGroupUsersRequest
-	63,  // 120: ultimate.server.api.GroupService.BanGroupUsers:input_type -> ultimate.server.api.BanGroupUsersRequest
-	68,  // 121: ultimate.server.api.GroupService.ListGroupUsers:input_type -> ultimate.server.api.ListGroupUsersRequest
-	69,  // 122: ultimate.server.api.GroupService.ListUserGroups:input_type -> ultimate.server.api.ListUserGroupsRequest
-	70,  // 123: ultimate.server.api.MatchmakerService.AddMatchmaker:input_type -> ultimate.server.api.AddMatchmakerRequest
-	72,  // 124: ultimate.server.api.MatchmakerService.RemoveMatchmaker:input_type -> ultimate.server.api.RemoveMatchmakerRequest
-	73,  // 125: ultimate.server.api.MatchmakerService.GetMatchmakerTicket:input_type -> ultimate.server.api.GetMatchmakerTicketRequest
-	74,  // 126: ultimate.server.api.MatchmakerService.GetQueueStats:input_type -> ultimate.server.api.GetQueueStatsRequest
-	122, // 127: ultimate.server.api.MatchmakerService.GetMatchmakerStats:input_type -> google.protobuf.Empty
-	77,  // 128: ultimate.server.api.RealtimeService.CreateMatch:input_type -> ultimate.server.api.CreateMatchRequest
-	78,  // 129: ultimate.server.api.RealtimeService.ListMatches:input_type -> ultimate.server.api.ListMatchesRequest
-	79,  // 130: ultimate.server.api.RealtimeService.GetMatch:input_type -> ultimate.server.api.GetMatchRequest
-	83,  // 131: ultimate.server.api.RealtimeService.MatchSignal:input_type -> ultimate.server.api.MatchSignalRequest
-	85,  // 132: ultimate.server.api.PartyService.ListParties:input_type -> ultimate.server.api.ListPartiesRequest
-	88,  // 133: ultimate.server.api.ChatService.ListChannelMessages:input_type -> ultimate.server.api.ListChannelMessagesRequest
-	91,  // 134: ultimate.server.api.NotificationService.ListNotifications:input_type -> ultimate.server.api.ListNotificationsRequest
-	94,  // 135: ultimate.server.api.NotificationService.DeleteNotifications:input_type -> ultimate.server.api.DeleteNotificationsRequest
-	122, // 136: ultimate.server.api.EconomyService.GetWallet:input_type -> google.protobuf.Empty
-	96,  // 137: ultimate.server.api.EconomyService.ListWalletLedger:input_type -> ultimate.server.api.ListWalletLedgerRequest
-	99,  // 138: ultimate.server.api.IAPService.ValidatePurchaseApple:input_type -> ultimate.server.api.ValidatePurchaseAppleRequest
-	100, // 139: ultimate.server.api.IAPService.ValidatePurchaseGoogle:input_type -> ultimate.server.api.ValidatePurchaseGoogleRequest
-	101, // 140: ultimate.server.api.IAPService.ValidatePurchaseHuawei:input_type -> ultimate.server.api.ValidatePurchaseHuaweiRequest
-	102, // 141: ultimate.server.api.IAPService.ValidatePurchaseFacebookInstant:input_type -> ultimate.server.api.ValidatePurchaseFacebookInstantRequest
-	103, // 142: ultimate.server.api.IAPService.ValidatePurchaseSamsung:input_type -> ultimate.server.api.ValidatePurchaseSamsungRequest
-	106, // 143: ultimate.server.api.IAPService.ValidateSubscriptionApple:input_type -> ultimate.server.api.ValidateSubscriptionAppleRequest
-	107, // 144: ultimate.server.api.IAPService.ValidateSubscriptionGoogle:input_type -> ultimate.server.api.ValidateSubscriptionGoogleRequest
-	110, // 145: ultimate.server.api.IAPService.ListSubscriptions:input_type -> ultimate.server.api.ListSubscriptionsRequest
-	112, // 146: ultimate.server.api.IAPService.GetSubscription:input_type -> ultimate.server.api.GetSubscriptionRequest
-	113, // 147: ultimate.server.api.RpcService.RpcFunc:input_type -> ultimate.server.api.Rpc
-	114, // 148: ultimate.server.api.UserService.GetUsers:input_type -> ultimate.server.api.GetUsersRequest
-	116, // 149: ultimate.server.api.EventService.Event:input_type -> ultimate.server.api.ClientEvent
-	122, // 150: ultimate.server.api.SystemService.Healthcheck:input_type -> google.protobuf.Empty
-	13,  // 151: ultimate.server.api.AuthenticationService.AuthenticateEmail:output_type -> ultimate.server.api.Session
-	13,  // 152: ultimate.server.api.AuthenticationService.AuthenticateDevice:output_type -> ultimate.server.api.Session
-	13,  // 153: ultimate.server.api.AuthenticationService.AuthenticateApple:output_type -> ultimate.server.api.Session
-	13,  // 154: ultimate.server.api.AuthenticationService.AuthenticateGoogle:output_type -> ultimate.server.api.Session
-	13,  // 155: ultimate.server.api.AuthenticationService.AuthenticateFacebook:output_type -> ultimate.server.api.Session
-	13,  // 156: ultimate.server.api.AuthenticationService.AuthenticateSteam:output_type -> ultimate.server.api.Session
-	13,  // 157: ultimate.server.api.AuthenticationService.AuthenticateGameCenter:output_type -> ultimate.server.api.Session
-	13,  // 158: ultimate.server.api.AuthenticationService.AuthenticateFacebookInstantGame:output_type -> ultimate.server.api.Session
-	13,  // 159: ultimate.server.api.AuthenticationService.AuthenticateCustom:output_type -> ultimate.server.api.Session
-	13,  // 160: ultimate.server.api.AuthenticationService.SessionRefresh:output_type -> ultimate.server.api.Session
-	122, // 161: ultimate.server.api.AuthenticationService.SessionLogout:output_type -> google.protobuf.Empty
-	15,  // 162: ultimate.server.api.AuthenticationService.GetAccount:output_type -> ultimate.server.api.Account
-	122, // 163: ultimate.server.api.AuthenticationService.UpdateAccount:output_type -> google.protobuf.Empty
-	122, // 164: ultimate.server.api.AuthenticationService.DeleteAccount:output_type -> google.protobuf.Empty
-	122, // 165: ultimate.server.api.AuthenticationService.LinkEmail:output_type -> google.protobuf.Empty
-	122, // 166: ultimate.server.api.AuthenticationService.LinkDevice:output_type -> google.protobuf.Empty
-	122, // 167: ultimate.server.api.AuthenticationService.LinkApple:output_type -> google.protobuf.Empty
-	122, // 168: ultimate.server.api.AuthenticationService.LinkGoogle:output_type -> google.protobuf.Empty
-	122, // 169: ultimate.server.api.AuthenticationService.LinkFacebook:output_type -> google.protobuf.Empty
-	122, // 170: ultimate.server.api.AuthenticationService.LinkSteam:output_type -> google.protobuf.Empty
-	122, // 171: ultimate.server.api.AuthenticationService.LinkCustom:output_type -> google.protobuf.Empty
-	122, // 172: ultimate.server.api.AuthenticationService.LinkGameCenter:output_type -> google.protobuf.Empty
-	122, // 173: ultimate.server.api.AuthenticationService.LinkFacebookInstantGame:output_type -> google.protobuf.Empty
-	122, // 174: ultimate.server.api.AuthenticationService.UnlinkEmail:output_type -> google.protobuf.Empty
-	122, // 175: ultimate.server.api.AuthenticationService.UnlinkDevice:output_type -> google.protobuf.Empty
-	122, // 176: ultimate.server.api.AuthenticationService.UnlinkApple:output_type -> google.protobuf.Empty
-	122, // 177: ultimate.server.api.AuthenticationService.UnlinkGoogle:output_type -> google.protobuf.Empty
-	122, // 178: ultimate.server.api.AuthenticationService.UnlinkFacebook:output_type -> google.protobuf.Empty
-	122, // 179: ultimate.server.api.AuthenticationService.UnlinkSteam:output_type -> google.protobuf.Empty
-	122, // 180: ultimate.server.api.AuthenticationService.UnlinkCustom:output_type -> google.protobuf.Empty
-	122, // 181: ultimate.server.api.AuthenticationService.UnlinkGameCenter:output_type -> google.protobuf.Empty
-	122, // 182: ultimate.server.api.AuthenticationService.UnlinkFacebookInstantGame:output_type -> google.protobuf.Empty
-	122, // 183: ultimate.server.api.LeaderboardService.CreateLeaderboard:output_type -> google.protobuf.Empty
-	122, // 184: ultimate.server.api.LeaderboardService.DeleteLeaderboard:output_type -> google.protobuf.Empty
-	21,  // 185: ultimate.server.api.LeaderboardService.ListLeaderboards:output_type -> ultimate.server.api.LeaderboardList
-	24,  // 186: ultimate.server.api.LeaderboardService.WriteLeaderboardRecord:output_type -> ultimate.server.api.LeaderboardRecord
-	27,  // 187: ultimate.server.api.LeaderboardService.ListLeaderboardRecords:output_type -> ultimate.server.api.LeaderboardRecordList
-	27,  // 188: ultimate.server.api.LeaderboardService.ListLeaderboardRecordsAroundOwner:output_type -> ultimate.server.api.LeaderboardRecordList
-	122, // 189: ultimate.server.api.LeaderboardService.DeleteLeaderboardRecord:output_type -> google.protobuf.Empty
-	122, // 190: ultimate.server.api.TournamentService.CreateTournament:output_type -> google.protobuf.Empty
-	122, // 191: ultimate.server.api.TournamentService.DeleteTournament:output_type -> google.protobuf.Empty
-	122, // 192: ultimate.server.api.TournamentService.JoinTournament:output_type -> google.protobuf.Empty
-	34,  // 193: ultimate.server.api.TournamentService.ListTournaments:output_type -> ultimate.server.api.TournamentList
-	24,  // 194: ultimate.server.api.TournamentService.WriteTournamentRecord:output_type -> ultimate.server.api.LeaderboardRecord
-	27,  // 195: ultimate.server.api.TournamentService.ListTournamentRecords:output_type -> ultimate.server.api.LeaderboardRecordList
-	27,  // 196: ultimate.server.api.TournamentService.ListTournamentRecordsAroundOwner:output_type -> ultimate.server.api.LeaderboardRecordList
-	122, // 197: ultimate.server.api.TournamentService.DeleteTournamentRecord:output_type -> google.protobuf.Empty
-	122, // 198: ultimate.server.api.FriendsService.AddFriends:output_type -> google.protobuf.Empty
-	43,  // 199: ultimate.server.api.FriendsService.ListFriends:output_type -> ultimate.server.api.FriendList
-	45,  // 200: ultimate.server.api.FriendsService.ListFriendsOfFriends:output_type -> ultimate.server.api.FriendsOfFriendsList
-	122, // 201: ultimate.server.api.FriendsService.DeleteFriends:output_type -> google.protobuf.Empty
-	122, // 202: ultimate.server.api.FriendsService.BlockFriends:output_type -> google.protobuf.Empty
-	122, // 203: ultimate.server.api.FriendsService.UnblockFriends:output_type -> google.protobuf.Empty
-	122, // 204: ultimate.server.api.FriendsService.ImportFacebookFriends:output_type -> google.protobuf.Empty
-	122, // 205: ultimate.server.api.FriendsService.ImportSteamFriends:output_type -> google.protobuf.Empty
-	52,  // 206: ultimate.server.api.GroupService.CreateGroup:output_type -> ultimate.server.api.Group
-	122, // 207: ultimate.server.api.GroupService.UpdateGroup:output_type -> google.protobuf.Empty
-	122, // 208: ultimate.server.api.GroupService.DeleteGroup:output_type -> google.protobuf.Empty
-	56,  // 209: ultimate.server.api.GroupService.ListGroups:output_type -> ultimate.server.api.GroupList
-	122, // 210: ultimate.server.api.GroupService.JoinGroup:output_type -> google.protobuf.Empty
-	122, // 211: ultimate.server.api.GroupService.LeaveGroup:output_type -> google.protobuf.Empty
-	122, // 212: ultimate.server.api.GroupService.AddGroupUsers:output_type -> google.protobuf.Empty
-	122, // 213: ultimate.server.api.GroupService.KickGroupUsers:output_type -> google.protobuf.Empty
-	122, // 214: ultimate.server.api.GroupService.PromoteGroupUsers:output_type -> google.protobuf.Empty
-	122, // 215: ultimate.server.api.GroupService.DemoteGroupUsers:output_type -> google.protobuf.Empty
-	122, // 216: ultimate.server.api.GroupService.BanGroupUsers:output_type -> google.protobuf.Empty
-	65,  // 217: ultimate.server.api.GroupService.ListGroupUsers:output_type -> ultimate.server.api.GroupUserList
-	67,  // 218: ultimate.server.api.GroupService.ListUserGroups:output_type -> ultimate.server.api.UserGroupList
-	71,  // 219: ultimate.server.api.MatchmakerService.AddMatchmaker:output_type -> ultimate.server.api.MatchmakerTicket
-	122, // 220: ultimate.server.api.MatchmakerService.RemoveMatchmaker:output_type -> google.protobuf.Empty
-	71,  // 221: ultimate.server.api.MatchmakerService.GetMatchmakerTicket:output_type -> ultimate.server.api.MatchmakerTicket
-	75,  // 222: ultimate.server.api.MatchmakerService.GetQueueStats:output_type -> ultimate.server.api.QueueStats
-	76,  // 223: ultimate.server.api.MatchmakerService.GetMatchmakerStats:output_type -> ultimate.server.api.MatchmakerStats
-	81,  // 224: ultimate.server.api.RealtimeService.CreateMatch:output_type -> ultimate.server.api.Match
-	82,  // 225: ultimate.server.api.RealtimeService.ListMatches:output_type -> ultimate.server.api.MatchList
-	81,  // 226: ultimate.server.api.RealtimeService.GetMatch:output_type -> ultimate.server.api.Match
-	84,  // 227: ultimate.server.api.RealtimeService.MatchSignal:output_type -> ultimate.server.api.MatchSignalResponse
-	87,  // 228: ultimate.server.api.PartyService.ListParties:output_type -> ultimate.server.api.PartyList
-	90,  // 229: ultimate.server.api.ChatService.ListChannelMessages:output_type -> ultimate.server.api.ChannelMessageList
-	93,  // 230: ultimate.server.api.NotificationService.ListNotifications:output_type -> ultimate.server.api.NotificationList
-	122, // 231: ultimate.server.api.NotificationService.DeleteNotifications:output_type -> google.protobuf.Empty
-	95,  // 232: ultimate.server.api.EconomyService.GetWallet:output_type -> ultimate.server.api.Wallet
-	98,  // 233: ultimate.server.api.EconomyService.ListWalletLedger:output_type -> ultimate.server.api.WalletLedgerList
-	105, // 234: ultimate.server.api.IAPService.ValidatePurchaseApple:output_type -> ultimate.server.api.ValidatePurchaseResponse
-	105, // 235: ultimate.server.api.IAPService.ValidatePurchaseGoogle:output_type -> ultimate.server.api.ValidatePurchaseResponse
-	105, // 236: ultimate.server.api.IAPService.ValidatePurchaseHuawei:output_type -> ultimate.server.api.ValidatePurchaseResponse
-	105, // 237: ultimate.server.api.IAPService.ValidatePurchaseFacebookInstant:output_type -> ultimate.server.api.ValidatePurchaseResponse
-	105, // 238: ultimate.server.api.IAPService.ValidatePurchaseSamsung:output_type -> ultimate.server.api.ValidatePurchaseResponse
-	108, // 239: ultimate.server.api.IAPService.ValidateSubscriptionApple:output_type -> ultimate.server.api.ValidateSubscriptionResponse
-	108, // 240: ultimate.server.api.IAPService.ValidateSubscriptionGoogle:output_type -> ultimate.server.api.ValidateSubscriptionResponse
-	111, // 241: ultimate.server.api.IAPService.ListSubscriptions:output_type -> ultimate.server.api.SubscriptionList
-	109, // 242: ultimate.server.api.IAPService.GetSubscription:output_type -> ultimate.server.api.ValidatedSubscription
-	113, // 243: ultimate.server.api.RpcService.RpcFunc:output_type -> ultimate.server.api.Rpc
-	115, // 244: ultimate.server.api.UserService.GetUsers:output_type -> ultimate.server.api.Users
-	122, // 245: ultimate.server.api.EventService.Event:output_type -> google.protobuf.Empty
-	122, // 246: ultimate.server.api.SystemService.Healthcheck:output_type -> google.protobuf.Empty
-	151, // [151:247] is the sub-list for method output_type
-	55,  // [55:151] is the sub-list for method input_type
-	55,  // [55:55] is the sub-list for extension type_name
-	55,  // [55:55] is the sub-list for extension extendee
-	0,   // [0:55] is the sub-list for field type_name
+	121, // 48: ultimate.server.api.ValidatedPurchase.create_time:type_name -> google.protobuf.Timestamp
+	121, // 49: ultimate.server.api.ValidatedPurchase.update_time:type_name -> google.protobuf.Timestamp
+	121, // 50: ultimate.server.api.ValidatedPurchase.refund_time:type_name -> google.protobuf.Timestamp
+	104, // 51: ultimate.server.api.ValidatePurchaseResponse.validated_purchases:type_name -> ultimate.server.api.ValidatedPurchase
+	109, // 52: ultimate.server.api.ValidateSubscriptionResponse.validated_subscription:type_name -> ultimate.server.api.ValidatedSubscription
+	121, // 53: ultimate.server.api.ValidatedSubscription.purchase_time:type_name -> google.protobuf.Timestamp
+	121, // 54: ultimate.server.api.ValidatedSubscription.expire_time:type_name -> google.protobuf.Timestamp
+	121, // 55: ultimate.server.api.ValidatedSubscription.create_time:type_name -> google.protobuf.Timestamp
+	121, // 56: ultimate.server.api.ValidatedSubscription.update_time:type_name -> google.protobuf.Timestamp
+	121, // 57: ultimate.server.api.ValidatedSubscription.refund_time:type_name -> google.protobuf.Timestamp
+	109, // 58: ultimate.server.api.SubscriptionList.validated_subscriptions:type_name -> ultimate.server.api.ValidatedSubscription
+	1,   // 59: ultimate.server.api.Users.users:type_name -> ultimate.server.api.User
+	120, // 60: ultimate.server.api.ClientEvent.properties:type_name -> ultimate.server.api.ClientEvent.PropertiesEntry
+	2,   // 61: ultimate.server.api.AuthenticationService.AuthenticateEmail:input_type -> ultimate.server.api.AuthenticateEmailRequest
+	3,   // 62: ultimate.server.api.AuthenticationService.AuthenticateDevice:input_type -> ultimate.server.api.AuthenticateDeviceRequest
+	4,   // 63: ultimate.server.api.AuthenticationService.AuthenticateApple:input_type -> ultimate.server.api.AuthenticateAppleRequest
+	5,   // 64: ultimate.server.api.AuthenticationService.AuthenticateGoogle:input_type -> ultimate.server.api.AuthenticateGoogleRequest
+	6,   // 65: ultimate.server.api.AuthenticationService.AuthenticateFacebook:input_type -> ultimate.server.api.AuthenticateFacebookRequest
+	7,   // 66: ultimate.server.api.AuthenticationService.AuthenticateSteam:input_type -> ultimate.server.api.AuthenticateSteamRequest
+	8,   // 67: ultimate.server.api.AuthenticationService.AuthenticateGameCenter:input_type -> ultimate.server.api.AuthenticateGameCenterRequest
+	9,   // 68: ultimate.server.api.AuthenticationService.AuthenticateFacebookInstantGame:input_type -> ultimate.server.api.AuthenticateFacebookInstantGameRequest
+	10,  // 69: ultimate.server.api.AuthenticationService.AuthenticateCustom:input_type -> ultimate.server.api.AuthenticateCustomRequest
+	11,  // 70: ultimate.server.api.AuthenticationService.SessionRefresh:input_type -> ultimate.server.api.SessionRefreshRequest
+	12,  // 71: ultimate.server.api.AuthenticationService.SessionLogout:input_type -> ultimate.server.api.SessionLogoutRequest
+	122, // 72: ultimate.server.api.AuthenticationService.GetAccount:input_type -> google.protobuf.Empty
+	16,  // 73: ultimate.server.api.AuthenticationService.UpdateAccount:input_type -> ultimate.server.api.UpdateAccountRequest
+	122, // 74: ultimate.server.api.AuthenticationService.DeleteAccount:input_type -> google.protobuf.Empty
+	2,   // 75: ultimate.server.api.AuthenticationService.LinkEmail:input_type -> ultimate.server.api.AuthenticateEmailRequest
+	3,   // 76: ultimate.server.api.AuthenticationService.LinkDevice:input_type -> ultimate.server.api.AuthenticateDeviceRequest
+	4,   // 77: ultimate.server.api.AuthenticationService.LinkApple:input_type -> ultimate.server.api.AuthenticateAppleRequest
+	5,   // 78: ultimate.server.api.AuthenticationService.LinkGoogle:input_type -> ultimate.server.api.AuthenticateGoogleRequest
+	6,   // 79: ultimate.server.api.AuthenticationService.LinkFacebook:input_type -> ultimate.server.api.AuthenticateFacebookRequest
+	7,   // 80: ultimate.server.api.AuthenticationService.LinkSteam:input_type -> ultimate.server.api.AuthenticateSteamRequest
+	10,  // 81: ultimate.server.api.AuthenticationService.LinkCustom:input_type -> ultimate.server.api.AuthenticateCustomRequest
+	8,   // 82: ultimate.server.api.AuthenticationService.LinkGameCenter:input_type -> ultimate.server.api.AuthenticateGameCenterRequest
+	9,   // 83: ultimate.server.api.AuthenticationService.LinkFacebookInstantGame:input_type -> ultimate.server.api.AuthenticateFacebookInstantGameRequest
+	17,  // 84: ultimate.server.api.AuthenticationService.UnlinkEmail:input_type -> ultimate.server.api.UnlinkRequest
+	17,  // 85: ultimate.server.api.AuthenticationService.UnlinkDevice:input_type -> ultimate.server.api.UnlinkRequest
+	17,  // 86: ultimate.server.api.AuthenticationService.UnlinkApple:input_type -> ultimate.server.api.UnlinkRequest
+	17,  // 87: ultimate.server.api.AuthenticationService.UnlinkGoogle:input_type -> ultimate.server.api.UnlinkRequest
+	17,  // 88: ultimate.server.api.AuthenticationService.UnlinkFacebook:input_type -> ultimate.server.api.UnlinkRequest
+	17,  // 89: ultimate.server.api.AuthenticationService.UnlinkSteam:input_type -> ultimate.server.api.UnlinkRequest
+	17,  // 90: ultimate.server.api.AuthenticationService.UnlinkCustom:input_type -> ultimate.server.api.UnlinkRequest
+	17,  // 91: ultimate.server.api.AuthenticationService.UnlinkGameCenter:input_type -> ultimate.server.api.UnlinkRequest
+	17,  // 92: ultimate.server.api.AuthenticationService.UnlinkFacebookInstantGame:input_type -> ultimate.server.api.UnlinkRequest
+	18,  // 93: ultimate.server.api.LeaderboardService.CreateLeaderboard:input_type -> ultimate.server.api.CreateLeaderboardRequest
+	22,  // 94: ultimate.server.api.LeaderboardService.DeleteLeaderboard:input_type -> ultimate.server.api.DeleteLeaderboardRequest
+	19,  // 95: ultimate.server.api.LeaderboardService.ListLeaderboards:input_type -> ultimate.server.api.ListLeaderboardsRequest
+	23,  // 96: ultimate.server.api.LeaderboardService.WriteLeaderboardRecord:input_type -> ultimate.server.api.WriteLeaderboardRecordRequest
+	25,  // 97: ultimate.server.api.LeaderboardService.ListLeaderboardRecords:input_type -> ultimate.server.api.ListLeaderboardRecordsRequest
+	26,  // 98: ultimate.server.api.LeaderboardService.ListLeaderboardRecordsAroundOwner:input_type -> ultimate.server.api.ListLeaderboardRecordsAroundOwnerRequest
+	28,  // 99: ultimate.server.api.LeaderboardService.DeleteLeaderboardRecord:input_type -> ultimate.server.api.DeleteLeaderboardRecordRequest
+	29,  // 100: ultimate.server.api.TournamentService.CreateTournament:input_type -> ultimate.server.api.CreateTournamentRequest
+	30,  // 101: ultimate.server.api.TournamentService.DeleteTournament:input_type -> ultimate.server.api.DeleteTournamentRequest
+	31,  // 102: ultimate.server.api.TournamentService.JoinTournament:input_type -> ultimate.server.api.JoinTournamentRequest
+	32,  // 103: ultimate.server.api.TournamentService.ListTournaments:input_type -> ultimate.server.api.ListTournamentsRequest
+	35,  // 104: ultimate.server.api.TournamentService.WriteTournamentRecord:input_type -> ultimate.server.api.WriteTournamentRecordRequest
+	36,  // 105: ultimate.server.api.TournamentService.ListTournamentRecords:input_type -> ultimate.server.api.ListTournamentRecordsRequest
+	37,  // 106: ultimate.server.api.TournamentService.ListTournamentRecordsAroundOwner:input_type -> ultimate.server.api.ListTournamentRecordsAroundOwnerRequest
+	38,  // 107: ultimate.server.api.TournamentService.DeleteTournamentRecord:input_type -> ultimate.server.api.DeleteTournamentRecordRequest
+	39,  // 108: ultimate.server.api.FriendsService.AddFriends:input_type -> ultimate.server.api.AddFriendsRequest
+	40,  // 109: ultimate.server.api.FriendsService.ListFriends:input_type -> ultimate.server.api.ListFriendsRequest
+	41,  // 110: ultimate.server.api.FriendsService.ListFriendsOfFriends:input_type -> ultimate.server.api.ListFriendsOfFriendsRequest
+	46,  // 111: ultimate.server.api.FriendsService.DeleteFriends:input_type -> ultimate.server.api.DeleteFriendsRequest
+	47,  // 112: ultimate.server.api.FriendsService.BlockFriends:input_type -> ultimate.server.api.BlockFriendsRequest
+	48,  // 113: ultimate.server.api.FriendsService.UnblockFriends:input_type -> ultimate.server.api.UnblockFriendsRequest
+	49,  // 114: ultimate.server.api.FriendsService.ImportFacebookFriends:input_type -> ultimate.server.api.ImportFacebookFriendsRequest
+	50,  // 115: ultimate.server.api.FriendsService.ImportSteamFriends:input_type -> ultimate.server.api.ImportSteamFriendsRequest
+	51,  // 116: ultimate.server.api.GroupService.CreateGroup:input_type -> ultimate.server.api.CreateGroupRequest
+	53,  // 117: ultimate.server.api.GroupService.UpdateGroup:input_type -> ultimate.server.api.UpdateGroupRequest
+	54,  // 118: ultimate.server.api.GroupService.DeleteGroup:input_type -> ultimate.server.api.DeleteGroupRequest
+	55,  // 119: ultimate.server.api.GroupService.ListGroups:input_type -> ultimate.server.api.ListGroupsRequest
+	57,  // 120: ultimate.server.api.GroupService.JoinGroup:input_type -> ultimate.server.api.JoinGroupRequest
+	58,  // 121: ultimate.server.api.GroupService.LeaveGroup:input_type -> ultimate.server.api.LeaveGroupRequest
+	59,  // 122: ultimate.server.api.GroupService.AddGroupUsers:input_type -> ultimate.server.api.AddGroupUsersRequest
+	60,  // 123: ultimate.server.api.GroupService.KickGroupUsers:input_type -> ultimate.server.api.KickGroupUsersRequest
+	61,  // 124: ultimate.server.api.GroupService.PromoteGroupUsers:input_type -> ultimate.server.api.PromoteGroupUsersRequest
+	62,  // 125: ultimate.server.api.GroupService.DemoteGroupUsers:input_type -> ultimate.server.api.DemoteGroupUsersRequest
+	63,  // 126: ultimate.server.api.GroupService.BanGroupUsers:input_type -> ultimate.server.api.BanGroupUsersRequest
+	68,  // 127: ultimate.server.api.GroupService.ListGroupUsers:input_type -> ultimate.server.api.ListGroupUsersRequest
+	69,  // 128: ultimate.server.api.GroupService.ListUserGroups:input_type -> ultimate.server.api.ListUserGroupsRequest
+	70,  // 129: ultimate.server.api.MatchmakerService.AddMatchmaker:input_type -> ultimate.server.api.AddMatchmakerRequest
+	72,  // 130: ultimate.server.api.MatchmakerService.RemoveMatchmaker:input_type -> ultimate.server.api.RemoveMatchmakerRequest
+	73,  // 131: ultimate.server.api.MatchmakerService.GetMatchmakerTicket:input_type -> ultimate.server.api.GetMatchmakerTicketRequest
+	74,  // 132: ultimate.server.api.MatchmakerService.GetQueueStats:input_type -> ultimate.server.api.GetQueueStatsRequest
+	122, // 133: ultimate.server.api.MatchmakerService.GetMatchmakerStats:input_type -> google.protobuf.Empty
+	77,  // 134: ultimate.server.api.RealtimeService.CreateMatch:input_type -> ultimate.server.api.CreateMatchRequest
+	78,  // 135: ultimate.server.api.RealtimeService.ListMatches:input_type -> ultimate.server.api.ListMatchesRequest
+	79,  // 136: ultimate.server.api.RealtimeService.GetMatch:input_type -> ultimate.server.api.GetMatchRequest
+	83,  // 137: ultimate.server.api.RealtimeService.MatchSignal:input_type -> ultimate.server.api.MatchSignalRequest
+	85,  // 138: ultimate.server.api.PartyService.ListParties:input_type -> ultimate.server.api.ListPartiesRequest
+	88,  // 139: ultimate.server.api.ChatService.ListChannelMessages:input_type -> ultimate.server.api.ListChannelMessagesRequest
+	91,  // 140: ultimate.server.api.NotificationService.ListNotifications:input_type -> ultimate.server.api.ListNotificationsRequest
+	94,  // 141: ultimate.server.api.NotificationService.DeleteNotifications:input_type -> ultimate.server.api.DeleteNotificationsRequest
+	122, // 142: ultimate.server.api.EconomyService.GetWallet:input_type -> google.protobuf.Empty
+	96,  // 143: ultimate.server.api.EconomyService.ListWalletLedger:input_type -> ultimate.server.api.ListWalletLedgerRequest
+	99,  // 144: ultimate.server.api.IAPService.ValidatePurchaseApple:input_type -> ultimate.server.api.ValidatePurchaseAppleRequest
+	100, // 145: ultimate.server.api.IAPService.ValidatePurchaseGoogle:input_type -> ultimate.server.api.ValidatePurchaseGoogleRequest
+	101, // 146: ultimate.server.api.IAPService.ValidatePurchaseHuawei:input_type -> ultimate.server.api.ValidatePurchaseHuaweiRequest
+	102, // 147: ultimate.server.api.IAPService.ValidatePurchaseFacebookInstant:input_type -> ultimate.server.api.ValidatePurchaseFacebookInstantRequest
+	103, // 148: ultimate.server.api.IAPService.ValidatePurchaseSamsung:input_type -> ultimate.server.api.ValidatePurchaseSamsungRequest
+	106, // 149: ultimate.server.api.IAPService.ValidateSubscriptionApple:input_type -> ultimate.server.api.ValidateSubscriptionAppleRequest
+	107, // 150: ultimate.server.api.IAPService.ValidateSubscriptionGoogle:input_type -> ultimate.server.api.ValidateSubscriptionGoogleRequest
+	110, // 151: ultimate.server.api.IAPService.ListSubscriptions:input_type -> ultimate.server.api.ListSubscriptionsRequest
+	112, // 152: ultimate.server.api.IAPService.GetSubscription:input_type -> ultimate.server.api.GetSubscriptionRequest
+	113, // 153: ultimate.server.api.RpcService.RpcFunc:input_type -> ultimate.server.api.Rpc
+	114, // 154: ultimate.server.api.UserService.GetUsers:input_type -> ultimate.server.api.GetUsersRequest
+	116, // 155: ultimate.server.api.EventService.Event:input_type -> ultimate.server.api.ClientEvent
+	122, // 156: ultimate.server.api.SystemService.Healthcheck:input_type -> google.protobuf.Empty
+	13,  // 157: ultimate.server.api.AuthenticationService.AuthenticateEmail:output_type -> ultimate.server.api.Session
+	13,  // 158: ultimate.server.api.AuthenticationService.AuthenticateDevice:output_type -> ultimate.server.api.Session
+	13,  // 159: ultimate.server.api.AuthenticationService.AuthenticateApple:output_type -> ultimate.server.api.Session
+	13,  // 160: ultimate.server.api.AuthenticationService.AuthenticateGoogle:output_type -> ultimate.server.api.Session
+	13,  // 161: ultimate.server.api.AuthenticationService.AuthenticateFacebook:output_type -> ultimate.server.api.Session
+	13,  // 162: ultimate.server.api.AuthenticationService.AuthenticateSteam:output_type -> ultimate.server.api.Session
+	13,  // 163: ultimate.server.api.AuthenticationService.AuthenticateGameCenter:output_type -> ultimate.server.api.Session
+	13,  // 164: ultimate.server.api.AuthenticationService.AuthenticateFacebookInstantGame:output_type -> ultimate.server.api.Session
+	13,  // 165: ultimate.server.api.AuthenticationService.AuthenticateCustom:output_type -> ultimate.server.api.Session
+	13,  // 166: ultimate.server.api.AuthenticationService.SessionRefresh:output_type -> ultimate.server.api.Session
+	122, // 167: ultimate.server.api.AuthenticationService.SessionLogout:output_type -> google.protobuf.Empty
+	15,  // 168: ultimate.server.api.AuthenticationService.GetAccount:output_type -> ultimate.server.api.Account
+	122, // 169: ultimate.server.api.AuthenticationService.UpdateAccount:output_type -> google.protobuf.Empty
+	122, // 170: ultimate.server.api.AuthenticationService.DeleteAccount:output_type -> google.protobuf.Empty
+	122, // 171: ultimate.server.api.AuthenticationService.LinkEmail:output_type -> google.protobuf.Empty
+	122, // 172: ultimate.server.api.AuthenticationService.LinkDevice:output_type -> google.protobuf.Empty
+	122, // 173: ultimate.server.api.AuthenticationService.LinkApple:output_type -> google.protobuf.Empty
+	122, // 174: ultimate.server.api.AuthenticationService.LinkGoogle:output_type -> google.protobuf.Empty
+	122, // 175: ultimate.server.api.AuthenticationService.LinkFacebook:output_type -> google.protobuf.Empty
+	122, // 176: ultimate.server.api.AuthenticationService.LinkSteam:output_type -> google.protobuf.Empty
+	122, // 177: ultimate.server.api.AuthenticationService.LinkCustom:output_type -> google.protobuf.Empty
+	122, // 178: ultimate.server.api.AuthenticationService.LinkGameCenter:output_type -> google.protobuf.Empty
+	122, // 179: ultimate.server.api.AuthenticationService.LinkFacebookInstantGame:output_type -> google.protobuf.Empty
+	122, // 180: ultimate.server.api.AuthenticationService.UnlinkEmail:output_type -> google.protobuf.Empty
+	122, // 181: ultimate.server.api.AuthenticationService.UnlinkDevice:output_type -> google.protobuf.Empty
+	122, // 182: ultimate.server.api.AuthenticationService.UnlinkApple:output_type -> google.protobuf.Empty
+	122, // 183: ultimate.server.api.AuthenticationService.UnlinkGoogle:output_type -> google.protobuf.Empty
+	122, // 184: ultimate.server.api.AuthenticationService.UnlinkFacebook:output_type -> google.protobuf.Empty
+	122, // 185: ultimate.server.api.AuthenticationService.UnlinkSteam:output_type -> google.protobuf.Empty
+	122, // 186: ultimate.server.api.AuthenticationService.UnlinkCustom:output_type -> google.protobuf.Empty
+	122, // 187: ultimate.server.api.AuthenticationService.UnlinkGameCenter:output_type -> google.protobuf.Empty
+	122, // 188: ultimate.server.api.AuthenticationService.UnlinkFacebookInstantGame:output_type -> google.protobuf.Empty
+	122, // 189: ultimate.server.api.LeaderboardService.CreateLeaderboard:output_type -> google.protobuf.Empty
+	122, // 190: ultimate.server.api.LeaderboardService.DeleteLeaderboard:output_type -> google.protobuf.Empty
+	21,  // 191: ultimate.server.api.LeaderboardService.ListLeaderboards:output_type -> ultimate.server.api.LeaderboardList
+	24,  // 192: ultimate.server.api.LeaderboardService.WriteLeaderboardRecord:output_type -> ultimate.server.api.LeaderboardRecord
+	27,  // 193: ultimate.server.api.LeaderboardService.ListLeaderboardRecords:output_type -> ultimate.server.api.LeaderboardRecordList
+	27,  // 194: ultimate.server.api.LeaderboardService.ListLeaderboardRecordsAroundOwner:output_type -> ultimate.server.api.LeaderboardRecordList
+	122, // 195: ultimate.server.api.LeaderboardService.DeleteLeaderboardRecord:output_type -> google.protobuf.Empty
+	122, // 196: ultimate.server.api.TournamentService.CreateTournament:output_type -> google.protobuf.Empty
+	122, // 197: ultimate.server.api.TournamentService.DeleteTournament:output_type -> google.protobuf.Empty
+	122, // 198: ultimate.server.api.TournamentService.JoinTournament:output_type -> google.protobuf.Empty
+	34,  // 199: ultimate.server.api.TournamentService.ListTournaments:output_type -> ultimate.server.api.TournamentList
+	24,  // 200: ultimate.server.api.TournamentService.WriteTournamentRecord:output_type -> ultimate.server.api.LeaderboardRecord
+	27,  // 201: ultimate.server.api.TournamentService.ListTournamentRecords:output_type -> ultimate.server.api.LeaderboardRecordList
+	27,  // 202: ultimate.server.api.TournamentService.ListTournamentRecordsAroundOwner:output_type -> ultimate.server.api.LeaderboardRecordList
+	122, // 203: ultimate.server.api.TournamentService.DeleteTournamentRecord:output_type -> google.protobuf.Empty
+	122, // 204: ultimate.server.api.FriendsService.AddFriends:output_type -> google.protobuf.Empty
+	43,  // 205: ultimate.server.api.FriendsService.ListFriends:output_type -> ultimate.server.api.FriendList
+	45,  // 206: ultimate.server.api.FriendsService.ListFriendsOfFriends:output_type -> ultimate.server.api.FriendsOfFriendsList
+	122, // 207: ultimate.server.api.FriendsService.DeleteFriends:output_type -> google.protobuf.Empty
+	122, // 208: ultimate.server.api.FriendsService.BlockFriends:output_type -> google.protobuf.Empty
+	122, // 209: ultimate.server.api.FriendsService.UnblockFriends:output_type -> google.protobuf.Empty
+	122, // 210: ultimate.server.api.FriendsService.ImportFacebookFriends:output_type -> google.protobuf.Empty
+	122, // 211: ultimate.server.api.FriendsService.ImportSteamFriends:output_type -> google.protobuf.Empty
+	52,  // 212: ultimate.server.api.GroupService.CreateGroup:output_type -> ultimate.server.api.Group
+	122, // 213: ultimate.server.api.GroupService.UpdateGroup:output_type -> google.protobuf.Empty
+	122, // 214: ultimate.server.api.GroupService.DeleteGroup:output_type -> google.protobuf.Empty
+	56,  // 215: ultimate.server.api.GroupService.ListGroups:output_type -> ultimate.server.api.GroupList
+	122, // 216: ultimate.server.api.GroupService.JoinGroup:output_type -> google.protobuf.Empty
+	122, // 217: ultimate.server.api.GroupService.LeaveGroup:output_type -> google.protobuf.Empty
+	122, // 218: ultimate.server.api.GroupService.AddGroupUsers:output_type -> google.protobuf.Empty
+	122, // 219: ultimate.server.api.GroupService.KickGroupUsers:output_type -> google.protobuf.Empty
+	122, // 220: ultimate.server.api.GroupService.PromoteGroupUsers:output_type -> google.protobuf.Empty
+	122, // 221: ultimate.server.api.GroupService.DemoteGroupUsers:output_type -> google.protobuf.Empty
+	122, // 222: ultimate.server.api.GroupService.BanGroupUsers:output_type -> google.protobuf.Empty
+	65,  // 223: ultimate.server.api.GroupService.ListGroupUsers:output_type -> ultimate.server.api.GroupUserList
+	67,  // 224: ultimate.server.api.GroupService.ListUserGroups:output_type -> ultimate.server.api.UserGroupList
+	71,  // 225: ultimate.server.api.MatchmakerService.AddMatchmaker:output_type -> ultimate.server.api.MatchmakerTicket
+	122, // 226: ultimate.server.api.MatchmakerService.RemoveMatchmaker:output_type -> google.protobuf.Empty
+	71,  // 227: ultimate.server.api.MatchmakerService.GetMatchmakerTicket:output_type -> ultimate.server.api.MatchmakerTicket
+	75,  // 228: ultimate.server.api.MatchmakerService.GetQueueStats:output_type -> ultimate.server.api.QueueStats
+	76,  // 229: ultimate.server.api.MatchmakerService.GetMatchmakerStats:output_type -> ultimate.server.api.MatchmakerStats
+	81,  // 230: ultimate.server.api.RealtimeService.CreateMatch:output_type -> ultimate.server.api.Match
+	82,  // 231: ultimate.server.api.RealtimeService.ListMatches:output_type -> ultimate.server.api.MatchList
+	81,  // 232: ultimate.server.api.RealtimeService.GetMatch:output_type -> ultimate.server.api.Match
+	84,  // 233: ultimate.server.api.RealtimeService.MatchSignal:output_type -> ultimate.server.api.MatchSignalResponse
+	87,  // 234: ultimate.server.api.PartyService.ListParties:output_type -> ultimate.server.api.PartyList
+	90,  // 235: ultimate.server.api.ChatService.ListChannelMessages:output_type -> ultimate.server.api.ChannelMessageList
+	93,  // 236: ultimate.server.api.NotificationService.ListNotifications:output_type -> ultimate.server.api.NotificationList
+	122, // 237: ultimate.server.api.NotificationService.DeleteNotifications:output_type -> google.protobuf.Empty
+	95,  // 238: ultimate.server.api.EconomyService.GetWallet:output_type -> ultimate.server.api.Wallet
+	98,  // 239: ultimate.server.api.EconomyService.ListWalletLedger:output_type -> ultimate.server.api.WalletLedgerList
+	105, // 240: ultimate.server.api.IAPService.ValidatePurchaseApple:output_type -> ultimate.server.api.ValidatePurchaseResponse
+	105, // 241: ultimate.server.api.IAPService.ValidatePurchaseGoogle:output_type -> ultimate.server.api.ValidatePurchaseResponse
+	105, // 242: ultimate.server.api.IAPService.ValidatePurchaseHuawei:output_type -> ultimate.server.api.ValidatePurchaseResponse
+	105, // 243: ultimate.server.api.IAPService.ValidatePurchaseFacebookInstant:output_type -> ultimate.server.api.ValidatePurchaseResponse
+	105, // 244: ultimate.server.api.IAPService.ValidatePurchaseSamsung:output_type -> ultimate.server.api.ValidatePurchaseResponse
+	108, // 245: ultimate.server.api.IAPService.ValidateSubscriptionApple:output_type -> ultimate.server.api.ValidateSubscriptionResponse
+	108, // 246: ultimate.server.api.IAPService.ValidateSubscriptionGoogle:output_type -> ultimate.server.api.ValidateSubscriptionResponse
+	111, // 247: ultimate.server.api.IAPService.ListSubscriptions:output_type -> ultimate.server.api.SubscriptionList
+	109, // 248: ultimate.server.api.IAPService.GetSubscription:output_type -> ultimate.server.api.ValidatedSubscription
+	113, // 249: ultimate.server.api.RpcService.RpcFunc:output_type -> ultimate.server.api.Rpc
+	115, // 250: ultimate.server.api.UserService.GetUsers:output_type -> ultimate.server.api.Users
+	122, // 251: ultimate.server.api.EventService.Event:output_type -> google.protobuf.Empty
+	122, // 252: ultimate.server.api.SystemService.Healthcheck:output_type -> google.protobuf.Empty
+	157, // [157:253] is the sub-list for method output_type
+	61,  // [61:157] is the sub-list for method input_type
+	61,  // [61:61] is the sub-list for extension type_name
+	61,  // [61:61] is the sub-list for extension extendee
+	0,   // [0:61] is the sub-list for field type_name
 }
 
 func init() { file_api_api_proto_init() }

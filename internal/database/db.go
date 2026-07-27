@@ -33,16 +33,13 @@ func DefaultConfig() Config {
 	}
 }
 
-// ConnectWithBackoff establishes a connection pool to PostgreSQL with exponential backoff retry.
-func ConnectWithBackoff(ctx context.Context, logger *zap.Logger, cfg Config) (*pgxpool.Pool, error) {
-	poolCfg, err := pgxpool.ParseConfig(cfg.DSN)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse database DSN: %w", err)
-	}
-
-	// Apply connection pool settings
+// ApplyPoolSettings maps Config pool fields onto a parsed pgxpool.Config.
+func ApplyPoolSettings(poolCfg *pgxpool.Config, cfg Config) {
 	if cfg.MaxOpenConns > 0 {
 		poolCfg.MaxConns = cfg.MaxOpenConns
+	}
+	if cfg.MaxIdleConns > 0 {
+		poolCfg.MinConns = cfg.MaxIdleConns
 	}
 	if cfg.MaxConnLifetime > 0 {
 		poolCfg.MaxConnLifetime = cfg.MaxConnLifetime
@@ -50,6 +47,16 @@ func ConnectWithBackoff(ctx context.Context, logger *zap.Logger, cfg Config) (*p
 	if cfg.MaxConnIdleTime > 0 {
 		poolCfg.MaxConnIdleTime = cfg.MaxConnIdleTime
 	}
+}
+
+// ConnectWithBackoff establishes a connection pool to PostgreSQL with exponential backoff retry.
+func ConnectWithBackoff(ctx context.Context, logger *zap.Logger, cfg Config) (*pgxpool.Pool, error) {
+	poolCfg, err := pgxpool.ParseConfig(cfg.DSN)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse database DSN: %w", err)
+	}
+
+	ApplyPoolSettings(poolCfg, cfg)
 
 	var pool *pgxpool.Pool
 	retryCount := 0
