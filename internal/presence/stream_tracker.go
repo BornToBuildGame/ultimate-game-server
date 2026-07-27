@@ -143,19 +143,42 @@ func (t *LocalTracker) Untrack(sessionID string, key StreamKey) (Presence, bool)
 	return removed, found
 }
 
+// StreamPresenceRemoval is a presence removed from a specific stream.
+type StreamPresenceRemoval struct {
+	Key      StreamKey
+	Presence Presence
+}
+
 // UntrackAll removes a session from every stream. Returns removed presence entries.
 func (t *LocalTracker) UntrackAll(sessionID string) []Presence {
+	detailed := t.UntrackAllDetailed(sessionID)
+	out := make([]Presence, 0, len(detailed))
+	for _, d := range detailed {
+		out = append(out, d.Presence)
+	}
+	return out
+}
+
+// UntrackAllDetailed removes a session from every stream and returns key+presence pairs.
+func (t *LocalTracker) UntrackAllDetailed(sessionID string) []StreamPresenceRemoval {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	sess, ok := t.bySess[sessionID]
 	if !ok {
 		return nil
 	}
-	out := make([]Presence, 0, len(sess))
+	out := make([]StreamPresenceRemoval, 0, len(sess))
 	for key := range sess {
 		if set, ok := t.byStream[key]; ok {
 			if sp, ok := set[sessionID]; ok {
-				out = append(out, Presence{SessionID: sessionID, UserID: sp.UserID, Meta: sp.Meta})
+				out = append(out, StreamPresenceRemoval{
+					Key: key,
+					Presence: Presence{
+						SessionID: sessionID,
+						UserID:    sp.UserID,
+						Meta:      sp.Meta,
+					},
+				})
 				delete(set, sessionID)
 			}
 			if len(set) == 0 {
@@ -165,6 +188,18 @@ func (t *LocalTracker) UntrackAll(sessionID string) []Presence {
 	}
 	delete(t.bySess, sessionID)
 	return out
+}
+
+// IsDomainStreamMode reports whether mode has a dedicated domain presence envelope
+// (status/channel/party/match/notifications) and should not emit stream_presence_event.
+func IsDomainStreamMode(mode int16) bool {
+	switch mode {
+	case StreamModeNotifications, StreamModeStatus, StreamModeChannel, StreamModeGroup,
+		StreamModeDM, StreamModeMatchRelayed, StreamModeMatchAuthoritative, StreamModeParty:
+		return true
+	default:
+		return false
+	}
 }
 
 // UntrackAllKeys removes a session from every stream and returns the stream keys (legacy helper).

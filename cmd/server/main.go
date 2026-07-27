@@ -163,6 +163,12 @@ func main() {
 	jsVM := goja.New()
 	runtime.MapLuaNK(luaVM, nk, rm.Registry())
 	runtime.MapJSNK(jsVM, nk, 5*time.Second, rm.Registry())
+	if err := runtime.LoadLuaModules(ctx, rtPath, luaVM, rtLogger); err != nil {
+		logger.Warn("LoadLuaModules completed with errors", zap.Error(err))
+	}
+	if err := runtime.LoadJSModules(ctx, rtPath, jsVM, rtLogger); err != nil {
+		logger.Warn("LoadJSModules completed with errors", zap.Error(err))
+	}
 	server.SetVMs(luaVM, jsVM)
 
 	cronSched := runtime.NewCronScheduler(rm.Registry(), rtLogger, sqlDB, nk)

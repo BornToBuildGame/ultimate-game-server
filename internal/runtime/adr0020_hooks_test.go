@@ -182,47 +182,137 @@ func TestStreamUserJoinSendDisconnect(t *testing.T) {
 	disc := &memDisconnecter{}
 	sm := &LocalStreamManager{Tracker: tracker, Router: router, Registry: disc}
 
-	ok, err := sm.StreamUserJoin(1, "subj", "", "", "user-1", "sess-1", false, false, "online")
+	const customMode int16 = 100 // outside domain modes 0–7
+	ok, err := sm.StreamUserJoin(customMode, "subj", "", "", "user-1", "sess-1", false, false, "online")
 	if err != nil || !ok {
 		t.Fatalf("join: ok=%v err=%v", ok, err)
 	}
-	n, err := sm.StreamCount(1, "subj", "", "")
+	n, err := sm.StreamCount(customMode, "subj", "", "")
 	if err != nil || n != 1 {
 		t.Fatalf("count=%d err=%v", n, err)
 	}
-	list, err := sm.StreamUserList(1, "subj", "", "", true, true)
+	list, err := sm.StreamUserList(customMode, "subj", "", "", true, true)
 	if err != nil || len(list) != 1 || list[0].SessionID != "sess-1" {
 		t.Fatalf("list=%v err=%v", list, err)
 	}
-	if err := sm.StreamSend(1, "subj", "", "", `{"hello":1}`, nil, true); err != nil {
+	if err := sm.StreamSend(customMode, "subj", "", "", `{"hello":1}`, nil, true); err != nil {
 		t.Fatal(err)
 	}
 	sender.mu.Lock()
 	got := sender.msgs["sess-1"]
 	sender.mu.Unlock()
-	if len(got) != 1 {
+	// join emits stream_presence_event; send emits stream_data
+	if len(got) < 2 {
 		t.Fatalf("msgs=%v", got)
 	}
-	var env map[string]interface{}
-	if err := json.Unmarshal(got[0], &env); err != nil {
-		t.Fatal(err)
+	var foundData bool
+	for _, raw := range got {
+		var env map[string]interface{}
+		if err := json.Unmarshal(raw, &env); err != nil {
+			t.Fatal(err)
+		}
+		if sd, ok := env["stream_data"].(map[string]interface{}); ok {
+			foundData = true
+			if sd["data"] != `{"hello":1}` {
+				t.Fatalf("data=%v", sd["data"])
+			}
+			streamMeta, _ := sd["stream"].(map[string]interface{})
+			if streamMeta == nil || streamMeta["subject"] != "subj" {
+				t.Fatalf("stream meta=%v", streamMeta)
+			}
+		}
 	}
-	sd, ok := env["stream_data"].(map[string]interface{})
-	if !ok {
-		t.Fatalf("missing stream_data: %s", got[0])
-	}
-	if sd["data"] != `{"hello":1}` {
-		t.Fatalf("data=%v", sd["data"])
-	}
-	streamMeta, _ := sd["stream"].(map[string]interface{})
-	if streamMeta == nil || streamMeta["subject"] != "subj" {
-		t.Fatalf("stream meta=%v", streamMeta)
+	if !foundData {
+		t.Fatalf("missing stream_data in %v", got)
 	}
 	if err := sm.SessionDisconnect("sess-1"); err != nil {
 		t.Fatal(err)
 	}
 	if disc.closed != "sess-1" {
 		t.Fatalf("closed=%q", disc.closed)
+	}
+}
+
+func TestStreamPresenceEventOnJoinLeave(t *testing.T) {
+	tracker := presence.NewLocalTracker()
+	sender := &memSender{}
+	router := presence.NewLocalMessageRouter(sender)
+	sm := &LocalStreamManager{Tracker: tracker, Router: router}
+
+	const customMode int16 = 100
+	ok, err := sm.StreamUserJoin(customMode, "lobby", "", "room-a", "user-1", "sess-1", false, false, "")
+	if err != nil || !ok {
+		t.Fatalf("join1: %v %v", ok, err)
+	}
+	ok, err = sm.StreamUserJoin(customMode, "lobby", "", "room-a", "user-2", "sess-2", false, false, "")
+	if err != nil || !ok {
+		t.Fatalf("join2: %v %v", ok, err)
+	}
+
+	sender.mu.Lock()
+	peerMsgs := sender.msgs["sess-1"]
+	sender.mu.Unlock()
+	foundJoin := false
+	for _, raw := range peerMsgs {
+		var env map[string]interface{}
+		if err := json.Unmarshal(raw, &env); err != nil {
+			t.Fatal(err)
+		}
+		spe, ok := env["stream_presence_event"].(map[string]interface{})
+		if !ok {
+			continue
+		}
+		joins, _ := spe["joins"].([]interface{})
+		if len(joins) == 1 {
+			j := joins[0].(map[string]interface{})
+			if j["session_id"] == "sess-2" && j["user_id"] == "user-2" {
+				foundJoin = true
+			}
+		}
+	}
+	if !foundJoin {
+		t.Fatalf("peer did not receive join presence: %v", peerMsgs)
+	}
+
+	if err := sm.StreamUserLeave(customMode, "lobby", "", "room-a", "user-2", "sess-2"); err != nil {
+		t.Fatal(err)
+	}
+	sender.mu.Lock()
+	peerMsgs = sender.msgs["sess-1"]
+	sender.mu.Unlock()
+	foundLeave := false
+	for _, raw := range peerMsgs {
+		var env map[string]interface{}
+		_ = json.Unmarshal(raw, &env)
+		spe, ok := env["stream_presence_event"].(map[string]interface{})
+		if !ok {
+			continue
+		}
+		leaves, _ := spe["leaves"].([]interface{})
+		if len(leaves) == 1 {
+			l := leaves[0].(map[string]interface{})
+			if l["session_id"] == "sess-2" {
+				foundLeave = true
+			}
+		}
+	}
+	if !foundLeave {
+		t.Fatalf("peer did not receive leave presence: %v", peerMsgs)
+	}
+
+	// Domain modes must not emit stream_presence_event.
+	sender.msgs = nil
+	_, _ = sm.StreamUserJoin(presence.StreamModeStatus, "user-3", "", "", "user-3", "sess-3", false, false, "")
+	sender.mu.Lock()
+	defer sender.mu.Unlock()
+	for _, raws := range sender.msgs {
+		for _, raw := range raws {
+			var env map[string]interface{}
+			_ = json.Unmarshal(raw, &env)
+			if _, ok := env["stream_presence_event"]; ok {
+				t.Fatal("status mode should not emit stream_presence_event")
+			}
+		}
 	}
 }
 

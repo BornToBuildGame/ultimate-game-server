@@ -2,6 +2,7 @@ package runtime
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 
@@ -24,10 +25,14 @@ type StreamManager interface {
 	StreamUserGet(mode int16, subject, subcontext, label, userID, sessionID string) (*StreamPresenceView, error)
 	StreamUserJoin(mode int16, subject, subcontext, label, userID, sessionID string, hidden, persistence bool, status string) (bool, error)
 	StreamUserLeave(mode int16, subject, subcontext, label, userID, sessionID string) error
+	StreamUserUpdate(mode int16, subject, subcontext, label, userID, sessionID string, hidden, persistence bool, status string) error
+	StreamUserKick(mode int16, subject, subcontext, label string, presence StreamPresenceView) error
 	StreamClose(mode int16, subject, subcontext, label string) error
 	StreamCount(mode int16, subject, subcontext, label string) (int, error)
 	StreamSend(mode int16, subject, subcontext, label, data string, sessionIDs []string, reliable bool) error
+	StreamSendRaw(mode int16, subject, subcontext, label string, data []byte, sessionIDs []string, reliable bool) error
 	SessionDisconnect(sessionID string) error
+	UntrackSession(sessionID string)
 }
 
 // LocalStreamManager implements StreamManager with LocalTracker + MessageRouter.
@@ -113,6 +118,12 @@ func (m *LocalStreamManager) StreamUserJoin(mode int16, subject, subcontext, lab
 		Status:   status,
 		Hidden:   hidden,
 	})
+	if isNew && !hidden {
+		m.emitStreamPresenceEvent(mode, subject, subcontext, label,
+			[]StreamPresenceView{{UserID: userID, SessionID: sessionID, Status: status}},
+			nil,
+		)
+	}
 	return isNew, nil
 }
 
@@ -120,9 +131,49 @@ func (m *LocalStreamManager) StreamUserLeave(mode int16, subject, subcontext, la
 	if m == nil || m.Tracker == nil {
 		return fmt.Errorf("stream tracker not configured")
 	}
-	_ = userID
 	key := streamKey(mode, subject, subcontext, label)
-	_, _ = m.Tracker.Untrack(sessionID, key)
+	removed, found := m.Tracker.Untrack(sessionID, key)
+	if !found {
+		return nil
+	}
+	uid := userID
+	if uid == "" {
+		uid = removed.UserID
+	}
+	if !removed.Meta.Hidden {
+		m.emitStreamPresenceEvent(mode, subject, subcontext, label, nil, []StreamPresenceView{{
+			UserID:    uid,
+			SessionID: sessionID,
+			Username:  removed.Meta.Username,
+			Status:    removed.Meta.Status,
+		}})
+	}
+	return nil
+}
+
+func (m *LocalStreamManager) StreamUserUpdate(mode int16, subject, subcontext, label, userID, sessionID string, hidden, persistence bool, status string) error {
+	if m == nil || m.Tracker == nil {
+		return fmt.Errorf("stream tracker not configured")
+	}
+	_ = persistence
+	key := streamKey(mode, subject, subcontext, label)
+	ok := m.Tracker.Update(sessionID, key, userID, presence.PresenceMeta{
+		Status: status,
+		Hidden: hidden,
+	})
+	if !ok {
+		return fmt.Errorf("presence not found on stream")
+	}
+	return nil
+}
+
+func (m *LocalStreamManager) StreamUserKick(mode int16, subject, subcontext, label string, presenceView StreamPresenceView) error {
+	if err := m.StreamUserLeave(mode, subject, subcontext, label, presenceView.UserID, presenceView.SessionID); err != nil {
+		return err
+	}
+	if presenceView.SessionID != "" && m.Registry != nil {
+		_ = m.Registry.DisconnectSession(presenceView.SessionID)
+	}
 	return nil
 }
 
@@ -158,6 +209,11 @@ func (m *LocalStreamManager) StreamSend(mode int16, subject, subcontext, label, 
 		})
 	}
 	return nil
+}
+
+func (m *LocalStreamManager) StreamSendRaw(mode int16, subject, subcontext, label string, data []byte, sessionIDs []string, reliable bool) error {
+	// Lua/JS receive string payloads; encode raw bytes as base64 for the stream_data envelope.
+	return m.StreamSend(mode, subject, subcontext, label, base64.StdEncoding.EncodeToString(data), sessionIDs, reliable)
 }
 
 // StreamSendLocal delivers to local sessions only (used by peer mesh handlers to avoid rebroadcast).
@@ -205,4 +261,109 @@ func (m *LocalStreamManager) SessionDisconnect(sessionID string) error {
 		return fmt.Errorf("session registry not configured")
 	}
 	return m.Registry.DisconnectSession(sessionID)
+}
+
+// UntrackSession removes a session from all streams and emits stream_presence_event for custom modes.
+func (m *LocalStreamManager) UntrackSession(sessionID string) {
+	if m == nil || m.Tracker == nil {
+		return
+	}
+	removals := m.Tracker.UntrackAllDetailed(sessionID)
+	for _, r := range removals {
+		if presence.IsDomainStreamMode(r.Key.Mode) || r.Presence.Meta.Hidden {
+			continue
+		}
+		m.emitStreamPresenceEvent(r.Key.Mode, r.Key.Subject, r.Key.Subcontext, r.Key.Label, nil, []StreamPresenceView{{
+			UserID:    r.Presence.UserID,
+			SessionID: r.Presence.SessionID,
+			Username:  r.Presence.Meta.Username,
+			Status:    r.Presence.Meta.Status,
+		}})
+	}
+}
+
+// EmitStreamPresenceRemovals fans out leave events for custom streams after UntrackAllDetailed.
+// Used by the socket gateway when it owns the tracker untrack path.
+func EmitStreamPresenceRemovals(router presence.MessageRouter, tracker *presence.LocalTracker, removals []presence.StreamPresenceRemoval) {
+	if router == nil || tracker == nil {
+		return
+	}
+	sm := &LocalStreamManager{Tracker: tracker, Router: router}
+	for _, r := range removals {
+		if presence.IsDomainStreamMode(r.Key.Mode) || r.Presence.Meta.Hidden {
+			continue
+		}
+		sm.emitStreamPresenceEvent(r.Key.Mode, r.Key.Subject, r.Key.Subcontext, r.Key.Label, nil, []StreamPresenceView{{
+			UserID:    r.Presence.UserID,
+			SessionID: r.Presence.SessionID,
+			Username:  r.Presence.Meta.Username,
+			Status:    r.Presence.Meta.Status,
+		}})
+	}
+}
+
+func (m *LocalStreamManager) emitStreamPresenceEvent(mode int16, subject, subcontext, label string, joins, leaves []StreamPresenceView) {
+	if m == nil || m.Router == nil || m.Tracker == nil {
+		return
+	}
+	if presence.IsDomainStreamMode(mode) {
+		return
+	}
+	if len(joins) == 0 && len(leaves) == 0 {
+		return
+	}
+	key := streamKey(mode, subject, subcontext, label)
+	targets := m.Tracker.Sessions(key)
+	// Also notify leavers so they see their own leave if still connected (join path includes new member).
+	seen := make(map[string]struct{}, len(targets))
+	for _, sid := range targets {
+		seen[sid] = struct{}{}
+	}
+	for _, j := range joins {
+		if _, ok := seen[j.SessionID]; !ok && j.SessionID != "" {
+			targets = append(targets, j.SessionID)
+			seen[j.SessionID] = struct{}{}
+		}
+	}
+	for _, l := range leaves {
+		if _, ok := seen[l.SessionID]; !ok && l.SessionID != "" {
+			targets = append(targets, l.SessionID)
+			seen[l.SessionID] = struct{}{}
+		}
+	}
+	if len(targets) == 0 {
+		return
+	}
+	joinMaps := make([]map[string]interface{}, 0, len(joins))
+	for _, j := range joins {
+		joinMaps = append(joinMaps, map[string]interface{}{
+			"user_id":    j.UserID,
+			"session_id": j.SessionID,
+			"username":   j.Username,
+		})
+	}
+	leaveMaps := make([]map[string]interface{}, 0, len(leaves))
+	for _, l := range leaves {
+		leaveMaps = append(leaveMaps, map[string]interface{}{
+			"user_id":    l.UserID,
+			"session_id": l.SessionID,
+			"username":   l.Username,
+		})
+	}
+	env, err := json.Marshal(map[string]interface{}{
+		"stream_presence_event": map[string]interface{}{
+			"stream": map[string]interface{}{
+				"mode":       mode,
+				"subject":    subject,
+				"subcontext": subcontext,
+				"label":      label,
+			},
+			"joins":  joinMaps,
+			"leaves": leaveMaps,
+		},
+	})
+	if err != nil {
+		return
+	}
+	m.Router.SendToSessionIDs(targets, env)
 }

@@ -52,6 +52,8 @@ type GoRuntimeModule struct {
 	storageIndex   *storage.BlugeStorageIndex
 	satoriClient   *satori.Client
 	fleetManager   fleet.Manager
+	tokenMgr       *auth.TokenManager
+	sessionStore   auth.SessionStore
 }
 
 func NewGoRuntimeModule(dbPool *pgxpool.Pool, logger Logger) *GoRuntimeModule {
@@ -75,6 +77,12 @@ func (m *GoRuntimeModule) SetStatusFollower(sf StatusFollower) {
 
 func (m *GoRuntimeModule) SetStreamManager(sm StreamManager) {
 	m.streamManager = sm
+}
+
+// SetAuthSession wires JWT minting and session logout into the runtime module.
+func (m *GoRuntimeModule) SetAuthSession(tm *auth.TokenManager, store auth.SessionStore) {
+	m.tokenMgr = tm
+	m.sessionStore = store
 }
 
 func (m *GoRuntimeModule) SetRPCDispatcher(fn RPCDispatcherFunc) {
@@ -855,6 +863,27 @@ func (m *GoRuntimeModule) StreamSend(mode int16, subject, subcontext, label, dat
 		return fmt.Errorf("stream manager not configured")
 	}
 	return m.streamManager.StreamSend(mode, subject, subcontext, label, data, sessionIDs, reliable)
+}
+
+func (m *GoRuntimeModule) StreamUserUpdate(mode int16, subject, subcontext, label, userID, sessionID string, hidden, persistence bool, status string) error {
+	if m.streamManager == nil {
+		return fmt.Errorf("stream manager not configured")
+	}
+	return m.streamManager.StreamUserUpdate(mode, subject, subcontext, label, userID, sessionID, hidden, persistence, status)
+}
+
+func (m *GoRuntimeModule) StreamUserKick(mode int16, subject, subcontext, label string, presence StreamPresenceView) error {
+	if m.streamManager == nil {
+		return fmt.Errorf("stream manager not configured")
+	}
+	return m.streamManager.StreamUserKick(mode, subject, subcontext, label, presence)
+}
+
+func (m *GoRuntimeModule) StreamSendRaw(mode int16, subject, subcontext, label string, data []byte, sessionIDs []string, reliable bool) error {
+	if m.streamManager == nil {
+		return fmt.Errorf("stream manager not configured")
+	}
+	return m.streamManager.StreamSendRaw(mode, subject, subcontext, label, data, sessionIDs, reliable)
 }
 
 func (m *GoRuntimeModule) SessionDisconnect(sessionID string) error {

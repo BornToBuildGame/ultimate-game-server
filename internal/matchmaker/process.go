@@ -751,11 +751,37 @@ func (mm *Matchmaker) finalizeMatch(ctx context.Context, tickets []*Ticket, queu
 	}
 
 	module := ""
-	for _, t := range tickets {
-		if t.StringProperties != nil {
-			if m, ok := t.StringProperties["module"]; ok && m != "" {
-				module = m
+	matchedUsers := make([]MatchedUser, 0, len(users))
+	for _, p := range users {
+		tid := ticketIDs[p.UserID]
+		mu := MatchedUser{
+			UserID:    p.UserID,
+			Username:  p.Username,
+			SessionID: p.SessionID,
+			TicketID:  tid,
+		}
+		for _, t := range tickets {
+			if t.ID == tid {
+				mu.PartyID = t.PartyID
+				mu.StringProperties = t.StringProperties
+				mu.NumericProperties = t.NumericProperties
+				if t.StringProperties != nil {
+					if m, ok := t.StringProperties["module"]; ok && m != "" && module == "" {
+						module = m
+					}
+				}
 				break
+			}
+		}
+		matchedUsers = append(matchedUsers, mu)
+	}
+	if module == "" {
+		for _, t := range tickets {
+			if t.StringProperties != nil {
+				if m, ok := t.StringProperties["module"]; ok && m != "" {
+					module = m
+					break
+				}
 			}
 		}
 	}
@@ -765,6 +791,7 @@ func (mm *Matchmaker) finalizeMatch(ctx context.Context, tickets []*Ticket, queu
 		PlayerIDs:     playerIDs,
 		Usernames:     usernames,
 		Users:         users,
+		MatchedUsers:  matchedUsers,
 		TicketIDs:     ticketIDs,
 		MatchToken:    matchToken,
 		QueueName:     queueName,

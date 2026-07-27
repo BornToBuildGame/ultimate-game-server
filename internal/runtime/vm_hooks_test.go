@@ -193,7 +193,61 @@ func (m *mockRuntimeModule) StreamCount(mode int16, subject, subcontext, label s
 func (m *mockRuntimeModule) StreamSend(mode int16, subject, subcontext, label, data string, sessionIDs []string, reliable bool) error {
 	return nil
 }
+func (m *mockRuntimeModule) StreamUserUpdate(mode int16, subject, subcontext, label, userID, sessionID string, hidden, persistence bool, status string) error {
+	return nil
+}
+func (m *mockRuntimeModule) StreamUserKick(mode int16, subject, subcontext, label string, presence StreamPresenceView) error {
+	return nil
+}
+func (m *mockRuntimeModule) StreamSendRaw(mode int16, subject, subcontext, label string, data []byte, sessionIDs []string, reliable bool) error {
+	return nil
+}
 func (m *mockRuntimeModule) SessionDisconnect(sessionID string) error {
+	return nil
+}
+func (m *mockRuntimeModule) AuthenticateDevice(ctx context.Context, id, username string, create bool) (string, string, bool, error) {
+	return "user-device", username, create, nil
+}
+func (m *mockRuntimeModule) AuthenticateCustom(ctx context.Context, id, username string, create bool) (string, string, bool, error) {
+	return "user-custom", username, create, nil
+}
+func (m *mockRuntimeModule) AuthenticateEmail(ctx context.Context, email, password, username string, create bool) (string, string, bool, error) {
+	return "user-email", username, create, nil
+}
+func (m *mockRuntimeModule) AuthenticateTokenGenerate(userID, username string, expiresAt int64, vars map[string]string) (string, int64, error) {
+	return "tok", expiresAt, nil
+}
+func (m *mockRuntimeModule) LinkDevice(ctx context.Context, userID, deviceID string) error {
+	return nil
+}
+func (m *mockRuntimeModule) LinkCustom(ctx context.Context, userID, customID string) error {
+	return nil
+}
+func (m *mockRuntimeModule) LinkEmail(ctx context.Context, userID, email, password string) error {
+	return nil
+}
+func (m *mockRuntimeModule) UnlinkDevice(ctx context.Context, userID, deviceID string) error {
+	return nil
+}
+func (m *mockRuntimeModule) UnlinkCustom(ctx context.Context, userID string) error {
+	return nil
+}
+func (m *mockRuntimeModule) UnlinkEmail(ctx context.Context, userID string) error {
+	return nil
+}
+func (m *mockRuntimeModule) AccountUpdateId(ctx context.Context, userID, username string, metadata map[string]interface{}, displayName, timezone, location, langTag, avatarURL string) error {
+	return nil
+}
+func (m *mockRuntimeModule) AccountDeleteId(ctx context.Context, userID string) error {
+	return nil
+}
+func (m *mockRuntimeModule) SessionLogout(userID, token, refreshToken string) error {
+	return nil
+}
+func (m *mockRuntimeModule) GroupUserJoin(ctx context.Context, groupID, userID, username string) error {
+	return nil
+}
+func (m *mockRuntimeModule) GroupUserLeave(ctx context.Context, groupID, userID, username string) error {
 	return nil
 }
 func (m *mockRuntimeModule) RpcCall(ctx context.Context, id, payload string) (string, error) {
@@ -595,6 +649,21 @@ func TestLuaVM_NK_Bindings(t *testing.T) {
 			}}
 		end, 3)
 		assert(#acks2 == 1)
+
+		-- Round 8 batch 2b
+		local uid, uname, created = nk.authenticate_device("device-abc-123456", "devuser", true)
+		assert(uid ~= nil and created == true)
+		uid, uname, created = nk.authenticate_custom("custom-1", "cuser", true)
+		assert(uid ~= nil)
+		local token, exp = nk.authenticate_token_generate("00000000-0000-0000-0000-000000000001", "u", 0, {role="admin"})
+		assert(token ~= nil)
+		nk.link_device("u1", "dev2")
+		nk.link_custom("u1", "c2")
+		nk.session_logout("u1", "tok", "")
+		nk.group_user_join("g1", "u1", "alice")
+		nk.group_user_leave("g1", "u1", "alice")
+		nk.stream_user_update(100, "s", "", "l", "u1", "sess1", false, false, "away")
+		nk.stream_send_raw(100, "s", "", "l", "aGVsbG8=", nil, true)
 	`
 
 	err := L.DoString(script)
@@ -720,6 +789,18 @@ func TestGojaVM_NK_Bindings(t *testing.T) {
 			3
 		);
 		if (!acks2 || acks2.length !== 1) throw new Error("storage_write_retry failed");
+
+		// Round 8 batch 2b
+		var auth = nk.authenticate_device("device-abc-123456", "devuser", true);
+		if (!auth || auth[0] !== "user-device") throw new Error("authenticate_device failed");
+		auth = nk.authenticate_custom("custom-1", "cuser", true);
+		if (!auth || auth[0] !== "user-custom") throw new Error("authenticate_custom failed");
+		var tok = nk.authenticate_token_generate("00000000-0000-0000-0000-000000000001", "u", 0, {role: "admin"});
+		if (!tok || !tok[0]) throw new Error("authenticate_token_generate failed");
+		nk.link_device("u1", "dev2");
+		nk.session_logout("u1", "tok", "");
+		nk.group_user_join("g1", "u1", "alice");
+		nk.stream_user_update(100, "s", "", "l", "u1", "sess1", false, false, "away");
 	`
 
 	_, err := vm.RunString(script)

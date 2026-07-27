@@ -144,10 +144,30 @@ type RuntimeModule interface {
 	StreamUserGet(mode int16, subject, subcontext, label, userID, sessionID string) (*StreamPresenceView, error)
 	StreamUserJoin(mode int16, subject, subcontext, label, userID, sessionID string, hidden, persistence bool, status string) (bool, error)
 	StreamUserLeave(mode int16, subject, subcontext, label, userID, sessionID string) error
+	StreamUserUpdate(mode int16, subject, subcontext, label, userID, sessionID string, hidden, persistence bool, status string) error
+	StreamUserKick(mode int16, subject, subcontext, label string, presence StreamPresenceView) error
 	StreamClose(mode int16, subject, subcontext, label string) error
 	StreamCount(mode int16, subject, subcontext, label string) (int, error)
 	StreamSend(mode int16, subject, subcontext, label, data string, sessionIDs []string, reliable bool) error
+	StreamSendRaw(mode int16, subject, subcontext, label string, data []byte, sessionIDs []string, reliable bool) error
 	SessionDisconnect(sessionID string) error
+
+	// Auth / account (Round 8 nk batch 2b)
+	AuthenticateDevice(ctx context.Context, id, username string, create bool) (userID, outUsername string, created bool, err error)
+	AuthenticateCustom(ctx context.Context, id, username string, create bool) (userID, outUsername string, created bool, err error)
+	AuthenticateEmail(ctx context.Context, email, password, username string, create bool) (userID, outUsername string, created bool, err error)
+	AuthenticateTokenGenerate(userID, username string, expiresAt int64, vars map[string]string) (token string, exp int64, err error)
+	LinkDevice(ctx context.Context, userID, deviceID string) error
+	LinkCustom(ctx context.Context, userID, customID string) error
+	LinkEmail(ctx context.Context, userID, email, password string) error
+	UnlinkDevice(ctx context.Context, userID, deviceID string) error
+	UnlinkCustom(ctx context.Context, userID string) error
+	UnlinkEmail(ctx context.Context, userID string) error
+	AccountUpdateId(ctx context.Context, userID, username string, metadata map[string]interface{}, displayName, timezone, location, langTag, avatarURL string) error
+	AccountDeleteId(ctx context.Context, userID string) error
+	SessionLogout(userID, token, refreshToken string) error
+	GroupUserJoin(ctx context.Context, groupID, userID, username string) error
+	GroupUserLeave(ctx context.Context, groupID, userID, username string) error
 
 	// RPC
 	RpcCall(ctx context.Context, id, payload string) (string, error)

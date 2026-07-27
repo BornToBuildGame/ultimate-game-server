@@ -49,26 +49,44 @@ func (tm *TokenManager) GenerateSession(userID string, username string) (string,
 // GenerateSessionWithVars embeds optional session vars into the access JWT.
 func (tm *TokenManager) GenerateSessionWithVars(userID, username string, vars map[string]string) (string, string, error) {
 	now := time.Now()
+	exp := now.Add(tm.expiry)
+	token, err := tm.signAccessToken(userID, username, vars, now, exp)
+	if err != nil {
+		return "", "", err
+	}
+	refreshToken := uuid.New().String()
+	return token, refreshToken, nil
+}
+
+// GenerateAccessToken mints an access JWT with optional custom expiry (unix seconds).
+// If expiresAt is 0, the configured TokenManager expiry is used.
+func (tm *TokenManager) GenerateAccessToken(userID, username string, expiresAt int64, vars map[string]string) (string, int64, error) {
+	now := time.Now()
+	exp := now.Add(tm.expiry)
+	if expiresAt > 0 {
+		exp = time.Unix(expiresAt, 0)
+	}
+	token, err := tm.signAccessToken(userID, username, vars, now, exp)
+	if err != nil {
+		return "", 0, err
+	}
+	return token, exp.Unix(), nil
+}
+
+func (tm *TokenManager) signAccessToken(userID, username string, vars map[string]string, now, exp time.Time) (string, error) {
 	claims := Claims{
 		UserID:   userID,
 		Username: username,
 		Vars:     vars,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ID:        uuid.New().String(),
-			ExpiresAt: jwt.NewNumericDate(now.Add(tm.expiry)),
+			ExpiresAt: jwt.NewNumericDate(exp),
 			IssuedAt:  jwt.NewNumericDate(now),
 			NotBefore: jwt.NewNumericDate(now),
 		},
 	}
-
 	tokenObj := jwt.NewWithClaims(tm.signingMethod, claims)
-	accessToken, err := tokenObj.SignedString(tm.secretKey)
-	if err != nil {
-		return "", "", fmt.Errorf("failed to sign access token: %w", err)
-	}
-
-	refreshToken := uuid.New().String()
-	return accessToken, refreshToken, nil
+	return tokenObj.SignedString(tm.secretKey)
 }
 
 // VerifyToken parses and validates a JWT access token.

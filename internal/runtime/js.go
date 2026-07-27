@@ -1625,8 +1625,7 @@ func MapJSNK(vm *goja.Runtime, nk RuntimeModule, timeout time.Duration, registry
 		})
 	}
 
-	mapJSNKBatch1(vm, nkObj, nk)
-	mapJSNKBatch2a(vm, nkObj, nk)
+	mapJSNKExtended(vm, nkObj, nk)
 
 	_ = vm.Set("nk", nkObj)
 }

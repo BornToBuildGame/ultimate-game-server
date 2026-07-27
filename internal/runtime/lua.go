@@ -1695,8 +1695,7 @@ func MapLuaNK(L *lua.LState, nk RuntimeModule, registry ...*HookRegistry) {
 		}))
 	}
 
-	mapLuaNKBatch1(L, nkTable, nk)
-	mapLuaNKBatch2a(L, nkTable, nk)
+	mapLuaNKExtended(L, nkTable, nk)
 
 	L.SetGlobal("nk", nkTable)
 }

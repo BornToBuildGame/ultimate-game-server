@@ -67,11 +67,23 @@ type MatchResult struct {
 	PlayerIDs     []string             `json:"player_ids"`
 	Usernames     []string             `json:"usernames"`
 	Users         []*Presence          `json:"users"`
+	MatchedUsers  []MatchedUser        `json:"matched_users,omitempty"`
 	TicketIDs     map[string]string    `json:"ticket_ids"` // user_id -> ticket_id
 	MatchToken    string               `json:"match_token"`
 	QueueName     string               `json:"queue_name"`
 	Authoritative bool                 `json:"authoritative"`
 	Module        string               `json:"module"`
+}
+
+// MatchedUser is a reference-shaped matchmaker_matched user entry.
+type MatchedUser struct {
+	UserID            string             `json:"user_id"`
+	Username          string             `json:"username"`
+	SessionID         string             `json:"session_id"`
+	PartyID           string             `json:"party_id,omitempty"`
+	TicketID          string             `json:"ticket_id,omitempty"`
+	StringProperties  map[string]string  `json:"string_properties,omitempty"`
+	NumericProperties map[string]float64 `json:"numeric_properties,omitempty"`
 }
 
 // CompletionRecord tracks a recently completed match for stats.

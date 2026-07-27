@@ -123,6 +123,9 @@ func (s *Server) SetRuntimeManager(rm *runtime.GoRuntimeManager) {
 		if grm, ok := rm.NK().(*runtime.GoRuntimeModule); ok && s.streamManager != nil {
 			grm.SetStreamManager(s.streamManager)
 		}
+		if grm, ok := rm.NK().(*runtime.GoRuntimeModule); ok {
+			grm.SetAuthSession(s.tokenMgr, s.sessReg.Store())
+		}
 		if s.Matchmaker != nil {
 			s.Matchmaker.SetDependencies(rm.DB(), rm.NK(), rm.Registry())
 		}
@@ -255,7 +258,8 @@ func NewServer(logger *zap.Logger, cfg Config, dbPool *pgxpool.Pool) (*Server, e
 			sockGateway.EmitSessionEvent("session_end", userID, sessionID, username)
 			sockGateway.UntrackStatusOnDisconnect(sessionID, userID, username)
 		} else {
-			_ = streamTracker.UntrackAll(sessionID)
+			removals := streamTracker.UntrackAllDetailed(sessionID)
+			runtime.EmitStreamPresenceRemovals(msgRouter, streamTracker, removals)
 			statusRegistry.UnfollowAll(sessionID)
 		}
 	}
@@ -351,65 +355,25 @@ func NewServer(logger *zap.Logger, cfg Config, dbPool *pgxpool.Pool) (*Server, e
 
 	// Matchmaker callbacks (notifying matched players over WebSockets)
 	onMatched := func(result matchmaker.MatchResult) {
-		type WSPresence struct {
-			UserID    string `json:"user_id"`
-			Username  string `json:"username"`
-			SessionID string `json:"session_id"`
-		}
+		users := buildMatchmakerMatchedUsers(result, func(userID, sessionID string) string {
+			if sessionID != "" {
+				return sessionID
+			}
+			sessIDs := s.SocketRegistry.GetUserSessionIDs(userID)
+			if len(sessIDs) > 0 {
+				return sessIDs[0]
+			}
+			return ""
+		})
 
-		users := make([]WSPresence, 0, len(result.Users))
-		if len(result.Users) > 0 {
-			for _, u := range result.Users {
-				sessID := u.SessionID
-				if sessID == "" {
-					sessIDs := s.SocketRegistry.GetUserSessionIDs(u.UserID)
-					if len(sessIDs) > 0 {
-						sessID = sessIDs[0]
-					}
-				}
-				users = append(users, WSPresence{
-					UserID:    u.UserID,
-					Username:  u.Username,
-					SessionID: sessID,
-				})
-			}
-		} else {
-			for idx, pid := range result.PlayerIDs {
-				sessIDs := s.SocketRegistry.GetUserSessionIDs(pid)
-				sessID := ""
-				if len(sessIDs) > 0 {
-					sessID = sessIDs[0]
-				}
-				uname := ""
-				if idx < len(result.Usernames) {
-					uname = result.Usernames[idx]
-				}
-				users = append(users, WSPresence{UserID: pid, Username: uname, SessionID: sessID})
-			}
-		}
-
-		for _, u := range users {
-			ticketID := ""
-			if result.TicketIDs != nil {
-				ticketID = result.TicketIDs[u.UserID]
-			}
-			payload := map[string]interface{}{
-				"ticket_id": ticketID,
-				"match_id":  result.MatchID,
-				"users":     users,
-				"self":      u,
-			}
-			if !result.Authoritative && result.MatchToken != "" {
-				payload["token"] = result.MatchToken
-				payload["match_token"] = result.MatchToken
-			}
-
+		for i, u := range users {
+			payload := buildMatchmakerMatchedPayload(result, users, i)
 			notification := map[string]interface{}{
 				"cid":                "",
 				"matchmaker_matched": payload,
 			}
 			msgBytes, _ := json.Marshal(notification)
-			s.SocketRegistry.SendToUser(u.UserID, msgBytes)
+			s.SocketRegistry.SendToUser(u.Presence.UserID, msgBytes)
 		}
 	}
 

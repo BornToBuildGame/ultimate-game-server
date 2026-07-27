@@ -7,6 +7,7 @@ import (
 
 	"ultimate-game-server/internal/cluster"
 	"ultimate-game-server/internal/presence"
+	"ultimate-game-server/internal/runtime"
 )
 
 const (
@@ -329,7 +330,8 @@ func (gh *GatewayHandler) UntrackStatusOnDisconnect(sessionID, userID, username 
 				}
 			}
 		}
-		_ = gh.StreamTracker.UntrackAll(sessionID)
+		removals := gh.StreamTracker.UntrackAllDetailed(sessionID)
+		runtime.EmitStreamPresenceRemovals(gh.MessageRouter, gh.StreamTracker, removals)
 	}
 	if gh.StatusRegistry != nil {
 		gh.StatusRegistry.UnfollowAll(sessionID)
