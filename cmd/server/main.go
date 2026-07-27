@@ -185,6 +185,14 @@ func main() {
 		cs.SetRPCDispatcher(&rpcConsoleAdapter{
 			rm: rm, luaVM: luaVM, jsVM: jsVM, cfg: runtime.DefaultRPCConfig(),
 		})
+		iapCfg := economy.DefaultIAPConfig
+		cs.SetIAPNotificationDeps(console.IAPNotificationDeps{
+			AppleEndpointID:  iapCfg.AppleNotificationsEndpointID,
+			GoogleEndpointID: iapCfg.GoogleNotificationsEndpointID,
+			Registry:         rm.Registry(),
+			NK:               nk,
+			Logger:           rtLogger,
+		})
 		if os.Getenv("SATORI_URL") != "" {
 			cs.SetSatoriClient(satori.NewClient(satori.Config{
 				URL:        os.Getenv("SATORI_URL"),

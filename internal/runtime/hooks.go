@@ -602,16 +602,92 @@ type Initializer interface {
 	RegisterBeforeGetWallet(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *GetWalletRequest) (*GetWalletRequest, error)) error
 	RegisterBeforeListWalletLedger(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *ListWalletLedgerRequest) (*ListWalletLedgerRequest, error)) error
 
+	RegisterBeforeLinkApple(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *LinkAppleRequest) (*LinkAppleRequest, error)) error
+	RegisterBeforeLinkGoogle(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *LinkGoogleRequest) (*LinkGoogleRequest, error)) error
+	RegisterBeforeLinkFacebook(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *LinkFacebookRequest) (*LinkFacebookRequest, error)) error
+	RegisterBeforeLinkSteam(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *LinkSteamRequest) (*LinkSteamRequest, error)) error
+	RegisterBeforeLinkDevice(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *LinkDeviceRequest) (*LinkDeviceRequest, error)) error
+	RegisterBeforeLinkCustom(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *LinkCustomRequest) (*LinkCustomRequest, error)) error
+	RegisterBeforeLinkEmail(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *LinkEmailRequest) (*LinkEmailRequest, error)) error
+	RegisterBeforeUnlinkApple(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *UnlinkAppleRequest) (*UnlinkAppleRequest, error)) error
+	RegisterBeforeUnlinkGoogle(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *UnlinkGoogleRequest) (*UnlinkGoogleRequest, error)) error
+	RegisterBeforeUnlinkFacebook(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *UnlinkFacebookRequest) (*UnlinkFacebookRequest, error)) error
+	RegisterBeforeUnlinkSteam(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *UnlinkSteamRequest) (*UnlinkSteamRequest, error)) error
+	RegisterBeforeUnlinkDevice(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *UnlinkDeviceRequest) (*UnlinkDeviceRequest, error)) error
+	RegisterBeforeUnlinkCustom(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *UnlinkCustomRequest) (*UnlinkCustomRequest, error)) error
+	RegisterBeforeUnlinkEmail(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *UnlinkEmailRequest) (*UnlinkEmailRequest, error)) error
+	RegisterBeforeValidatePurchaseApple(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *ValidatePurchaseAppleRequest) (*ValidatePurchaseAppleRequest, error)) error
+	RegisterBeforeValidatePurchaseGoogle(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *ValidatePurchaseGoogleRequest) (*ValidatePurchaseGoogleRequest, error)) error
+	RegisterBeforeValidatePurchaseHuawei(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *ValidatePurchaseHuaweiRequest) (*ValidatePurchaseHuaweiRequest, error)) error
+	RegisterBeforeValidateSubscriptionApple(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *ValidateSubscriptionAppleRequest) (*ValidateSubscriptionAppleRequest, error)) error
+	RegisterBeforeValidateSubscriptionGoogle(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *ValidateSubscriptionGoogleRequest) (*ValidateSubscriptionGoogleRequest, error)) error
+	RegisterBeforeBanGroupUsers(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *BanGroupUsersRequest) (*BanGroupUsersRequest, error)) error
+	RegisterBeforeKickGroupUsers(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *KickGroupUsersRequest) (*KickGroupUsersRequest, error)) error
+	RegisterBeforePromoteGroupUsers(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *PromoteGroupUsersRequest) (*PromoteGroupUsersRequest, error)) error
+	RegisterBeforeDemoteGroupUsers(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *DemoteGroupUsersRequest) (*DemoteGroupUsersRequest, error)) error
+	RegisterBeforeAddGroupUsers(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *AddGroupUsersRequest) (*AddGroupUsersRequest, error)) error
+	RegisterBeforeUpdateGroup(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *UpdateGroupRequest) (*UpdateGroupRequest, error)) error
+	RegisterBeforeDeleteGroup(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *DeleteGroupRequest) (*DeleteGroupRequest, error)) error
+	RegisterBeforeListGroupUsers(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *ListGroupUsersRequest) (*ListGroupUsersRequest, error)) error
+	RegisterBeforeListUserGroups(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *ListUserGroupsRequest) (*ListUserGroupsRequest, error)) error
+	RegisterBeforeListNotifications(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *ListNotificationsRequest) (*ListNotificationsRequest, error)) error
+	RegisterBeforeDeleteNotifications(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *DeleteNotificationsRequest) (*DeleteNotificationsRequest, error)) error
+	RegisterBeforeListFriendsOfFriends(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *ListFriendsOfFriendsRequest) (*ListFriendsOfFriendsRequest, error)) error
+	RegisterBeforeCreateParty(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *CreatePartyRequest) (*CreatePartyRequest, error)) error
+	RegisterBeforeJoinParty(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *JoinPartyRequest) (*JoinPartyRequest, error)) error
+	RegisterBeforeLeaveParty(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *LeavePartyRequest) (*LeavePartyRequest, error)) error
+	RegisterBeforeListTournaments(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *ListTournamentsRequest) (*ListTournamentsRequest, error)) error
+
 	// Specific type-safe after hooks
 	RegisterAfterAuthenticateEmail(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, out *Session, in *AuthenticateEmailRequest) error) error
 	RegisterAfterWriteStorageObjects(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, out *StorageObjectAcks, in *WriteStorageObjectsRequest) error) error
 	RegisterAfterAddFriends(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *AddFriendsRequest) error) error
 	RegisterAfterJoinGroup(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *JoinGroupRequest) error) error
+	RegisterAfterAuthenticateDevice(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, out *Session, in *AuthenticateDeviceRequest) error) error
+	RegisterAfterAuthenticateCustom(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, out *Session, in *AuthenticateCustomRequest) error) error
+	RegisterAfterAuthenticateApple(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, out *Session, in *AuthenticateAppleRequest) error) error
+	RegisterAfterAuthenticateGoogle(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, out *Session, in *AuthenticateGoogleRequest) error) error
+	RegisterAfterAuthenticateFacebook(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, out *Session, in *AuthenticateFacebookRequest) error) error
+	RegisterAfterAuthenticateSteam(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, out *Session, in *AuthenticateSteamRequest) error) error
+	RegisterAfterSessionRefresh(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, out *Session, in *SessionRefreshRequest) error) error
+	RegisterAfterReadStorageObjects(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *ReadStorageObjectsRequest) error) error
+	RegisterAfterDeleteStorageObjects(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *DeleteStorageObjectsRequest) error) error
+	RegisterAfterDeleteFriends(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *DeleteFriendsRequest) error) error
+	RegisterAfterBlockFriends(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *BlockFriendsRequest) error) error
+	RegisterAfterWriteLeaderboardRecord(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *WriteLeaderboardRecordRequest) error) error
+	RegisterAfterJoinTournament(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *JoinTournamentRequest) error) error
+	RegisterAfterCreateGroup(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *CreateGroupRequest) error) error
+	RegisterAfterLeaveGroup(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *LeaveGroupRequest) error) error
+	RegisterAfterBanGroupUsers(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *BanGroupUsersRequest) error) error
+	RegisterAfterKickGroupUsers(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *KickGroupUsersRequest) error) error
+	RegisterAfterValidatePurchaseApple(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *ValidatePurchaseAppleRequest) error) error
+	RegisterAfterValidatePurchaseGoogle(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *ValidatePurchaseGoogleRequest) error) error
+	RegisterAfterLinkApple(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *LinkAppleRequest) error) error
+	RegisterAfterLinkGoogle(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *LinkGoogleRequest) error) error
+	RegisterAfterUpdateAccount(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *UpdateAccountRequest) error) error
+	RegisterAfterDeleteNotifications(fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, in *DeleteNotificationsRequest) error) error
 
 	RegisterStorageIndex(name, collection, key string, fields, sortableFields []string, maxEntries int, indexOnly bool) error
 	RegisterStorageIndexFilter(indexName string, fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, write *StorageWrite) bool) error
 	RegisterFleetManager(fm fleet.Manager) error
+
+	RegisterPurchaseNotificationApple(fn PurchaseNotificationAppleHandler) error
+	RegisterPurchaseNotificationGoogle(fn PurchaseNotificationGoogleHandler) error
+	RegisterSubscriptionNotificationApple(fn SubscriptionNotificationAppleHandler) error
+	RegisterSubscriptionNotificationGoogle(fn SubscriptionNotificationGoogleHandler) error
 }
+
+// PurchaseNotificationAppleHandler is invoked for Apple purchase RTDN events.
+type PurchaseNotificationAppleHandler func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, notificationType int, purchase *ValidatedPurchaseView, rawPayload string) error
+
+// PurchaseNotificationGoogleHandler is invoked for Google purchase RTDN events.
+type PurchaseNotificationGoogleHandler func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, notificationType int, purchase *ValidatedPurchaseView, rawPayload string) error
+
+// SubscriptionNotificationAppleHandler is invoked for Apple subscription RTDN events.
+type SubscriptionNotificationAppleHandler func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, notificationType int, subscription *ValidatedSubscriptionView, rawPayload string) error
+
+// SubscriptionNotificationGoogleHandler is invoked for Google subscription RTDN events.
+type SubscriptionNotificationGoogleHandler func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, notificationType int, subscription *ValidatedSubscriptionView, rawPayload string) error
 
 // HookRegistry stores registered custom RPCs, before/after hooks, and cron jobs.
 type HookRegistry struct {
@@ -634,6 +710,10 @@ type HookRegistry struct {
 	leaderboardResetHandler    LeaderboardResetHandler
 	tournamentEndHandler       TournamentEndHandler
 	tournamentResetHandler     TournamentResetHandler
+	purchaseNotificationApple      PurchaseNotificationAppleHandler
+	purchaseNotificationGoogle     PurchaseNotificationGoogleHandler
+	subscriptionNotificationApple  SubscriptionNotificationAppleHandler
+	subscriptionNotificationGoogle SubscriptionNotificationGoogleHandler
 }
 
 // NewHookRegistry creates a new instance of HookRegistry.
@@ -951,4 +1031,45 @@ func (hr *HookRegistry) GetTournamentReset() TournamentResetHandler {
 	hr.mu.RLock()
 	defer hr.mu.RUnlock()
 	return hr.tournamentResetHandler
+}
+
+func (hr *HookRegistry) RegisterPurchaseNotificationApple(fn PurchaseNotificationAppleHandler) {
+	hr.mu.Lock()
+	defer hr.mu.Unlock()
+	hr.purchaseNotificationApple = fn
+}
+func (hr *HookRegistry) GetPurchaseNotificationApple() PurchaseNotificationAppleHandler {
+	hr.mu.RLock()
+	defer hr.mu.RUnlock()
+	return hr.purchaseNotificationApple
+}
+func (hr *HookRegistry) RegisterPurchaseNotificationGoogle(fn PurchaseNotificationGoogleHandler) {
+	hr.mu.Lock()
+	defer hr.mu.Unlock()
+	hr.purchaseNotificationGoogle = fn
+}
+func (hr *HookRegistry) GetPurchaseNotificationGoogle() PurchaseNotificationGoogleHandler {
+	hr.mu.RLock()
+	defer hr.mu.RUnlock()
+	return hr.purchaseNotificationGoogle
+}
+func (hr *HookRegistry) RegisterSubscriptionNotificationApple(fn SubscriptionNotificationAppleHandler) {
+	hr.mu.Lock()
+	defer hr.mu.Unlock()
+	hr.subscriptionNotificationApple = fn
+}
+func (hr *HookRegistry) GetSubscriptionNotificationApple() SubscriptionNotificationAppleHandler {
+	hr.mu.RLock()
+	defer hr.mu.RUnlock()
+	return hr.subscriptionNotificationApple
+}
+func (hr *HookRegistry) RegisterSubscriptionNotificationGoogle(fn SubscriptionNotificationGoogleHandler) {
+	hr.mu.Lock()
+	defer hr.mu.Unlock()
+	hr.subscriptionNotificationGoogle = fn
+}
+func (hr *HookRegistry) GetSubscriptionNotificationGoogle() SubscriptionNotificationGoogleHandler {
+	hr.mu.RLock()
+	defer hr.mu.RUnlock()
+	return hr.subscriptionNotificationGoogle
 }

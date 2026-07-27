@@ -116,15 +116,7 @@ func (m *LocalStreamManager) StreamSend(mode int16, subject, subcontext, label, 
 		return fmt.Errorf("stream tracker not configured")
 	}
 	_ = reliable
-	key := streamKey(mode, subject, subcontext, label)
-	targets := sessionIDs
-	if len(targets) == 0 {
-		targets = m.Tracker.Sessions(key)
-	}
-	if m.Router == nil || len(targets) == 0 {
-		return nil
-	}
-	m.Router.SendToSessionIDs(targets, []byte(data))
+	m.streamSendLocal(mode, subject, subcontext, label, data, sessionIDs)
 	if m.mesh != nil {
 		_ = m.mesh.PublishStreamBroadcast(context.Background(), cluster.StreamSendMessage{
 			SourceNode: m.nodeID,
@@ -133,6 +125,30 @@ func (m *LocalStreamManager) StreamSend(mode int16, subject, subcontext, label, 
 		})
 	}
 	return nil
+}
+
+// StreamSendLocal delivers to local sessions only (used by peer mesh handlers to avoid rebroadcast).
+func (m *LocalStreamManager) StreamSendLocal(mode int16, subject, subcontext, label, data string, sessionIDs []string) error {
+	if m == nil || m.Tracker == nil {
+		return fmt.Errorf("stream tracker not configured")
+	}
+	m.streamSendLocal(mode, subject, subcontext, label, data, sessionIDs)
+	return nil
+}
+
+func (m *LocalStreamManager) streamSendLocal(mode int16, subject, subcontext, label, data string, sessionIDs []string) {
+	if m.Router == nil {
+		return
+	}
+	key := streamKey(mode, subject, subcontext, label)
+	targets := sessionIDs
+	if len(targets) == 0 {
+		targets = m.Tracker.Sessions(key)
+	}
+	if len(targets) == 0 {
+		return
+	}
+	m.Router.SendToSessionIDs(targets, []byte(data))
 }
 
 func (m *LocalStreamManager) SessionDisconnect(sessionID string) error {

@@ -44,15 +44,17 @@ var ErrTransactionSeenBefore = errors.New("TRANSACTION_SEEN_BEFORE")
 
 // IAPConfig holds provider credentials (from env/server config).
 type IAPConfig struct {
-	AppleSharedPassword string
-	GoogleClientEmail   string
-	GooglePrivateKey    string
-	GooglePackageName   string
-	HuaweiPublicKey     string
-	HuaweiClientID      string
-	HuaweiClientSecret  string
-	FacebookAppSecret   string
-	SamsungPackageName  string
+	AppleSharedPassword           string
+	AppleNotificationsEndpointID  string
+	GoogleClientEmail             string
+	GooglePrivateKey              string
+	GooglePackageName             string
+	GoogleNotificationsEndpointID string
+	HuaweiPublicKey               string
+	HuaweiClientID                string
+	HuaweiClientSecret            string
+	FacebookAppSecret             string
+	SamsungPackageName            string
 }
 
 // DefaultIAPConfig is set at server startup for runtime module helpers.
@@ -62,16 +64,27 @@ var DefaultIAPConfig IAPConfig
 // Empty values leave the corresponding field unset (dev/test-receipt paths still work).
 func LoadIAPConfigFromEnv() IAPConfig {
 	return IAPConfig{
-		AppleSharedPassword: os.Getenv("APPLE_SHARED_PASSWORD"),
-		GoogleClientEmail:   os.Getenv("GOOGLE_IAP_CLIENT_EMAIL"),
-		GooglePrivateKey:    os.Getenv("GOOGLE_IAP_PRIVATE_KEY"),
-		GooglePackageName:   os.Getenv("GOOGLE_IAP_PACKAGE_NAME"),
-		HuaweiPublicKey:     os.Getenv("HUAWEI_IAP_PUBLIC_KEY"),
-		HuaweiClientID:      os.Getenv("HUAWEI_CLIENT_ID"),
-		HuaweiClientSecret:  os.Getenv("HUAWEI_CLIENT_SECRET"),
-		FacebookAppSecret:   os.Getenv("FACEBOOK_APP_SECRET"),
-		SamsungPackageName:  os.Getenv("SAMSUNG_PACKAGE_NAME"),
+		AppleSharedPassword:           os.Getenv("APPLE_SHARED_PASSWORD"),
+		AppleNotificationsEndpointID:  firstEnv("IAP_APPLE_NOTIFICATIONS_ENDPOINT_ID", "APPLE_NOTIFICATIONS_ENDPOINT_ID"),
+		GoogleClientEmail:             os.Getenv("GOOGLE_IAP_CLIENT_EMAIL"),
+		GooglePrivateKey:              os.Getenv("GOOGLE_IAP_PRIVATE_KEY"),
+		GooglePackageName:             os.Getenv("GOOGLE_IAP_PACKAGE_NAME"),
+		GoogleNotificationsEndpointID: firstEnv("IAP_GOOGLE_NOTIFICATIONS_ENDPOINT_ID", "GOOGLE_NOTIFICATIONS_ENDPOINT_ID"),
+		HuaweiPublicKey:               os.Getenv("HUAWEI_IAP_PUBLIC_KEY"),
+		HuaweiClientID:                os.Getenv("HUAWEI_CLIENT_ID"),
+		HuaweiClientSecret:            os.Getenv("HUAWEI_CLIENT_SECRET"),
+		FacebookAppSecret:             os.Getenv("FACEBOOK_APP_SECRET"),
+		SamsungPackageName:            os.Getenv("SAMSUNG_PACKAGE_NAME"),
 	}
+}
+
+func firstEnv(keys ...string) string {
+	for _, k := range keys {
+		if v := os.Getenv(k); v != "" {
+			return v
+		}
+	}
+	return ""
 }
 
 // ValidatedPurchase is a persisted or validated one-time purchase.

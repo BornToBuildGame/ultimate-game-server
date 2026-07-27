@@ -68,6 +68,7 @@ type Server struct {
 	rpcDispatcher  RPCDispatcher
 	statusProvider StatusProvider
 	satoriClient   *satori.Client
+	iapNotify      IAPNotificationDeps
 
 	revokedTokens sync.Map // token string -> struct{}
 }
@@ -181,6 +182,7 @@ func (s *Server) Start(addr string) error {
 	s.registerFriendsRoutes(mux)
 	s.registerDeferredRoutes(mux)
 	s.registerV2ConsoleRoutes(mux)
+	s.registerIAPNotificationRoutes(mux)
 
 	s.httpServer = &http.Server{
 		Handler:      mux,

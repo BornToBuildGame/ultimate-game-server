@@ -116,3 +116,103 @@ func TestMesh_PresenceCrossNodeFanout(t *testing.T) {
 	require.Equal(t, "update", got.Kind)
 	require.Equal(t, "node-A", got.SourceNode)
 }
+
+func TestMesh_StreamSendCrossNodeFanout(t *testing.T) {
+	ctx := context.Background()
+	container, err := tcredis.Run(ctx, "redis:7-alpine")
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = container.Terminate(ctx) })
+
+	addr, err := container.ConnectionString(ctx)
+	require.NoError(t, err)
+	opt, err := redis.ParseURL(addr)
+	require.NoError(t, err)
+	rdb := redis.NewClient(opt)
+	t.Cleanup(func() { _ = rdb.Close() })
+
+	var got StreamSendMessage
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	meshB := NewMesh(rdb, "node-B", zap.NewNop())
+	meshB.SetStreamHandler(func(msg StreamSendMessage) {
+		got = msg
+		wg.Done()
+	})
+	meshB.Start(ctx)
+	t.Cleanup(meshB.Stop)
+
+	meshA := NewMesh(rdb, "node-A", zap.NewNop())
+	meshA.Start(ctx)
+	t.Cleanup(meshA.Stop)
+	time.Sleep(100 * time.Millisecond)
+
+	err = meshA.PublishStreamBroadcast(ctx, StreamSendMessage{
+		Mode: 1, Subject: "s1", Label: "room", Data: `{"op":"ping"}`,
+	})
+	require.NoError(t, err)
+
+	done := make(chan struct{})
+	go func() {
+		wg.Wait()
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+		t.Fatal("timed out waiting for cross-node stream send")
+	}
+	require.Equal(t, "node-A", got.SourceNode)
+	require.Equal(t, int16(1), got.Mode)
+	require.Equal(t, `{"op":"ping"}`, got.Data)
+}
+
+func TestMesh_PartyCrossNodeFanout(t *testing.T) {
+	ctx := context.Background()
+	container, err := tcredis.Run(ctx, "redis:7-alpine")
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = container.Terminate(ctx) })
+
+	addr, err := container.ConnectionString(ctx)
+	require.NoError(t, err)
+	opt, err := redis.ParseURL(addr)
+	require.NoError(t, err)
+	rdb := redis.NewClient(opt)
+	t.Cleanup(func() { _ = rdb.Close() })
+
+	var got PartyMessage
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	meshB := NewMesh(rdb, "node-B", zap.NewNop())
+	meshB.SetPartyHandler(func(msg PartyMessage) {
+		got = msg
+		wg.Done()
+	})
+	meshB.Start(ctx)
+	t.Cleanup(meshB.Stop)
+
+	meshA := NewMesh(rdb, "node-A", zap.NewNop())
+	meshA.Start(ctx)
+	t.Cleanup(meshA.Stop)
+	time.Sleep(100 * time.Millisecond)
+
+	err = meshA.PublishParty(ctx, PartyMessage{
+		PartyID: "party-1",
+		Payload: []byte(`{"party_presence_event":{"party_id":"party-1"}}`),
+	})
+	require.NoError(t, err)
+
+	done := make(chan struct{})
+	go func() {
+		wg.Wait()
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+		t.Fatal("timed out waiting for cross-node party")
+	}
+	require.Equal(t, "party-1", got.PartyID)
+	require.Equal(t, "node-A", got.SourceNode)
+}

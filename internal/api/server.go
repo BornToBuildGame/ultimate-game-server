@@ -310,7 +310,7 @@ func NewServer(logger *zap.Logger, cfg Config, dbPool *pgxpool.Pool) (*Server, e
 
 		mesh := cluster.NewMesh(rdb, nodeID, logger)
 		mesh.SetStreamHandler(func(msg cluster.StreamSendMessage) {
-			streamMgr.StreamSend(msg.Mode, msg.Subject, msg.Subcontext, msg.Label, msg.Data, msg.SessionIDs, true)
+			_ = streamMgr.StreamSendLocal(msg.Mode, msg.Subject, msg.Subcontext, msg.Label, msg.Data, msg.SessionIDs)
 		})
 		mesh.SetChatHandler(func(msg cluster.ChatMessage) {
 			sockGateway.DeliverClusterChat(msg.ChannelID, msg.Payload)
