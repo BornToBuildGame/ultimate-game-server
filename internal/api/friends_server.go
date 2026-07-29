@@ -19,10 +19,10 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 type FriendsServer struct {
-	apipb.UnimplementedFriendsServiceServer
 	dbPool    *pgxpool.Pool
 	tokenMgr  *auth.TokenManager
 	presence  *presence.PresenceTracker
@@ -123,7 +123,15 @@ func (s *FriendsServer) ListFriends(ctx context.Context, req *apipb.ListFriendsR
 	if err != nil {
 		return nil, err
 	}
-	list, nextCursor, err := social.ListFriends(ctx, s.dbPool, userID, int(req.GetState()), int(req.GetLimit()), req.GetCursor())
+	state := 0
+	if req.GetState() != nil {
+		state = int(req.GetState().GetValue())
+	}
+	limit := 0
+	if req.GetLimit() != nil {
+		limit = int(req.GetLimit().GetValue())
+	}
+	list, nextCursor, err := social.ListFriends(ctx, s.dbPool, userID, state, limit, req.GetCursor())
 	if err != nil {
 		return nil, mapFriendError(err)
 	}
@@ -136,12 +144,12 @@ func (s *FriendsServer) ListFriends(ctx context.Context, req *apipb.ListFriendsR
 	for i, f := range list {
 		protoFriends[i] = &apipb.Friend{
 			User:       friendUserToProto(f.User, online[f.User.ID]),
-			State:      int32(f.State),
+			State:      wrapperspb.Int32(int32(f.State)),
 			UpdateTime: timestamppb.New(f.UpdateTime),
 			Metadata:   f.Metadata,
 		}
 	}
-	return &apipb.FriendList{Friends: protoFriends, NextCursor: nextCursor}, nil
+	return &apipb.FriendList{Friends: protoFriends, Cursor: nextCursor}, nil
 }
 
 func (s *FriendsServer) ListFriendsOfFriends(ctx context.Context, req *apipb.ListFriendsOfFriendsRequest) (*apipb.FriendsOfFriendsList, error) {
@@ -149,7 +157,11 @@ func (s *FriendsServer) ListFriendsOfFriends(ctx context.Context, req *apipb.Lis
 	if err != nil {
 		return nil, err
 	}
-	list, next, err := social.ListFriendsOfFriends(ctx, s.dbPool, userID, int(req.GetLimit()), req.GetCursor())
+	limit := 10
+	if req.GetLimit() != nil {
+		limit = int(req.GetLimit().GetValue())
+	}
+	list, next, err := social.ListFriendsOfFriends(ctx, s.dbPool, userID, limit, req.GetCursor())
 	if err != nil {
 		return nil, mapFriendError(err)
 	}
@@ -158,9 +170,9 @@ func (s *FriendsServer) ListFriendsOfFriends(ctx context.Context, req *apipb.Lis
 		ids[i] = f.User.ID
 	}
 	online := s.onlineSet(ids)
-	out := make([]*apipb.FriendOfFriend, len(list))
+	out := make([]*apipb.FriendsOfFriendsList_FriendOfFriend, len(list))
 	for i, f := range list {
-		out[i] = &apipb.FriendOfFriend{
+		out[i] = &apipb.FriendsOfFriendsList_FriendOfFriend{
 			Referrer: f.Referrer,
 			User:     friendUserToProto(f.User, online[f.User.ID]),
 		}
@@ -202,32 +214,23 @@ func (s *FriendsServer) BlockFriends(ctx context.Context, req *apipb.BlockFriend
 	return &emptypb.Empty{}, nil
 }
 
-func (s *FriendsServer) UnblockFriends(ctx context.Context, req *apipb.UnblockFriendsRequest) (*emptypb.Empty, error) {
-	userID, _, err := s.authenticate(ctx)
-	if err != nil {
-		return nil, err
-	}
-	resolvedIDs, err := social.ResolveUserIDs(ctx, s.dbPool, req.GetIds(), req.GetUsernames())
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to resolve users: %v", err)
-	}
-	for _, destID := range resolvedIDs {
-		if err := social.UnblockUser(ctx, s.dbPool, userID, destID); err != nil {
-			return nil, mapFriendError(err)
-		}
-	}
-	return &emptypb.Empty{}, nil
-}
-
 func (s *FriendsServer) ImportFacebookFriends(ctx context.Context, req *apipb.ImportFacebookFriendsRequest) (*emptypb.Empty, error) {
 	userID, username, err := s.authenticate(ctx)
 	if err != nil {
 		return nil, err
 	}
-	if req.GetToken() == "" {
+	token := ""
+	if req.GetAccount() != nil {
+		token = req.GetAccount().GetToken()
+	}
+	if token == "" {
 		return nil, status.Error(codes.InvalidArgument, "Facebook token is required")
 	}
-	if err := social.ImportFacebookFriends(ctx, s.dbPool, userID, username, req.GetToken(), req.GetReset_(), s.notifier); err != nil {
+	reset := false
+	if req.GetReset_() != nil {
+		reset = req.GetReset_().GetValue()
+	}
+	if err := social.ImportFacebookFriends(ctx, s.dbPool, userID, username, token, reset, s.notifier); err != nil {
 		return nil, status.Errorf(codes.Unauthenticated, "failed to import Facebook friends: %v", err)
 	}
 	return &emptypb.Empty{}, nil
@@ -238,10 +241,18 @@ func (s *FriendsServer) ImportSteamFriends(ctx context.Context, req *apipb.Impor
 	if err != nil {
 		return nil, err
 	}
-	if req.GetSteamToken() == "" {
+	token := ""
+	if req.GetAccount() != nil {
+		token = req.GetAccount().GetToken()
+	}
+	if token == "" {
 		return nil, status.Error(codes.InvalidArgument, "Steam token is required")
 	}
-	if err := social.ImportSteamFriends(ctx, s.dbPool, userID, username, req.GetSteamToken(), req.GetReset_(), s.notifier); err != nil {
+	reset := false
+	if req.GetReset_() != nil {
+		reset = req.GetReset_().GetValue()
+	}
+	if err := social.ImportSteamFriends(ctx, s.dbPool, userID, username, token, reset, s.notifier); err != nil {
 		return nil, status.Errorf(codes.FailedPrecondition, "failed to import Steam friends: %v", err)
 	}
 	return &emptypb.Empty{}, nil

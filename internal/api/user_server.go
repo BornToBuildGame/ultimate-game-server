@@ -18,7 +18,6 @@ import (
 
 // UserServer implements apipb.UserServiceServer.
 type UserServer struct {
-	apipb.UnimplementedUserServiceServer
 	dbPool   *pgxpool.Pool
 	tokenMgr *auth.TokenManager
 }

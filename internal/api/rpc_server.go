@@ -22,7 +22,6 @@ import (
 
 // RpcServer implements apipb.RpcServiceServer.
 type RpcServer struct {
-	apipb.UnimplementedRpcServiceServer
 	dbPool   *pgxpool.Pool
 	tokenMgr *auth.TokenManager
 	runtime  *runtime.GoRuntimeManager

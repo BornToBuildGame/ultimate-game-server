@@ -17,6 +17,7 @@ import (
 
 	"go.uber.org/zap"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 type mockGoMatch struct {
@@ -77,23 +78,11 @@ func TestRealtimeServer_GrpcAndRest(t *testing.T) {
 	// Context with grpc auth metadata
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs("authorization", "Bearer "+token))
 
-	// 1. Test CreateMatch (gRPC)
-	createReq := &apipb.CreateMatchRequest{
-		Module: "mock_module",
-		Params: map[string]string{"foo": "bar"},
-	}
-	matchObj, err := rtServer.CreateMatch(ctx, createReq)
+	// 1. Create match via router
+	matchID := match.NewAuthoritativeMatchID()
+	err := matchRouter.CreateAndRegisterMatch(ctx, matchID, "mock_module", map[string]interface{}{"foo": "bar"})
 	if err != nil {
 		t.Fatalf("failed to create match: %v", err)
-	}
-	if matchObj.MatchId == "" {
-		t.Error("expected non-empty match ID")
-	}
-	if !strings.Contains(matchObj.MatchId, ".") {
-		t.Errorf("expected match ID with node suffix (uuid.node), got: %s", matchObj.MatchId)
-	}
-	if !matchObj.Authoritative {
-		t.Error("expected authoritative match")
 	}
 
 	// Give match goroutine a moment to start
@@ -103,37 +92,14 @@ func TestRealtimeServer_GrpcAndRest(t *testing.T) {
 		t.Error("expected mockMatch.MatchInit to have been called")
 	}
 
-	// 2. Test GetMatch (gRPC)
-	getReq := &apipb.GetMatchRequest{MatchId: matchObj.MatchId}
-	matchDetails, err := rtServer.GetMatch(ctx, getReq)
-	if err != nil {
-		t.Fatalf("failed to get match details: %v", err)
-	}
-	if matchDetails.MatchId != matchObj.MatchId {
-		t.Errorf("expected match ID %s, got: %s", matchObj.MatchId, matchDetails.MatchId)
-	}
-
-	// 3. Test ListMatches (gRPC)
-	listReq := &apipb.ListMatchesRequest{Authoritative: true}
+	// 2. Test ListMatches (gRPC)
+	listReq := &apipb.ListMatchesRequest{Authoritative: wrapperspb.Bool(true)}
 	matchesList, err := rtServer.ListMatches(ctx, listReq)
 	if err != nil {
 		t.Fatalf("failed to list matches: %v", err)
 	}
 	if len(matchesList.Matches) == 0 {
 		t.Error("expected at least one active match in list")
-	}
-
-	// 4. Test MatchSignal (gRPC)
-	signalReq := &apipb.MatchSignalRequest{
-		MatchId: matchObj.MatchId,
-		Payload: "test_data",
-	}
-	signalRes, err := rtServer.MatchSignal(ctx, signalReq)
-	if err != nil {
-		t.Fatalf("failed to send signal: %v", err)
-	}
-	if signalRes.Response != "signal_response: test_data" {
-		t.Errorf("unexpected signal response: %s", signalRes.Response)
 	}
 
 	// 5. Test REST API Handlers using Server

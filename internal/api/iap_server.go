@@ -19,11 +19,11 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 // IAPServer implements apipb.IAPServiceServer.
 type IAPServer struct {
-	apipb.UnimplementedIAPServiceServer
 	dbPool   *pgxpool.Pool
 	tokenMgr *auth.TokenManager
 	hooks    *runtime.HookRegistry
@@ -61,8 +61,8 @@ func toProtoPurchase(vp *economy.ValidatedPurchase) *apipb.ValidatedPurchase {
 	}
 	out := &apipb.ValidatedPurchase{
 		UserId: vp.UserID, ProductId: vp.ProductID, TransactionId: vp.TransactionID,
-		Store: int32(vp.Store), PurchaseTime: timestamppb.New(vp.PurchaseTime),
-		SeenBefore: vp.SeenBefore, Environment: int32(vp.Environment),
+		Store: apipb.StoreProvider(vp.Store), PurchaseTime: timestamppb.New(vp.PurchaseTime),
+		SeenBefore: vp.SeenBefore, Environment: apipb.StoreEnvironment(vp.Environment),
 		ProviderResponse: vp.RawResponse,
 	}
 	if !vp.CreateTime.IsZero() {
@@ -83,9 +83,9 @@ func toProtoSub(sub *economy.ValidatedSubscription) *apipb.ValidatedSubscription
 	}
 	out := &apipb.ValidatedSubscription{
 		UserId: sub.UserID, ProductId: sub.ProductID, OriginalTransactionId: sub.OriginalTransactionID,
-		Store: int32(sub.Store), PurchaseTime: timestamppb.New(sub.PurchaseTime),
-		ExpireTime: timestamppb.New(sub.ExpireTime), Active: sub.Active,
-		SeenBefore: sub.SeenBefore, Environment: int32(sub.Environment),
+		Store: apipb.StoreProvider(sub.Store), PurchaseTime: timestamppb.New(sub.PurchaseTime),
+		ExpiryTime: timestamppb.New(sub.ExpireTime), Active: sub.Active,
+		Environment: apipb.StoreEnvironment(sub.Environment),
 		ProviderResponse: sub.RawResponse,
 	}
 	if !sub.CreateTime.IsZero() {
@@ -100,11 +100,11 @@ func toProtoSub(sub *economy.ValidatedSubscription) *apipb.ValidatedSubscription
 	return out
 }
 
-func grpcPersist(p *bool) bool {
+func grpcPersist(p *wrapperspb.BoolValue) bool {
 	if p == nil {
 		return true
 	}
-	return *p
+	return p.GetValue()
 }
 
 func (s *IAPServer) invokeBefore(ctx context.Context, name string, in interface{}) (interface{}, error) {
@@ -185,11 +185,8 @@ func (s *IAPServer) ValidatePurchaseHuawei(ctx context.Context, req *apipb.Valid
 	} else if casted, ok := in.(*apipb.ValidatePurchaseHuaweiRequest); ok {
 		req = casted
 	}
-	purchaseData := req.GetPurchaseData()
-	if purchaseData == "" {
-		purchaseData = req.GetPurchase()
-	}
-	vp, err := economy.ValidatePurchaseHuawei(ctx, s.dbPool, s.cfg, userID, purchaseData, req.GetSignature(), grpcPersist(req.Persist))
+	purchaseData := req.GetPurchase()
+	vp, err := economy.ValidatePurchaseHuawei(ctx, s.dbPool, s.cfg, userID, purchaseData, req.GetSignature(), grpcPersist(req.GetPersist()))
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
@@ -265,7 +262,7 @@ func (s *IAPServer) ValidateSubscriptionGoogle(ctx context.Context, req *apipb.V
 	} else if casted, ok := in.(*apipb.ValidateSubscriptionGoogleRequest); ok {
 		req = casted
 	}
-	sub, err := economy.ValidateSubscriptionGoogle(ctx, s.dbPool, s.cfg, userID, req.GetProductId(), req.GetPurchaseToken(), grpcPersist(req.Persist))
+	sub, err := economy.ValidateSubscriptionGoogle(ctx, s.dbPool, s.cfg, userID, "", req.GetReceipt(), grpcPersist(req.GetPersist()))
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
@@ -284,7 +281,8 @@ func (s *IAPServer) ListSubscriptions(ctx context.Context, req *apipb.ListSubscr
 	} else if casted, ok := in.(*apipb.ListSubscriptionsRequest); ok {
 		req = casted
 	}
-	list, err := economy.ListSubscriptions(ctx, s.dbPool, userID, int(req.GetLimit()), req.GetCursor())
+	limit := int(req.GetLimit().GetValue())
+	list, err := economy.ListSubscriptions(ctx, s.dbPool, userID, limit, req.GetCursor())
 	if err != nil {
 		if errors.Is(err, economy.ErrSubscriptionsListInvalidCursor) {
 			return nil, status.Error(codes.InvalidArgument, "cursor is invalid")
@@ -621,7 +619,7 @@ func resolveGooglePurchaseFields(req *apipb.ValidatePurchaseGoogleRequest) (prod
 	if req == nil {
 		return "", ""
 	}
-	return parseGooglePurchaseBlob(req.GetPurchase(), req.GetProductId(), req.GetPurchaseToken())
+	return parseGooglePurchaseBlob(req.GetPurchase(), "", "")
 }
 
 func parseGooglePurchaseBlob(purchase, productID, token string) (string, string) {

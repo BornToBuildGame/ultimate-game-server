@@ -3,6 +3,7 @@ package economy
 import (
 	"context"
 	"testing"
+	"time"
 
 	"ultimate-game-server/internal/auth"
 	"ultimate-game-server/internal/storage"
@@ -12,6 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 )
+
 
 func TestMultiUpdate_AccountStorageWallet(t *testing.T) {
 	if testing.Short() {
@@ -30,6 +32,17 @@ func TestMultiUpdate_AccountStorageWallet(t *testing.T) {
 	pool, err := pgxpool.New(ctx, dsn)
 	require.NoError(t, err)
 	t.Cleanup(func() { pool.Close() })
+
+	var pingErr error
+	for i := 0; i < 10; i++ {
+		pingErr = pool.Ping(ctx)
+		if pingErr == nil {
+			break
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+	require.NoError(t, pingErr)
+
 
 	_, err = pool.Exec(ctx, `
 		CREATE TABLE users (

@@ -19,11 +19,11 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 // ChannelServer implements apipb.ChatServiceServer.
 type ChannelServer struct {
-	apipb.UnimplementedChatServiceServer
 	dbPool   *pgxpool.Pool
 	tokenMgr *auth.TokenManager
 	hooks    *runtime.HookRegistry
@@ -55,13 +55,13 @@ func toProtoChannelMessage(m chat.ChannelMessage) *apipb.ChannelMessage {
 	return &apipb.ChannelMessage{
 		ChannelId:  m.ChannelID,
 		MessageId:  m.MessageID,
-		Code:       int32(m.Code),
+		Code:       wrapperspb.Int32(int32(m.Code)),
 		SenderId:   m.SenderID,
 		Username:   m.Username,
 		Content:    m.Content,
 		CreateTime: timestamppb.New(m.CreateTime),
 		UpdateTime: timestamppb.New(m.UpdateTime),
-		Persistent: m.Persistent,
+		Persistent: wrapperspb.Bool(m.Persistent),
 		RoomName:   m.RoomName,
 		GroupId:    m.GroupID,
 		UserIdOne:  m.UserIDOne,
@@ -79,7 +79,7 @@ func (s *ChannelServer) ListChannelMessages(ctx context.Context, req *apipb.List
 		return nil, status.Error(codes.InvalidArgument, "invalid channel ID")
 	}
 
-	limit := int(req.GetLimit())
+	limit := int(req.GetLimit().GetValue())
 	if limit == 0 {
 		limit = 20
 	}
@@ -87,8 +87,8 @@ func (s *ChannelServer) ListChannelMessages(ctx context.Context, req *apipb.List
 		return nil, status.Error(codes.InvalidArgument, "invalid limit - limit must be between 1 and 100")
 	}
 	forward := true
-	if req.Forward != nil {
-		forward = req.GetForward()
+	if req.GetForward() != nil {
+		forward = req.GetForward().GetValue()
 	}
 
 	stream, err := chat.ChannelIdToStream(req.GetChannelId())

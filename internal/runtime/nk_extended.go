@@ -19,6 +19,7 @@ func mapLuaNKExtended(L *lua.LState, nkTable *lua.LTable, nk RuntimeModule) {
 	mapLuaNKAccounts(L, nkTable, nk)
 	mapLuaNKGroupsStorage(L, nkTable, nk)
 	mapLuaNKAuthStreams(L, nkTable, nk)
+	mapLuaNKBatch3(L, nkTable, nk)
 }
 
 // mapJSNKExtended registers extended JS nk bindings beyond the core MapJSNK surface.
@@ -26,7 +27,9 @@ func mapJSNKExtended(vm *goja.Runtime, nkObj *goja.Object, nk RuntimeModule) {
 	mapJSNKAccounts(vm, nkObj, nk)
 	mapJSNKGroupsStorage(vm, nkObj, nk)
 	mapJSNKAuthStreams(vm, nkObj, nk)
+	mapJSNKBatch3(vm, nkObj, nk)
 }
+
 
 // jsNKValue marshals a Go value to a JS-friendly goja value, panicking on error.
 func jsNKValue(vm *goja.Runtime, v interface{}, err error) goja.Value {
@@ -1258,3 +1261,243 @@ func jsAnyMap(v goja.Value) map[string]interface{} {
 	_ = json.Unmarshal(b, &out)
 	return out
 }
+
+func mapLuaNKBatch3(L *lua.LState, nkTable *lua.LTable, nk RuntimeModule) {
+	L.SetField(nkTable, "http_request", L.NewFunction(func(L *lua.LState) int {
+		urlStr := L.CheckString(1)
+		method := L.OptString(2, "GET")
+		var headers map[string]string
+		if tbl := L.OptTable(3, nil); tbl != nil {
+			headers = make(map[string]string)
+			tbl.ForEach(func(k, v lua.LValue) {
+				headers[k.String()] = v.String()
+			})
+		}
+		body := L.OptString(4, "")
+		timeoutMs := L.OptInt(5, 5000)
+
+		code, respHeaders, respBody, err := nk.HttpRequest(L.Context(), urlStr, method, headers, body, timeoutMs)
+		if err != nil {
+			L.RaiseError("http_request failed: %v", err)
+			return 0
+		}
+
+		hdrTbl := L.NewTable()
+		for k, v := range respHeaders {
+			hdrTbl.RawSetString(k, lua.LString(v))
+		}
+		L.Push(lua.LNumber(code))
+		L.Push(hdrTbl)
+		L.Push(lua.LString(respBody))
+		return 3
+	}))
+
+	L.SetField(nkTable, "sql_exec", L.NewFunction(func(L *lua.LState) int {
+		query := L.CheckString(1)
+		var args []interface{}
+		if tbl := L.OptTable(2, nil); tbl != nil {
+			tbl.ForEach(func(k, v lua.LValue) {
+				args = append(args, ToGoValue(v))
+			})
+		}
+		ct, err := nk.SqlExec(L.Context(), query, args)
+		if err != nil {
+			L.RaiseError("sql_exec failed: %v", err)
+			return 0
+		}
+		L.Push(lua.LNumber(ct))
+		return 1
+	}))
+
+	L.SetField(nkTable, "sql_query", L.NewFunction(func(L *lua.LState) int {
+		query := L.CheckString(1)
+		var args []interface{}
+		if tbl := L.OptTable(2, nil); tbl != nil {
+			tbl.ForEach(func(k, v lua.LValue) {
+				args = append(args, ToGoValue(v))
+			})
+		}
+		rows, err := nk.SqlQuery(L.Context(), query, args)
+		if err != nil {
+			L.RaiseError("sql_query failed: %v", err)
+			return 0
+		}
+		resTbl := L.NewTable()
+		for _, row := range rows {
+			rowTbl := L.NewTable()
+			for k, v := range row {
+				rowTbl.RawSetString(k, ToLuaValue(L, v))
+			}
+			resTbl.Append(rowTbl)
+		}
+		L.Push(resTbl)
+		return 1
+	}))
+
+	L.SetField(nkTable, "localcache_get", L.NewFunction(func(L *lua.LState) int {
+		val, ok := nk.LocalCacheGet(L.CheckString(1))
+		if !ok {
+			L.Push(lua.LNil)
+			L.Push(lua.LBool(false))
+			return 2
+		}
+		L.Push(ToLuaValue(L, val))
+		L.Push(lua.LBool(true))
+		return 2
+	}))
+
+	L.SetField(nkTable, "localcache_set", L.NewFunction(func(L *lua.LState) int {
+		key := L.CheckString(1)
+		val := ToGoValue(L.Get(2))
+		ttlSec := int64(L.OptInt(3, 0))
+		nk.LocalCacheSet(key, val, ttlSec)
+		return 0
+	}))
+
+	L.SetField(nkTable, "crypto_hash", L.NewFunction(func(L *lua.LState) int {
+		res, err := nk.CryptoHash(L.CheckString(1), L.CheckString(2))
+		if err != nil {
+			L.RaiseError("crypto_hash failed: %v", err)
+			return 0
+		}
+		L.Push(lua.LString(res))
+		return 1
+	}))
+
+	L.SetField(nkTable, "crypto_hmac_hash", L.NewFunction(func(L *lua.LState) int {
+		res, err := nk.CryptoHmacHash(L.CheckString(1), L.CheckString(2), L.CheckString(3))
+		if err != nil {
+			L.RaiseError("crypto_hmac_hash failed: %v", err)
+			return 0
+		}
+		L.Push(lua.LString(res))
+		return 1
+	}))
+
+	L.SetField(nkTable, "bcrypt_hash", L.NewFunction(func(L *lua.LState) int {
+		res, err := nk.BcryptHash(L.CheckString(1))
+		if err != nil {
+			L.RaiseError("bcrypt_hash failed: %v", err)
+			return 0
+		}
+		L.Push(lua.LString(res))
+		return 1
+	}))
+
+	L.SetField(nkTable, "bcrypt_compare", L.NewFunction(func(L *lua.LState) int {
+		res := nk.BcryptCompare(L.CheckString(1), L.CheckString(2))
+		L.Push(lua.LBool(res))
+		return 1
+	}))
+
+	L.SetField(nkTable, "uuid_v4", L.NewFunction(func(L *lua.LState) int {
+		L.Push(lua.LString(nk.UuidV4()))
+		return 1
+	}))
+}
+
+func mapJSNKBatch3(vm *goja.Runtime, nkObj *goja.Object, nk RuntimeModule) {
+	_ = nkObj.Set("http_request", func(call goja.FunctionCall) goja.Value {
+		urlStr := call.Argument(0).String()
+		method := jsOptString(call.Argument(1))
+		headers := jsStringMap(call.Argument(2))
+		body := jsOptString(call.Argument(3))
+		timeoutMs := int(call.Argument(4).ToInteger())
+		code, respHeaders, respBody, err := nk.HttpRequest(context.Background(), urlStr, method, headers, body, timeoutMs)
+		if err != nil {
+			panic(vm.NewGoError(err))
+		}
+		res := map[string]interface{}{
+			"code":    code,
+			"headers": respHeaders,
+			"body":    respBody,
+		}
+		return vm.ToValue(res)
+	})
+	_ = nkObj.Set("httpRequest", nkObj.Get("http_request"))
+
+	_ = nkObj.Set("sql_exec", func(call goja.FunctionCall) goja.Value {
+		query := call.Argument(0).String()
+		var args []interface{}
+		if arr, ok := call.Argument(1).Export().([]interface{}); ok {
+			args = arr
+		}
+		ct, err := nk.SqlExec(context.Background(), query, args)
+		if err != nil {
+			panic(vm.NewGoError(err))
+		}
+		return vm.ToValue(ct)
+	})
+	_ = nkObj.Set("sqlExec", nkObj.Get("sql_exec"))
+
+	_ = nkObj.Set("sql_query", func(call goja.FunctionCall) goja.Value {
+		query := call.Argument(0).String()
+		var args []interface{}
+		if arr, ok := call.Argument(1).Export().([]interface{}); ok {
+			args = arr
+		}
+		rows, err := nk.SqlQuery(context.Background(), query, args)
+		if err != nil {
+			panic(vm.NewGoError(err))
+		}
+		return vm.ToValue(rows)
+	})
+	_ = nkObj.Set("sqlQuery", nkObj.Get("sql_query"))
+
+	_ = nkObj.Set("localcache_get", func(call goja.FunctionCall) goja.Value {
+		val, ok := nk.LocalCacheGet(call.Argument(0).String())
+		if !ok {
+			return goja.Null()
+		}
+		return vm.ToValue(val)
+	})
+	_ = nkObj.Set("localCacheGet", nkObj.Get("localcache_get"))
+
+	_ = nkObj.Set("localcache_set", func(call goja.FunctionCall) goja.Value {
+		key := call.Argument(0).String()
+		val := call.Argument(1).Export()
+		ttlSec := call.Argument(2).ToInteger()
+		nk.LocalCacheSet(key, val, ttlSec)
+		return goja.Undefined()
+	})
+	_ = nkObj.Set("localCacheSet", nkObj.Get("localcache_set"))
+
+	_ = nkObj.Set("crypto_hash", func(call goja.FunctionCall) goja.Value {
+		res, err := nk.CryptoHash(call.Argument(0).String(), call.Argument(1).String())
+		if err != nil {
+			panic(vm.NewGoError(err))
+		}
+		return vm.ToValue(res)
+	})
+	_ = nkObj.Set("cryptoHash", nkObj.Get("crypto_hash"))
+
+	_ = nkObj.Set("crypto_hmac_hash", func(call goja.FunctionCall) goja.Value {
+		res, err := nk.CryptoHmacHash(call.Argument(0).String(), call.Argument(1).String(), call.Argument(2).String())
+		if err != nil {
+			panic(vm.NewGoError(err))
+		}
+		return vm.ToValue(res)
+	})
+	_ = nkObj.Set("cryptoHmacHash", nkObj.Get("crypto_hmac_hash"))
+
+	_ = nkObj.Set("bcrypt_hash", func(call goja.FunctionCall) goja.Value {
+		res, err := nk.BcryptHash(call.Argument(0).String())
+		if err != nil {
+			panic(vm.NewGoError(err))
+		}
+		return vm.ToValue(res)
+	})
+	_ = nkObj.Set("bcryptHash", nkObj.Get("bcrypt_hash"))
+
+	_ = nkObj.Set("bcrypt_compare", func(call goja.FunctionCall) goja.Value {
+		res := nk.BcryptCompare(call.Argument(0).String(), call.Argument(1).String())
+		return vm.ToValue(res)
+	})
+	_ = nkObj.Set("bcryptCompare", nkObj.Get("bcrypt_compare"))
+
+	_ = nkObj.Set("uuid_v4", func(call goja.FunctionCall) goja.Value {
+		return vm.ToValue(nk.UuidV4())
+	})
+	_ = nkObj.Set("uuidV4", nkObj.Get("uuid_v4"))
+}
+

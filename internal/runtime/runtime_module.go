@@ -2,18 +2,28 @@ package runtime
 
 import (
 	"context"
+	"crypto/hmac"
+	"crypto/md5"
+	"crypto/sha256"
+	"crypto/sha512"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"hash"
+	"io"
+	"net/http"
 	"os"
+	"strings"
+	"sync"
 	"time"
 
 	"ultimate-game-server/internal/auth"
 	"ultimate-game-server/internal/chat"
 	"ultimate-game-server/internal/cronexpr"
 	"ultimate-game-server/internal/economy"
+	"ultimate-game-server/internal/fleet"
 	"ultimate-game-server/internal/leaderboard"
 	"ultimate-game-server/internal/notification"
-	"ultimate-game-server/internal/fleet"
 	"ultimate-game-server/internal/satori"
 	"ultimate-game-server/internal/social"
 	"ultimate-game-server/internal/storage"
@@ -21,7 +31,9 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"golang.org/x/crypto/bcrypt"
 )
+
 
 type MatchRegistry interface {
 	CreateAndRegisterMatch(ctx context.Context, matchID string, module string, params map[string]interface{}) error
@@ -1453,3 +1465,160 @@ func (m *GoRuntimeModule) CronPrev(expression string, timestamp int64) (int64, e
 	t := time.Unix(timestamp, 0).UTC()
 	return expr.Last(t).UTC().Unix(), nil
 }
+
+type cacheItem struct {
+	value     interface{}
+	expiresAt time.Time
+}
+
+var (
+	localCache   = make(map[string]cacheItem)
+	localCacheMu sync.RWMutex
+)
+
+func (m *GoRuntimeModule) HttpRequest(ctx context.Context, urlStr, method string, headers map[string]string, body string, timeoutMs int) (int, map[string]string, string, error) {
+	if method == "" {
+		method = "GET"
+	}
+	method = strings.ToUpper(method)
+	var bodyReader io.Reader
+	if body != "" {
+		bodyReader = strings.NewReader(body)
+	}
+	req, err := http.NewRequestWithContext(ctx, method, urlStr, bodyReader)
+	if err != nil {
+		return 0, nil, "", fmt.Errorf("failed to create http request: %w", err)
+	}
+	for k, v := range headers {
+		req.Header.Set(k, v)
+	}
+	if timeoutMs <= 0 {
+		timeoutMs = 5000
+	}
+	client := &http.Client{Timeout: time.Duration(timeoutMs) * time.Millisecond}
+	resp, err := client.Do(req)
+	if err != nil {
+		return 0, nil, "", fmt.Errorf("http request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	respHeaders := make(map[string]string)
+	for k, v := range resp.Header {
+		if len(v) > 0 {
+			respHeaders[k] = v[0]
+		}
+	}
+	b, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return resp.StatusCode, respHeaders, "", fmt.Errorf("failed to read response body: %w", err)
+	}
+	return resp.StatusCode, respHeaders, string(b), nil
+}
+
+func (m *GoRuntimeModule) SqlExec(ctx context.Context, query string, args []interface{}) (int64, error) {
+	if m.dbPool == nil {
+		return 0, fmt.Errorf("database not configured")
+	}
+	ct, err := m.dbPool.Exec(ctx, query, args...)
+	if err != nil {
+		return 0, err
+	}
+	return ct.RowsAffected(), nil
+}
+
+func (m *GoRuntimeModule) SqlQuery(ctx context.Context, query string, args []interface{}) ([]map[string]interface{}, error) {
+	if m.dbPool == nil {
+		return nil, fmt.Errorf("database not configured")
+	}
+	rows, err := m.dbPool.Query(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	fieldDescs := rows.FieldDescriptions()
+	var results []map[string]interface{}
+	for rows.Next() {
+		vals, err := rows.Values()
+		if err != nil {
+			return nil, err
+		}
+		rowMap := make(map[string]interface{})
+		for i, fd := range fieldDescs {
+			rowMap[fd.Name] = vals[i]
+		}
+		results = append(results, rowMap)
+	}
+	return results, rows.Err()
+}
+
+func (m *GoRuntimeModule) LocalCacheGet(key string) (interface{}, bool) {
+	localCacheMu.RLock()
+	defer localCacheMu.RUnlock()
+	item, ok := localCache[key]
+	if !ok {
+		return nil, false
+	}
+	if !item.expiresAt.IsZero() && time.Now().After(item.expiresAt) {
+		return nil, false
+	}
+	return item.value, true
+}
+
+func (m *GoRuntimeModule) LocalCacheSet(key string, value interface{}, ttlSec int64) {
+	localCacheMu.Lock()
+	defer localCacheMu.Unlock()
+	var exp time.Time
+	if ttlSec > 0 {
+		exp = time.Now().Add(time.Duration(ttlSec) * time.Second)
+	}
+	localCache[key] = cacheItem{value: value, expiresAt: exp}
+}
+
+func (m *GoRuntimeModule) CryptoHash(algo, input string) (string, error) {
+	switch strings.ToLower(algo) {
+	case "md5":
+		h := md5.Sum([]byte(input))
+		return hex.EncodeToString(h[:]), nil
+	case "sha256":
+		h := sha256.Sum256([]byte(input))
+		return hex.EncodeToString(h[:]), nil
+	case "sha512":
+		h := sha512.Sum512([]byte(input))
+		return hex.EncodeToString(h[:]), nil
+	default:
+		return "", fmt.Errorf("unsupported hash algorithm: %s", algo)
+	}
+}
+
+func (m *GoRuntimeModule) CryptoHmacHash(algo, key, input string) (string, error) {
+	var mac hash.Hash
+	switch strings.ToLower(algo) {
+	case "sha256":
+		mac = hmac.New(sha256.New, []byte(key))
+	case "sha512":
+		mac = hmac.New(sha512.New, []byte(key))
+	default:
+		return "", fmt.Errorf("unsupported hmac algorithm: %s", algo)
+	}
+	mac.Write([]byte(input))
+	return hex.EncodeToString(mac.Sum(nil)), nil
+}
+
+func (m *GoRuntimeModule) BcryptHash(password string) (string, error) {
+	b, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return "", err
+	}
+	return string(b), nil
+}
+
+func (m *GoRuntimeModule) BcryptCompare(hashStr, password string) bool {
+	err := bcrypt.CompareHashAndPassword([]byte(hashStr), []byte(password))
+	return err == nil
+}
+
+func (m *GoRuntimeModule) UuidV4() string {
+	return uuid.New().String()
+}
+

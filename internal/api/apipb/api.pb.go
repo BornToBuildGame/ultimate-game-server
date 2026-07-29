@@ -11,6 +11,7 @@ import (
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	emptypb "google.golang.org/protobuf/types/known/emptypb"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
+	wrapperspb "google.golang.org/protobuf/types/known/wrapperspb"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
@@ -23,15 +24,20 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// Score operator override for leaderboard/tournament writes.
+// Operator that can be used to override the one set in the leaderboard.
 type Operator int32
 
 const (
+	// Do not override the leaderboard operator.
 	Operator_NO_OVERRIDE Operator = 0
-	Operator_BEST        Operator = 1
-	Operator_SET         Operator = 2
-	Operator_INCREMENT   Operator = 3
-	Operator_DECREMENT   Operator = 4
+	// Override the leaderboard operator with BEST.
+	Operator_BEST Operator = 1
+	// Override the leaderboard operator with SET.
+	Operator_SET Operator = 2
+	// Override the leaderboard operator with INCREMENT.
+	Operator_INCREMENT Operator = 3
+	// Override the leaderboard operator with DECREMENT.
+	Operator_DECREMENT Operator = 4
 )
 
 // Enum value maps for Operator.
@@ -79,27 +85,1105 @@ func (Operator) EnumDescriptor() ([]byte, []int) {
 	return file_api_api_proto_rawDescGZIP(), []int{0}
 }
 
+// Validation Provider.
+type StoreProvider int32
+
+const (
+	// Apple App Store
+	StoreProvider_APPLE_APP_STORE StoreProvider = 0
+	// Google Play Store
+	StoreProvider_GOOGLE_PLAY_STORE StoreProvider = 1
+	// Huawei App Gallery
+	StoreProvider_HUAWEI_APP_GALLERY StoreProvider = 2
+	// Facebook Instant Store
+	StoreProvider_FACEBOOK_INSTANT_STORE StoreProvider = 3
+	// Samsung Galaxy Store
+	StoreProvider_SAMSUNG_GALAXY_STORE StoreProvider = 4
+)
+
+// Enum value maps for StoreProvider.
+var (
+	StoreProvider_name = map[int32]string{
+		0: "APPLE_APP_STORE",
+		1: "GOOGLE_PLAY_STORE",
+		2: "HUAWEI_APP_GALLERY",
+		3: "FACEBOOK_INSTANT_STORE",
+		4: "SAMSUNG_GALAXY_STORE",
+	}
+	StoreProvider_value = map[string]int32{
+		"APPLE_APP_STORE":        0,
+		"GOOGLE_PLAY_STORE":      1,
+		"HUAWEI_APP_GALLERY":     2,
+		"FACEBOOK_INSTANT_STORE": 3,
+		"SAMSUNG_GALAXY_STORE":   4,
+	}
+)
+
+func (x StoreProvider) Enum() *StoreProvider {
+	p := new(StoreProvider)
+	*p = x
+	return p
+}
+
+func (x StoreProvider) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (StoreProvider) Descriptor() protoreflect.EnumDescriptor {
+	return file_api_api_proto_enumTypes[1].Descriptor()
+}
+
+func (StoreProvider) Type() protoreflect.EnumType {
+	return &file_api_api_proto_enumTypes[1]
+}
+
+func (x StoreProvider) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use StoreProvider.Descriptor instead.
+func (StoreProvider) EnumDescriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{1}
+}
+
+// Environment where a purchase/subscription took place.
+type StoreEnvironment int32
+
+const (
+	// Unknown environment.
+	StoreEnvironment_UNKNOWN StoreEnvironment = 0
+	// Sandbox/test environment.
+	StoreEnvironment_SANDBOX StoreEnvironment = 1
+	// Production environment.
+	StoreEnvironment_PRODUCTION StoreEnvironment = 2
+)
+
+// Enum value maps for StoreEnvironment.
+var (
+	StoreEnvironment_name = map[int32]string{
+		0: "UNKNOWN",
+		1: "SANDBOX",
+		2: "PRODUCTION",
+	}
+	StoreEnvironment_value = map[string]int32{
+		"UNKNOWN":    0,
+		"SANDBOX":    1,
+		"PRODUCTION": 2,
+	}
+)
+
+func (x StoreEnvironment) Enum() *StoreEnvironment {
+	p := new(StoreEnvironment)
+	*p = x
+	return p
+}
+
+func (x StoreEnvironment) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (StoreEnvironment) Descriptor() protoreflect.EnumDescriptor {
+	return file_api_api_proto_enumTypes[2].Descriptor()
+}
+
+func (StoreEnvironment) Type() protoreflect.EnumType {
+	return &file_api_api_proto_enumTypes[2]
+}
+
+func (x StoreEnvironment) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use StoreEnvironment.Descriptor instead.
+func (StoreEnvironment) EnumDescriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{2}
+}
+
+// The friendship status.
+type Friend_State int32
+
+const (
+	// The user is a friend of the current user.
+	Friend_FRIEND Friend_State = 0
+	// The current user has sent an invite to the user.
+	Friend_INVITE_SENT Friend_State = 1
+	// The current user has received an invite from this user.
+	Friend_INVITE_RECEIVED Friend_State = 2
+	// The current user has blocked this user.
+	Friend_BLOCKED Friend_State = 3
+)
+
+// Enum value maps for Friend_State.
+var (
+	Friend_State_name = map[int32]string{
+		0: "FRIEND",
+		1: "INVITE_SENT",
+		2: "INVITE_RECEIVED",
+		3: "BLOCKED",
+	}
+	Friend_State_value = map[string]int32{
+		"FRIEND":          0,
+		"INVITE_SENT":     1,
+		"INVITE_RECEIVED": 2,
+		"BLOCKED":         3,
+	}
+)
+
+func (x Friend_State) Enum() *Friend_State {
+	p := new(Friend_State)
+	*p = x
+	return p
+}
+
+func (x Friend_State) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (Friend_State) Descriptor() protoreflect.EnumDescriptor {
+	return file_api_api_proto_enumTypes[3].Descriptor()
+}
+
+func (Friend_State) Type() protoreflect.EnumType {
+	return &file_api_api_proto_enumTypes[3]
+}
+
+func (x Friend_State) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use Friend_State.Descriptor instead.
+func (Friend_State) EnumDescriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{32, 0}
+}
+
+// The group role status.
+type GroupUserList_GroupUser_State int32
+
+const (
+	// The user is a superadmin with full control of the group.
+	GroupUserList_GroupUser_SUPERADMIN GroupUserList_GroupUser_State = 0
+	// The user is an admin with additional privileges.
+	GroupUserList_GroupUser_ADMIN GroupUserList_GroupUser_State = 1
+	// The user is a regular member.
+	GroupUserList_GroupUser_MEMBER GroupUserList_GroupUser_State = 2
+	// The user has requested to join the group.
+	GroupUserList_GroupUser_JOIN_REQUEST GroupUserList_GroupUser_State = 3
+)
+
+// Enum value maps for GroupUserList_GroupUser_State.
+var (
+	GroupUserList_GroupUser_State_name = map[int32]string{
+		0: "SUPERADMIN",
+		1: "ADMIN",
+		2: "MEMBER",
+		3: "JOIN_REQUEST",
+	}
+	GroupUserList_GroupUser_State_value = map[string]int32{
+		"SUPERADMIN":   0,
+		"ADMIN":        1,
+		"MEMBER":       2,
+		"JOIN_REQUEST": 3,
+	}
+)
+
+func (x GroupUserList_GroupUser_State) Enum() *GroupUserList_GroupUser_State {
+	p := new(GroupUserList_GroupUser_State)
+	*p = x
+	return p
+}
+
+func (x GroupUserList_GroupUser_State) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (GroupUserList_GroupUser_State) Descriptor() protoreflect.EnumDescriptor {
+	return file_api_api_proto_enumTypes[4].Descriptor()
+}
+
+func (GroupUserList_GroupUser_State) Type() protoreflect.EnumType {
+	return &file_api_api_proto_enumTypes[4]
+}
+
+func (x GroupUserList_GroupUser_State) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use GroupUserList_GroupUser_State.Descriptor instead.
+func (GroupUserList_GroupUser_State) EnumDescriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{52, 0, 0}
+}
+
+// The group role status.
+type UserGroupList_UserGroup_State int32
+
+const (
+	// The user is a superadmin with full control of the group.
+	UserGroupList_UserGroup_SUPERADMIN UserGroupList_UserGroup_State = 0
+	// The user is an admin with additional privileges.
+	UserGroupList_UserGroup_ADMIN UserGroupList_UserGroup_State = 1
+	// The user is a regular member.
+	UserGroupList_UserGroup_MEMBER UserGroupList_UserGroup_State = 2
+	// The user has requested to join the group.
+	UserGroupList_UserGroup_JOIN_REQUEST UserGroupList_UserGroup_State = 3
+)
+
+// Enum value maps for UserGroupList_UserGroup_State.
+var (
+	UserGroupList_UserGroup_State_name = map[int32]string{
+		0: "SUPERADMIN",
+		1: "ADMIN",
+		2: "MEMBER",
+		3: "JOIN_REQUEST",
+	}
+	UserGroupList_UserGroup_State_value = map[string]int32{
+		"SUPERADMIN":   0,
+		"ADMIN":        1,
+		"MEMBER":       2,
+		"JOIN_REQUEST": 3,
+	}
+)
+
+func (x UserGroupList_UserGroup_State) Enum() *UserGroupList_UserGroup_State {
+	p := new(UserGroupList_UserGroup_State)
+	*p = x
+	return p
+}
+
+func (x UserGroupList_UserGroup_State) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (UserGroupList_UserGroup_State) Descriptor() protoreflect.EnumDescriptor {
+	return file_api_api_proto_enumTypes[5].Descriptor()
+}
+
+func (UserGroupList_UserGroup_State) Type() protoreflect.EnumType {
+	return &file_api_api_proto_enumTypes[5]
+}
+
+func (x UserGroupList_UserGroup_State) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use UserGroupList_UserGroup_State.Descriptor instead.
+func (UserGroupList_UserGroup_State) EnumDescriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{53, 0, 0}
+}
+
+// Send a Apple Sign In token to the server. Used with authenticate/link/unlink.
+type AccountApple struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The ID token received from Apple to validate.
+	Token string `protobuf:"bytes,1,opt,name=token,proto3" json:"token,omitempty"`
+	// Extra information that will be bundled in the session token.
+	Vars          map[string]string `protobuf:"bytes,2,rep,name=vars,proto3" json:"vars,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AccountApple) Reset() {
+	*x = AccountApple{}
+	mi := &file_api_api_proto_msgTypes[0]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AccountApple) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AccountApple) ProtoMessage() {}
+
+func (x *AccountApple) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[0]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AccountApple.ProtoReflect.Descriptor instead.
+func (*AccountApple) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *AccountApple) GetToken() string {
+	if x != nil {
+		return x.Token
+	}
+	return ""
+}
+
+func (x *AccountApple) GetVars() map[string]string {
+	if x != nil {
+		return x.Vars
+	}
+	return nil
+}
+
+// Send a custom ID to the server. Used with authenticate/link/unlink.
+type AccountCustom struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// A custom identifier.
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// Extra information that will be bundled in the session token.
+	Vars          map[string]string `protobuf:"bytes,2,rep,name=vars,proto3" json:"vars,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AccountCustom) Reset() {
+	*x = AccountCustom{}
+	mi := &file_api_api_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AccountCustom) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AccountCustom) ProtoMessage() {}
+
+func (x *AccountCustom) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AccountCustom.ProtoReflect.Descriptor instead.
+func (*AccountCustom) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *AccountCustom) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *AccountCustom) GetVars() map[string]string {
+	if x != nil {
+		return x.Vars
+	}
+	return nil
+}
+
+// Send a device to the server. Used with authenticate/link/unlink and user.
+type AccountDevice struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// A device identifier. Should be obtained by a platform-specific device API.
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// Extra information that will be bundled in the session token.
+	Vars          map[string]string `protobuf:"bytes,2,rep,name=vars,proto3" json:"vars,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AccountDevice) Reset() {
+	*x = AccountDevice{}
+	mi := &file_api_api_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AccountDevice) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AccountDevice) ProtoMessage() {}
+
+func (x *AccountDevice) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AccountDevice.ProtoReflect.Descriptor instead.
+func (*AccountDevice) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *AccountDevice) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *AccountDevice) GetVars() map[string]string {
+	if x != nil {
+		return x.Vars
+	}
+	return nil
+}
+
+// Send an email with password to the server. Used with authenticate/link/unlink.
+type AccountEmail struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// A valid RFC-5322 email address.
+	Email string `protobuf:"bytes,1,opt,name=email,proto3" json:"email,omitempty"`
+	// A password for the user account.
+	Password string `protobuf:"bytes,2,opt,name=password,proto3" json:"password,omitempty"`
+	// Extra information that will be bundled in the session token.
+	Vars          map[string]string `protobuf:"bytes,3,rep,name=vars,proto3" json:"vars,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AccountEmail) Reset() {
+	*x = AccountEmail{}
+	mi := &file_api_api_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AccountEmail) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AccountEmail) ProtoMessage() {}
+
+func (x *AccountEmail) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AccountEmail.ProtoReflect.Descriptor instead.
+func (*AccountEmail) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *AccountEmail) GetEmail() string {
+	if x != nil {
+		return x.Email
+	}
+	return ""
+}
+
+func (x *AccountEmail) GetPassword() string {
+	if x != nil {
+		return x.Password
+	}
+	return ""
+}
+
+func (x *AccountEmail) GetVars() map[string]string {
+	if x != nil {
+		return x.Vars
+	}
+	return nil
+}
+
+// Send a Facebook token to the server. Used with authenticate/link/unlink.
+type AccountFacebook struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The OAuth token received from Facebook to access their profile API.
+	Token string `protobuf:"bytes,1,opt,name=token,proto3" json:"token,omitempty"`
+	// Extra information that will be bundled in the session token.
+	Vars          map[string]string `protobuf:"bytes,2,rep,name=vars,proto3" json:"vars,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AccountFacebook) Reset() {
+	*x = AccountFacebook{}
+	mi := &file_api_api_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AccountFacebook) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AccountFacebook) ProtoMessage() {}
+
+func (x *AccountFacebook) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AccountFacebook.ProtoReflect.Descriptor instead.
+func (*AccountFacebook) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *AccountFacebook) GetToken() string {
+	if x != nil {
+		return x.Token
+	}
+	return ""
+}
+
+func (x *AccountFacebook) GetVars() map[string]string {
+	if x != nil {
+		return x.Vars
+	}
+	return nil
+}
+
+// Send a Facebook Instant Game token to the server. Used with authenticate/link/unlink.
+type AccountFacebookInstantGame struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The OAuth token received from a Facebook Instant Game.
+	SignedPlayerInfo string `protobuf:"bytes,1,opt,name=signed_player_info,json=signedPlayerInfo,proto3" json:"signed_player_info,omitempty"`
+	// Extra information that will be bundled in the session token.
+	Vars          map[string]string `protobuf:"bytes,2,rep,name=vars,proto3" json:"vars,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AccountFacebookInstantGame) Reset() {
+	*x = AccountFacebookInstantGame{}
+	mi := &file_api_api_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AccountFacebookInstantGame) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AccountFacebookInstantGame) ProtoMessage() {}
+
+func (x *AccountFacebookInstantGame) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AccountFacebookInstantGame.ProtoReflect.Descriptor instead.
+func (*AccountFacebookInstantGame) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *AccountFacebookInstantGame) GetSignedPlayerInfo() string {
+	if x != nil {
+		return x.SignedPlayerInfo
+	}
+	return ""
+}
+
+func (x *AccountFacebookInstantGame) GetVars() map[string]string {
+	if x != nil {
+		return x.Vars
+	}
+	return nil
+}
+
+// Send Apple's Game Center account credentials to the server. Used with authenticate/link/unlink.
+type AccountGameCenter struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Player ID (generated by GameCenter).
+	PlayerId string `protobuf:"bytes,1,opt,name=player_id,json=playerId,proto3" json:"player_id,omitempty"`
+	// Bundle ID (generated by GameCenter).
+	BundleId string `protobuf:"bytes,2,opt,name=bundle_id,json=bundleId,proto3" json:"bundle_id,omitempty"`
+	// Time since UNIX epoch when the signature was created.
+	TimestampSeconds int64 `protobuf:"varint,3,opt,name=timestamp_seconds,json=timestampSeconds,proto3" json:"timestamp_seconds,omitempty"`
+	// A random "NSString" used to compute the hash and keep it randomized.
+	Salt string `protobuf:"bytes,4,opt,name=salt,proto3" json:"salt,omitempty"`
+	// The verification signature data generated.
+	Signature string `protobuf:"bytes,5,opt,name=signature,proto3" json:"signature,omitempty"`
+	// The URL for the public encryption key.
+	PublicKeyUrl string `protobuf:"bytes,6,opt,name=public_key_url,json=publicKeyUrl,proto3" json:"public_key_url,omitempty"`
+	// Extra information that will be bundled in the session token.
+	Vars          map[string]string `protobuf:"bytes,7,rep,name=vars,proto3" json:"vars,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AccountGameCenter) Reset() {
+	*x = AccountGameCenter{}
+	mi := &file_api_api_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AccountGameCenter) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AccountGameCenter) ProtoMessage() {}
+
+func (x *AccountGameCenter) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AccountGameCenter.ProtoReflect.Descriptor instead.
+func (*AccountGameCenter) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *AccountGameCenter) GetPlayerId() string {
+	if x != nil {
+		return x.PlayerId
+	}
+	return ""
+}
+
+func (x *AccountGameCenter) GetBundleId() string {
+	if x != nil {
+		return x.BundleId
+	}
+	return ""
+}
+
+func (x *AccountGameCenter) GetTimestampSeconds() int64 {
+	if x != nil {
+		return x.TimestampSeconds
+	}
+	return 0
+}
+
+func (x *AccountGameCenter) GetSalt() string {
+	if x != nil {
+		return x.Salt
+	}
+	return ""
+}
+
+func (x *AccountGameCenter) GetSignature() string {
+	if x != nil {
+		return x.Signature
+	}
+	return ""
+}
+
+func (x *AccountGameCenter) GetPublicKeyUrl() string {
+	if x != nil {
+		return x.PublicKeyUrl
+	}
+	return ""
+}
+
+func (x *AccountGameCenter) GetVars() map[string]string {
+	if x != nil {
+		return x.Vars
+	}
+	return nil
+}
+
+// Send a Google token to the server. Used with authenticate/link/unlink.
+type AccountGoogle struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The OAuth token received from Google to access their profile API.
+	Token string `protobuf:"bytes,1,opt,name=token,proto3" json:"token,omitempty"`
+	// Extra information that will be bundled in the session token.
+	Vars          map[string]string `protobuf:"bytes,2,rep,name=vars,proto3" json:"vars,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AccountGoogle) Reset() {
+	*x = AccountGoogle{}
+	mi := &file_api_api_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AccountGoogle) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AccountGoogle) ProtoMessage() {}
+
+func (x *AccountGoogle) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AccountGoogle.ProtoReflect.Descriptor instead.
+func (*AccountGoogle) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *AccountGoogle) GetToken() string {
+	if x != nil {
+		return x.Token
+	}
+	return ""
+}
+
+func (x *AccountGoogle) GetVars() map[string]string {
+	if x != nil {
+		return x.Vars
+	}
+	return nil
+}
+
+// Send a Steam token to the server. Used with authenticate/link/unlink.
+type AccountSteam struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The account token received from Steam to access their profile API.
+	Token string `protobuf:"bytes,1,opt,name=token,proto3" json:"token,omitempty"`
+	// Extra information that will be bundled in the session token.
+	Vars          map[string]string `protobuf:"bytes,2,rep,name=vars,proto3" json:"vars,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AccountSteam) Reset() {
+	*x = AccountSteam{}
+	mi := &file_api_api_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AccountSteam) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AccountSteam) ProtoMessage() {}
+
+func (x *AccountSteam) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AccountSteam.ProtoReflect.Descriptor instead.
+func (*AccountSteam) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *AccountSteam) GetToken() string {
+	if x != nil {
+		return x.Token
+	}
+	return ""
+}
+
+func (x *AccountSteam) GetVars() map[string]string {
+	if x != nil {
+		return x.Vars
+	}
+	return nil
+}
+
+// Obtain a new authentication token using a refresh token.
+type AccountRefresh struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Refresh token.
+	Token string `protobuf:"bytes,1,opt,name=token,proto3" json:"token,omitempty"`
+	// Extra information that will be bundled in the session token.
+	Vars          map[string]string `protobuf:"bytes,2,rep,name=vars,proto3" json:"vars,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AccountRefresh) Reset() {
+	*x = AccountRefresh{}
+	mi := &file_api_api_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AccountRefresh) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AccountRefresh) ProtoMessage() {}
+
+func (x *AccountRefresh) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AccountRefresh.ProtoReflect.Descriptor instead.
+func (*AccountRefresh) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *AccountRefresh) GetToken() string {
+	if x != nil {
+		return x.Token
+	}
+	return ""
+}
+
+func (x *AccountRefresh) GetVars() map[string]string {
+	if x != nil {
+		return x.Vars
+	}
+	return nil
+}
+
+// A user with additional account details. Always the current user.
+type Account struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The user object.
+	User *User `protobuf:"bytes,1,opt,name=user,proto3" json:"user,omitempty"`
+	// The user's wallet data.
+	Wallet string `protobuf:"bytes,2,opt,name=wallet,proto3" json:"wallet,omitempty"`
+	// The email address of the user.
+	Email string `protobuf:"bytes,3,opt,name=email,proto3" json:"email,omitempty"`
+	// The devices which belong to the user's account.
+	Devices []*AccountDevice `protobuf:"bytes,4,rep,name=devices,proto3" json:"devices,omitempty"`
+	// The custom id in the user's account.
+	CustomId string `protobuf:"bytes,5,opt,name=custom_id,json=customId,proto3" json:"custom_id,omitempty"`
+	// The UNIX time when the user's email was verified.
+	VerifyTime *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=verify_time,json=verifyTime,proto3" json:"verify_time,omitempty"`
+	// The UNIX time when the user's account was disabled/banned.
+	DisableTime   *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=disable_time,json=disableTime,proto3" json:"disable_time,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Account) Reset() {
+	*x = Account{}
+	mi := &file_api_api_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Account) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Account) ProtoMessage() {}
+
+func (x *Account) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Account.ProtoReflect.Descriptor instead.
+func (*Account) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *Account) GetUser() *User {
+	if x != nil {
+		return x.User
+	}
+	return nil
+}
+
+func (x *Account) GetWallet() string {
+	if x != nil {
+		return x.Wallet
+	}
+	return ""
+}
+
+func (x *Account) GetEmail() string {
+	if x != nil {
+		return x.Email
+	}
+	return ""
+}
+
+func (x *Account) GetDevices() []*AccountDevice {
+	if x != nil {
+		return x.Devices
+	}
+	return nil
+}
+
+func (x *Account) GetCustomId() string {
+	if x != nil {
+		return x.CustomId
+	}
+	return ""
+}
+
+func (x *Account) GetVerifyTime() *timestamppb.Timestamp {
+	if x != nil {
+		return x.VerifyTime
+	}
+	return nil
+}
+
+func (x *Account) GetDisableTime() *timestamppb.Timestamp {
+	if x != nil {
+		return x.DisableTime
+	}
+	return nil
+}
+
+// A user's session used to authenticate messages.
+type Session struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// True if the corresponding account was just created, false otherwise.
+	Created bool `protobuf:"varint,1,opt,name=created,proto3" json:"created,omitempty"`
+	// Authentication credentials.
+	Token string `protobuf:"bytes,2,opt,name=token,proto3" json:"token,omitempty"`
+	// Refresh token that can be used for session token renewal.
+	RefreshToken  string `protobuf:"bytes,3,opt,name=refresh_token,json=refreshToken,proto3" json:"refresh_token,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Session) Reset() {
+	*x = Session{}
+	mi := &file_api_api_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Session) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Session) ProtoMessage() {}
+
+func (x *Session) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Session.ProtoReflect.Descriptor instead.
+func (*Session) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *Session) GetCreated() bool {
+	if x != nil {
+		return x.Created
+	}
+	return false
+}
+
+func (x *Session) GetToken() string {
+	if x != nil {
+		return x.Token
+	}
+	return ""
+}
+
+func (x *Session) GetRefreshToken() string {
+	if x != nil {
+		return x.RefreshToken
+	}
+	return ""
+}
+
+// A user in the server.
 type User struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Username      string                 `protobuf:"bytes,2,opt,name=username,proto3" json:"username,omitempty"`
-	DisplayName   string                 `protobuf:"bytes,3,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
-	AvatarUrl     string                 `protobuf:"bytes,4,opt,name=avatar_url,json=avatarUrl,proto3" json:"avatar_url,omitempty"`
-	LangTag       string                 `protobuf:"bytes,5,opt,name=lang_tag,json=langTag,proto3" json:"lang_tag,omitempty"`
-	Location      string                 `protobuf:"bytes,6,opt,name=location,proto3" json:"location,omitempty"`
-	Timezone      string                 `protobuf:"bytes,7,opt,name=timezone,proto3" json:"timezone,omitempty"`
-	Metadata      string                 `protobuf:"bytes,8,opt,name=metadata,proto3" json:"metadata,omitempty"`
-	CreateTime    *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=create_time,json=createTime,proto3" json:"create_time,omitempty"`
-	UpdateTime    *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=update_time,json=updateTime,proto3" json:"update_time,omitempty"`
-	Online        bool                   `protobuf:"varint,11,opt,name=online,proto3" json:"online,omitempty"`
-	EdgeCount     int32                  `protobuf:"varint,12,opt,name=edge_count,json=edgeCount,proto3" json:"edge_count,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The id of the user's account.
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// The username of the user's account.
+	Username string `protobuf:"bytes,2,opt,name=username,proto3" json:"username,omitempty"`
+	// The display name of the user.
+	DisplayName string `protobuf:"bytes,3,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	// A URL for an avatar image.
+	AvatarUrl string `protobuf:"bytes,4,opt,name=avatar_url,json=avatarUrl,proto3" json:"avatar_url,omitempty"`
+	// The language expected to be a tag which follows the BCP-47 spec.
+	LangTag string `protobuf:"bytes,5,opt,name=lang_tag,json=langTag,proto3" json:"lang_tag,omitempty"`
+	// The location set by the user.
+	Location string `protobuf:"bytes,6,opt,name=location,proto3" json:"location,omitempty"`
+	// The timezone set by the user.
+	Timezone string `protobuf:"bytes,7,opt,name=timezone,proto3" json:"timezone,omitempty"`
+	// Additional information stored as a JSON object.
+	Metadata string `protobuf:"bytes,8,opt,name=metadata,proto3" json:"metadata,omitempty"`
+	// The Facebook id in the user's account.
+	FacebookId string `protobuf:"bytes,9,opt,name=facebook_id,json=facebookId,proto3" json:"facebook_id,omitempty"`
+	// The Google id in the user's account.
+	GoogleId string `protobuf:"bytes,10,opt,name=google_id,json=googleId,proto3" json:"google_id,omitempty"`
+	// The Apple Game Center in of the user's account.
+	GamecenterId string `protobuf:"bytes,11,opt,name=gamecenter_id,json=gamecenterId,proto3" json:"gamecenter_id,omitempty"`
+	// The Steam id in the user's account.
+	SteamId string `protobuf:"bytes,12,opt,name=steam_id,json=steamId,proto3" json:"steam_id,omitempty"`
+	// Indicates whether the user is currently online.
+	Online bool `protobuf:"varint,13,opt,name=online,proto3" json:"online,omitempty"`
+	// Number of related edges to this user.
+	EdgeCount int32 `protobuf:"varint,14,opt,name=edge_count,json=edgeCount,proto3" json:"edge_count,omitempty"`
+	// The UNIX time when the user was created.
+	CreateTime *timestamppb.Timestamp `protobuf:"bytes,15,opt,name=create_time,json=createTime,proto3" json:"create_time,omitempty"`
+	// The UNIX time when the user was last updated.
+	UpdateTime *timestamppb.Timestamp `protobuf:"bytes,16,opt,name=update_time,json=updateTime,proto3" json:"update_time,omitempty"`
+	// The Facebook Instant Game ID in the user's account.
+	FacebookInstantGameId string `protobuf:"bytes,17,opt,name=facebook_instant_game_id,json=facebookInstantGameId,proto3" json:"facebook_instant_game_id,omitempty"`
+	// The Apple Sign In ID in the user's account.
+	AppleId       string `protobuf:"bytes,18,opt,name=apple_id,json=appleId,proto3" json:"apple_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *User) Reset() {
 	*x = User{}
-	mi := &file_api_api_proto_msgTypes[0]
+	mi := &file_api_api_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -111,7 +1195,7 @@ func (x *User) String() string {
 func (*User) ProtoMessage() {}
 
 func (x *User) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[0]
+	mi := &file_api_api_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -124,7 +1208,7 @@ func (x *User) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use User.ProtoReflect.Descriptor instead.
 func (*User) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{0}
+	return file_api_api_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *User) GetId() string {
@@ -183,18 +1267,32 @@ func (x *User) GetMetadata() string {
 	return ""
 }
 
-func (x *User) GetCreateTime() *timestamppb.Timestamp {
+func (x *User) GetFacebookId() string {
 	if x != nil {
-		return x.CreateTime
+		return x.FacebookId
 	}
-	return nil
+	return ""
 }
 
-func (x *User) GetUpdateTime() *timestamppb.Timestamp {
+func (x *User) GetGoogleId() string {
 	if x != nil {
-		return x.UpdateTime
+		return x.GoogleId
 	}
-	return nil
+	return ""
+}
+
+func (x *User) GetGamecenterId() string {
+	if x != nil {
+		return x.GamecenterId
+	}
+	return ""
+}
+
+func (x *User) GetSteamId() string {
+	if x != nil {
+		return x.SteamId
+	}
+	return ""
 }
 
 func (x *User) GetOnline() bool {
@@ -211,803 +1309,57 @@ func (x *User) GetEdgeCount() int32 {
 	return 0
 }
 
-type AuthenticateEmailRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Email         string                 `protobuf:"bytes,1,opt,name=email,proto3" json:"email,omitempty"`
-	Password      string                 `protobuf:"bytes,2,opt,name=password,proto3" json:"password,omitempty"`
-	Create        bool                   `protobuf:"varint,3,opt,name=create,proto3" json:"create,omitempty"`
-	Username      string                 `protobuf:"bytes,4,opt,name=username,proto3" json:"username,omitempty"`
-	DisplayName   string                 `protobuf:"bytes,5,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *AuthenticateEmailRequest) Reset() {
-	*x = AuthenticateEmailRequest{}
-	mi := &file_api_api_proto_msgTypes[1]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *AuthenticateEmailRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*AuthenticateEmailRequest) ProtoMessage() {}
-
-func (x *AuthenticateEmailRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[1]
+func (x *User) GetCreateTime() *timestamppb.Timestamp {
 	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use AuthenticateEmailRequest.ProtoReflect.Descriptor instead.
-func (*AuthenticateEmailRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{1}
-}
-
-func (x *AuthenticateEmailRequest) GetEmail() string {
-	if x != nil {
-		return x.Email
-	}
-	return ""
-}
-
-func (x *AuthenticateEmailRequest) GetPassword() string {
-	if x != nil {
-		return x.Password
-	}
-	return ""
-}
-
-func (x *AuthenticateEmailRequest) GetCreate() bool {
-	if x != nil {
-		return x.Create
-	}
-	return false
-}
-
-func (x *AuthenticateEmailRequest) GetUsername() string {
-	if x != nil {
-		return x.Username
-	}
-	return ""
-}
-
-func (x *AuthenticateEmailRequest) GetDisplayName() string {
-	if x != nil {
-		return x.DisplayName
-	}
-	return ""
-}
-
-type AuthenticateDeviceRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Create        bool                   `protobuf:"varint,2,opt,name=create,proto3" json:"create,omitempty"`
-	Username      string                 `protobuf:"bytes,3,opt,name=username,proto3" json:"username,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *AuthenticateDeviceRequest) Reset() {
-	*x = AuthenticateDeviceRequest{}
-	mi := &file_api_api_proto_msgTypes[2]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *AuthenticateDeviceRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*AuthenticateDeviceRequest) ProtoMessage() {}
-
-func (x *AuthenticateDeviceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[2]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use AuthenticateDeviceRequest.ProtoReflect.Descriptor instead.
-func (*AuthenticateDeviceRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{2}
-}
-
-func (x *AuthenticateDeviceRequest) GetId() string {
-	if x != nil {
-		return x.Id
-	}
-	return ""
-}
-
-func (x *AuthenticateDeviceRequest) GetCreate() bool {
-	if x != nil {
-		return x.Create
-	}
-	return false
-}
-
-func (x *AuthenticateDeviceRequest) GetUsername() string {
-	if x != nil {
-		return x.Username
-	}
-	return ""
-}
-
-type AuthenticateAppleRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Token         string                 `protobuf:"bytes,1,opt,name=token,proto3" json:"token,omitempty"`
-	Create        bool                   `protobuf:"varint,2,opt,name=create,proto3" json:"create,omitempty"`
-	Username      string                 `protobuf:"bytes,3,opt,name=username,proto3" json:"username,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *AuthenticateAppleRequest) Reset() {
-	*x = AuthenticateAppleRequest{}
-	mi := &file_api_api_proto_msgTypes[3]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *AuthenticateAppleRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*AuthenticateAppleRequest) ProtoMessage() {}
-
-func (x *AuthenticateAppleRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[3]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use AuthenticateAppleRequest.ProtoReflect.Descriptor instead.
-func (*AuthenticateAppleRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{3}
-}
-
-func (x *AuthenticateAppleRequest) GetToken() string {
-	if x != nil {
-		return x.Token
-	}
-	return ""
-}
-
-func (x *AuthenticateAppleRequest) GetCreate() bool {
-	if x != nil {
-		return x.Create
-	}
-	return false
-}
-
-func (x *AuthenticateAppleRequest) GetUsername() string {
-	if x != nil {
-		return x.Username
-	}
-	return ""
-}
-
-type AuthenticateGoogleRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Token         string                 `protobuf:"bytes,1,opt,name=token,proto3" json:"token,omitempty"`
-	Create        bool                   `protobuf:"varint,2,opt,name=create,proto3" json:"create,omitempty"`
-	Username      string                 `protobuf:"bytes,3,opt,name=username,proto3" json:"username,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *AuthenticateGoogleRequest) Reset() {
-	*x = AuthenticateGoogleRequest{}
-	mi := &file_api_api_proto_msgTypes[4]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *AuthenticateGoogleRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*AuthenticateGoogleRequest) ProtoMessage() {}
-
-func (x *AuthenticateGoogleRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[4]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use AuthenticateGoogleRequest.ProtoReflect.Descriptor instead.
-func (*AuthenticateGoogleRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{4}
-}
-
-func (x *AuthenticateGoogleRequest) GetToken() string {
-	if x != nil {
-		return x.Token
-	}
-	return ""
-}
-
-func (x *AuthenticateGoogleRequest) GetCreate() bool {
-	if x != nil {
-		return x.Create
-	}
-	return false
-}
-
-func (x *AuthenticateGoogleRequest) GetUsername() string {
-	if x != nil {
-		return x.Username
-	}
-	return ""
-}
-
-type AuthenticateFacebookRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Token         string                 `protobuf:"bytes,1,opt,name=token,proto3" json:"token,omitempty"`
-	Create        bool                   `protobuf:"varint,2,opt,name=create,proto3" json:"create,omitempty"`
-	Username      string                 `protobuf:"bytes,3,opt,name=username,proto3" json:"username,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *AuthenticateFacebookRequest) Reset() {
-	*x = AuthenticateFacebookRequest{}
-	mi := &file_api_api_proto_msgTypes[5]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *AuthenticateFacebookRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*AuthenticateFacebookRequest) ProtoMessage() {}
-
-func (x *AuthenticateFacebookRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[5]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use AuthenticateFacebookRequest.ProtoReflect.Descriptor instead.
-func (*AuthenticateFacebookRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{5}
-}
-
-func (x *AuthenticateFacebookRequest) GetToken() string {
-	if x != nil {
-		return x.Token
-	}
-	return ""
-}
-
-func (x *AuthenticateFacebookRequest) GetCreate() bool {
-	if x != nil {
-		return x.Create
-	}
-	return false
-}
-
-func (x *AuthenticateFacebookRequest) GetUsername() string {
-	if x != nil {
-		return x.Username
-	}
-	return ""
-}
-
-type AuthenticateSteamRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Ticket        []byte                 `protobuf:"bytes,1,opt,name=ticket,proto3" json:"ticket,omitempty"`
-	Create        bool                   `protobuf:"varint,2,opt,name=create,proto3" json:"create,omitempty"`
-	Username      string                 `protobuf:"bytes,3,opt,name=username,proto3" json:"username,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *AuthenticateSteamRequest) Reset() {
-	*x = AuthenticateSteamRequest{}
-	mi := &file_api_api_proto_msgTypes[6]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *AuthenticateSteamRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*AuthenticateSteamRequest) ProtoMessage() {}
-
-func (x *AuthenticateSteamRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[6]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use AuthenticateSteamRequest.ProtoReflect.Descriptor instead.
-func (*AuthenticateSteamRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{6}
-}
-
-func (x *AuthenticateSteamRequest) GetTicket() []byte {
-	if x != nil {
-		return x.Ticket
+		return x.CreateTime
 	}
 	return nil
 }
 
-func (x *AuthenticateSteamRequest) GetCreate() bool {
+func (x *User) GetUpdateTime() *timestamppb.Timestamp {
 	if x != nil {
-		return x.Create
+		return x.UpdateTime
 	}
-	return false
+	return nil
 }
 
-func (x *AuthenticateSteamRequest) GetUsername() string {
+func (x *User) GetFacebookInstantGameId() string {
 	if x != nil {
-		return x.Username
+		return x.FacebookInstantGameId
 	}
 	return ""
 }
 
-type AuthenticateGameCenterRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	PlayerId      string                 `protobuf:"bytes,1,opt,name=player_id,json=playerId,proto3" json:"player_id,omitempty"`
-	BundleId      string                 `protobuf:"bytes,2,opt,name=bundle_id,json=bundleId,proto3" json:"bundle_id,omitempty"`
-	Timestamp     int64                  `protobuf:"varint,3,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
-	Salt          string                 `protobuf:"bytes,4,opt,name=salt,proto3" json:"salt,omitempty"`
-	Signature     string                 `protobuf:"bytes,5,opt,name=signature,proto3" json:"signature,omitempty"`
-	PublicKeyUrl  string                 `protobuf:"bytes,6,opt,name=public_key_url,json=publicKeyUrl,proto3" json:"public_key_url,omitempty"`
-	Create        bool                   `protobuf:"varint,7,opt,name=create,proto3" json:"create,omitempty"`
-	Username      string                 `protobuf:"bytes,8,opt,name=username,proto3" json:"username,omitempty"`
+func (x *User) GetAppleId() string {
+	if x != nil {
+		return x.AppleId
+	}
+	return ""
+}
+
+// A collection of zero or more users.
+type Users struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The User objects.
+	Users         []*User `protobuf:"bytes,1,rep,name=users,proto3" json:"users,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *AuthenticateGameCenterRequest) Reset() {
-	*x = AuthenticateGameCenterRequest{}
-	mi := &file_api_api_proto_msgTypes[7]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *AuthenticateGameCenterRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*AuthenticateGameCenterRequest) ProtoMessage() {}
-
-func (x *AuthenticateGameCenterRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[7]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use AuthenticateGameCenterRequest.ProtoReflect.Descriptor instead.
-func (*AuthenticateGameCenterRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{7}
-}
-
-func (x *AuthenticateGameCenterRequest) GetPlayerId() string {
-	if x != nil {
-		return x.PlayerId
-	}
-	return ""
-}
-
-func (x *AuthenticateGameCenterRequest) GetBundleId() string {
-	if x != nil {
-		return x.BundleId
-	}
-	return ""
-}
-
-func (x *AuthenticateGameCenterRequest) GetTimestamp() int64 {
-	if x != nil {
-		return x.Timestamp
-	}
-	return 0
-}
-
-func (x *AuthenticateGameCenterRequest) GetSalt() string {
-	if x != nil {
-		return x.Salt
-	}
-	return ""
-}
-
-func (x *AuthenticateGameCenterRequest) GetSignature() string {
-	if x != nil {
-		return x.Signature
-	}
-	return ""
-}
-
-func (x *AuthenticateGameCenterRequest) GetPublicKeyUrl() string {
-	if x != nil {
-		return x.PublicKeyUrl
-	}
-	return ""
-}
-
-func (x *AuthenticateGameCenterRequest) GetCreate() bool {
-	if x != nil {
-		return x.Create
-	}
-	return false
-}
-
-func (x *AuthenticateGameCenterRequest) GetUsername() string {
-	if x != nil {
-		return x.Username
-	}
-	return ""
-}
-
-type AuthenticateFacebookInstantGameRequest struct {
-	state            protoimpl.MessageState `protogen:"open.v1"`
-	SignedPlayerInfo string                 `protobuf:"bytes,1,opt,name=signed_player_info,json=signedPlayerInfo,proto3" json:"signed_player_info,omitempty"`
-	Create           bool                   `protobuf:"varint,2,opt,name=create,proto3" json:"create,omitempty"`
-	Username         string                 `protobuf:"bytes,3,opt,name=username,proto3" json:"username,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
-}
-
-func (x *AuthenticateFacebookInstantGameRequest) Reset() {
-	*x = AuthenticateFacebookInstantGameRequest{}
-	mi := &file_api_api_proto_msgTypes[8]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *AuthenticateFacebookInstantGameRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*AuthenticateFacebookInstantGameRequest) ProtoMessage() {}
-
-func (x *AuthenticateFacebookInstantGameRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[8]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use AuthenticateFacebookInstantGameRequest.ProtoReflect.Descriptor instead.
-func (*AuthenticateFacebookInstantGameRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{8}
-}
-
-func (x *AuthenticateFacebookInstantGameRequest) GetSignedPlayerInfo() string {
-	if x != nil {
-		return x.SignedPlayerInfo
-	}
-	return ""
-}
-
-func (x *AuthenticateFacebookInstantGameRequest) GetCreate() bool {
-	if x != nil {
-		return x.Create
-	}
-	return false
-}
-
-func (x *AuthenticateFacebookInstantGameRequest) GetUsername() string {
-	if x != nil {
-		return x.Username
-	}
-	return ""
-}
-
-type AuthenticateCustomRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Create        bool                   `protobuf:"varint,2,opt,name=create,proto3" json:"create,omitempty"`
-	Username      string                 `protobuf:"bytes,3,opt,name=username,proto3" json:"username,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *AuthenticateCustomRequest) Reset() {
-	*x = AuthenticateCustomRequest{}
-	mi := &file_api_api_proto_msgTypes[9]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *AuthenticateCustomRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*AuthenticateCustomRequest) ProtoMessage() {}
-
-func (x *AuthenticateCustomRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[9]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use AuthenticateCustomRequest.ProtoReflect.Descriptor instead.
-func (*AuthenticateCustomRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{9}
-}
-
-func (x *AuthenticateCustomRequest) GetId() string {
-	if x != nil {
-		return x.Id
-	}
-	return ""
-}
-
-func (x *AuthenticateCustomRequest) GetCreate() bool {
-	if x != nil {
-		return x.Create
-	}
-	return false
-}
-
-func (x *AuthenticateCustomRequest) GetUsername() string {
-	if x != nil {
-		return x.Username
-	}
-	return ""
-}
-
-type SessionRefreshRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Token         string                 `protobuf:"bytes,1,opt,name=token,proto3" json:"token,omitempty"`
-	RefreshToken  string                 `protobuf:"bytes,2,opt,name=refresh_token,json=refreshToken,proto3" json:"refresh_token,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *SessionRefreshRequest) Reset() {
-	*x = SessionRefreshRequest{}
-	mi := &file_api_api_proto_msgTypes[10]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *SessionRefreshRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*SessionRefreshRequest) ProtoMessage() {}
-
-func (x *SessionRefreshRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[10]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use SessionRefreshRequest.ProtoReflect.Descriptor instead.
-func (*SessionRefreshRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{10}
-}
-
-func (x *SessionRefreshRequest) GetToken() string {
-	if x != nil {
-		return x.Token
-	}
-	return ""
-}
-
-func (x *SessionRefreshRequest) GetRefreshToken() string {
-	if x != nil {
-		return x.RefreshToken
-	}
-	return ""
-}
-
-type SessionLogoutRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Token         string                 `protobuf:"bytes,1,opt,name=token,proto3" json:"token,omitempty"`
-	RefreshToken  string                 `protobuf:"bytes,2,opt,name=refresh_token,json=refreshToken,proto3" json:"refresh_token,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *SessionLogoutRequest) Reset() {
-	*x = SessionLogoutRequest{}
-	mi := &file_api_api_proto_msgTypes[11]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *SessionLogoutRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*SessionLogoutRequest) ProtoMessage() {}
-
-func (x *SessionLogoutRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[11]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use SessionLogoutRequest.ProtoReflect.Descriptor instead.
-func (*SessionLogoutRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{11}
-}
-
-func (x *SessionLogoutRequest) GetToken() string {
-	if x != nil {
-		return x.Token
-	}
-	return ""
-}
-
-func (x *SessionLogoutRequest) GetRefreshToken() string {
-	if x != nil {
-		return x.RefreshToken
-	}
-	return ""
-}
-
-type Session struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Token         string                 `protobuf:"bytes,1,opt,name=token,proto3" json:"token,omitempty"`
-	RefreshToken  string                 `protobuf:"bytes,2,opt,name=refresh_token,json=refreshToken,proto3" json:"refresh_token,omitempty"`
-	Created       bool                   `protobuf:"varint,3,opt,name=created,proto3" json:"created,omitempty"`
-	UserId        string                 `protobuf:"bytes,4,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	Username      string                 `protobuf:"bytes,5,opt,name=username,proto3" json:"username,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *Session) Reset() {
-	*x = Session{}
-	mi := &file_api_api_proto_msgTypes[12]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *Session) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*Session) ProtoMessage() {}
-
-func (x *Session) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[12]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use Session.ProtoReflect.Descriptor instead.
-func (*Session) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{12}
-}
-
-func (x *Session) GetToken() string {
-	if x != nil {
-		return x.Token
-	}
-	return ""
-}
-
-func (x *Session) GetRefreshToken() string {
-	if x != nil {
-		return x.RefreshToken
-	}
-	return ""
-}
-
-func (x *Session) GetCreated() bool {
-	if x != nil {
-		return x.Created
-	}
-	return false
-}
-
-func (x *Session) GetUserId() string {
-	if x != nil {
-		return x.UserId
-	}
-	return ""
-}
-
-func (x *Session) GetUsername() string {
-	if x != nil {
-		return x.Username
-	}
-	return ""
-}
-
-type Device struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *Device) Reset() {
-	*x = Device{}
+func (x *Users) Reset() {
+	*x = Users{}
 	mi := &file_api_api_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *Device) String() string {
+func (x *Users) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*Device) ProtoMessage() {}
+func (*Users) ProtoMessage() {}
 
-func (x *Device) ProtoReflect() protoreflect.Message {
+func (x *Users) ProtoReflect() protoreflect.Message {
 	mi := &file_api_api_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -1019,44 +1371,45 @@ func (x *Device) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use Device.ProtoReflect.Descriptor instead.
-func (*Device) Descriptor() ([]byte, []int) {
+// Deprecated: Use Users.ProtoReflect.Descriptor instead.
+func (*Users) Descriptor() ([]byte, []int) {
 	return file_api_api_proto_rawDescGZIP(), []int{13}
 }
 
-func (x *Device) GetId() string {
+func (x *Users) GetUsers() []*User {
 	if x != nil {
-		return x.Id
+		return x.Users
 	}
-	return ""
+	return nil
 }
 
-type Account struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	User          *User                  `protobuf:"bytes,1,opt,name=user,proto3" json:"user,omitempty"`
-	Devices       []*Device              `protobuf:"bytes,2,rep,name=devices,proto3" json:"devices,omitempty"`
-	Email         string                 `protobuf:"bytes,3,opt,name=email,proto3" json:"email,omitempty"`
-	CustomId      string                 `protobuf:"bytes,4,opt,name=custom_id,json=customId,proto3" json:"custom_id,omitempty"`
-	VerifyTime    *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=verify_time,json=verifyTime,proto3" json:"verify_time,omitempty"`
-	Wallet        string                 `protobuf:"bytes,6,opt,name=wallet,proto3" json:"wallet,omitempty"` // JSON string of currency balances
+// Fetch a batch of zero or more users from the server.
+type GetUsersRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The account id of a user.
+	Ids []string `protobuf:"bytes,1,rep,name=ids,proto3" json:"ids,omitempty"`
+	// The account username of a user.
+	Usernames []string `protobuf:"bytes,2,rep,name=usernames,proto3" json:"usernames,omitempty"`
+	// The Facebook ID of a user.
+	FacebookIds   []string `protobuf:"bytes,3,rep,name=facebook_ids,json=facebookIds,proto3" json:"facebook_ids,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *Account) Reset() {
-	*x = Account{}
+func (x *GetUsersRequest) Reset() {
+	*x = GetUsersRequest{}
 	mi := &file_api_api_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *Account) String() string {
+func (x *GetUsersRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*Account) ProtoMessage() {}
+func (*GetUsersRequest) ProtoMessage() {}
 
-func (x *Account) ProtoReflect() protoreflect.Message {
+func (x *GetUsersRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_api_api_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -1068,62 +1421,47 @@ func (x *Account) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use Account.ProtoReflect.Descriptor instead.
-func (*Account) Descriptor() ([]byte, []int) {
+// Deprecated: Use GetUsersRequest.ProtoReflect.Descriptor instead.
+func (*GetUsersRequest) Descriptor() ([]byte, []int) {
 	return file_api_api_proto_rawDescGZIP(), []int{14}
 }
 
-func (x *Account) GetUser() *User {
+func (x *GetUsersRequest) GetIds() []string {
 	if x != nil {
-		return x.User
+		return x.Ids
 	}
 	return nil
 }
 
-func (x *Account) GetDevices() []*Device {
+func (x *GetUsersRequest) GetUsernames() []string {
 	if x != nil {
-		return x.Devices
+		return x.Usernames
 	}
 	return nil
 }
 
-func (x *Account) GetEmail() string {
+func (x *GetUsersRequest) GetFacebookIds() []string {
 	if x != nil {
-		return x.Email
-	}
-	return ""
-}
-
-func (x *Account) GetCustomId() string {
-	if x != nil {
-		return x.CustomId
-	}
-	return ""
-}
-
-func (x *Account) GetVerifyTime() *timestamppb.Timestamp {
-	if x != nil {
-		return x.VerifyTime
+		return x.FacebookIds
 	}
 	return nil
 }
 
-func (x *Account) GetWallet() string {
-	if x != nil {
-		return x.Wallet
-	}
-	return ""
-}
-
+// Update a user's account details.
 type UpdateAccountRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	DisplayName   string                 `protobuf:"bytes,1,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
-	AvatarUrl     string                 `protobuf:"bytes,2,opt,name=avatar_url,json=avatarUrl,proto3" json:"avatar_url,omitempty"`
-	LangTag       string                 `protobuf:"bytes,3,opt,name=lang_tag,json=langTag,proto3" json:"lang_tag,omitempty"`
-	Location      string                 `protobuf:"bytes,4,opt,name=location,proto3" json:"location,omitempty"`
-	Timezone      string                 `protobuf:"bytes,5,opt,name=timezone,proto3" json:"timezone,omitempty"`
-	Metadata      string                 `protobuf:"bytes,6,opt,name=metadata,proto3" json:"metadata,omitempty"`
-	Username      string                 `protobuf:"bytes,7,opt,name=username,proto3" json:"username,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The username of the user's account.
+	Username *wrapperspb.StringValue `protobuf:"bytes,1,opt,name=username,proto3" json:"username,omitempty"`
+	// The display name of the user.
+	DisplayName *wrapperspb.StringValue `protobuf:"bytes,2,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	// A URL for an avatar image.
+	AvatarUrl *wrapperspb.StringValue `protobuf:"bytes,3,opt,name=avatar_url,json=avatarUrl,proto3" json:"avatar_url,omitempty"`
+	// The language expected to be a tag which follows the BCP-47 spec.
+	LangTag *wrapperspb.StringValue `protobuf:"bytes,4,opt,name=lang_tag,json=langTag,proto3" json:"lang_tag,omitempty"`
+	// The location set by the user.
+	Location *wrapperspb.StringValue `protobuf:"bytes,5,opt,name=location,proto3" json:"location,omitempty"`
+	// The timezone set by the user.
+	Timezone      *wrapperspb.StringValue `protobuf:"bytes,6,opt,name=timezone,proto3" json:"timezone,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1158,76 +1496,73 @@ func (*UpdateAccountRequest) Descriptor() ([]byte, []int) {
 	return file_api_api_proto_rawDescGZIP(), []int{15}
 }
 
-func (x *UpdateAccountRequest) GetDisplayName() string {
+func (x *UpdateAccountRequest) GetUsername() *wrapperspb.StringValue {
+	if x != nil {
+		return x.Username
+	}
+	return nil
+}
+
+func (x *UpdateAccountRequest) GetDisplayName() *wrapperspb.StringValue {
 	if x != nil {
 		return x.DisplayName
 	}
-	return ""
+	return nil
 }
 
-func (x *UpdateAccountRequest) GetAvatarUrl() string {
+func (x *UpdateAccountRequest) GetAvatarUrl() *wrapperspb.StringValue {
 	if x != nil {
 		return x.AvatarUrl
 	}
-	return ""
+	return nil
 }
 
-func (x *UpdateAccountRequest) GetLangTag() string {
+func (x *UpdateAccountRequest) GetLangTag() *wrapperspb.StringValue {
 	if x != nil {
 		return x.LangTag
 	}
-	return ""
+	return nil
 }
 
-func (x *UpdateAccountRequest) GetLocation() string {
+func (x *UpdateAccountRequest) GetLocation() *wrapperspb.StringValue {
 	if x != nil {
 		return x.Location
 	}
-	return ""
+	return nil
 }
 
-func (x *UpdateAccountRequest) GetTimezone() string {
+func (x *UpdateAccountRequest) GetTimezone() *wrapperspb.StringValue {
 	if x != nil {
 		return x.Timezone
 	}
-	return ""
+	return nil
 }
 
-func (x *UpdateAccountRequest) GetMetadata() string {
-	if x != nil {
-		return x.Metadata
-	}
-	return ""
-}
-
-func (x *UpdateAccountRequest) GetUsername() string {
-	if x != nil {
-		return x.Username
-	}
-	return ""
-}
-
-type UnlinkRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+// Authenticate against the server with a refresh token.
+type SessionRefreshRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Refresh token.
+	Token string `protobuf:"bytes,1,opt,name=token,proto3" json:"token,omitempty"`
+	// Extra information that will be bundled in the session token.
+	Vars          map[string]string `protobuf:"bytes,2,rep,name=vars,proto3" json:"vars,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *UnlinkRequest) Reset() {
-	*x = UnlinkRequest{}
+func (x *SessionRefreshRequest) Reset() {
+	*x = SessionRefreshRequest{}
 	mi := &file_api_api_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *UnlinkRequest) String() string {
+func (x *SessionRefreshRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*UnlinkRequest) ProtoMessage() {}
+func (*SessionRefreshRequest) ProtoMessage() {}
 
-func (x *UnlinkRequest) ProtoReflect() protoreflect.Message {
+func (x *SessionRefreshRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_api_api_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -1239,45 +1574,50 @@ func (x *UnlinkRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use UnlinkRequest.ProtoReflect.Descriptor instead.
-func (*UnlinkRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use SessionRefreshRequest.ProtoReflect.Descriptor instead.
+func (*SessionRefreshRequest) Descriptor() ([]byte, []int) {
 	return file_api_api_proto_rawDescGZIP(), []int{16}
 }
 
-func (x *UnlinkRequest) GetId() string {
+func (x *SessionRefreshRequest) GetToken() string {
 	if x != nil {
-		return x.Id
+		return x.Token
 	}
 	return ""
 }
 
-type CreateLeaderboardRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	SortOrder     string                 `protobuf:"bytes,2,opt,name=sort_order,json=sortOrder,proto3" json:"sort_order,omitempty"`             // "ascending" or "descending"
-	Operator      string                 `protobuf:"bytes,3,opt,name=operator,proto3" json:"operator,omitempty"`                                // "best", "set", "increment", "decrement"
-	ResetSchedule string                 `protobuf:"bytes,4,opt,name=reset_schedule,json=resetSchedule,proto3" json:"reset_schedule,omitempty"` // Cron format
-	Metadata      string                 `protobuf:"bytes,5,opt,name=metadata,proto3" json:"metadata,omitempty"`                                // JSON string format
-	Authoritative bool                   `protobuf:"varint,6,opt,name=authoritative,proto3" json:"authoritative,omitempty"`
-	EnableRanks   bool                   `protobuf:"varint,7,opt,name=enable_ranks,json=enableRanks,proto3" json:"enable_ranks,omitempty"`
+func (x *SessionRefreshRequest) GetVars() map[string]string {
+	if x != nil {
+		return x.Vars
+	}
+	return nil
+}
+
+// Log out a session, invalidate a refresh token, or log out all sessions/refresh tokens for a user.
+type SessionLogoutRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Session token to log out.
+	Token string `protobuf:"bytes,1,opt,name=token,proto3" json:"token,omitempty"`
+	// Refresh token to invalidate.
+	RefreshToken  string `protobuf:"bytes,2,opt,name=refresh_token,json=refreshToken,proto3" json:"refresh_token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *CreateLeaderboardRequest) Reset() {
-	*x = CreateLeaderboardRequest{}
+func (x *SessionLogoutRequest) Reset() {
+	*x = SessionLogoutRequest{}
 	mi := &file_api_api_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *CreateLeaderboardRequest) String() string {
+func (x *SessionLogoutRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*CreateLeaderboardRequest) ProtoMessage() {}
+func (*SessionLogoutRequest) ProtoMessage() {}
 
-func (x *CreateLeaderboardRequest) ProtoReflect() protoreflect.Message {
+func (x *SessionLogoutRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_api_api_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -1289,82 +1629,52 @@ func (x *CreateLeaderboardRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use CreateLeaderboardRequest.ProtoReflect.Descriptor instead.
-func (*CreateLeaderboardRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use SessionLogoutRequest.ProtoReflect.Descriptor instead.
+func (*SessionLogoutRequest) Descriptor() ([]byte, []int) {
 	return file_api_api_proto_rawDescGZIP(), []int{17}
 }
 
-func (x *CreateLeaderboardRequest) GetId() string {
+func (x *SessionLogoutRequest) GetToken() string {
 	if x != nil {
-		return x.Id
+		return x.Token
 	}
 	return ""
 }
 
-func (x *CreateLeaderboardRequest) GetSortOrder() string {
+func (x *SessionLogoutRequest) GetRefreshToken() string {
 	if x != nil {
-		return x.SortOrder
+		return x.RefreshToken
 	}
 	return ""
 }
 
-func (x *CreateLeaderboardRequest) GetOperator() string {
-	if x != nil {
-		return x.Operator
-	}
-	return ""
-}
-
-func (x *CreateLeaderboardRequest) GetResetSchedule() string {
-	if x != nil {
-		return x.ResetSchedule
-	}
-	return ""
-}
-
-func (x *CreateLeaderboardRequest) GetMetadata() string {
-	if x != nil {
-		return x.Metadata
-	}
-	return ""
-}
-
-func (x *CreateLeaderboardRequest) GetAuthoritative() bool {
-	if x != nil {
-		return x.Authoritative
-	}
-	return false
-}
-
-func (x *CreateLeaderboardRequest) GetEnableRanks() bool {
-	if x != nil {
-		return x.EnableRanks
-	}
-	return false
-}
-
-type ListLeaderboardsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Limit         int32                  `protobuf:"varint,1,opt,name=limit,proto3" json:"limit,omitempty"`
-	Cursor        string                 `protobuf:"bytes,2,opt,name=cursor,proto3" json:"cursor,omitempty"`
+// Authenticate against the server with Apple Sign In.
+type AuthenticateAppleRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The Apple account details.
+	Account *AccountApple `protobuf:"bytes,1,opt,name=account,proto3" json:"account,omitempty"`
+	// Register the account if the user does not already exist.
+	Create *wrapperspb.BoolValue `protobuf:"bytes,2,opt,name=create,proto3" json:"create,omitempty"`
+	// Set the username on the account at register. Must be unique.
+	Username      string `protobuf:"bytes,3,opt,name=username,proto3" json:"username,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *ListLeaderboardsRequest) Reset() {
-	*x = ListLeaderboardsRequest{}
+func (x *AuthenticateAppleRequest) Reset() {
+	*x = AuthenticateAppleRequest{}
 	mi := &file_api_api_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *ListLeaderboardsRequest) String() string {
+func (x *AuthenticateAppleRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ListLeaderboardsRequest) ProtoMessage() {}
+func (*AuthenticateAppleRequest) ProtoMessage() {}
 
-func (x *ListLeaderboardsRequest) ProtoReflect() protoreflect.Message {
+func (x *AuthenticateAppleRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_api_api_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -1376,470 +1686,388 @@ func (x *ListLeaderboardsRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ListLeaderboardsRequest.ProtoReflect.Descriptor instead.
-func (*ListLeaderboardsRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use AuthenticateAppleRequest.ProtoReflect.Descriptor instead.
+func (*AuthenticateAppleRequest) Descriptor() ([]byte, []int) {
 	return file_api_api_proto_rawDescGZIP(), []int{18}
 }
 
-func (x *ListLeaderboardsRequest) GetLimit() int32 {
+func (x *AuthenticateAppleRequest) GetAccount() *AccountApple {
 	if x != nil {
-		return x.Limit
-	}
-	return 0
-}
-
-func (x *ListLeaderboardsRequest) GetCursor() string {
-	if x != nil {
-		return x.Cursor
-	}
-	return ""
-}
-
-type Leaderboard struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	SortOrder     string                 `protobuf:"bytes,2,opt,name=sort_order,json=sortOrder,proto3" json:"sort_order,omitempty"`
-	Operator      string                 `protobuf:"bytes,3,opt,name=operator,proto3" json:"operator,omitempty"`
-	ResetSchedule string                 `protobuf:"bytes,4,opt,name=reset_schedule,json=resetSchedule,proto3" json:"reset_schedule,omitempty"`
-	Metadata      string                 `protobuf:"bytes,5,opt,name=metadata,proto3" json:"metadata,omitempty"`
-	Authoritative bool                   `protobuf:"varint,6,opt,name=authoritative,proto3" json:"authoritative,omitempty"`
-	CreateTime    *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=create_time,json=createTime,proto3" json:"create_time,omitempty"`
-	PrevReset     int64                  `protobuf:"varint,8,opt,name=prev_reset,json=prevReset,proto3" json:"prev_reset,omitempty"`
-	NextReset     int64                  `protobuf:"varint,9,opt,name=next_reset,json=nextReset,proto3" json:"next_reset,omitempty"`
-	EnableRanks   bool                   `protobuf:"varint,10,opt,name=enable_ranks,json=enableRanks,proto3" json:"enable_ranks,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *Leaderboard) Reset() {
-	*x = Leaderboard{}
-	mi := &file_api_api_proto_msgTypes[19]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *Leaderboard) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*Leaderboard) ProtoMessage() {}
-
-func (x *Leaderboard) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[19]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use Leaderboard.ProtoReflect.Descriptor instead.
-func (*Leaderboard) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{19}
-}
-
-func (x *Leaderboard) GetId() string {
-	if x != nil {
-		return x.Id
-	}
-	return ""
-}
-
-func (x *Leaderboard) GetSortOrder() string {
-	if x != nil {
-		return x.SortOrder
-	}
-	return ""
-}
-
-func (x *Leaderboard) GetOperator() string {
-	if x != nil {
-		return x.Operator
-	}
-	return ""
-}
-
-func (x *Leaderboard) GetResetSchedule() string {
-	if x != nil {
-		return x.ResetSchedule
-	}
-	return ""
-}
-
-func (x *Leaderboard) GetMetadata() string {
-	if x != nil {
-		return x.Metadata
-	}
-	return ""
-}
-
-func (x *Leaderboard) GetAuthoritative() bool {
-	if x != nil {
-		return x.Authoritative
-	}
-	return false
-}
-
-func (x *Leaderboard) GetCreateTime() *timestamppb.Timestamp {
-	if x != nil {
-		return x.CreateTime
+		return x.Account
 	}
 	return nil
 }
 
-func (x *Leaderboard) GetPrevReset() int64 {
+func (x *AuthenticateAppleRequest) GetCreate() *wrapperspb.BoolValue {
 	if x != nil {
-		return x.PrevReset
-	}
-	return 0
-}
-
-func (x *Leaderboard) GetNextReset() int64 {
-	if x != nil {
-		return x.NextReset
-	}
-	return 0
-}
-
-func (x *Leaderboard) GetEnableRanks() bool {
-	if x != nil {
-		return x.EnableRanks
-	}
-	return false
-}
-
-type LeaderboardList struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Leaderboards  []*Leaderboard         `protobuf:"bytes,1,rep,name=leaderboards,proto3" json:"leaderboards,omitempty"`
-	NextCursor    string                 `protobuf:"bytes,2,opt,name=next_cursor,json=nextCursor,proto3" json:"next_cursor,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *LeaderboardList) Reset() {
-	*x = LeaderboardList{}
-	mi := &file_api_api_proto_msgTypes[20]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *LeaderboardList) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*LeaderboardList) ProtoMessage() {}
-
-func (x *LeaderboardList) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[20]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use LeaderboardList.ProtoReflect.Descriptor instead.
-func (*LeaderboardList) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{20}
-}
-
-func (x *LeaderboardList) GetLeaderboards() []*Leaderboard {
-	if x != nil {
-		return x.Leaderboards
+		return x.Create
 	}
 	return nil
 }
 
-func (x *LeaderboardList) GetNextCursor() string {
-	if x != nil {
-		return x.NextCursor
-	}
-	return ""
-}
-
-type DeleteLeaderboardRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *DeleteLeaderboardRequest) Reset() {
-	*x = DeleteLeaderboardRequest{}
-	mi := &file_api_api_proto_msgTypes[21]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *DeleteLeaderboardRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*DeleteLeaderboardRequest) ProtoMessage() {}
-
-func (x *DeleteLeaderboardRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[21]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use DeleteLeaderboardRequest.ProtoReflect.Descriptor instead.
-func (*DeleteLeaderboardRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{21}
-}
-
-func (x *DeleteLeaderboardRequest) GetId() string {
-	if x != nil {
-		return x.Id
-	}
-	return ""
-}
-
-type WriteLeaderboardRecordRequest struct {
-	state            protoimpl.MessageState `protogen:"open.v1"`
-	LeaderboardId    string                 `protobuf:"bytes,1,opt,name=leaderboard_id,json=leaderboardId,proto3" json:"leaderboard_id,omitempty"`
-	Score            int64                  `protobuf:"varint,2,opt,name=score,proto3" json:"score,omitempty"`
-	Subscore         int64                  `protobuf:"varint,3,opt,name=subscore,proto3" json:"subscore,omitempty"`
-	Metadata         string                 `protobuf:"bytes,4,opt,name=metadata,proto3" json:"metadata,omitempty"` // JSON string format
-	OverrideOperator Operator               `protobuf:"varint,5,opt,name=override_operator,json=overrideOperator,proto3,enum=ultimate.server.api.Operator" json:"override_operator,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
-}
-
-func (x *WriteLeaderboardRecordRequest) Reset() {
-	*x = WriteLeaderboardRecordRequest{}
-	mi := &file_api_api_proto_msgTypes[22]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *WriteLeaderboardRecordRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*WriteLeaderboardRecordRequest) ProtoMessage() {}
-
-func (x *WriteLeaderboardRecordRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[22]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use WriteLeaderboardRecordRequest.ProtoReflect.Descriptor instead.
-func (*WriteLeaderboardRecordRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{22}
-}
-
-func (x *WriteLeaderboardRecordRequest) GetLeaderboardId() string {
-	if x != nil {
-		return x.LeaderboardId
-	}
-	return ""
-}
-
-func (x *WriteLeaderboardRecordRequest) GetScore() int64 {
-	if x != nil {
-		return x.Score
-	}
-	return 0
-}
-
-func (x *WriteLeaderboardRecordRequest) GetSubscore() int64 {
-	if x != nil {
-		return x.Subscore
-	}
-	return 0
-}
-
-func (x *WriteLeaderboardRecordRequest) GetMetadata() string {
-	if x != nil {
-		return x.Metadata
-	}
-	return ""
-}
-
-func (x *WriteLeaderboardRecordRequest) GetOverrideOperator() Operator {
-	if x != nil {
-		return x.OverrideOperator
-	}
-	return Operator_NO_OVERRIDE
-}
-
-type LeaderboardRecord struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	LeaderboardId string                 `protobuf:"bytes,1,opt,name=leaderboard_id,json=leaderboardId,proto3" json:"leaderboard_id,omitempty"`
-	OwnerId       string                 `protobuf:"bytes,2,opt,name=owner_id,json=ownerId,proto3" json:"owner_id,omitempty"`
-	Username      string                 `protobuf:"bytes,3,opt,name=username,proto3" json:"username,omitempty"`
-	Score         int64                  `protobuf:"varint,4,opt,name=score,proto3" json:"score,omitempty"`
-	Subscore      int64                  `protobuf:"varint,5,opt,name=subscore,proto3" json:"subscore,omitempty"`
-	Metadata      string                 `protobuf:"bytes,6,opt,name=metadata,proto3" json:"metadata,omitempty"` // JSON string format
-	Rank          int64                  `protobuf:"varint,7,opt,name=rank,proto3" json:"rank,omitempty"`
-	CreateTime    *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=create_time,json=createTime,proto3" json:"create_time,omitempty"`
-	UpdateTime    *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=update_time,json=updateTime,proto3" json:"update_time,omitempty"`
-	ExpiryTime    *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=expiry_time,json=expiryTime,proto3" json:"expiry_time,omitempty"`
-	NumScore      int32                  `protobuf:"varint,11,opt,name=num_score,json=numScore,proto3" json:"num_score,omitempty"`
-	MaxNumScore   int32                  `protobuf:"varint,12,opt,name=max_num_score,json=maxNumScore,proto3" json:"max_num_score,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *LeaderboardRecord) Reset() {
-	*x = LeaderboardRecord{}
-	mi := &file_api_api_proto_msgTypes[23]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *LeaderboardRecord) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*LeaderboardRecord) ProtoMessage() {}
-
-func (x *LeaderboardRecord) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[23]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use LeaderboardRecord.ProtoReflect.Descriptor instead.
-func (*LeaderboardRecord) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{23}
-}
-
-func (x *LeaderboardRecord) GetLeaderboardId() string {
-	if x != nil {
-		return x.LeaderboardId
-	}
-	return ""
-}
-
-func (x *LeaderboardRecord) GetOwnerId() string {
-	if x != nil {
-		return x.OwnerId
-	}
-	return ""
-}
-
-func (x *LeaderboardRecord) GetUsername() string {
+func (x *AuthenticateAppleRequest) GetUsername() string {
 	if x != nil {
 		return x.Username
 	}
 	return ""
 }
 
-func (x *LeaderboardRecord) GetScore() int64 {
-	if x != nil {
-		return x.Score
-	}
-	return 0
-}
-
-func (x *LeaderboardRecord) GetSubscore() int64 {
-	if x != nil {
-		return x.Subscore
-	}
-	return 0
-}
-
-func (x *LeaderboardRecord) GetMetadata() string {
-	if x != nil {
-		return x.Metadata
-	}
-	return ""
-}
-
-func (x *LeaderboardRecord) GetRank() int64 {
-	if x != nil {
-		return x.Rank
-	}
-	return 0
-}
-
-func (x *LeaderboardRecord) GetCreateTime() *timestamppb.Timestamp {
-	if x != nil {
-		return x.CreateTime
-	}
-	return nil
-}
-
-func (x *LeaderboardRecord) GetUpdateTime() *timestamppb.Timestamp {
-	if x != nil {
-		return x.UpdateTime
-	}
-	return nil
-}
-
-func (x *LeaderboardRecord) GetExpiryTime() *timestamppb.Timestamp {
-	if x != nil {
-		return x.ExpiryTime
-	}
-	return nil
-}
-
-func (x *LeaderboardRecord) GetNumScore() int32 {
-	if x != nil {
-		return x.NumScore
-	}
-	return 0
-}
-
-func (x *LeaderboardRecord) GetMaxNumScore() int32 {
-	if x != nil {
-		return x.MaxNumScore
-	}
-	return 0
-}
-
-type ListLeaderboardRecordsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	LeaderboardId string                 `protobuf:"bytes,1,opt,name=leaderboard_id,json=leaderboardId,proto3" json:"leaderboard_id,omitempty"`
-	Limit         int32                  `protobuf:"varint,2,opt,name=limit,proto3" json:"limit,omitempty"`
-	Cursor        string                 `protobuf:"bytes,3,opt,name=cursor,proto3" json:"cursor,omitempty"`
-	OwnerIds      []string               `protobuf:"bytes,4,rep,name=owner_ids,json=ownerIds,proto3" json:"owner_ids,omitempty"`
-	Expiry        int64                  `protobuf:"varint,5,opt,name=expiry,proto3" json:"expiry,omitempty"` // optional override unix expiry
+// Authenticate against the server with a custom ID.
+type AuthenticateCustomRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The custom account details.
+	Account *AccountCustom `protobuf:"bytes,1,opt,name=account,proto3" json:"account,omitempty"`
+	// Register the account if the user does not already exist.
+	Create *wrapperspb.BoolValue `protobuf:"bytes,2,opt,name=create,proto3" json:"create,omitempty"`
+	// Set the username on the account at register. Must be unique.
+	Username      string `protobuf:"bytes,3,opt,name=username,proto3" json:"username,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *ListLeaderboardRecordsRequest) Reset() {
-	*x = ListLeaderboardRecordsRequest{}
+func (x *AuthenticateCustomRequest) Reset() {
+	*x = AuthenticateCustomRequest{}
+	mi := &file_api_api_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AuthenticateCustomRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AuthenticateCustomRequest) ProtoMessage() {}
+
+func (x *AuthenticateCustomRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AuthenticateCustomRequest.ProtoReflect.Descriptor instead.
+func (*AuthenticateCustomRequest) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *AuthenticateCustomRequest) GetAccount() *AccountCustom {
+	if x != nil {
+		return x.Account
+	}
+	return nil
+}
+
+func (x *AuthenticateCustomRequest) GetCreate() *wrapperspb.BoolValue {
+	if x != nil {
+		return x.Create
+	}
+	return nil
+}
+
+func (x *AuthenticateCustomRequest) GetUsername() string {
+	if x != nil {
+		return x.Username
+	}
+	return ""
+}
+
+// Authenticate against the server with a device ID.
+type AuthenticateDeviceRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The device account details.
+	Account *AccountDevice `protobuf:"bytes,1,opt,name=account,proto3" json:"account,omitempty"`
+	// Register the account if the user does not already exist.
+	Create *wrapperspb.BoolValue `protobuf:"bytes,2,opt,name=create,proto3" json:"create,omitempty"`
+	// Set the username on the account at register. Must be unique.
+	Username      string `protobuf:"bytes,3,opt,name=username,proto3" json:"username,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AuthenticateDeviceRequest) Reset() {
+	*x = AuthenticateDeviceRequest{}
+	mi := &file_api_api_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AuthenticateDeviceRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AuthenticateDeviceRequest) ProtoMessage() {}
+
+func (x *AuthenticateDeviceRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AuthenticateDeviceRequest.ProtoReflect.Descriptor instead.
+func (*AuthenticateDeviceRequest) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{20}
+}
+
+func (x *AuthenticateDeviceRequest) GetAccount() *AccountDevice {
+	if x != nil {
+		return x.Account
+	}
+	return nil
+}
+
+func (x *AuthenticateDeviceRequest) GetCreate() *wrapperspb.BoolValue {
+	if x != nil {
+		return x.Create
+	}
+	return nil
+}
+
+func (x *AuthenticateDeviceRequest) GetUsername() string {
+	if x != nil {
+		return x.Username
+	}
+	return ""
+}
+
+// Authenticate against the server with email+password.
+type AuthenticateEmailRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The email account details.
+	Account *AccountEmail `protobuf:"bytes,1,opt,name=account,proto3" json:"account,omitempty"`
+	// Register the account if the user does not already exist.
+	Create *wrapperspb.BoolValue `protobuf:"bytes,2,opt,name=create,proto3" json:"create,omitempty"`
+	// Set the username on the account at register. Must be unique.
+	Username      string `protobuf:"bytes,3,opt,name=username,proto3" json:"username,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AuthenticateEmailRequest) Reset() {
+	*x = AuthenticateEmailRequest{}
+	mi := &file_api_api_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AuthenticateEmailRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AuthenticateEmailRequest) ProtoMessage() {}
+
+func (x *AuthenticateEmailRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AuthenticateEmailRequest.ProtoReflect.Descriptor instead.
+func (*AuthenticateEmailRequest) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{21}
+}
+
+func (x *AuthenticateEmailRequest) GetAccount() *AccountEmail {
+	if x != nil {
+		return x.Account
+	}
+	return nil
+}
+
+func (x *AuthenticateEmailRequest) GetCreate() *wrapperspb.BoolValue {
+	if x != nil {
+		return x.Create
+	}
+	return nil
+}
+
+func (x *AuthenticateEmailRequest) GetUsername() string {
+	if x != nil {
+		return x.Username
+	}
+	return ""
+}
+
+// Authenticate against the server with Facebook.
+type AuthenticateFacebookRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The Facebook account details.
+	Account *AccountFacebook `protobuf:"bytes,1,opt,name=account,proto3" json:"account,omitempty"`
+	// Register the account if the user does not already exist.
+	Create *wrapperspb.BoolValue `protobuf:"bytes,2,opt,name=create,proto3" json:"create,omitempty"`
+	// Set the username on the account at register. Must be unique.
+	Username string `protobuf:"bytes,3,opt,name=username,proto3" json:"username,omitempty"`
+	// Import Facebook friends for the user.
+	Sync          *wrapperspb.BoolValue `protobuf:"bytes,4,opt,name=sync,proto3" json:"sync,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AuthenticateFacebookRequest) Reset() {
+	*x = AuthenticateFacebookRequest{}
+	mi := &file_api_api_proto_msgTypes[22]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AuthenticateFacebookRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AuthenticateFacebookRequest) ProtoMessage() {}
+
+func (x *AuthenticateFacebookRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[22]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AuthenticateFacebookRequest.ProtoReflect.Descriptor instead.
+func (*AuthenticateFacebookRequest) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{22}
+}
+
+func (x *AuthenticateFacebookRequest) GetAccount() *AccountFacebook {
+	if x != nil {
+		return x.Account
+	}
+	return nil
+}
+
+func (x *AuthenticateFacebookRequest) GetCreate() *wrapperspb.BoolValue {
+	if x != nil {
+		return x.Create
+	}
+	return nil
+}
+
+func (x *AuthenticateFacebookRequest) GetUsername() string {
+	if x != nil {
+		return x.Username
+	}
+	return ""
+}
+
+func (x *AuthenticateFacebookRequest) GetSync() *wrapperspb.BoolValue {
+	if x != nil {
+		return x.Sync
+	}
+	return nil
+}
+
+// Authenticate against the server with Facebook Instant Game token.
+type AuthenticateFacebookInstantGameRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The Facebook Instant Game account details.
+	Account *AccountFacebookInstantGame `protobuf:"bytes,1,opt,name=account,proto3" json:"account,omitempty"`
+	// Register the account if the user does not already exist.
+	Create *wrapperspb.BoolValue `protobuf:"bytes,2,opt,name=create,proto3" json:"create,omitempty"`
+	// Set the username on the account at register. Must be unique.
+	Username      string `protobuf:"bytes,3,opt,name=username,proto3" json:"username,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AuthenticateFacebookInstantGameRequest) Reset() {
+	*x = AuthenticateFacebookInstantGameRequest{}
+	mi := &file_api_api_proto_msgTypes[23]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AuthenticateFacebookInstantGameRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AuthenticateFacebookInstantGameRequest) ProtoMessage() {}
+
+func (x *AuthenticateFacebookInstantGameRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[23]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AuthenticateFacebookInstantGameRequest.ProtoReflect.Descriptor instead.
+func (*AuthenticateFacebookInstantGameRequest) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{23}
+}
+
+func (x *AuthenticateFacebookInstantGameRequest) GetAccount() *AccountFacebookInstantGame {
+	if x != nil {
+		return x.Account
+	}
+	return nil
+}
+
+func (x *AuthenticateFacebookInstantGameRequest) GetCreate() *wrapperspb.BoolValue {
+	if x != nil {
+		return x.Create
+	}
+	return nil
+}
+
+func (x *AuthenticateFacebookInstantGameRequest) GetUsername() string {
+	if x != nil {
+		return x.Username
+	}
+	return ""
+}
+
+// Authenticate against the server with Apple's Game Center.
+type AuthenticateGameCenterRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The Game Center account details.
+	Account *AccountGameCenter `protobuf:"bytes,1,opt,name=account,proto3" json:"account,omitempty"`
+	// Register the account if the user does not already exist.
+	Create *wrapperspb.BoolValue `protobuf:"bytes,2,opt,name=create,proto3" json:"create,omitempty"`
+	// Set the username on the account at register. Must be unique.
+	Username      string `protobuf:"bytes,3,opt,name=username,proto3" json:"username,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AuthenticateGameCenterRequest) Reset() {
+	*x = AuthenticateGameCenterRequest{}
 	mi := &file_api_api_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *ListLeaderboardRecordsRequest) String() string {
+func (x *AuthenticateGameCenterRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ListLeaderboardRecordsRequest) ProtoMessage() {}
+func (*AuthenticateGameCenterRequest) ProtoMessage() {}
 
-func (x *ListLeaderboardRecordsRequest) ProtoReflect() protoreflect.Message {
+func (x *AuthenticateGameCenterRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_api_api_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -1851,70 +2079,59 @@ func (x *ListLeaderboardRecordsRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ListLeaderboardRecordsRequest.ProtoReflect.Descriptor instead.
-func (*ListLeaderboardRecordsRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use AuthenticateGameCenterRequest.ProtoReflect.Descriptor instead.
+func (*AuthenticateGameCenterRequest) Descriptor() ([]byte, []int) {
 	return file_api_api_proto_rawDescGZIP(), []int{24}
 }
 
-func (x *ListLeaderboardRecordsRequest) GetLeaderboardId() string {
+func (x *AuthenticateGameCenterRequest) GetAccount() *AccountGameCenter {
 	if x != nil {
-		return x.LeaderboardId
-	}
-	return ""
-}
-
-func (x *ListLeaderboardRecordsRequest) GetLimit() int32 {
-	if x != nil {
-		return x.Limit
-	}
-	return 0
-}
-
-func (x *ListLeaderboardRecordsRequest) GetCursor() string {
-	if x != nil {
-		return x.Cursor
-	}
-	return ""
-}
-
-func (x *ListLeaderboardRecordsRequest) GetOwnerIds() []string {
-	if x != nil {
-		return x.OwnerIds
+		return x.Account
 	}
 	return nil
 }
 
-func (x *ListLeaderboardRecordsRequest) GetExpiry() int64 {
+func (x *AuthenticateGameCenterRequest) GetCreate() *wrapperspb.BoolValue {
 	if x != nil {
-		return x.Expiry
+		return x.Create
 	}
-	return 0
+	return nil
 }
 
-type ListLeaderboardRecordsAroundOwnerRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	LeaderboardId string                 `protobuf:"bytes,1,opt,name=leaderboard_id,json=leaderboardId,proto3" json:"leaderboard_id,omitempty"`
-	OwnerId       string                 `protobuf:"bytes,2,opt,name=owner_id,json=ownerId,proto3" json:"owner_id,omitempty"`
-	Limit         int32                  `protobuf:"varint,3,opt,name=limit,proto3" json:"limit,omitempty"`
-	Expiry        int64                  `protobuf:"varint,4,opt,name=expiry,proto3" json:"expiry,omitempty"`
+func (x *AuthenticateGameCenterRequest) GetUsername() string {
+	if x != nil {
+		return x.Username
+	}
+	return ""
+}
+
+// Authenticate against the server with Google.
+type AuthenticateGoogleRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The Google account details.
+	Account *AccountGoogle `protobuf:"bytes,1,opt,name=account,proto3" json:"account,omitempty"`
+	// Register the account if the user does not already exist.
+	Create *wrapperspb.BoolValue `protobuf:"bytes,2,opt,name=create,proto3" json:"create,omitempty"`
+	// Set the username on the account at register. Must be unique.
+	Username      string `protobuf:"bytes,3,opt,name=username,proto3" json:"username,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *ListLeaderboardRecordsAroundOwnerRequest) Reset() {
-	*x = ListLeaderboardRecordsAroundOwnerRequest{}
+func (x *AuthenticateGoogleRequest) Reset() {
+	*x = AuthenticateGoogleRequest{}
 	mi := &file_api_api_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *ListLeaderboardRecordsAroundOwnerRequest) String() string {
+func (x *AuthenticateGoogleRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ListLeaderboardRecordsAroundOwnerRequest) ProtoMessage() {}
+func (*AuthenticateGoogleRequest) ProtoMessage() {}
 
-func (x *ListLeaderboardRecordsAroundOwnerRequest) ProtoReflect() protoreflect.Message {
+func (x *AuthenticateGoogleRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_api_api_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -1926,63 +2143,61 @@ func (x *ListLeaderboardRecordsAroundOwnerRequest) ProtoReflect() protoreflect.M
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ListLeaderboardRecordsAroundOwnerRequest.ProtoReflect.Descriptor instead.
-func (*ListLeaderboardRecordsAroundOwnerRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use AuthenticateGoogleRequest.ProtoReflect.Descriptor instead.
+func (*AuthenticateGoogleRequest) Descriptor() ([]byte, []int) {
 	return file_api_api_proto_rawDescGZIP(), []int{25}
 }
 
-func (x *ListLeaderboardRecordsAroundOwnerRequest) GetLeaderboardId() string {
+func (x *AuthenticateGoogleRequest) GetAccount() *AccountGoogle {
 	if x != nil {
-		return x.LeaderboardId
+		return x.Account
+	}
+	return nil
+}
+
+func (x *AuthenticateGoogleRequest) GetCreate() *wrapperspb.BoolValue {
+	if x != nil {
+		return x.Create
+	}
+	return nil
+}
+
+func (x *AuthenticateGoogleRequest) GetUsername() string {
+	if x != nil {
+		return x.Username
 	}
 	return ""
 }
 
-func (x *ListLeaderboardRecordsAroundOwnerRequest) GetOwnerId() string {
-	if x != nil {
-		return x.OwnerId
-	}
-	return ""
-}
-
-func (x *ListLeaderboardRecordsAroundOwnerRequest) GetLimit() int32 {
-	if x != nil {
-		return x.Limit
-	}
-	return 0
-}
-
-func (x *ListLeaderboardRecordsAroundOwnerRequest) GetExpiry() int64 {
-	if x != nil {
-		return x.Expiry
-	}
-	return 0
-}
-
-type LeaderboardRecordList struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Records       []*LeaderboardRecord   `protobuf:"bytes,1,rep,name=records,proto3" json:"records,omitempty"`
-	NextCursor    string                 `protobuf:"bytes,2,opt,name=next_cursor,json=nextCursor,proto3" json:"next_cursor,omitempty"`
-	PrevCursor    string                 `protobuf:"bytes,3,opt,name=prev_cursor,json=prevCursor,proto3" json:"prev_cursor,omitempty"`
-	OwnerRecords  []*LeaderboardRecord   `protobuf:"bytes,4,rep,name=owner_records,json=ownerRecords,proto3" json:"owner_records,omitempty"`
+// Authenticate against the server with Steam.
+type AuthenticateSteamRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The Steam account details.
+	Account *AccountSteam `protobuf:"bytes,1,opt,name=account,proto3" json:"account,omitempty"`
+	// Register the account if the user does not already exist.
+	Create *wrapperspb.BoolValue `protobuf:"bytes,2,opt,name=create,proto3" json:"create,omitempty"`
+	// Set the username on the account at register. Must be unique.
+	Username string `protobuf:"bytes,3,opt,name=username,proto3" json:"username,omitempty"`
+	// Import Steam friends for the user.
+	Sync          *wrapperspb.BoolValue `protobuf:"bytes,4,opt,name=sync,proto3" json:"sync,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *LeaderboardRecordList) Reset() {
-	*x = LeaderboardRecordList{}
+func (x *AuthenticateSteamRequest) Reset() {
+	*x = AuthenticateSteamRequest{}
 	mi := &file_api_api_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *LeaderboardRecordList) String() string {
+func (x *AuthenticateSteamRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*LeaderboardRecordList) ProtoMessage() {}
+func (*AuthenticateSteamRequest) ProtoMessage() {}
 
-func (x *LeaderboardRecordList) ProtoReflect() protoreflect.Message {
+func (x *AuthenticateSteamRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_api_api_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -1994,950 +2209,55 @@ func (x *LeaderboardRecordList) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use LeaderboardRecordList.ProtoReflect.Descriptor instead.
-func (*LeaderboardRecordList) Descriptor() ([]byte, []int) {
+// Deprecated: Use AuthenticateSteamRequest.ProtoReflect.Descriptor instead.
+func (*AuthenticateSteamRequest) Descriptor() ([]byte, []int) {
 	return file_api_api_proto_rawDescGZIP(), []int{26}
 }
 
-func (x *LeaderboardRecordList) GetRecords() []*LeaderboardRecord {
+func (x *AuthenticateSteamRequest) GetAccount() *AccountSteam {
 	if x != nil {
-		return x.Records
+		return x.Account
 	}
 	return nil
 }
 
-func (x *LeaderboardRecordList) GetNextCursor() string {
+func (x *AuthenticateSteamRequest) GetCreate() *wrapperspb.BoolValue {
 	if x != nil {
-		return x.NextCursor
-	}
-	return ""
-}
-
-func (x *LeaderboardRecordList) GetPrevCursor() string {
-	if x != nil {
-		return x.PrevCursor
-	}
-	return ""
-}
-
-func (x *LeaderboardRecordList) GetOwnerRecords() []*LeaderboardRecord {
-	if x != nil {
-		return x.OwnerRecords
+		return x.Create
 	}
 	return nil
 }
 
-type DeleteLeaderboardRecordRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	LeaderboardId string                 `protobuf:"bytes,1,opt,name=leaderboard_id,json=leaderboardId,proto3" json:"leaderboard_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *DeleteLeaderboardRecordRequest) Reset() {
-	*x = DeleteLeaderboardRecordRequest{}
-	mi := &file_api_api_proto_msgTypes[27]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *DeleteLeaderboardRecordRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*DeleteLeaderboardRecordRequest) ProtoMessage() {}
-
-func (x *DeleteLeaderboardRecordRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[27]
+func (x *AuthenticateSteamRequest) GetUsername() string {
 	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use DeleteLeaderboardRecordRequest.ProtoReflect.Descriptor instead.
-func (*DeleteLeaderboardRecordRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{27}
-}
-
-func (x *DeleteLeaderboardRecordRequest) GetLeaderboardId() string {
-	if x != nil {
-		return x.LeaderboardId
+		return x.Username
 	}
 	return ""
 }
 
-type CreateTournamentRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	SortOrder     string                 `protobuf:"bytes,2,opt,name=sort_order,json=sortOrder,proto3" json:"sort_order,omitempty"`
-	Operator      string                 `protobuf:"bytes,3,opt,name=operator,proto3" json:"operator,omitempty"`
-	ResetSchedule string                 `protobuf:"bytes,4,opt,name=reset_schedule,json=resetSchedule,proto3" json:"reset_schedule,omitempty"`
-	Metadata      string                 `protobuf:"bytes,5,opt,name=metadata,proto3" json:"metadata,omitempty"`
-	Authoritative bool                   `protobuf:"varint,6,opt,name=authoritative,proto3" json:"authoritative,omitempty"`
-	Category      int32                  `protobuf:"varint,7,opt,name=category,proto3" json:"category,omitempty"`
-	Description   string                 `protobuf:"bytes,8,opt,name=description,proto3" json:"description,omitempty"`
-	Duration      int32                  `protobuf:"varint,9,opt,name=duration,proto3" json:"duration,omitempty"`
-	EndTime       *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=end_time,json=endTime,proto3" json:"end_time,omitempty"`
-	JoinRequired  bool                   `protobuf:"varint,11,opt,name=join_required,json=joinRequired,proto3" json:"join_required,omitempty"`
-	MaxSize       int32                  `protobuf:"varint,12,opt,name=max_size,json=maxSize,proto3" json:"max_size,omitempty"`
-	MaxNumScore   int32                  `protobuf:"varint,13,opt,name=max_num_score,json=maxNumScore,proto3" json:"max_num_score,omitempty"`
-	Title         string                 `protobuf:"bytes,14,opt,name=title,proto3" json:"title,omitempty"`
-	StartTime     *timestamppb.Timestamp `protobuf:"bytes,15,opt,name=start_time,json=startTime,proto3" json:"start_time,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *CreateTournamentRequest) Reset() {
-	*x = CreateTournamentRequest{}
-	mi := &file_api_api_proto_msgTypes[28]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *CreateTournamentRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*CreateTournamentRequest) ProtoMessage() {}
-
-func (x *CreateTournamentRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[28]
+func (x *AuthenticateSteamRequest) GetSync() *wrapperspb.BoolValue {
 	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use CreateTournamentRequest.ProtoReflect.Descriptor instead.
-func (*CreateTournamentRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{28}
-}
-
-func (x *CreateTournamentRequest) GetId() string {
-	if x != nil {
-		return x.Id
-	}
-	return ""
-}
-
-func (x *CreateTournamentRequest) GetSortOrder() string {
-	if x != nil {
-		return x.SortOrder
-	}
-	return ""
-}
-
-func (x *CreateTournamentRequest) GetOperator() string {
-	if x != nil {
-		return x.Operator
-	}
-	return ""
-}
-
-func (x *CreateTournamentRequest) GetResetSchedule() string {
-	if x != nil {
-		return x.ResetSchedule
-	}
-	return ""
-}
-
-func (x *CreateTournamentRequest) GetMetadata() string {
-	if x != nil {
-		return x.Metadata
-	}
-	return ""
-}
-
-func (x *CreateTournamentRequest) GetAuthoritative() bool {
-	if x != nil {
-		return x.Authoritative
-	}
-	return false
-}
-
-func (x *CreateTournamentRequest) GetCategory() int32 {
-	if x != nil {
-		return x.Category
-	}
-	return 0
-}
-
-func (x *CreateTournamentRequest) GetDescription() string {
-	if x != nil {
-		return x.Description
-	}
-	return ""
-}
-
-func (x *CreateTournamentRequest) GetDuration() int32 {
-	if x != nil {
-		return x.Duration
-	}
-	return 0
-}
-
-func (x *CreateTournamentRequest) GetEndTime() *timestamppb.Timestamp {
-	if x != nil {
-		return x.EndTime
+		return x.Sync
 	}
 	return nil
 }
 
-func (x *CreateTournamentRequest) GetJoinRequired() bool {
-	if x != nil {
-		return x.JoinRequired
-	}
-	return false
-}
-
-func (x *CreateTournamentRequest) GetMaxSize() int32 {
-	if x != nil {
-		return x.MaxSize
-	}
-	return 0
-}
-
-func (x *CreateTournamentRequest) GetMaxNumScore() int32 {
-	if x != nil {
-		return x.MaxNumScore
-	}
-	return 0
-}
-
-func (x *CreateTournamentRequest) GetTitle() string {
-	if x != nil {
-		return x.Title
-	}
-	return ""
-}
-
-func (x *CreateTournamentRequest) GetStartTime() *timestamppb.Timestamp {
-	if x != nil {
-		return x.StartTime
-	}
-	return nil
-}
-
-type DeleteTournamentRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *DeleteTournamentRequest) Reset() {
-	*x = DeleteTournamentRequest{}
-	mi := &file_api_api_proto_msgTypes[29]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *DeleteTournamentRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*DeleteTournamentRequest) ProtoMessage() {}
-
-func (x *DeleteTournamentRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[29]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use DeleteTournamentRequest.ProtoReflect.Descriptor instead.
-func (*DeleteTournamentRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{29}
-}
-
-func (x *DeleteTournamentRequest) GetId() string {
-	if x != nil {
-		return x.Id
-	}
-	return ""
-}
-
-type JoinTournamentRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *JoinTournamentRequest) Reset() {
-	*x = JoinTournamentRequest{}
-	mi := &file_api_api_proto_msgTypes[30]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *JoinTournamentRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*JoinTournamentRequest) ProtoMessage() {}
-
-func (x *JoinTournamentRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[30]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use JoinTournamentRequest.ProtoReflect.Descriptor instead.
-func (*JoinTournamentRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{30}
-}
-
-func (x *JoinTournamentRequest) GetId() string {
-	if x != nil {
-		return x.Id
-	}
-	return ""
-}
-
-type ListTournamentsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	CategoryStart int32                  `protobuf:"varint,1,opt,name=category_start,json=categoryStart,proto3" json:"category_start,omitempty"`
-	CategoryEnd   int32                  `protobuf:"varint,2,opt,name=category_end,json=categoryEnd,proto3" json:"category_end,omitempty"`
-	StartTime     *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=start_time,json=startTime,proto3" json:"start_time,omitempty"`
-	EndTime       *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=end_time,json=endTime,proto3" json:"end_time,omitempty"`
-	Limit         int32                  `protobuf:"varint,5,opt,name=limit,proto3" json:"limit,omitempty"`
-	Cursor        string                 `protobuf:"bytes,6,opt,name=cursor,proto3" json:"cursor,omitempty"`
-	Active        bool                   `protobuf:"varint,7,opt,name=active,proto3" json:"active,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *ListTournamentsRequest) Reset() {
-	*x = ListTournamentsRequest{}
-	mi := &file_api_api_proto_msgTypes[31]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ListTournamentsRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ListTournamentsRequest) ProtoMessage() {}
-
-func (x *ListTournamentsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[31]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ListTournamentsRequest.ProtoReflect.Descriptor instead.
-func (*ListTournamentsRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{31}
-}
-
-func (x *ListTournamentsRequest) GetCategoryStart() int32 {
-	if x != nil {
-		return x.CategoryStart
-	}
-	return 0
-}
-
-func (x *ListTournamentsRequest) GetCategoryEnd() int32 {
-	if x != nil {
-		return x.CategoryEnd
-	}
-	return 0
-}
-
-func (x *ListTournamentsRequest) GetStartTime() *timestamppb.Timestamp {
-	if x != nil {
-		return x.StartTime
-	}
-	return nil
-}
-
-func (x *ListTournamentsRequest) GetEndTime() *timestamppb.Timestamp {
-	if x != nil {
-		return x.EndTime
-	}
-	return nil
-}
-
-func (x *ListTournamentsRequest) GetLimit() int32 {
-	if x != nil {
-		return x.Limit
-	}
-	return 0
-}
-
-func (x *ListTournamentsRequest) GetCursor() string {
-	if x != nil {
-		return x.Cursor
-	}
-	return ""
-}
-
-func (x *ListTournamentsRequest) GetActive() bool {
-	if x != nil {
-		return x.Active
-	}
-	return false
-}
-
-type Tournament struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	SortOrder     string                 `protobuf:"bytes,2,opt,name=sort_order,json=sortOrder,proto3" json:"sort_order,omitempty"`
-	Operator      string                 `protobuf:"bytes,3,opt,name=operator,proto3" json:"operator,omitempty"`
-	ResetSchedule string                 `protobuf:"bytes,4,opt,name=reset_schedule,json=resetSchedule,proto3" json:"reset_schedule,omitempty"`
-	Metadata      string                 `protobuf:"bytes,5,opt,name=metadata,proto3" json:"metadata,omitempty"`
-	Authoritative bool                   `protobuf:"varint,6,opt,name=authoritative,proto3" json:"authoritative,omitempty"`
-	Category      int32                  `protobuf:"varint,7,opt,name=category,proto3" json:"category,omitempty"`
-	Description   string                 `protobuf:"bytes,8,opt,name=description,proto3" json:"description,omitempty"`
-	Duration      int32                  `protobuf:"varint,9,opt,name=duration,proto3" json:"duration,omitempty"`
-	EndTime       *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=end_time,json=endTime,proto3" json:"end_time,omitempty"`
-	JoinRequired  bool                   `protobuf:"varint,11,opt,name=join_required,json=joinRequired,proto3" json:"join_required,omitempty"`
-	MaxSize       int32                  `protobuf:"varint,12,opt,name=max_size,json=maxSize,proto3" json:"max_size,omitempty"`
-	MaxNumScore   int32                  `protobuf:"varint,13,opt,name=max_num_score,json=maxNumScore,proto3" json:"max_num_score,omitempty"`
-	Title         string                 `protobuf:"bytes,14,opt,name=title,proto3" json:"title,omitempty"`
-	StartTime     *timestamppb.Timestamp `protobuf:"bytes,15,opt,name=start_time,json=startTime,proto3" json:"start_time,omitempty"`
-	Size          int32                  `protobuf:"varint,16,opt,name=size,proto3" json:"size,omitempty"`
-	CanEnter      bool                   `protobuf:"varint,17,opt,name=can_enter,json=canEnter,proto3" json:"can_enter,omitempty"`
-	StartActive   int64                  `protobuf:"varint,18,opt,name=start_active,json=startActive,proto3" json:"start_active,omitempty"`
-	EndActive     int64                  `protobuf:"varint,19,opt,name=end_active,json=endActive,proto3" json:"end_active,omitempty"`
-	PrevReset     int64                  `protobuf:"varint,20,opt,name=prev_reset,json=prevReset,proto3" json:"prev_reset,omitempty"`
-	NextReset     int64                  `protobuf:"varint,21,opt,name=next_reset,json=nextReset,proto3" json:"next_reset,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *Tournament) Reset() {
-	*x = Tournament{}
-	mi := &file_api_api_proto_msgTypes[32]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *Tournament) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*Tournament) ProtoMessage() {}
-
-func (x *Tournament) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[32]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use Tournament.ProtoReflect.Descriptor instead.
-func (*Tournament) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{32}
-}
-
-func (x *Tournament) GetId() string {
-	if x != nil {
-		return x.Id
-	}
-	return ""
-}
-
-func (x *Tournament) GetSortOrder() string {
-	if x != nil {
-		return x.SortOrder
-	}
-	return ""
-}
-
-func (x *Tournament) GetOperator() string {
-	if x != nil {
-		return x.Operator
-	}
-	return ""
-}
-
-func (x *Tournament) GetResetSchedule() string {
-	if x != nil {
-		return x.ResetSchedule
-	}
-	return ""
-}
-
-func (x *Tournament) GetMetadata() string {
-	if x != nil {
-		return x.Metadata
-	}
-	return ""
-}
-
-func (x *Tournament) GetAuthoritative() bool {
-	if x != nil {
-		return x.Authoritative
-	}
-	return false
-}
-
-func (x *Tournament) GetCategory() int32 {
-	if x != nil {
-		return x.Category
-	}
-	return 0
-}
-
-func (x *Tournament) GetDescription() string {
-	if x != nil {
-		return x.Description
-	}
-	return ""
-}
-
-func (x *Tournament) GetDuration() int32 {
-	if x != nil {
-		return x.Duration
-	}
-	return 0
-}
-
-func (x *Tournament) GetEndTime() *timestamppb.Timestamp {
-	if x != nil {
-		return x.EndTime
-	}
-	return nil
-}
-
-func (x *Tournament) GetJoinRequired() bool {
-	if x != nil {
-		return x.JoinRequired
-	}
-	return false
-}
-
-func (x *Tournament) GetMaxSize() int32 {
-	if x != nil {
-		return x.MaxSize
-	}
-	return 0
-}
-
-func (x *Tournament) GetMaxNumScore() int32 {
-	if x != nil {
-		return x.MaxNumScore
-	}
-	return 0
-}
-
-func (x *Tournament) GetTitle() string {
-	if x != nil {
-		return x.Title
-	}
-	return ""
-}
-
-func (x *Tournament) GetStartTime() *timestamppb.Timestamp {
-	if x != nil {
-		return x.StartTime
-	}
-	return nil
-}
-
-func (x *Tournament) GetSize() int32 {
-	if x != nil {
-		return x.Size
-	}
-	return 0
-}
-
-func (x *Tournament) GetCanEnter() bool {
-	if x != nil {
-		return x.CanEnter
-	}
-	return false
-}
-
-func (x *Tournament) GetStartActive() int64 {
-	if x != nil {
-		return x.StartActive
-	}
-	return 0
-}
-
-func (x *Tournament) GetEndActive() int64 {
-	if x != nil {
-		return x.EndActive
-	}
-	return 0
-}
-
-func (x *Tournament) GetPrevReset() int64 {
-	if x != nil {
-		return x.PrevReset
-	}
-	return 0
-}
-
-func (x *Tournament) GetNextReset() int64 {
-	if x != nil {
-		return x.NextReset
-	}
-	return 0
-}
-
-type TournamentList struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Tournaments   []*Tournament          `protobuf:"bytes,1,rep,name=tournaments,proto3" json:"tournaments,omitempty"`
-	NextCursor    string                 `protobuf:"bytes,2,opt,name=next_cursor,json=nextCursor,proto3" json:"next_cursor,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *TournamentList) Reset() {
-	*x = TournamentList{}
-	mi := &file_api_api_proto_msgTypes[33]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *TournamentList) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*TournamentList) ProtoMessage() {}
-
-func (x *TournamentList) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[33]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use TournamentList.ProtoReflect.Descriptor instead.
-func (*TournamentList) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{33}
-}
-
-func (x *TournamentList) GetTournaments() []*Tournament {
-	if x != nil {
-		return x.Tournaments
-	}
-	return nil
-}
-
-func (x *TournamentList) GetNextCursor() string {
-	if x != nil {
-		return x.NextCursor
-	}
-	return ""
-}
-
-type WriteTournamentRecordRequest struct {
-	state            protoimpl.MessageState `protogen:"open.v1"`
-	TournamentId     string                 `protobuf:"bytes,1,opt,name=tournament_id,json=tournamentId,proto3" json:"tournament_id,omitempty"`
-	Score            int64                  `protobuf:"varint,2,opt,name=score,proto3" json:"score,omitempty"`
-	Subscore         int64                  `protobuf:"varint,3,opt,name=subscore,proto3" json:"subscore,omitempty"`
-	Metadata         string                 `protobuf:"bytes,4,opt,name=metadata,proto3" json:"metadata,omitempty"`
-	OverrideOperator Operator               `protobuf:"varint,5,opt,name=override_operator,json=overrideOperator,proto3,enum=ultimate.server.api.Operator" json:"override_operator,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
-}
-
-func (x *WriteTournamentRecordRequest) Reset() {
-	*x = WriteTournamentRecordRequest{}
-	mi := &file_api_api_proto_msgTypes[34]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *WriteTournamentRecordRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*WriteTournamentRecordRequest) ProtoMessage() {}
-
-func (x *WriteTournamentRecordRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[34]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use WriteTournamentRecordRequest.ProtoReflect.Descriptor instead.
-func (*WriteTournamentRecordRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{34}
-}
-
-func (x *WriteTournamentRecordRequest) GetTournamentId() string {
-	if x != nil {
-		return x.TournamentId
-	}
-	return ""
-}
-
-func (x *WriteTournamentRecordRequest) GetScore() int64 {
-	if x != nil {
-		return x.Score
-	}
-	return 0
-}
-
-func (x *WriteTournamentRecordRequest) GetSubscore() int64 {
-	if x != nil {
-		return x.Subscore
-	}
-	return 0
-}
-
-func (x *WriteTournamentRecordRequest) GetMetadata() string {
-	if x != nil {
-		return x.Metadata
-	}
-	return ""
-}
-
-func (x *WriteTournamentRecordRequest) GetOverrideOperator() Operator {
-	if x != nil {
-		return x.OverrideOperator
-	}
-	return Operator_NO_OVERRIDE
-}
-
-type ListTournamentRecordsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	TournamentId  string                 `protobuf:"bytes,1,opt,name=tournament_id,json=tournamentId,proto3" json:"tournament_id,omitempty"`
-	Limit         int32                  `protobuf:"varint,2,opt,name=limit,proto3" json:"limit,omitempty"`
-	Cursor        string                 `protobuf:"bytes,3,opt,name=cursor,proto3" json:"cursor,omitempty"`
-	OwnerIds      []string               `protobuf:"bytes,4,rep,name=owner_ids,json=ownerIds,proto3" json:"owner_ids,omitempty"`
-	Expiry        int64                  `protobuf:"varint,5,opt,name=expiry,proto3" json:"expiry,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *ListTournamentRecordsRequest) Reset() {
-	*x = ListTournamentRecordsRequest{}
-	mi := &file_api_api_proto_msgTypes[35]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ListTournamentRecordsRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ListTournamentRecordsRequest) ProtoMessage() {}
-
-func (x *ListTournamentRecordsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[35]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ListTournamentRecordsRequest.ProtoReflect.Descriptor instead.
-func (*ListTournamentRecordsRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{35}
-}
-
-func (x *ListTournamentRecordsRequest) GetTournamentId() string {
-	if x != nil {
-		return x.TournamentId
-	}
-	return ""
-}
-
-func (x *ListTournamentRecordsRequest) GetLimit() int32 {
-	if x != nil {
-		return x.Limit
-	}
-	return 0
-}
-
-func (x *ListTournamentRecordsRequest) GetCursor() string {
-	if x != nil {
-		return x.Cursor
-	}
-	return ""
-}
-
-func (x *ListTournamentRecordsRequest) GetOwnerIds() []string {
-	if x != nil {
-		return x.OwnerIds
-	}
-	return nil
-}
-
-func (x *ListTournamentRecordsRequest) GetExpiry() int64 {
-	if x != nil {
-		return x.Expiry
-	}
-	return 0
-}
-
-type ListTournamentRecordsAroundOwnerRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	TournamentId  string                 `protobuf:"bytes,1,opt,name=tournament_id,json=tournamentId,proto3" json:"tournament_id,omitempty"`
-	OwnerId       string                 `protobuf:"bytes,2,opt,name=owner_id,json=ownerId,proto3" json:"owner_id,omitempty"`
-	Limit         int32                  `protobuf:"varint,3,opt,name=limit,proto3" json:"limit,omitempty"`
-	Expiry        int64                  `protobuf:"varint,4,opt,name=expiry,proto3" json:"expiry,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *ListTournamentRecordsAroundOwnerRequest) Reset() {
-	*x = ListTournamentRecordsAroundOwnerRequest{}
-	mi := &file_api_api_proto_msgTypes[36]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ListTournamentRecordsAroundOwnerRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ListTournamentRecordsAroundOwnerRequest) ProtoMessage() {}
-
-func (x *ListTournamentRecordsAroundOwnerRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[36]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ListTournamentRecordsAroundOwnerRequest.ProtoReflect.Descriptor instead.
-func (*ListTournamentRecordsAroundOwnerRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{36}
-}
-
-func (x *ListTournamentRecordsAroundOwnerRequest) GetTournamentId() string {
-	if x != nil {
-		return x.TournamentId
-	}
-	return ""
-}
-
-func (x *ListTournamentRecordsAroundOwnerRequest) GetOwnerId() string {
-	if x != nil {
-		return x.OwnerId
-	}
-	return ""
-}
-
-func (x *ListTournamentRecordsAroundOwnerRequest) GetLimit() int32 {
-	if x != nil {
-		return x.Limit
-	}
-	return 0
-}
-
-func (x *ListTournamentRecordsAroundOwnerRequest) GetExpiry() int64 {
-	if x != nil {
-		return x.Expiry
-	}
-	return 0
-}
-
-type DeleteTournamentRecordRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	TournamentId  string                 `protobuf:"bytes,1,opt,name=tournament_id,json=tournamentId,proto3" json:"tournament_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *DeleteTournamentRecordRequest) Reset() {
-	*x = DeleteTournamentRecordRequest{}
-	mi := &file_api_api_proto_msgTypes[37]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *DeleteTournamentRecordRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*DeleteTournamentRecordRequest) ProtoMessage() {}
-
-func (x *DeleteTournamentRecordRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[37]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use DeleteTournamentRecordRequest.ProtoReflect.Descriptor instead.
-func (*DeleteTournamentRecordRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{37}
-}
-
-func (x *DeleteTournamentRecordRequest) GetTournamentId() string {
-	if x != nil {
-		return x.TournamentId
-	}
-	return ""
-}
-
+// Add one or more friends to the current user.
 type AddFriendsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Ids           []string               `protobuf:"bytes,1,rep,name=ids,proto3" json:"ids,omitempty"`
-	Usernames     []string               `protobuf:"bytes,2,rep,name=usernames,proto3" json:"usernames,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The account id of a user.
+	Ids []string `protobuf:"bytes,1,rep,name=ids,proto3" json:"ids,omitempty"`
+	// The account username of a user.
+	Usernames []string `protobuf:"bytes,2,rep,name=usernames,proto3" json:"usernames,omitempty"`
+	// Optional metadata to add to friends.
+	Metadata      string `protobuf:"bytes,3,opt,name=metadata,proto3" json:"metadata,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *AddFriendsRequest) Reset() {
 	*x = AddFriendsRequest{}
-	mi := &file_api_api_proto_msgTypes[38]
+	mi := &file_api_api_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2949,7 +2269,7 @@ func (x *AddFriendsRequest) String() string {
 func (*AddFriendsRequest) ProtoMessage() {}
 
 func (x *AddFriendsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[38]
+	mi := &file_api_api_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2962,7 +2282,7 @@ func (x *AddFriendsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AddFriendsRequest.ProtoReflect.Descriptor instead.
 func (*AddFriendsRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{38}
+	return file_api_api_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *AddFriendsRequest) GetIds() []string {
@@ -2979,353 +2299,27 @@ func (x *AddFriendsRequest) GetUsernames() []string {
 	return nil
 }
 
-type ListFriendsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Limit         int32                  `protobuf:"varint,1,opt,name=limit,proto3" json:"limit,omitempty"`
-	State         int32                  `protobuf:"varint,2,opt,name=state,proto3" json:"state,omitempty"` // 0=friends, 1=sent request, 2=received request, 3=blocked
-	Cursor        string                 `protobuf:"bytes,3,opt,name=cursor,proto3" json:"cursor,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *ListFriendsRequest) Reset() {
-	*x = ListFriendsRequest{}
-	mi := &file_api_api_proto_msgTypes[39]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ListFriendsRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ListFriendsRequest) ProtoMessage() {}
-
-func (x *ListFriendsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[39]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ListFriendsRequest.ProtoReflect.Descriptor instead.
-func (*ListFriendsRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{39}
-}
-
-func (x *ListFriendsRequest) GetLimit() int32 {
-	if x != nil {
-		return x.Limit
-	}
-	return 0
-}
-
-func (x *ListFriendsRequest) GetState() int32 {
-	if x != nil {
-		return x.State
-	}
-	return 0
-}
-
-func (x *ListFriendsRequest) GetCursor() string {
-	if x != nil {
-		return x.Cursor
-	}
-	return ""
-}
-
-type ListFriendsOfFriendsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Limit         int32                  `protobuf:"varint,1,opt,name=limit,proto3" json:"limit,omitempty"`
-	Cursor        string                 `protobuf:"bytes,2,opt,name=cursor,proto3" json:"cursor,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *ListFriendsOfFriendsRequest) Reset() {
-	*x = ListFriendsOfFriendsRequest{}
-	mi := &file_api_api_proto_msgTypes[40]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ListFriendsOfFriendsRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ListFriendsOfFriendsRequest) ProtoMessage() {}
-
-func (x *ListFriendsOfFriendsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[40]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ListFriendsOfFriendsRequest.ProtoReflect.Descriptor instead.
-func (*ListFriendsOfFriendsRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{40}
-}
-
-func (x *ListFriendsOfFriendsRequest) GetLimit() int32 {
-	if x != nil {
-		return x.Limit
-	}
-	return 0
-}
-
-func (x *ListFriendsOfFriendsRequest) GetCursor() string {
-	if x != nil {
-		return x.Cursor
-	}
-	return ""
-}
-
-type Friend struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	User          *User                  `protobuf:"bytes,1,opt,name=user,proto3" json:"user,omitempty"`
-	State         int32                  `protobuf:"varint,2,opt,name=state,proto3" json:"state,omitempty"`
-	UpdateTime    *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=update_time,json=updateTime,proto3" json:"update_time,omitempty"`
-	Metadata      string                 `protobuf:"bytes,4,opt,name=metadata,proto3" json:"metadata,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *Friend) Reset() {
-	*x = Friend{}
-	mi := &file_api_api_proto_msgTypes[41]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *Friend) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*Friend) ProtoMessage() {}
-
-func (x *Friend) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[41]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use Friend.ProtoReflect.Descriptor instead.
-func (*Friend) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{41}
-}
-
-func (x *Friend) GetUser() *User {
-	if x != nil {
-		return x.User
-	}
-	return nil
-}
-
-func (x *Friend) GetState() int32 {
-	if x != nil {
-		return x.State
-	}
-	return 0
-}
-
-func (x *Friend) GetUpdateTime() *timestamppb.Timestamp {
-	if x != nil {
-		return x.UpdateTime
-	}
-	return nil
-}
-
-func (x *Friend) GetMetadata() string {
+func (x *AddFriendsRequest) GetMetadata() string {
 	if x != nil {
 		return x.Metadata
 	}
 	return ""
 }
 
-type FriendList struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Friends       []*Friend              `protobuf:"bytes,1,rep,name=friends,proto3" json:"friends,omitempty"`
-	NextCursor    string                 `protobuf:"bytes,2,opt,name=next_cursor,json=nextCursor,proto3" json:"next_cursor,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *FriendList) Reset() {
-	*x = FriendList{}
-	mi := &file_api_api_proto_msgTypes[42]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *FriendList) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*FriendList) ProtoMessage() {}
-
-func (x *FriendList) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[42]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use FriendList.ProtoReflect.Descriptor instead.
-func (*FriendList) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{42}
-}
-
-func (x *FriendList) GetFriends() []*Friend {
-	if x != nil {
-		return x.Friends
-	}
-	return nil
-}
-
-func (x *FriendList) GetNextCursor() string {
-	if x != nil {
-		return x.NextCursor
-	}
-	return ""
-}
-
-type FriendOfFriend struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Referrer      string                 `protobuf:"bytes,1,opt,name=referrer,proto3" json:"referrer,omitempty"`
-	User          *User                  `protobuf:"bytes,2,opt,name=user,proto3" json:"user,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *FriendOfFriend) Reset() {
-	*x = FriendOfFriend{}
-	mi := &file_api_api_proto_msgTypes[43]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *FriendOfFriend) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*FriendOfFriend) ProtoMessage() {}
-
-func (x *FriendOfFriend) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[43]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use FriendOfFriend.ProtoReflect.Descriptor instead.
-func (*FriendOfFriend) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{43}
-}
-
-func (x *FriendOfFriend) GetReferrer() string {
-	if x != nil {
-		return x.Referrer
-	}
-	return ""
-}
-
-func (x *FriendOfFriend) GetUser() *User {
-	if x != nil {
-		return x.User
-	}
-	return nil
-}
-
-type FriendsOfFriendsList struct {
-	state            protoimpl.MessageState `protogen:"open.v1"`
-	FriendsOfFriends []*FriendOfFriend      `protobuf:"bytes,1,rep,name=friends_of_friends,json=friendsOfFriends,proto3" json:"friends_of_friends,omitempty"`
-	Cursor           string                 `protobuf:"bytes,2,opt,name=cursor,proto3" json:"cursor,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
-}
-
-func (x *FriendsOfFriendsList) Reset() {
-	*x = FriendsOfFriendsList{}
-	mi := &file_api_api_proto_msgTypes[44]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *FriendsOfFriendsList) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*FriendsOfFriendsList) ProtoMessage() {}
-
-func (x *FriendsOfFriendsList) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[44]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use FriendsOfFriendsList.ProtoReflect.Descriptor instead.
-func (*FriendsOfFriendsList) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{44}
-}
-
-func (x *FriendsOfFriendsList) GetFriendsOfFriends() []*FriendOfFriend {
-	if x != nil {
-		return x.FriendsOfFriends
-	}
-	return nil
-}
-
-func (x *FriendsOfFriendsList) GetCursor() string {
-	if x != nil {
-		return x.Cursor
-	}
-	return ""
-}
-
+// Delete one or more friends for the current user.
 type DeleteFriendsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Ids           []string               `protobuf:"bytes,1,rep,name=ids,proto3" json:"ids,omitempty"`
-	Usernames     []string               `protobuf:"bytes,2,rep,name=usernames,proto3" json:"usernames,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The account id of a user.
+	Ids []string `protobuf:"bytes,1,rep,name=ids,proto3" json:"ids,omitempty"`
+	// The account username of a user.
+	Usernames     []string `protobuf:"bytes,2,rep,name=usernames,proto3" json:"usernames,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *DeleteFriendsRequest) Reset() {
 	*x = DeleteFriendsRequest{}
-	mi := &file_api_api_proto_msgTypes[45]
+	mi := &file_api_api_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3337,7 +2331,7 @@ func (x *DeleteFriendsRequest) String() string {
 func (*DeleteFriendsRequest) ProtoMessage() {}
 
 func (x *DeleteFriendsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[45]
+	mi := &file_api_api_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3350,7 +2344,7 @@ func (x *DeleteFriendsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteFriendsRequest.ProtoReflect.Descriptor instead.
 func (*DeleteFriendsRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{45}
+	return file_api_api_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *DeleteFriendsRequest) GetIds() []string {
@@ -3367,17 +2361,20 @@ func (x *DeleteFriendsRequest) GetUsernames() []string {
 	return nil
 }
 
+// Block one or more friends for the current user.
 type BlockFriendsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Ids           []string               `protobuf:"bytes,1,rep,name=ids,proto3" json:"ids,omitempty"`
-	Usernames     []string               `protobuf:"bytes,2,rep,name=usernames,proto3" json:"usernames,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The account id of a user.
+	Ids []string `protobuf:"bytes,1,rep,name=ids,proto3" json:"ids,omitempty"`
+	// The account username of a user.
+	Usernames     []string `protobuf:"bytes,2,rep,name=usernames,proto3" json:"usernames,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *BlockFriendsRequest) Reset() {
 	*x = BlockFriendsRequest{}
-	mi := &file_api_api_proto_msgTypes[46]
+	mi := &file_api_api_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3389,7 +2386,7 @@ func (x *BlockFriendsRequest) String() string {
 func (*BlockFriendsRequest) ProtoMessage() {}
 
 func (x *BlockFriendsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[46]
+	mi := &file_api_api_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3402,7 +2399,7 @@ func (x *BlockFriendsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BlockFriendsRequest.ProtoReflect.Descriptor instead.
 func (*BlockFriendsRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{46}
+	return file_api_api_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *BlockFriendsRequest) GetIds() []string {
@@ -3419,29 +2416,34 @@ func (x *BlockFriendsRequest) GetUsernames() []string {
 	return nil
 }
 
-type UnblockFriendsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Ids           []string               `protobuf:"bytes,1,rep,name=ids,proto3" json:"ids,omitempty"`
-	Usernames     []string               `protobuf:"bytes,2,rep,name=usernames,proto3" json:"usernames,omitempty"`
+// List friends for a user.
+type ListFriendsRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Max number of records to return. Between 1 and 1000.
+	Limit *wrapperspb.Int32Value `protobuf:"bytes,1,opt,name=limit,proto3" json:"limit,omitempty"`
+	// The friend state to list.
+	State *wrapperspb.Int32Value `protobuf:"bytes,2,opt,name=state,proto3" json:"state,omitempty"`
+	// An optional next page cursor.
+	Cursor        string `protobuf:"bytes,3,opt,name=cursor,proto3" json:"cursor,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *UnblockFriendsRequest) Reset() {
-	*x = UnblockFriendsRequest{}
-	mi := &file_api_api_proto_msgTypes[47]
+func (x *ListFriendsRequest) Reset() {
+	*x = ListFriendsRequest{}
+	mi := &file_api_api_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *UnblockFriendsRequest) String() string {
+func (x *ListFriendsRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*UnblockFriendsRequest) ProtoMessage() {}
+func (*ListFriendsRequest) ProtoMessage() {}
 
-func (x *UnblockFriendsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[47]
+func (x *ListFriendsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3452,36 +2454,284 @@ func (x *UnblockFriendsRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use UnblockFriendsRequest.ProtoReflect.Descriptor instead.
-func (*UnblockFriendsRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{47}
+// Deprecated: Use ListFriendsRequest.ProtoReflect.Descriptor instead.
+func (*ListFriendsRequest) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{30}
 }
 
-func (x *UnblockFriendsRequest) GetIds() []string {
+func (x *ListFriendsRequest) GetLimit() *wrapperspb.Int32Value {
 	if x != nil {
-		return x.Ids
+		return x.Limit
 	}
 	return nil
 }
 
-func (x *UnblockFriendsRequest) GetUsernames() []string {
+func (x *ListFriendsRequest) GetState() *wrapperspb.Int32Value {
 	if x != nil {
-		return x.Usernames
+		return x.State
 	}
 	return nil
 }
 
+func (x *ListFriendsRequest) GetCursor() string {
+	if x != nil {
+		return x.Cursor
+	}
+	return ""
+}
+
+// List friends of friends for the current user.
+type ListFriendsOfFriendsRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Max number of records to return. Between 1 and 100.
+	Limit *wrapperspb.Int32Value `protobuf:"bytes,1,opt,name=limit,proto3" json:"limit,omitempty"`
+	// An optional next page cursor.
+	Cursor        string `protobuf:"bytes,2,opt,name=cursor,proto3" json:"cursor,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListFriendsOfFriendsRequest) Reset() {
+	*x = ListFriendsOfFriendsRequest{}
+	mi := &file_api_api_proto_msgTypes[31]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListFriendsOfFriendsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListFriendsOfFriendsRequest) ProtoMessage() {}
+
+func (x *ListFriendsOfFriendsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[31]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListFriendsOfFriendsRequest.ProtoReflect.Descriptor instead.
+func (*ListFriendsOfFriendsRequest) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{31}
+}
+
+func (x *ListFriendsOfFriendsRequest) GetLimit() *wrapperspb.Int32Value {
+	if x != nil {
+		return x.Limit
+	}
+	return nil
+}
+
+func (x *ListFriendsOfFriendsRequest) GetCursor() string {
+	if x != nil {
+		return x.Cursor
+	}
+	return ""
+}
+
+// A friend of a user.
+type Friend struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The user object.
+	User *User `protobuf:"bytes,1,opt,name=user,proto3" json:"user,omitempty"`
+	// The friend status.
+	State *wrapperspb.Int32Value `protobuf:"bytes,2,opt,name=state,proto3" json:"state,omitempty"`
+	// Time of the latest relationship update.
+	UpdateTime *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=update_time,json=updateTime,proto3" json:"update_time,omitempty"`
+	// Metadata.
+	Metadata      string `protobuf:"bytes,4,opt,name=metadata,proto3" json:"metadata,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Friend) Reset() {
+	*x = Friend{}
+	mi := &file_api_api_proto_msgTypes[32]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Friend) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Friend) ProtoMessage() {}
+
+func (x *Friend) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[32]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Friend.ProtoReflect.Descriptor instead.
+func (*Friend) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{32}
+}
+
+func (x *Friend) GetUser() *User {
+	if x != nil {
+		return x.User
+	}
+	return nil
+}
+
+func (x *Friend) GetState() *wrapperspb.Int32Value {
+	if x != nil {
+		return x.State
+	}
+	return nil
+}
+
+func (x *Friend) GetUpdateTime() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdateTime
+	}
+	return nil
+}
+
+func (x *Friend) GetMetadata() string {
+	if x != nil {
+		return x.Metadata
+	}
+	return ""
+}
+
+// A collection of zero or more friends of the user.
+type FriendList struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The Friend objects.
+	Friends []*Friend `protobuf:"bytes,1,rep,name=friends,proto3" json:"friends,omitempty"`
+	// Cursor for the next page of results, if any.
+	Cursor        string `protobuf:"bytes,2,opt,name=cursor,proto3" json:"cursor,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *FriendList) Reset() {
+	*x = FriendList{}
+	mi := &file_api_api_proto_msgTypes[33]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FriendList) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FriendList) ProtoMessage() {}
+
+func (x *FriendList) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[33]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FriendList.ProtoReflect.Descriptor instead.
+func (*FriendList) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{33}
+}
+
+func (x *FriendList) GetFriends() []*Friend {
+	if x != nil {
+		return x.Friends
+	}
+	return nil
+}
+
+func (x *FriendList) GetCursor() string {
+	if x != nil {
+		return x.Cursor
+	}
+	return ""
+}
+
+// A List of friends of friends.
+type FriendsOfFriendsList struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// User friends of friends.
+	FriendsOfFriends []*FriendsOfFriendsList_FriendOfFriend `protobuf:"bytes,1,rep,name=friends_of_friends,json=friendsOfFriends,proto3" json:"friends_of_friends,omitempty"`
+	// Cursor for the next page of results, if any.
+	Cursor        string `protobuf:"bytes,2,opt,name=cursor,proto3" json:"cursor,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *FriendsOfFriendsList) Reset() {
+	*x = FriendsOfFriendsList{}
+	mi := &file_api_api_proto_msgTypes[34]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FriendsOfFriendsList) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FriendsOfFriendsList) ProtoMessage() {}
+
+func (x *FriendsOfFriendsList) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[34]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FriendsOfFriendsList.ProtoReflect.Descriptor instead.
+func (*FriendsOfFriendsList) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{34}
+}
+
+func (x *FriendsOfFriendsList) GetFriendsOfFriends() []*FriendsOfFriendsList_FriendOfFriend {
+	if x != nil {
+		return x.FriendsOfFriends
+	}
+	return nil
+}
+
+func (x *FriendsOfFriendsList) GetCursor() string {
+	if x != nil {
+		return x.Cursor
+	}
+	return ""
+}
+
+// Import Facebook friends into the current user's account.
 type ImportFacebookFriendsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Token         string                 `protobuf:"bytes,1,opt,name=token,proto3" json:"token,omitempty"`
-	Reset_        bool                   `protobuf:"varint,2,opt,name=reset,proto3" json:"reset,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The Facebook account details.
+	Account *AccountFacebook `protobuf:"bytes,1,opt,name=account,proto3" json:"account,omitempty"`
+	// Reset the current user's friends list.
+	Reset_        *wrapperspb.BoolValue `protobuf:"bytes,2,opt,name=reset,proto3" json:"reset,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ImportFacebookFriendsRequest) Reset() {
 	*x = ImportFacebookFriendsRequest{}
-	mi := &file_api_api_proto_msgTypes[48]
+	mi := &file_api_api_proto_msgTypes[35]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3493,7 +2743,7 @@ func (x *ImportFacebookFriendsRequest) String() string {
 func (*ImportFacebookFriendsRequest) ProtoMessage() {}
 
 func (x *ImportFacebookFriendsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[48]
+	mi := &file_api_api_proto_msgTypes[35]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3506,34 +2756,37 @@ func (x *ImportFacebookFriendsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ImportFacebookFriendsRequest.ProtoReflect.Descriptor instead.
 func (*ImportFacebookFriendsRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{48}
+	return file_api_api_proto_rawDescGZIP(), []int{35}
 }
 
-func (x *ImportFacebookFriendsRequest) GetToken() string {
+func (x *ImportFacebookFriendsRequest) GetAccount() *AccountFacebook {
 	if x != nil {
-		return x.Token
+		return x.Account
 	}
-	return ""
+	return nil
 }
 
-func (x *ImportFacebookFriendsRequest) GetReset_() bool {
+func (x *ImportFacebookFriendsRequest) GetReset_() *wrapperspb.BoolValue {
 	if x != nil {
 		return x.Reset_
 	}
-	return false
+	return nil
 }
 
+// Import Steam friends into the current user's account.
 type ImportSteamFriendsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	SteamToken    string                 `protobuf:"bytes,1,opt,name=steam_token,json=steamToken,proto3" json:"steam_token,omitempty"`
-	Reset_        bool                   `protobuf:"varint,2,opt,name=reset,proto3" json:"reset,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The Steam account details.
+	Account *AccountSteam `protobuf:"bytes,1,opt,name=account,proto3" json:"account,omitempty"`
+	// Reset the current user's friends list.
+	Reset_        *wrapperspb.BoolValue `protobuf:"bytes,2,opt,name=reset,proto3" json:"reset,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ImportSteamFriendsRequest) Reset() {
 	*x = ImportSteamFriendsRequest{}
-	mi := &file_api_api_proto_msgTypes[49]
+	mi := &file_api_api_proto_msgTypes[36]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3545,7 +2798,7 @@ func (x *ImportSteamFriendsRequest) String() string {
 func (*ImportSteamFriendsRequest) ProtoMessage() {}
 
 func (x *ImportSteamFriendsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[49]
+	mi := &file_api_api_proto_msgTypes[36]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3558,39 +2811,155 @@ func (x *ImportSteamFriendsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ImportSteamFriendsRequest.ProtoReflect.Descriptor instead.
 func (*ImportSteamFriendsRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{49}
+	return file_api_api_proto_rawDescGZIP(), []int{36}
 }
 
-func (x *ImportSteamFriendsRequest) GetSteamToken() string {
+func (x *ImportSteamFriendsRequest) GetAccount() *AccountSteam {
 	if x != nil {
-		return x.SteamToken
+		return x.Account
 	}
-	return ""
+	return nil
 }
 
-func (x *ImportSteamFriendsRequest) GetReset_() bool {
+func (x *ImportSteamFriendsRequest) GetReset_() *wrapperspb.BoolValue {
 	if x != nil {
 		return x.Reset_
 	}
-	return false
+	return nil
 }
 
+// Link Facebook to the current user's account.
+type LinkFacebookRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The Facebook account details.
+	Account *AccountFacebook `protobuf:"bytes,1,opt,name=account,proto3" json:"account,omitempty"`
+	// Import Facebook friends for the user.
+	Sync          *wrapperspb.BoolValue `protobuf:"bytes,2,opt,name=sync,proto3" json:"sync,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *LinkFacebookRequest) Reset() {
+	*x = LinkFacebookRequest{}
+	mi := &file_api_api_proto_msgTypes[37]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *LinkFacebookRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*LinkFacebookRequest) ProtoMessage() {}
+
+func (x *LinkFacebookRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[37]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use LinkFacebookRequest.ProtoReflect.Descriptor instead.
+func (*LinkFacebookRequest) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{37}
+}
+
+func (x *LinkFacebookRequest) GetAccount() *AccountFacebook {
+	if x != nil {
+		return x.Account
+	}
+	return nil
+}
+
+func (x *LinkFacebookRequest) GetSync() *wrapperspb.BoolValue {
+	if x != nil {
+		return x.Sync
+	}
+	return nil
+}
+
+// Link Steam to the current user's account.
+type LinkSteamRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The Steam account details.
+	Account *AccountSteam `protobuf:"bytes,1,opt,name=account,proto3" json:"account,omitempty"`
+	// Import Steam friends for the user.
+	Sync          *wrapperspb.BoolValue `protobuf:"bytes,2,opt,name=sync,proto3" json:"sync,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *LinkSteamRequest) Reset() {
+	*x = LinkSteamRequest{}
+	mi := &file_api_api_proto_msgTypes[38]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *LinkSteamRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*LinkSteamRequest) ProtoMessage() {}
+
+func (x *LinkSteamRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[38]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use LinkSteamRequest.ProtoReflect.Descriptor instead.
+func (*LinkSteamRequest) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{38}
+}
+
+func (x *LinkSteamRequest) GetAccount() *AccountSteam {
+	if x != nil {
+		return x.Account
+	}
+	return nil
+}
+
+func (x *LinkSteamRequest) GetSync() *wrapperspb.BoolValue {
+	if x != nil {
+		return x.Sync
+	}
+	return nil
+}
+
+// Create a group with the current user as owner.
 type CreateGroupRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	Description   string                 `protobuf:"bytes,2,opt,name=description,proto3" json:"description,omitempty"`
-	AvatarUrl     string                 `protobuf:"bytes,3,opt,name=avatar_url,json=avatarUrl,proto3" json:"avatar_url,omitempty"`
-	LangTag       string                 `protobuf:"bytes,4,opt,name=lang_tag,json=langTag,proto3" json:"lang_tag,omitempty"`
-	Open          bool                   `protobuf:"varint,5,opt,name=open,proto3" json:"open,omitempty"`
-	MaxCount      int32                  `protobuf:"varint,6,opt,name=max_count,json=maxCount,proto3" json:"max_count,omitempty"`
-	Metadata      string                 `protobuf:"bytes,7,opt,name=metadata,proto3" json:"metadata,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// A unique name for the group.
+	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	// A description for the group.
+	Description string `protobuf:"bytes,2,opt,name=description,proto3" json:"description,omitempty"`
+	// The language expected to be a tag which follows the BCP-47 spec.
+	LangTag string `protobuf:"bytes,3,opt,name=lang_tag,json=langTag,proto3" json:"lang_tag,omitempty"`
+	// A URL for an avatar image.
+	AvatarUrl string `protobuf:"bytes,4,opt,name=avatar_url,json=avatarUrl,proto3" json:"avatar_url,omitempty"`
+	// Mark a group as open or not where only admins can accept members.
+	Open bool `protobuf:"varint,5,opt,name=open,proto3" json:"open,omitempty"`
+	// Maximum number of group members.
+	MaxCount      int32 `protobuf:"varint,6,opt,name=max_count,json=maxCount,proto3" json:"max_count,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *CreateGroupRequest) Reset() {
 	*x = CreateGroupRequest{}
-	mi := &file_api_api_proto_msgTypes[50]
+	mi := &file_api_api_proto_msgTypes[39]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3602,7 +2971,7 @@ func (x *CreateGroupRequest) String() string {
 func (*CreateGroupRequest) ProtoMessage() {}
 
 func (x *CreateGroupRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[50]
+	mi := &file_api_api_proto_msgTypes[39]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3615,7 +2984,7 @@ func (x *CreateGroupRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateGroupRequest.ProtoReflect.Descriptor instead.
 func (*CreateGroupRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{50}
+	return file_api_api_proto_rawDescGZIP(), []int{39}
 }
 
 func (x *CreateGroupRequest) GetName() string {
@@ -3632,16 +3001,16 @@ func (x *CreateGroupRequest) GetDescription() string {
 	return ""
 }
 
-func (x *CreateGroupRequest) GetAvatarUrl() string {
+func (x *CreateGroupRequest) GetLangTag() string {
 	if x != nil {
-		return x.AvatarUrl
+		return x.LangTag
 	}
 	return ""
 }
 
-func (x *CreateGroupRequest) GetLangTag() string {
+func (x *CreateGroupRequest) GetAvatarUrl() string {
 	if x != nil {
-		return x.LangTag
+		return x.AvatarUrl
 	}
 	return ""
 }
@@ -3660,26 +3029,32 @@ func (x *CreateGroupRequest) GetMaxCount() int32 {
 	return 0
 }
 
-func (x *CreateGroupRequest) GetMetadata() string {
-	if x != nil {
-		return x.Metadata
-	}
-	return ""
-}
-
+// A group in the server.
 type Group struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	CreatorId     string                 `protobuf:"bytes,2,opt,name=creator_id,json=creatorId,proto3" json:"creator_id,omitempty"`
-	Name          string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
-	Description   string                 `protobuf:"bytes,4,opt,name=description,proto3" json:"description,omitempty"`
-	AvatarUrl     string                 `protobuf:"bytes,5,opt,name=avatar_url,json=avatarUrl,proto3" json:"avatar_url,omitempty"`
-	LangTag       string                 `protobuf:"bytes,6,opt,name=lang_tag,json=langTag,proto3" json:"lang_tag,omitempty"`
-	Open          bool                   `protobuf:"varint,7,opt,name=open,proto3" json:"open,omitempty"`
-	EdgeCount     int32                  `protobuf:"varint,8,opt,name=edge_count,json=edgeCount,proto3" json:"edge_count,omitempty"`
-	MaxCount      int32                  `protobuf:"varint,9,opt,name=max_count,json=maxCount,proto3" json:"max_count,omitempty"`
-	Metadata      string                 `protobuf:"bytes,10,opt,name=metadata,proto3" json:"metadata,omitempty"`
-	CreateTime    *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=create_time,json=createTime,proto3" json:"create_time,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The id of a group.
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// The id of the user who created the group.
+	CreatorId string `protobuf:"bytes,2,opt,name=creator_id,json=creatorId,proto3" json:"creator_id,omitempty"`
+	// The unique name of the group.
+	Name string `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
+	// A description for the group.
+	Description string `protobuf:"bytes,4,opt,name=description,proto3" json:"description,omitempty"`
+	// The language expected to be a tag which follows the BCP-47 spec.
+	LangTag string `protobuf:"bytes,5,opt,name=lang_tag,json=langTag,proto3" json:"lang_tag,omitempty"`
+	// Additional information stored as a JSON object.
+	Metadata string `protobuf:"bytes,6,opt,name=metadata,proto3" json:"metadata,omitempty"`
+	// A URL for an avatar image.
+	AvatarUrl string `protobuf:"bytes,7,opt,name=avatar_url,json=avatarUrl,proto3" json:"avatar_url,omitempty"`
+	// Anyone can join open groups, otherwise only admins can accept members.
+	Open *wrapperspb.BoolValue `protobuf:"bytes,8,opt,name=open,proto3" json:"open,omitempty"`
+	// The current count of all members in the group.
+	EdgeCount int32 `protobuf:"varint,9,opt,name=edge_count,json=edgeCount,proto3" json:"edge_count,omitempty"`
+	// The maximum number of members allowed.
+	MaxCount int32 `protobuf:"varint,10,opt,name=max_count,json=maxCount,proto3" json:"max_count,omitempty"`
+	// The UNIX time when the group was created.
+	CreateTime *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=create_time,json=createTime,proto3" json:"create_time,omitempty"`
+	// The UNIX time when the group was last updated.
 	UpdateTime    *timestamppb.Timestamp `protobuf:"bytes,12,opt,name=update_time,json=updateTime,proto3" json:"update_time,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -3687,7 +3062,7 @@ type Group struct {
 
 func (x *Group) Reset() {
 	*x = Group{}
-	mi := &file_api_api_proto_msgTypes[51]
+	mi := &file_api_api_proto_msgTypes[40]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3699,7 +3074,7 @@ func (x *Group) String() string {
 func (*Group) ProtoMessage() {}
 
 func (x *Group) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[51]
+	mi := &file_api_api_proto_msgTypes[40]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3712,7 +3087,7 @@ func (x *Group) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Group.ProtoReflect.Descriptor instead.
 func (*Group) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{51}
+	return file_api_api_proto_rawDescGZIP(), []int{40}
 }
 
 func (x *Group) GetId() string {
@@ -3743,13 +3118,6 @@ func (x *Group) GetDescription() string {
 	return ""
 }
 
-func (x *Group) GetAvatarUrl() string {
-	if x != nil {
-		return x.AvatarUrl
-	}
-	return ""
-}
-
 func (x *Group) GetLangTag() string {
 	if x != nil {
 		return x.LangTag
@@ -3757,11 +3125,25 @@ func (x *Group) GetLangTag() string {
 	return ""
 }
 
-func (x *Group) GetOpen() bool {
+func (x *Group) GetMetadata() string {
+	if x != nil {
+		return x.Metadata
+	}
+	return ""
+}
+
+func (x *Group) GetAvatarUrl() string {
+	if x != nil {
+		return x.AvatarUrl
+	}
+	return ""
+}
+
+func (x *Group) GetOpen() *wrapperspb.BoolValue {
 	if x != nil {
 		return x.Open
 	}
-	return false
+	return nil
 }
 
 func (x *Group) GetEdgeCount() int32 {
@@ -3778,13 +3160,6 @@ func (x *Group) GetMaxCount() int32 {
 	return 0
 }
 
-func (x *Group) GetMetadata() string {
-	if x != nil {
-		return x.Metadata
-	}
-	return ""
-}
-
 func (x *Group) GetCreateTime() *timestamppb.Timestamp {
 	if x != nil {
 		return x.CreateTime
@@ -3799,237 +3174,20 @@ func (x *Group) GetUpdateTime() *timestamppb.Timestamp {
 	return nil
 }
 
-type UpdateGroupRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	Description   string                 `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
-	AvatarUrl     string                 `protobuf:"bytes,4,opt,name=avatar_url,json=avatarUrl,proto3" json:"avatar_url,omitempty"`
-	LangTag       string                 `protobuf:"bytes,5,opt,name=lang_tag,json=langTag,proto3" json:"lang_tag,omitempty"`
-	Open          bool                   `protobuf:"varint,6,opt,name=open,proto3" json:"open,omitempty"`
-	Metadata      string                 `protobuf:"bytes,7,opt,name=metadata,proto3" json:"metadata,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *UpdateGroupRequest) Reset() {
-	*x = UpdateGroupRequest{}
-	mi := &file_api_api_proto_msgTypes[52]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *UpdateGroupRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*UpdateGroupRequest) ProtoMessage() {}
-
-func (x *UpdateGroupRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[52]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use UpdateGroupRequest.ProtoReflect.Descriptor instead.
-func (*UpdateGroupRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{52}
-}
-
-func (x *UpdateGroupRequest) GetId() string {
-	if x != nil {
-		return x.Id
-	}
-	return ""
-}
-
-func (x *UpdateGroupRequest) GetName() string {
-	if x != nil {
-		return x.Name
-	}
-	return ""
-}
-
-func (x *UpdateGroupRequest) GetDescription() string {
-	if x != nil {
-		return x.Description
-	}
-	return ""
-}
-
-func (x *UpdateGroupRequest) GetAvatarUrl() string {
-	if x != nil {
-		return x.AvatarUrl
-	}
-	return ""
-}
-
-func (x *UpdateGroupRequest) GetLangTag() string {
-	if x != nil {
-		return x.LangTag
-	}
-	return ""
-}
-
-func (x *UpdateGroupRequest) GetOpen() bool {
-	if x != nil {
-		return x.Open
-	}
-	return false
-}
-
-func (x *UpdateGroupRequest) GetMetadata() string {
-	if x != nil {
-		return x.Metadata
-	}
-	return ""
-}
-
-type DeleteGroupRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *DeleteGroupRequest) Reset() {
-	*x = DeleteGroupRequest{}
-	mi := &file_api_api_proto_msgTypes[53]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *DeleteGroupRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*DeleteGroupRequest) ProtoMessage() {}
-
-func (x *DeleteGroupRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[53]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use DeleteGroupRequest.ProtoReflect.Descriptor instead.
-func (*DeleteGroupRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{53}
-}
-
-func (x *DeleteGroupRequest) GetId() string {
-	if x != nil {
-		return x.Id
-	}
-	return ""
-}
-
-type ListGroupsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	LangTag       string                 `protobuf:"bytes,2,opt,name=lang_tag,json=langTag,proto3" json:"lang_tag,omitempty"`
-	Open          *bool                  `protobuf:"varint,3,opt,name=open,proto3,oneof" json:"open,omitempty"`
-	Limit         int32                  `protobuf:"varint,4,opt,name=limit,proto3" json:"limit,omitempty"`
-	Cursor        string                 `protobuf:"bytes,5,opt,name=cursor,proto3" json:"cursor,omitempty"`
-	Members       int32                  `protobuf:"varint,6,opt,name=members,proto3" json:"members,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *ListGroupsRequest) Reset() {
-	*x = ListGroupsRequest{}
-	mi := &file_api_api_proto_msgTypes[54]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ListGroupsRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ListGroupsRequest) ProtoMessage() {}
-
-func (x *ListGroupsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[54]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ListGroupsRequest.ProtoReflect.Descriptor instead.
-func (*ListGroupsRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{54}
-}
-
-func (x *ListGroupsRequest) GetName() string {
-	if x != nil {
-		return x.Name
-	}
-	return ""
-}
-
-func (x *ListGroupsRequest) GetLangTag() string {
-	if x != nil {
-		return x.LangTag
-	}
-	return ""
-}
-
-func (x *ListGroupsRequest) GetOpen() bool {
-	if x != nil && x.Open != nil {
-		return *x.Open
-	}
-	return false
-}
-
-func (x *ListGroupsRequest) GetLimit() int32 {
-	if x != nil {
-		return x.Limit
-	}
-	return 0
-}
-
-func (x *ListGroupsRequest) GetCursor() string {
-	if x != nil {
-		return x.Cursor
-	}
-	return ""
-}
-
-func (x *ListGroupsRequest) GetMembers() int32 {
-	if x != nil {
-		return x.Members
-	}
-	return 0
-}
-
+// One or more groups returned from a listing operation.
 type GroupList struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Groups        []*Group               `protobuf:"bytes,1,rep,name=groups,proto3" json:"groups,omitempty"`
-	NextCursor    string                 `protobuf:"bytes,2,opt,name=next_cursor,json=nextCursor,proto3" json:"next_cursor,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// One or more groups.
+	Groups []*Group `protobuf:"bytes,1,rep,name=groups,proto3" json:"groups,omitempty"`
+	// A cursor used to get the next page.
+	Cursor        string `protobuf:"bytes,2,opt,name=cursor,proto3" json:"cursor,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *GroupList) Reset() {
 	*x = GroupList{}
-	mi := &file_api_api_proto_msgTypes[55]
+	mi := &file_api_api_proto_msgTypes[41]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4041,7 +3199,7 @@ func (x *GroupList) String() string {
 func (*GroupList) ProtoMessage() {}
 
 func (x *GroupList) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[55]
+	mi := &file_api_api_proto_msgTypes[41]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4054,7 +3212,7 @@ func (x *GroupList) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GroupList.ProtoReflect.Descriptor instead.
 func (*GroupList) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{55}
+	return file_api_api_proto_rawDescGZIP(), []int{41}
 }
 
 func (x *GroupList) GetGroups() []*Group {
@@ -4064,23 +3222,253 @@ func (x *GroupList) GetGroups() []*Group {
 	return nil
 }
 
-func (x *GroupList) GetNextCursor() string {
+func (x *GroupList) GetCursor() string {
 	if x != nil {
-		return x.NextCursor
+		return x.Cursor
 	}
 	return ""
 }
 
+// Update fields in a given group.
+type UpdateGroupRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The ID of the group to update.
+	GroupId string `protobuf:"bytes,1,opt,name=group_id,json=groupId,proto3" json:"group_id,omitempty"`
+	// Name.
+	Name *wrapperspb.StringValue `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	// Description string.
+	Description *wrapperspb.StringValue `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
+	// Lang tag.
+	LangTag *wrapperspb.StringValue `protobuf:"bytes,4,opt,name=lang_tag,json=langTag,proto3" json:"lang_tag,omitempty"`
+	// Avatar URL.
+	AvatarUrl *wrapperspb.StringValue `protobuf:"bytes,5,opt,name=avatar_url,json=avatarUrl,proto3" json:"avatar_url,omitempty"`
+	// Open is true if anyone should be allowed to join.
+	Open          *wrapperspb.BoolValue `protobuf:"bytes,6,opt,name=open,proto3" json:"open,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateGroupRequest) Reset() {
+	*x = UpdateGroupRequest{}
+	mi := &file_api_api_proto_msgTypes[42]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateGroupRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateGroupRequest) ProtoMessage() {}
+
+func (x *UpdateGroupRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[42]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateGroupRequest.ProtoReflect.Descriptor instead.
+func (*UpdateGroupRequest) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{42}
+}
+
+func (x *UpdateGroupRequest) GetGroupId() string {
+	if x != nil {
+		return x.GroupId
+	}
+	return ""
+}
+
+func (x *UpdateGroupRequest) GetName() *wrapperspb.StringValue {
+	if x != nil {
+		return x.Name
+	}
+	return nil
+}
+
+func (x *UpdateGroupRequest) GetDescription() *wrapperspb.StringValue {
+	if x != nil {
+		return x.Description
+	}
+	return nil
+}
+
+func (x *UpdateGroupRequest) GetLangTag() *wrapperspb.StringValue {
+	if x != nil {
+		return x.LangTag
+	}
+	return nil
+}
+
+func (x *UpdateGroupRequest) GetAvatarUrl() *wrapperspb.StringValue {
+	if x != nil {
+		return x.AvatarUrl
+	}
+	return nil
+}
+
+func (x *UpdateGroupRequest) GetOpen() *wrapperspb.BoolValue {
+	if x != nil {
+		return x.Open
+	}
+	return nil
+}
+
+// Delete a group the user has access to.
+type DeleteGroupRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The id of a group.
+	GroupId       string `protobuf:"bytes,1,opt,name=group_id,json=groupId,proto3" json:"group_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteGroupRequest) Reset() {
+	*x = DeleteGroupRequest{}
+	mi := &file_api_api_proto_msgTypes[43]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteGroupRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteGroupRequest) ProtoMessage() {}
+
+func (x *DeleteGroupRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[43]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteGroupRequest.ProtoReflect.Descriptor instead.
+func (*DeleteGroupRequest) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{43}
+}
+
+func (x *DeleteGroupRequest) GetGroupId() string {
+	if x != nil {
+		return x.GroupId
+	}
+	return ""
+}
+
+// List groups based on given filters.
+type ListGroupsRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// List groups that contain this value in their names.
+	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	// Optional pagination cursor.
+	Cursor string `protobuf:"bytes,2,opt,name=cursor,proto3" json:"cursor,omitempty"`
+	// Max number of groups to return. Between 1 and 100.
+	Limit *wrapperspb.Int32Value `protobuf:"bytes,3,opt,name=limit,proto3" json:"limit,omitempty"`
+	// Language tag filter.
+	LangTag string `protobuf:"bytes,4,opt,name=lang_tag,json=langTag,proto3" json:"lang_tag,omitempty"`
+	// Number of group members.
+	Members *wrapperspb.Int32Value `protobuf:"bytes,5,opt,name=members,proto3" json:"members,omitempty"`
+	// Optional Open/Closed filter.
+	Open          *wrapperspb.BoolValue `protobuf:"bytes,6,opt,name=open,proto3" json:"open,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListGroupsRequest) Reset() {
+	*x = ListGroupsRequest{}
+	mi := &file_api_api_proto_msgTypes[44]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListGroupsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListGroupsRequest) ProtoMessage() {}
+
+func (x *ListGroupsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[44]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListGroupsRequest.ProtoReflect.Descriptor instead.
+func (*ListGroupsRequest) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{44}
+}
+
+func (x *ListGroupsRequest) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *ListGroupsRequest) GetCursor() string {
+	if x != nil {
+		return x.Cursor
+	}
+	return ""
+}
+
+func (x *ListGroupsRequest) GetLimit() *wrapperspb.Int32Value {
+	if x != nil {
+		return x.Limit
+	}
+	return nil
+}
+
+func (x *ListGroupsRequest) GetLangTag() string {
+	if x != nil {
+		return x.LangTag
+	}
+	return ""
+}
+
+func (x *ListGroupsRequest) GetMembers() *wrapperspb.Int32Value {
+	if x != nil {
+		return x.Members
+	}
+	return nil
+}
+
+func (x *ListGroupsRequest) GetOpen() *wrapperspb.BoolValue {
+	if x != nil {
+		return x.Open
+	}
+	return nil
+}
+
+// Immediately join an open group, or request to join a closed one.
 type JoinGroupRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The group ID to join. The group must already exist.
+	GroupId       string `protobuf:"bytes,1,opt,name=group_id,json=groupId,proto3" json:"group_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *JoinGroupRequest) Reset() {
 	*x = JoinGroupRequest{}
-	mi := &file_api_api_proto_msgTypes[56]
+	mi := &file_api_api_proto_msgTypes[45]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4092,7 +3480,7 @@ func (x *JoinGroupRequest) String() string {
 func (*JoinGroupRequest) ProtoMessage() {}
 
 func (x *JoinGroupRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[56]
+	mi := &file_api_api_proto_msgTypes[45]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4105,26 +3493,28 @@ func (x *JoinGroupRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use JoinGroupRequest.ProtoReflect.Descriptor instead.
 func (*JoinGroupRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{56}
+	return file_api_api_proto_rawDescGZIP(), []int{45}
 }
 
-func (x *JoinGroupRequest) GetId() string {
+func (x *JoinGroupRequest) GetGroupId() string {
 	if x != nil {
-		return x.Id
+		return x.GroupId
 	}
 	return ""
 }
 
+// Leave a group.
 type LeaveGroupRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The group ID to leave.
+	GroupId       string `protobuf:"bytes,1,opt,name=group_id,json=groupId,proto3" json:"group_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *LeaveGroupRequest) Reset() {
 	*x = LeaveGroupRequest{}
-	mi := &file_api_api_proto_msgTypes[57]
+	mi := &file_api_api_proto_msgTypes[46]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4136,7 +3526,7 @@ func (x *LeaveGroupRequest) String() string {
 func (*LeaveGroupRequest) ProtoMessage() {}
 
 func (x *LeaveGroupRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[57]
+	mi := &file_api_api_proto_msgTypes[46]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4149,27 +3539,30 @@ func (x *LeaveGroupRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LeaveGroupRequest.ProtoReflect.Descriptor instead.
 func (*LeaveGroupRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{57}
+	return file_api_api_proto_rawDescGZIP(), []int{46}
 }
 
-func (x *LeaveGroupRequest) GetId() string {
+func (x *LeaveGroupRequest) GetGroupId() string {
 	if x != nil {
-		return x.Id
+		return x.GroupId
 	}
 	return ""
 }
 
+// Add users to a group.
 type AddGroupUsersRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	GroupId       string                 `protobuf:"bytes,1,opt,name=group_id,json=groupId,proto3" json:"group_id,omitempty"`
-	UserIds       []string               `protobuf:"bytes,2,rep,name=user_ids,json=userIds,proto3" json:"user_ids,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The group to add users to.
+	GroupId string `protobuf:"bytes,1,opt,name=group_id,json=groupId,proto3" json:"group_id,omitempty"`
+	// The users to add.
+	UserIds       []string `protobuf:"bytes,2,rep,name=user_ids,json=userIds,proto3" json:"user_ids,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *AddGroupUsersRequest) Reset() {
 	*x = AddGroupUsersRequest{}
-	mi := &file_api_api_proto_msgTypes[58]
+	mi := &file_api_api_proto_msgTypes[47]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4181,7 +3574,7 @@ func (x *AddGroupUsersRequest) String() string {
 func (*AddGroupUsersRequest) ProtoMessage() {}
 
 func (x *AddGroupUsersRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[58]
+	mi := &file_api_api_proto_msgTypes[47]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4194,7 +3587,7 @@ func (x *AddGroupUsersRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AddGroupUsersRequest.ProtoReflect.Descriptor instead.
 func (*AddGroupUsersRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{58}
+	return file_api_api_proto_rawDescGZIP(), []int{47}
 }
 
 func (x *AddGroupUsersRequest) GetGroupId() string {
@@ -4211,17 +3604,20 @@ func (x *AddGroupUsersRequest) GetUserIds() []string {
 	return nil
 }
 
+// Kick a set of users from a group.
 type KickGroupUsersRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	GroupId       string                 `protobuf:"bytes,1,opt,name=group_id,json=groupId,proto3" json:"group_id,omitempty"`
-	UserIds       []string               `protobuf:"bytes,2,rep,name=user_ids,json=userIds,proto3" json:"user_ids,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The group ID to kick from.
+	GroupId string `protobuf:"bytes,1,opt,name=group_id,json=groupId,proto3" json:"group_id,omitempty"`
+	// The users to kick.
+	UserIds       []string `protobuf:"bytes,2,rep,name=user_ids,json=userIds,proto3" json:"user_ids,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *KickGroupUsersRequest) Reset() {
 	*x = KickGroupUsersRequest{}
-	mi := &file_api_api_proto_msgTypes[59]
+	mi := &file_api_api_proto_msgTypes[48]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4233,7 +3629,7 @@ func (x *KickGroupUsersRequest) String() string {
 func (*KickGroupUsersRequest) ProtoMessage() {}
 
 func (x *KickGroupUsersRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[59]
+	mi := &file_api_api_proto_msgTypes[48]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4246,7 +3642,7 @@ func (x *KickGroupUsersRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use KickGroupUsersRequest.ProtoReflect.Descriptor instead.
 func (*KickGroupUsersRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{59}
+	return file_api_api_proto_rawDescGZIP(), []int{48}
 }
 
 func (x *KickGroupUsersRequest) GetGroupId() string {
@@ -4263,17 +3659,20 @@ func (x *KickGroupUsersRequest) GetUserIds() []string {
 	return nil
 }
 
+// Promote a set of users in a group to the next role up.
 type PromoteGroupUsersRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	GroupId       string                 `protobuf:"bytes,1,opt,name=group_id,json=groupId,proto3" json:"group_id,omitempty"`
-	UserIds       []string               `protobuf:"bytes,2,rep,name=user_ids,json=userIds,proto3" json:"user_ids,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The group ID to promote in.
+	GroupId string `protobuf:"bytes,1,opt,name=group_id,json=groupId,proto3" json:"group_id,omitempty"`
+	// The users to promote.
+	UserIds       []string `protobuf:"bytes,2,rep,name=user_ids,json=userIds,proto3" json:"user_ids,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *PromoteGroupUsersRequest) Reset() {
 	*x = PromoteGroupUsersRequest{}
-	mi := &file_api_api_proto_msgTypes[60]
+	mi := &file_api_api_proto_msgTypes[49]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4285,7 +3684,7 @@ func (x *PromoteGroupUsersRequest) String() string {
 func (*PromoteGroupUsersRequest) ProtoMessage() {}
 
 func (x *PromoteGroupUsersRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[60]
+	mi := &file_api_api_proto_msgTypes[49]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4298,7 +3697,7 @@ func (x *PromoteGroupUsersRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PromoteGroupUsersRequest.ProtoReflect.Descriptor instead.
 func (*PromoteGroupUsersRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{60}
+	return file_api_api_proto_rawDescGZIP(), []int{49}
 }
 
 func (x *PromoteGroupUsersRequest) GetGroupId() string {
@@ -4315,17 +3714,20 @@ func (x *PromoteGroupUsersRequest) GetUserIds() []string {
 	return nil
 }
 
+// Demote a set of users in a group to the next role down.
 type DemoteGroupUsersRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	GroupId       string                 `protobuf:"bytes,1,opt,name=group_id,json=groupId,proto3" json:"group_id,omitempty"`
-	UserIds       []string               `protobuf:"bytes,2,rep,name=user_ids,json=userIds,proto3" json:"user_ids,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The group ID to demote in.
+	GroupId string `protobuf:"bytes,1,opt,name=group_id,json=groupId,proto3" json:"group_id,omitempty"`
+	// The users to demote.
+	UserIds       []string `protobuf:"bytes,2,rep,name=user_ids,json=userIds,proto3" json:"user_ids,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *DemoteGroupUsersRequest) Reset() {
 	*x = DemoteGroupUsersRequest{}
-	mi := &file_api_api_proto_msgTypes[61]
+	mi := &file_api_api_proto_msgTypes[50]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4337,7 +3739,7 @@ func (x *DemoteGroupUsersRequest) String() string {
 func (*DemoteGroupUsersRequest) ProtoMessage() {}
 
 func (x *DemoteGroupUsersRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[61]
+	mi := &file_api_api_proto_msgTypes[50]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4350,7 +3752,7 @@ func (x *DemoteGroupUsersRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DemoteGroupUsersRequest.ProtoReflect.Descriptor instead.
 func (*DemoteGroupUsersRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{61}
+	return file_api_api_proto_rawDescGZIP(), []int{50}
 }
 
 func (x *DemoteGroupUsersRequest) GetGroupId() string {
@@ -4367,17 +3769,20 @@ func (x *DemoteGroupUsersRequest) GetUserIds() []string {
 	return nil
 }
 
+// Ban users from a group.
 type BanGroupUsersRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	GroupId       string                 `protobuf:"bytes,1,opt,name=group_id,json=groupId,proto3" json:"group_id,omitempty"`
-	UserIds       []string               `protobuf:"bytes,2,rep,name=user_ids,json=userIds,proto3" json:"user_ids,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The group to ban users from.
+	GroupId string `protobuf:"bytes,1,opt,name=group_id,json=groupId,proto3" json:"group_id,omitempty"`
+	// The users to ban.
+	UserIds       []string `protobuf:"bytes,2,rep,name=user_ids,json=userIds,proto3" json:"user_ids,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *BanGroupUsersRequest) Reset() {
 	*x = BanGroupUsersRequest{}
-	mi := &file_api_api_proto_msgTypes[62]
+	mi := &file_api_api_proto_msgTypes[51]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4389,7 +3794,7 @@ func (x *BanGroupUsersRequest) String() string {
 func (*BanGroupUsersRequest) ProtoMessage() {}
 
 func (x *BanGroupUsersRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[62]
+	mi := &file_api_api_proto_msgTypes[51]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4402,7 +3807,7 @@ func (x *BanGroupUsersRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BanGroupUsersRequest.ProtoReflect.Descriptor instead.
 func (*BanGroupUsersRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{62}
+	return file_api_api_proto_rawDescGZIP(), []int{51}
 }
 
 func (x *BanGroupUsersRequest) GetGroupId() string {
@@ -4419,69 +3824,20 @@ func (x *BanGroupUsersRequest) GetUserIds() []string {
 	return nil
 }
 
-type GroupUser struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	User          *User                  `protobuf:"bytes,1,opt,name=user,proto3" json:"user,omitempty"`
-	State         int32                  `protobuf:"varint,2,opt,name=state,proto3" json:"state,omitempty"` // 0=superadmin, 1=admin, 2=member, 3=join_request
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *GroupUser) Reset() {
-	*x = GroupUser{}
-	mi := &file_api_api_proto_msgTypes[63]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *GroupUser) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*GroupUser) ProtoMessage() {}
-
-func (x *GroupUser) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[63]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use GroupUser.ProtoReflect.Descriptor instead.
-func (*GroupUser) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{63}
-}
-
-func (x *GroupUser) GetUser() *User {
-	if x != nil {
-		return x.User
-	}
-	return nil
-}
-
-func (x *GroupUser) GetState() int32 {
-	if x != nil {
-		return x.State
-	}
-	return 0
-}
-
+// A list of users belonging to a group, along with their role.
 type GroupUserList struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	GroupUsers    []*GroupUser           `protobuf:"bytes,1,rep,name=group_users,json=groupUsers,proto3" json:"group_users,omitempty"`
-	NextCursor    string                 `protobuf:"bytes,2,opt,name=next_cursor,json=nextCursor,proto3" json:"next_cursor,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// User-role pairs for a group.
+	GroupUsers []*GroupUserList_GroupUser `protobuf:"bytes,1,rep,name=group_users,json=groupUsers,proto3" json:"group_users,omitempty"`
+	// Cursor for the next page of results, if any.
+	Cursor        string `protobuf:"bytes,2,opt,name=cursor,proto3" json:"cursor,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *GroupUserList) Reset() {
 	*x = GroupUserList{}
-	mi := &file_api_api_proto_msgTypes[64]
+	mi := &file_api_api_proto_msgTypes[52]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4493,7 +3849,7 @@ func (x *GroupUserList) String() string {
 func (*GroupUserList) ProtoMessage() {}
 
 func (x *GroupUserList) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[64]
+	mi := &file_api_api_proto_msgTypes[52]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4506,86 +3862,37 @@ func (x *GroupUserList) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GroupUserList.ProtoReflect.Descriptor instead.
 func (*GroupUserList) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{64}
+	return file_api_api_proto_rawDescGZIP(), []int{52}
 }
 
-func (x *GroupUserList) GetGroupUsers() []*GroupUser {
+func (x *GroupUserList) GetGroupUsers() []*GroupUserList_GroupUser {
 	if x != nil {
 		return x.GroupUsers
 	}
 	return nil
 }
 
-func (x *GroupUserList) GetNextCursor() string {
+func (x *GroupUserList) GetCursor() string {
 	if x != nil {
-		return x.NextCursor
+		return x.Cursor
 	}
 	return ""
 }
 
-type UserGroup struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Group         *Group                 `protobuf:"bytes,1,opt,name=group,proto3" json:"group,omitempty"`
-	State         int32                  `protobuf:"varint,2,opt,name=state,proto3" json:"state,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *UserGroup) Reset() {
-	*x = UserGroup{}
-	mi := &file_api_api_proto_msgTypes[65]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *UserGroup) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*UserGroup) ProtoMessage() {}
-
-func (x *UserGroup) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[65]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use UserGroup.ProtoReflect.Descriptor instead.
-func (*UserGroup) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{65}
-}
-
-func (x *UserGroup) GetGroup() *Group {
-	if x != nil {
-		return x.Group
-	}
-	return nil
-}
-
-func (x *UserGroup) GetState() int32 {
-	if x != nil {
-		return x.State
-	}
-	return 0
-}
-
+// A list of groups belonging to a user, along with the user's role in each group.
 type UserGroupList struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	UserGroups    []*UserGroup           `protobuf:"bytes,1,rep,name=user_groups,json=userGroups,proto3" json:"user_groups,omitempty"`
-	NextCursor    string                 `protobuf:"bytes,2,opt,name=next_cursor,json=nextCursor,proto3" json:"next_cursor,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Group-role pairs for a user.
+	UserGroups []*UserGroupList_UserGroup `protobuf:"bytes,1,rep,name=user_groups,json=userGroups,proto3" json:"user_groups,omitempty"`
+	// Cursor for the next page of results, if any.
+	Cursor        string `protobuf:"bytes,2,opt,name=cursor,proto3" json:"cursor,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *UserGroupList) Reset() {
 	*x = UserGroupList{}
-	mi := &file_api_api_proto_msgTypes[66]
+	mi := &file_api_api_proto_msgTypes[53]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4597,7 +3904,7 @@ func (x *UserGroupList) String() string {
 func (*UserGroupList) ProtoMessage() {}
 
 func (x *UserGroupList) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[66]
+	mi := &file_api_api_proto_msgTypes[53]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4610,35 +3917,41 @@ func (x *UserGroupList) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UserGroupList.ProtoReflect.Descriptor instead.
 func (*UserGroupList) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{66}
+	return file_api_api_proto_rawDescGZIP(), []int{53}
 }
 
-func (x *UserGroupList) GetUserGroups() []*UserGroup {
+func (x *UserGroupList) GetUserGroups() []*UserGroupList_UserGroup {
 	if x != nil {
 		return x.UserGroups
 	}
 	return nil
 }
 
-func (x *UserGroupList) GetNextCursor() string {
+func (x *UserGroupList) GetCursor() string {
 	if x != nil {
-		return x.NextCursor
+		return x.Cursor
 	}
 	return ""
 }
 
+// List all users that are part of a group.
 type ListGroupUsersRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	GroupId       string                 `protobuf:"bytes,1,opt,name=group_id,json=groupId,proto3" json:"group_id,omitempty"`
-	Limit         int32                  `protobuf:"varint,2,opt,name=limit,proto3" json:"limit,omitempty"`
-	Cursor        string                 `protobuf:"bytes,3,opt,name=cursor,proto3" json:"cursor,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The group ID to list from.
+	GroupId string `protobuf:"bytes,1,opt,name=group_id,json=groupId,proto3" json:"group_id,omitempty"`
+	// Max number of records to return. Between 1 and 100.
+	Limit *wrapperspb.Int32Value `protobuf:"bytes,2,opt,name=limit,proto3" json:"limit,omitempty"`
+	// The group user state to list.
+	State *wrapperspb.Int32Value `protobuf:"bytes,3,opt,name=state,proto3" json:"state,omitempty"`
+	// An optional next page cursor.
+	Cursor        string `protobuf:"bytes,4,opt,name=cursor,proto3" json:"cursor,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ListGroupUsersRequest) Reset() {
 	*x = ListGroupUsersRequest{}
-	mi := &file_api_api_proto_msgTypes[67]
+	mi := &file_api_api_proto_msgTypes[54]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4650,7 +3963,7 @@ func (x *ListGroupUsersRequest) String() string {
 func (*ListGroupUsersRequest) ProtoMessage() {}
 
 func (x *ListGroupUsersRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[67]
+	mi := &file_api_api_proto_msgTypes[54]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4663,7 +3976,7 @@ func (x *ListGroupUsersRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListGroupUsersRequest.ProtoReflect.Descriptor instead.
 func (*ListGroupUsersRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{67}
+	return file_api_api_proto_rawDescGZIP(), []int{54}
 }
 
 func (x *ListGroupUsersRequest) GetGroupId() string {
@@ -4673,11 +3986,18 @@ func (x *ListGroupUsersRequest) GetGroupId() string {
 	return ""
 }
 
-func (x *ListGroupUsersRequest) GetLimit() int32 {
+func (x *ListGroupUsersRequest) GetLimit() *wrapperspb.Int32Value {
 	if x != nil {
 		return x.Limit
 	}
-	return 0
+	return nil
+}
+
+func (x *ListGroupUsersRequest) GetState() *wrapperspb.Int32Value {
+	if x != nil {
+		return x.State
+	}
+	return nil
 }
 
 func (x *ListGroupUsersRequest) GetCursor() string {
@@ -4687,18 +4007,24 @@ func (x *ListGroupUsersRequest) GetCursor() string {
 	return ""
 }
 
+// List the groups a user is part of, and their relationship to each.
 type ListUserGroupsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	Limit         int32                  `protobuf:"varint,2,opt,name=limit,proto3" json:"limit,omitempty"`
-	Cursor        string                 `protobuf:"bytes,3,opt,name=cursor,proto3" json:"cursor,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// ID of the user.
+	UserId string `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	// Max number of records to return. Between 1 and 100.
+	Limit *wrapperspb.Int32Value `protobuf:"bytes,2,opt,name=limit,proto3" json:"limit,omitempty"`
+	// The user group state to list.
+	State *wrapperspb.Int32Value `protobuf:"bytes,3,opt,name=state,proto3" json:"state,omitempty"`
+	// An optional next page cursor.
+	Cursor        string `protobuf:"bytes,4,opt,name=cursor,proto3" json:"cursor,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ListUserGroupsRequest) Reset() {
 	*x = ListUserGroupsRequest{}
-	mi := &file_api_api_proto_msgTypes[68]
+	mi := &file_api_api_proto_msgTypes[55]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4710,7 +4036,7 @@ func (x *ListUserGroupsRequest) String() string {
 func (*ListUserGroupsRequest) ProtoMessage() {}
 
 func (x *ListUserGroupsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[68]
+	mi := &file_api_api_proto_msgTypes[55]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4723,7 +4049,7 @@ func (x *ListUserGroupsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListUserGroupsRequest.ProtoReflect.Descriptor instead.
 func (*ListUserGroupsRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{68}
+	return file_api_api_proto_rawDescGZIP(), []int{55}
 }
 
 func (x *ListUserGroupsRequest) GetUserId() string {
@@ -4733,11 +4059,18 @@ func (x *ListUserGroupsRequest) GetUserId() string {
 	return ""
 }
 
-func (x *ListUserGroupsRequest) GetLimit() int32 {
+func (x *ListUserGroupsRequest) GetLimit() *wrapperspb.Int32Value {
 	if x != nil {
 		return x.Limit
 	}
-	return 0
+	return nil
+}
+
+func (x *ListUserGroupsRequest) GetState() *wrapperspb.Int32Value {
+	if x != nil {
+		return x.State
+	}
+	return nil
 }
 
 func (x *ListUserGroupsRequest) GetCursor() string {
@@ -4747,35 +4080,44 @@ func (x *ListUserGroupsRequest) GetCursor() string {
 	return ""
 }
 
-type AddMatchmakerRequest struct {
-	state             protoimpl.MessageState `protogen:"open.v1"`
-	QueueName         string                 `protobuf:"bytes,1,opt,name=queue_name,json=queueName,proto3" json:"queue_name,omitempty"`
-	MinCount          int32                  `protobuf:"varint,2,opt,name=min_count,json=minCount,proto3" json:"min_count,omitempty"`
-	MaxCount          int32                  `protobuf:"varint,3,opt,name=max_count,json=maxCount,proto3" json:"max_count,omitempty"`
-	StringProperties  map[string]string      `protobuf:"bytes,4,rep,name=string_properties,json=stringProperties,proto3" json:"string_properties,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	NumericProperties map[string]float64     `protobuf:"bytes,5,rep,name=numeric_properties,json=numericProperties,proto3" json:"numeric_properties,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"fixed64,2,opt,name=value"`
-	CountMultiple     int32                  `protobuf:"varint,6,opt,name=count_multiple,json=countMultiple,proto3" json:"count_multiple,omitempty"`
-	ReversePrecision  bool                   `protobuf:"varint,7,opt,name=reverse_precision,json=reversePrecision,proto3" json:"reverse_precision,omitempty"`
-	Query             string                 `protobuf:"bytes,8,opt,name=query,proto3" json:"query,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+// A leaderboard on the server.
+type Leaderboard struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The ID of the leaderboard.
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// ASC(0) or DESC(1) sort mode of scores in the leaderboard.
+	SortOrder uint32 `protobuf:"varint,2,opt,name=sort_order,json=sortOrder,proto3" json:"sort_order,omitempty"`
+	// BEST, SET, INCREMENT or DECREMENT operator mode of the leaderboard.
+	Operator Operator `protobuf:"varint,3,opt,name=operator,proto3,enum=ultimate.server.api.Operator" json:"operator,omitempty"`
+	// The UNIX time when the leaderboard was previously reset. A computed value.
+	PrevReset uint32 `protobuf:"varint,4,opt,name=prev_reset,json=prevReset,proto3" json:"prev_reset,omitempty"`
+	// The UNIX time when the leaderboard is next playable. A computed value.
+	NextReset uint32 `protobuf:"varint,5,opt,name=next_reset,json=nextReset,proto3" json:"next_reset,omitempty"`
+	// Additional information stored as a JSON object.
+	Metadata string `protobuf:"bytes,6,opt,name=metadata,proto3" json:"metadata,omitempty"`
+	// The UNIX time when the leaderboard was created.
+	CreateTime *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=create_time,json=createTime,proto3" json:"create_time,omitempty"`
+	// Whether the leaderboard was created authoritatively or not.
+	Authoritative bool `protobuf:"varint,8,opt,name=authoritative,proto3" json:"authoritative,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
-func (x *AddMatchmakerRequest) Reset() {
-	*x = AddMatchmakerRequest{}
-	mi := &file_api_api_proto_msgTypes[69]
+func (x *Leaderboard) Reset() {
+	*x = Leaderboard{}
+	mi := &file_api_api_proto_msgTypes[56]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *AddMatchmakerRequest) String() string {
+func (x *Leaderboard) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*AddMatchmakerRequest) ProtoMessage() {}
+func (*Leaderboard) ProtoMessage() {}
 
-func (x *AddMatchmakerRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[69]
+func (x *Leaderboard) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[56]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4786,553 +4128,866 @@ func (x *AddMatchmakerRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use AddMatchmakerRequest.ProtoReflect.Descriptor instead.
-func (*AddMatchmakerRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{69}
+// Deprecated: Use Leaderboard.ProtoReflect.Descriptor instead.
+func (*Leaderboard) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{56}
 }
 
-func (x *AddMatchmakerRequest) GetQueueName() string {
+func (x *Leaderboard) GetId() string {
 	if x != nil {
-		return x.QueueName
+		return x.Id
 	}
 	return ""
 }
 
-func (x *AddMatchmakerRequest) GetMinCount() int32 {
+func (x *Leaderboard) GetSortOrder() uint32 {
 	if x != nil {
-		return x.MinCount
+		return x.SortOrder
 	}
 	return 0
 }
 
-func (x *AddMatchmakerRequest) GetMaxCount() int32 {
+func (x *Leaderboard) GetOperator() Operator {
 	if x != nil {
-		return x.MaxCount
+		return x.Operator
+	}
+	return Operator_NO_OVERRIDE
+}
+
+func (x *Leaderboard) GetPrevReset() uint32 {
+	if x != nil {
+		return x.PrevReset
 	}
 	return 0
 }
 
-func (x *AddMatchmakerRequest) GetStringProperties() map[string]string {
+func (x *Leaderboard) GetNextReset() uint32 {
 	if x != nil {
-		return x.StringProperties
+		return x.NextReset
+	}
+	return 0
+}
+
+func (x *Leaderboard) GetMetadata() string {
+	if x != nil {
+		return x.Metadata
+	}
+	return ""
+}
+
+func (x *Leaderboard) GetCreateTime() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreateTime
 	}
 	return nil
 }
 
-func (x *AddMatchmakerRequest) GetNumericProperties() map[string]float64 {
-	if x != nil {
-		return x.NumericProperties
-	}
-	return nil
-}
-
-func (x *AddMatchmakerRequest) GetCountMultiple() int32 {
-	if x != nil {
-		return x.CountMultiple
-	}
-	return 0
-}
-
-func (x *AddMatchmakerRequest) GetReversePrecision() bool {
-	if x != nil {
-		return x.ReversePrecision
-	}
-	return false
-}
-
-func (x *AddMatchmakerRequest) GetQuery() string {
-	if x != nil {
-		return x.Query
-	}
-	return ""
-}
-
-type MatchmakerTicket struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	TicketId      string                 `protobuf:"bytes,1,opt,name=ticket_id,json=ticketId,proto3" json:"ticket_id,omitempty"`
-	QueueName     string                 `protobuf:"bytes,2,opt,name=queue_name,json=queueName,proto3" json:"queue_name,omitempty"`
-	Status        string                 `protobuf:"bytes,3,opt,name=status,proto3" json:"status,omitempty"`                           // "queued", "matched", "cancelled", "expired"
-	MatchId       string                 `protobuf:"bytes,4,opt,name=match_id,json=matchId,proto3" json:"match_id,omitempty"`          // empty if not matched yet
-	MatchToken    string                 `protobuf:"bytes,5,opt,name=match_token,json=matchToken,proto3" json:"match_token,omitempty"` // empty if not matched yet
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *MatchmakerTicket) Reset() {
-	*x = MatchmakerTicket{}
-	mi := &file_api_api_proto_msgTypes[70]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *MatchmakerTicket) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*MatchmakerTicket) ProtoMessage() {}
-
-func (x *MatchmakerTicket) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[70]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use MatchmakerTicket.ProtoReflect.Descriptor instead.
-func (*MatchmakerTicket) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{70}
-}
-
-func (x *MatchmakerTicket) GetTicketId() string {
-	if x != nil {
-		return x.TicketId
-	}
-	return ""
-}
-
-func (x *MatchmakerTicket) GetQueueName() string {
-	if x != nil {
-		return x.QueueName
-	}
-	return ""
-}
-
-func (x *MatchmakerTicket) GetStatus() string {
-	if x != nil {
-		return x.Status
-	}
-	return ""
-}
-
-func (x *MatchmakerTicket) GetMatchId() string {
-	if x != nil {
-		return x.MatchId
-	}
-	return ""
-}
-
-func (x *MatchmakerTicket) GetMatchToken() string {
-	if x != nil {
-		return x.MatchToken
-	}
-	return ""
-}
-
-type RemoveMatchmakerRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	TicketId      string                 `protobuf:"bytes,1,opt,name=ticket_id,json=ticketId,proto3" json:"ticket_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *RemoveMatchmakerRequest) Reset() {
-	*x = RemoveMatchmakerRequest{}
-	mi := &file_api_api_proto_msgTypes[71]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *RemoveMatchmakerRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*RemoveMatchmakerRequest) ProtoMessage() {}
-
-func (x *RemoveMatchmakerRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[71]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use RemoveMatchmakerRequest.ProtoReflect.Descriptor instead.
-func (*RemoveMatchmakerRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{71}
-}
-
-func (x *RemoveMatchmakerRequest) GetTicketId() string {
-	if x != nil {
-		return x.TicketId
-	}
-	return ""
-}
-
-type GetMatchmakerTicketRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	TicketId      string                 `protobuf:"bytes,1,opt,name=ticket_id,json=ticketId,proto3" json:"ticket_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *GetMatchmakerTicketRequest) Reset() {
-	*x = GetMatchmakerTicketRequest{}
-	mi := &file_api_api_proto_msgTypes[72]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *GetMatchmakerTicketRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*GetMatchmakerTicketRequest) ProtoMessage() {}
-
-func (x *GetMatchmakerTicketRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[72]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use GetMatchmakerTicketRequest.ProtoReflect.Descriptor instead.
-func (*GetMatchmakerTicketRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{72}
-}
-
-func (x *GetMatchmakerTicketRequest) GetTicketId() string {
-	if x != nil {
-		return x.TicketId
-	}
-	return ""
-}
-
-type GetQueueStatsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	QueueName     string                 `protobuf:"bytes,1,opt,name=queue_name,json=queueName,proto3" json:"queue_name,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *GetQueueStatsRequest) Reset() {
-	*x = GetQueueStatsRequest{}
-	mi := &file_api_api_proto_msgTypes[73]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *GetQueueStatsRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*GetQueueStatsRequest) ProtoMessage() {}
-
-func (x *GetQueueStatsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[73]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use GetQueueStatsRequest.ProtoReflect.Descriptor instead.
-func (*GetQueueStatsRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{73}
-}
-
-func (x *GetQueueStatsRequest) GetQueueName() string {
-	if x != nil {
-		return x.QueueName
-	}
-	return ""
-}
-
-type QueueStats struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	QueueName      string                 `protobuf:"bytes,2,opt,name=queue_name,json=queueName,proto3" json:"queue_name,omitempty"`
-	TicketCount    int32                  `protobuf:"varint,3,opt,name=ticket_count,json=ticketCount,proto3" json:"ticket_count,omitempty"`
-	AverageWaitSec int32                  `protobuf:"varint,4,opt,name=average_wait_sec,json=averageWaitSec,proto3" json:"average_wait_sec,omitempty"`
-	ActiveMatches  int32                  `protobuf:"varint,5,opt,name=active_matches,json=activeMatches,proto3" json:"active_matches,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
-}
-
-func (x *QueueStats) Reset() {
-	*x = QueueStats{}
-	mi := &file_api_api_proto_msgTypes[74]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *QueueStats) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*QueueStats) ProtoMessage() {}
-
-func (x *QueueStats) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[74]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use QueueStats.ProtoReflect.Descriptor instead.
-func (*QueueStats) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{74}
-}
-
-func (x *QueueStats) GetQueueName() string {
-	if x != nil {
-		return x.QueueName
-	}
-	return ""
-}
-
-func (x *QueueStats) GetTicketCount() int32 {
-	if x != nil {
-		return x.TicketCount
-	}
-	return 0
-}
-
-func (x *QueueStats) GetAverageWaitSec() int32 {
-	if x != nil {
-		return x.AverageWaitSec
-	}
-	return 0
-}
-
-func (x *QueueStats) GetActiveMatches() int32 {
-	if x != nil {
-		return x.ActiveMatches
-	}
-	return 0
-}
-
-type MatchmakerStats struct {
-	state                  protoimpl.MessageState `protogen:"open.v1"`
-	TicketCount            int32                  `protobuf:"varint,1,opt,name=ticket_count,json=ticketCount,proto3" json:"ticket_count,omitempty"`
-	OldestTicketCreateTime string                 `protobuf:"bytes,2,opt,name=oldest_ticket_create_time,json=oldestTicketCreateTime,proto3" json:"oldest_ticket_create_time,omitempty"`
-	CompletionCount        int32                  `protobuf:"varint,3,opt,name=completion_count,json=completionCount,proto3" json:"completion_count,omitempty"`
-	unknownFields          protoimpl.UnknownFields
-	sizeCache              protoimpl.SizeCache
-}
-
-func (x *MatchmakerStats) Reset() {
-	*x = MatchmakerStats{}
-	mi := &file_api_api_proto_msgTypes[75]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *MatchmakerStats) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*MatchmakerStats) ProtoMessage() {}
-
-func (x *MatchmakerStats) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[75]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use MatchmakerStats.ProtoReflect.Descriptor instead.
-func (*MatchmakerStats) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{75}
-}
-
-func (x *MatchmakerStats) GetTicketCount() int32 {
-	if x != nil {
-		return x.TicketCount
-	}
-	return 0
-}
-
-func (x *MatchmakerStats) GetOldestTicketCreateTime() string {
-	if x != nil {
-		return x.OldestTicketCreateTime
-	}
-	return ""
-}
-
-func (x *MatchmakerStats) GetCompletionCount() int32 {
-	if x != nil {
-		return x.CompletionCount
-	}
-	return 0
-}
-
-type CreateMatchRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Module        string                 `protobuf:"bytes,1,opt,name=module,proto3" json:"module,omitempty"`
-	Params        map[string]string      `protobuf:"bytes,2,rep,name=params,proto3" json:"params,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *CreateMatchRequest) Reset() {
-	*x = CreateMatchRequest{}
-	mi := &file_api_api_proto_msgTypes[76]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *CreateMatchRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*CreateMatchRequest) ProtoMessage() {}
-
-func (x *CreateMatchRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[76]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use CreateMatchRequest.ProtoReflect.Descriptor instead.
-func (*CreateMatchRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{76}
-}
-
-func (x *CreateMatchRequest) GetModule() string {
-	if x != nil {
-		return x.Module
-	}
-	return ""
-}
-
-func (x *CreateMatchRequest) GetParams() map[string]string {
-	if x != nil {
-		return x.Params
-	}
-	return nil
-}
-
-type ListMatchesRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Limit         int32                  `protobuf:"varint,1,opt,name=limit,proto3" json:"limit,omitempty"`
-	Authoritative bool                   `protobuf:"varint,2,opt,name=authoritative,proto3" json:"authoritative,omitempty"`
-	Label         string                 `protobuf:"bytes,3,opt,name=label,proto3" json:"label,omitempty"`
-	MinSize       int32                  `protobuf:"varint,4,opt,name=min_size,json=minSize,proto3" json:"min_size,omitempty"`
-	MaxSize       int32                  `protobuf:"varint,5,opt,name=max_size,json=maxSize,proto3" json:"max_size,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *ListMatchesRequest) Reset() {
-	*x = ListMatchesRequest{}
-	mi := &file_api_api_proto_msgTypes[77]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ListMatchesRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ListMatchesRequest) ProtoMessage() {}
-
-func (x *ListMatchesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[77]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ListMatchesRequest.ProtoReflect.Descriptor instead.
-func (*ListMatchesRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{77}
-}
-
-func (x *ListMatchesRequest) GetLimit() int32 {
-	if x != nil {
-		return x.Limit
-	}
-	return 0
-}
-
-func (x *ListMatchesRequest) GetAuthoritative() bool {
+func (x *Leaderboard) GetAuthoritative() bool {
 	if x != nil {
 		return x.Authoritative
 	}
 	return false
 }
 
-func (x *ListMatchesRequest) GetLabel() string {
+// A list of leaderboards.
+type LeaderboardList struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The list of leaderboards returned.
+	Leaderboards []*Leaderboard `protobuf:"bytes,1,rep,name=leaderboards,proto3" json:"leaderboards,omitempty"`
+	// A pagination cursor (optional).
+	Cursor        string `protobuf:"bytes,2,opt,name=cursor,proto3" json:"cursor,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *LeaderboardList) Reset() {
+	*x = LeaderboardList{}
+	mi := &file_api_api_proto_msgTypes[57]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *LeaderboardList) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*LeaderboardList) ProtoMessage() {}
+
+func (x *LeaderboardList) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[57]
 	if x != nil {
-		return x.Label
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use LeaderboardList.ProtoReflect.Descriptor instead.
+func (*LeaderboardList) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{57}
+}
+
+func (x *LeaderboardList) GetLeaderboards() []*Leaderboard {
+	if x != nil {
+		return x.Leaderboards
+	}
+	return nil
+}
+
+func (x *LeaderboardList) GetCursor() string {
+	if x != nil {
+		return x.Cursor
 	}
 	return ""
 }
 
-func (x *ListMatchesRequest) GetMinSize() int32 {
+// Represents a complete leaderboard record with all scores and associated metadata.
+type LeaderboardRecord struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The ID of the leaderboard this score belongs to.
+	LeaderboardId string `protobuf:"bytes,1,opt,name=leaderboard_id,json=leaderboardId,proto3" json:"leaderboard_id,omitempty"`
+	// The ID of the score owner, usually a user or group.
+	OwnerId string `protobuf:"bytes,2,opt,name=owner_id,json=ownerId,proto3" json:"owner_id,omitempty"`
+	// The username of the score owner, if the owner is a user.
+	Username *wrapperspb.StringValue `protobuf:"bytes,3,opt,name=username,proto3" json:"username,omitempty"`
+	// The score value.
+	Score int64 `protobuf:"varint,4,opt,name=score,proto3" json:"score,omitempty"`
+	// An optional subscore value.
+	Subscore int64 `protobuf:"varint,5,opt,name=subscore,proto3" json:"subscore,omitempty"`
+	// The number of submissions to this score record.
+	NumScore int32 `protobuf:"varint,6,opt,name=num_score,json=numScore,proto3" json:"num_score,omitempty"`
+	// Metadata.
+	Metadata string `protobuf:"bytes,7,opt,name=metadata,proto3" json:"metadata,omitempty"`
+	// The UNIX time when the leaderboard record was created.
+	CreateTime *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=create_time,json=createTime,proto3" json:"create_time,omitempty"`
+	// The UNIX time when the leaderboard record was updated.
+	UpdateTime *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=update_time,json=updateTime,proto3" json:"update_time,omitempty"`
+	// The UNIX time when the leaderboard record expires.
+	ExpiryTime *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=expiry_time,json=expiryTime,proto3" json:"expiry_time,omitempty"`
+	// The rank of this record.
+	Rank int64 `protobuf:"varint,11,opt,name=rank,proto3" json:"rank,omitempty"`
+	// The maximum number of score updates allowed by the owner.
+	MaxNumScore   uint32 `protobuf:"varint,12,opt,name=max_num_score,json=maxNumScore,proto3" json:"max_num_score,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *LeaderboardRecord) Reset() {
+	*x = LeaderboardRecord{}
+	mi := &file_api_api_proto_msgTypes[58]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *LeaderboardRecord) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*LeaderboardRecord) ProtoMessage() {}
+
+func (x *LeaderboardRecord) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[58]
 	if x != nil {
-		return x.MinSize
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use LeaderboardRecord.ProtoReflect.Descriptor instead.
+func (*LeaderboardRecord) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{58}
+}
+
+func (x *LeaderboardRecord) GetLeaderboardId() string {
+	if x != nil {
+		return x.LeaderboardId
+	}
+	return ""
+}
+
+func (x *LeaderboardRecord) GetOwnerId() string {
+	if x != nil {
+		return x.OwnerId
+	}
+	return ""
+}
+
+func (x *LeaderboardRecord) GetUsername() *wrapperspb.StringValue {
+	if x != nil {
+		return x.Username
+	}
+	return nil
+}
+
+func (x *LeaderboardRecord) GetScore() int64 {
+	if x != nil {
+		return x.Score
 	}
 	return 0
 }
 
-func (x *ListMatchesRequest) GetMaxSize() int32 {
+func (x *LeaderboardRecord) GetSubscore() int64 {
+	if x != nil {
+		return x.Subscore
+	}
+	return 0
+}
+
+func (x *LeaderboardRecord) GetNumScore() int32 {
+	if x != nil {
+		return x.NumScore
+	}
+	return 0
+}
+
+func (x *LeaderboardRecord) GetMetadata() string {
+	if x != nil {
+		return x.Metadata
+	}
+	return ""
+}
+
+func (x *LeaderboardRecord) GetCreateTime() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreateTime
+	}
+	return nil
+}
+
+func (x *LeaderboardRecord) GetUpdateTime() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdateTime
+	}
+	return nil
+}
+
+func (x *LeaderboardRecord) GetExpiryTime() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ExpiryTime
+	}
+	return nil
+}
+
+func (x *LeaderboardRecord) GetRank() int64 {
+	if x != nil {
+		return x.Rank
+	}
+	return 0
+}
+
+func (x *LeaderboardRecord) GetMaxNumScore() uint32 {
+	if x != nil {
+		return x.MaxNumScore
+	}
+	return 0
+}
+
+// A set of leaderboard records, may be part of a leaderboard records page or a batch of individual records.
+type LeaderboardRecordList struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// A list of leaderboard records.
+	Records []*LeaderboardRecord `protobuf:"bytes,1,rep,name=records,proto3" json:"records,omitempty"`
+	// A batched set of leaderboard records belonging to specified owners.
+	OwnerRecords []*LeaderboardRecord `protobuf:"bytes,2,rep,name=owner_records,json=ownerRecords,proto3" json:"owner_records,omitempty"`
+	// The cursor to send when retrieving the next page, if any.
+	NextCursor string `protobuf:"bytes,3,opt,name=next_cursor,json=nextCursor,proto3" json:"next_cursor,omitempty"`
+	// The cursor to send when retrieving the previous page, if any.
+	PrevCursor string `protobuf:"bytes,4,opt,name=prev_cursor,json=prevCursor,proto3" json:"prev_cursor,omitempty"`
+	// The total number of ranks available.
+	RankCount     int64 `protobuf:"varint,5,opt,name=rank_count,json=rankCount,proto3" json:"rank_count,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *LeaderboardRecordList) Reset() {
+	*x = LeaderboardRecordList{}
+	mi := &file_api_api_proto_msgTypes[59]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *LeaderboardRecordList) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*LeaderboardRecordList) ProtoMessage() {}
+
+func (x *LeaderboardRecordList) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[59]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use LeaderboardRecordList.ProtoReflect.Descriptor instead.
+func (*LeaderboardRecordList) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{59}
+}
+
+func (x *LeaderboardRecordList) GetRecords() []*LeaderboardRecord {
+	if x != nil {
+		return x.Records
+	}
+	return nil
+}
+
+func (x *LeaderboardRecordList) GetOwnerRecords() []*LeaderboardRecord {
+	if x != nil {
+		return x.OwnerRecords
+	}
+	return nil
+}
+
+func (x *LeaderboardRecordList) GetNextCursor() string {
+	if x != nil {
+		return x.NextCursor
+	}
+	return ""
+}
+
+func (x *LeaderboardRecordList) GetPrevCursor() string {
+	if x != nil {
+		return x.PrevCursor
+	}
+	return ""
+}
+
+func (x *LeaderboardRecordList) GetRankCount() int64 {
+	if x != nil {
+		return x.RankCount
+	}
+	return 0
+}
+
+// A request to submit a score to a leaderboard.
+type WriteLeaderboardRecordRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The ID of the leaderboard to write to.
+	LeaderboardId string `protobuf:"bytes,1,opt,name=leaderboard_id,json=leaderboardId,proto3" json:"leaderboard_id,omitempty"`
+	// Record input.
+	Record        *WriteLeaderboardRecordRequest_LeaderboardRecordWrite `protobuf:"bytes,2,opt,name=record,proto3" json:"record,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *WriteLeaderboardRecordRequest) Reset() {
+	*x = WriteLeaderboardRecordRequest{}
+	mi := &file_api_api_proto_msgTypes[60]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WriteLeaderboardRecordRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WriteLeaderboardRecordRequest) ProtoMessage() {}
+
+func (x *WriteLeaderboardRecordRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[60]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WriteLeaderboardRecordRequest.ProtoReflect.Descriptor instead.
+func (*WriteLeaderboardRecordRequest) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{60}
+}
+
+func (x *WriteLeaderboardRecordRequest) GetLeaderboardId() string {
+	if x != nil {
+		return x.LeaderboardId
+	}
+	return ""
+}
+
+func (x *WriteLeaderboardRecordRequest) GetRecord() *WriteLeaderboardRecordRequest_LeaderboardRecordWrite {
+	if x != nil {
+		return x.Record
+	}
+	return nil
+}
+
+// List leaderboard records from a given leaderboard.
+type ListLeaderboardRecordsRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The ID of the leaderboard to list for.
+	LeaderboardId string `protobuf:"bytes,1,opt,name=leaderboard_id,json=leaderboardId,proto3" json:"leaderboard_id,omitempty"`
+	// One or more owners to retrieve records for.
+	OwnerIds []string `protobuf:"bytes,2,rep,name=owner_ids,json=ownerIds,proto3" json:"owner_ids,omitempty"`
+	// Max number of records to return. Between 1 and 100.
+	Limit *wrapperspb.Int32Value `protobuf:"bytes,3,opt,name=limit,proto3" json:"limit,omitempty"`
+	// A next or previous page cursor.
+	Cursor string `protobuf:"bytes,4,opt,name=cursor,proto3" json:"cursor,omitempty"`
+	// Expiry in seconds (since epoch) to begin fetching records from.
+	Expiry        *wrapperspb.Int64Value `protobuf:"bytes,5,opt,name=expiry,proto3" json:"expiry,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListLeaderboardRecordsRequest) Reset() {
+	*x = ListLeaderboardRecordsRequest{}
+	mi := &file_api_api_proto_msgTypes[61]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListLeaderboardRecordsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListLeaderboardRecordsRequest) ProtoMessage() {}
+
+func (x *ListLeaderboardRecordsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[61]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListLeaderboardRecordsRequest.ProtoReflect.Descriptor instead.
+func (*ListLeaderboardRecordsRequest) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{61}
+}
+
+func (x *ListLeaderboardRecordsRequest) GetLeaderboardId() string {
+	if x != nil {
+		return x.LeaderboardId
+	}
+	return ""
+}
+
+func (x *ListLeaderboardRecordsRequest) GetOwnerIds() []string {
+	if x != nil {
+		return x.OwnerIds
+	}
+	return nil
+}
+
+func (x *ListLeaderboardRecordsRequest) GetLimit() *wrapperspb.Int32Value {
+	if x != nil {
+		return x.Limit
+	}
+	return nil
+}
+
+func (x *ListLeaderboardRecordsRequest) GetCursor() string {
+	if x != nil {
+		return x.Cursor
+	}
+	return ""
+}
+
+func (x *ListLeaderboardRecordsRequest) GetExpiry() *wrapperspb.Int64Value {
+	if x != nil {
+		return x.Expiry
+	}
+	return nil
+}
+
+// List leaderboard records from a given leaderboard around the owner.
+type ListLeaderboardRecordsAroundOwnerRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The ID of the leaderboard to list for.
+	LeaderboardId string `protobuf:"bytes,1,opt,name=leaderboard_id,json=leaderboardId,proto3" json:"leaderboard_id,omitempty"`
+	// Max number of records to return. Between 1 and 100.
+	Limit *wrapperspb.UInt32Value `protobuf:"bytes,2,opt,name=limit,proto3" json:"limit,omitempty"`
+	// The owner to retrieve records around.
+	OwnerId string `protobuf:"bytes,3,opt,name=owner_id,json=ownerId,proto3" json:"owner_id,omitempty"`
+	// Expiry in seconds (since epoch) to begin fetching records from.
+	Expiry *wrapperspb.Int64Value `protobuf:"bytes,4,opt,name=expiry,proto3" json:"expiry,omitempty"`
+	// A next or previous page cursor.
+	Cursor        string `protobuf:"bytes,5,opt,name=cursor,proto3" json:"cursor,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListLeaderboardRecordsAroundOwnerRequest) Reset() {
+	*x = ListLeaderboardRecordsAroundOwnerRequest{}
+	mi := &file_api_api_proto_msgTypes[62]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListLeaderboardRecordsAroundOwnerRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListLeaderboardRecordsAroundOwnerRequest) ProtoMessage() {}
+
+func (x *ListLeaderboardRecordsAroundOwnerRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[62]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListLeaderboardRecordsAroundOwnerRequest.ProtoReflect.Descriptor instead.
+func (*ListLeaderboardRecordsAroundOwnerRequest) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{62}
+}
+
+func (x *ListLeaderboardRecordsAroundOwnerRequest) GetLeaderboardId() string {
+	if x != nil {
+		return x.LeaderboardId
+	}
+	return ""
+}
+
+func (x *ListLeaderboardRecordsAroundOwnerRequest) GetLimit() *wrapperspb.UInt32Value {
+	if x != nil {
+		return x.Limit
+	}
+	return nil
+}
+
+func (x *ListLeaderboardRecordsAroundOwnerRequest) GetOwnerId() string {
+	if x != nil {
+		return x.OwnerId
+	}
+	return ""
+}
+
+func (x *ListLeaderboardRecordsAroundOwnerRequest) GetExpiry() *wrapperspb.Int64Value {
+	if x != nil {
+		return x.Expiry
+	}
+	return nil
+}
+
+func (x *ListLeaderboardRecordsAroundOwnerRequest) GetCursor() string {
+	if x != nil {
+		return x.Cursor
+	}
+	return ""
+}
+
+// Delete a leaderboard record.
+type DeleteLeaderboardRecordRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The leaderboard ID to delete from.
+	LeaderboardId string `protobuf:"bytes,1,opt,name=leaderboard_id,json=leaderboardId,proto3" json:"leaderboard_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteLeaderboardRecordRequest) Reset() {
+	*x = DeleteLeaderboardRecordRequest{}
+	mi := &file_api_api_proto_msgTypes[63]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteLeaderboardRecordRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteLeaderboardRecordRequest) ProtoMessage() {}
+
+func (x *DeleteLeaderboardRecordRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[63]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteLeaderboardRecordRequest.ProtoReflect.Descriptor instead.
+func (*DeleteLeaderboardRecordRequest) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{63}
+}
+
+func (x *DeleteLeaderboardRecordRequest) GetLeaderboardId() string {
+	if x != nil {
+		return x.LeaderboardId
+	}
+	return ""
+}
+
+// A tournament on the server.
+type Tournament struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The ID of the tournament.
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// The title for the tournament.
+	Title string `protobuf:"bytes,2,opt,name=title,proto3" json:"title,omitempty"`
+	// The description of the tournament. May be blank.
+	Description string `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
+	// The category of the tournament. e.g. "vip" could be category 1.
+	Category uint32 `protobuf:"varint,4,opt,name=category,proto3" json:"category,omitempty"`
+	// ASC (0) or DESC (1) sort mode of scores in the tournament.
+	SortOrder uint32 `protobuf:"varint,5,opt,name=sort_order,json=sortOrder,proto3" json:"sort_order,omitempty"`
+	// The current number of players in the tournament.
+	Size uint32 `protobuf:"varint,6,opt,name=size,proto3" json:"size,omitempty"`
+	// The maximum number of players for the tournament.
+	MaxSize uint32 `protobuf:"varint,7,opt,name=max_size,json=maxSize,proto3" json:"max_size,omitempty"`
+	// The maximum score updates allowed per player for the current tournament.
+	MaxNumScore uint32 `protobuf:"varint,8,opt,name=max_num_score,json=maxNumScore,proto3" json:"max_num_score,omitempty"`
+	// True if the tournament is active and can enter. A computed value.
+	CanEnter bool `protobuf:"varint,9,opt,name=can_enter,json=canEnter,proto3" json:"can_enter,omitempty"`
+	// The UNIX time when the tournament stops being active until next reset.
+	EndActive uint32 `protobuf:"varint,10,opt,name=end_active,json=endActive,proto3" json:"end_active,omitempty"`
+	// The UNIX time when the tournament is next playable.
+	NextReset uint32 `protobuf:"varint,11,opt,name=next_reset,json=nextReset,proto3" json:"next_reset,omitempty"`
+	// Additional information stored as a JSON object.
+	Metadata string `protobuf:"bytes,12,opt,name=metadata,proto3" json:"metadata,omitempty"`
+	// The UNIX time when the tournament was created.
+	CreateTime *timestamppb.Timestamp `protobuf:"bytes,13,opt,name=create_time,json=createTime,proto3" json:"create_time,omitempty"`
+	// The UNIX time when the tournament will start.
+	StartTime *timestamppb.Timestamp `protobuf:"bytes,14,opt,name=start_time,json=startTime,proto3" json:"start_time,omitempty"`
+	// The UNIX time when the tournament will be stopped.
+	EndTime *timestamppb.Timestamp `protobuf:"bytes,15,opt,name=end_time,json=endTime,proto3" json:"end_time,omitempty"`
+	// Duration of the tournament in seconds.
+	Duration uint32 `protobuf:"varint,16,opt,name=duration,proto3" json:"duration,omitempty"`
+	// The UNIX time when the tournament start being active.
+	StartActive uint32 `protobuf:"varint,17,opt,name=start_active,json=startActive,proto3" json:"start_active,omitempty"`
+	// The UNIX time when the tournament was last reset.
+	PrevReset uint32 `protobuf:"varint,18,opt,name=prev_reset,json=prevReset,proto3" json:"prev_reset,omitempty"`
+	// Operator.
+	Operator Operator `protobuf:"varint,19,opt,name=operator,proto3,enum=ultimate.server.api.Operator" json:"operator,omitempty"`
+	// Whether the leaderboard was created authoritatively or not.
+	Authoritative bool `protobuf:"varint,20,opt,name=authoritative,proto3" json:"authoritative,omitempty"`
+	// Whether the user must join the tournament before being able to submit scores.
+	JoinRequired  bool `protobuf:"varint,21,opt,name=join_required,json=joinRequired,proto3" json:"join_required,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Tournament) Reset() {
+	*x = Tournament{}
+	mi := &file_api_api_proto_msgTypes[64]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Tournament) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Tournament) ProtoMessage() {}
+
+func (x *Tournament) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[64]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Tournament.ProtoReflect.Descriptor instead.
+func (*Tournament) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{64}
+}
+
+func (x *Tournament) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *Tournament) GetTitle() string {
+	if x != nil {
+		return x.Title
+	}
+	return ""
+}
+
+func (x *Tournament) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *Tournament) GetCategory() uint32 {
+	if x != nil {
+		return x.Category
+	}
+	return 0
+}
+
+func (x *Tournament) GetSortOrder() uint32 {
+	if x != nil {
+		return x.SortOrder
+	}
+	return 0
+}
+
+func (x *Tournament) GetSize() uint32 {
+	if x != nil {
+		return x.Size
+	}
+	return 0
+}
+
+func (x *Tournament) GetMaxSize() uint32 {
 	if x != nil {
 		return x.MaxSize
 	}
 	return 0
 }
 
-type GetMatchRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	MatchId       string                 `protobuf:"bytes,1,opt,name=match_id,json=matchId,proto3" json:"match_id,omitempty"`
+func (x *Tournament) GetMaxNumScore() uint32 {
+	if x != nil {
+		return x.MaxNumScore
+	}
+	return 0
+}
+
+func (x *Tournament) GetCanEnter() bool {
+	if x != nil {
+		return x.CanEnter
+	}
+	return false
+}
+
+func (x *Tournament) GetEndActive() uint32 {
+	if x != nil {
+		return x.EndActive
+	}
+	return 0
+}
+
+func (x *Tournament) GetNextReset() uint32 {
+	if x != nil {
+		return x.NextReset
+	}
+	return 0
+}
+
+func (x *Tournament) GetMetadata() string {
+	if x != nil {
+		return x.Metadata
+	}
+	return ""
+}
+
+func (x *Tournament) GetCreateTime() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreateTime
+	}
+	return nil
+}
+
+func (x *Tournament) GetStartTime() *timestamppb.Timestamp {
+	if x != nil {
+		return x.StartTime
+	}
+	return nil
+}
+
+func (x *Tournament) GetEndTime() *timestamppb.Timestamp {
+	if x != nil {
+		return x.EndTime
+	}
+	return nil
+}
+
+func (x *Tournament) GetDuration() uint32 {
+	if x != nil {
+		return x.Duration
+	}
+	return 0
+}
+
+func (x *Tournament) GetStartActive() uint32 {
+	if x != nil {
+		return x.StartActive
+	}
+	return 0
+}
+
+func (x *Tournament) GetPrevReset() uint32 {
+	if x != nil {
+		return x.PrevReset
+	}
+	return 0
+}
+
+func (x *Tournament) GetOperator() Operator {
+	if x != nil {
+		return x.Operator
+	}
+	return Operator_NO_OVERRIDE
+}
+
+func (x *Tournament) GetAuthoritative() bool {
+	if x != nil {
+		return x.Authoritative
+	}
+	return false
+}
+
+func (x *Tournament) GetJoinRequired() bool {
+	if x != nil {
+		return x.JoinRequired
+	}
+	return false
+}
+
+// A list of tournaments.
+type TournamentList struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The list of tournaments returned.
+	Tournaments []*Tournament `protobuf:"bytes,1,rep,name=tournaments,proto3" json:"tournaments,omitempty"`
+	// A pagination cursor (optional).
+	Cursor        string `protobuf:"bytes,2,opt,name=cursor,proto3" json:"cursor,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *GetMatchRequest) Reset() {
-	*x = GetMatchRequest{}
-	mi := &file_api_api_proto_msgTypes[78]
+func (x *TournamentList) Reset() {
+	*x = TournamentList{}
+	mi := &file_api_api_proto_msgTypes[65]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *GetMatchRequest) String() string {
+func (x *TournamentList) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*GetMatchRequest) ProtoMessage() {}
+func (*TournamentList) ProtoMessage() {}
 
-func (x *GetMatchRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[78]
+func (x *TournamentList) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[65]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5343,42 +4998,57 @@ func (x *GetMatchRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use GetMatchRequest.ProtoReflect.Descriptor instead.
-func (*GetMatchRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{78}
+// Deprecated: Use TournamentList.ProtoReflect.Descriptor instead.
+func (*TournamentList) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{65}
 }
 
-func (x *GetMatchRequest) GetMatchId() string {
+func (x *TournamentList) GetTournaments() []*Tournament {
 	if x != nil {
-		return x.MatchId
+		return x.Tournaments
+	}
+	return nil
+}
+
+func (x *TournamentList) GetCursor() string {
+	if x != nil {
+		return x.Cursor
 	}
 	return ""
 }
 
-type MatchPresence struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	Username      string                 `protobuf:"bytes,2,opt,name=username,proto3" json:"username,omitempty"`
-	SessionId     string                 `protobuf:"bytes,3,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
+// A set of tournament records which may be part of a tournament records page or a batch of individual records.
+type TournamentRecordList struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// A list of tournament records.
+	Records []*LeaderboardRecord `protobuf:"bytes,1,rep,name=records,proto3" json:"records,omitempty"`
+	// A batched set of tournament records belonging to specified owners.
+	OwnerRecords []*LeaderboardRecord `protobuf:"bytes,2,rep,name=owner_records,json=ownerRecords,proto3" json:"owner_records,omitempty"`
+	// The cursor to send when retrieving the next page (optional).
+	NextCursor string `protobuf:"bytes,3,opt,name=next_cursor,json=nextCursor,proto3" json:"next_cursor,omitempty"`
+	// The cursor to send when retrieving the previous page (optional).
+	PrevCursor string `protobuf:"bytes,4,opt,name=prev_cursor,json=prevCursor,proto3" json:"prev_cursor,omitempty"`
+	// The total number of ranks available.
+	RankCount     int64 `protobuf:"varint,5,opt,name=rank_count,json=rankCount,proto3" json:"rank_count,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *MatchPresence) Reset() {
-	*x = MatchPresence{}
-	mi := &file_api_api_proto_msgTypes[79]
+func (x *TournamentRecordList) Reset() {
+	*x = TournamentRecordList{}
+	mi := &file_api_api_proto_msgTypes[66]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *MatchPresence) String() string {
+func (x *TournamentRecordList) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*MatchPresence) ProtoMessage() {}
+func (*TournamentRecordList) ProtoMessage() {}
 
-func (x *MatchPresence) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[79]
+func (x *TournamentRecordList) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[66]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5389,40 +5059,1019 @@ func (x *MatchPresence) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use MatchPresence.ProtoReflect.Descriptor instead.
-func (*MatchPresence) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{79}
+// Deprecated: Use TournamentRecordList.ProtoReflect.Descriptor instead.
+func (*TournamentRecordList) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{66}
 }
 
-func (x *MatchPresence) GetUserId() string {
+func (x *TournamentRecordList) GetRecords() []*LeaderboardRecord {
 	if x != nil {
-		return x.UserId
+		return x.Records
+	}
+	return nil
+}
+
+func (x *TournamentRecordList) GetOwnerRecords() []*LeaderboardRecord {
+	if x != nil {
+		return x.OwnerRecords
+	}
+	return nil
+}
+
+func (x *TournamentRecordList) GetNextCursor() string {
+	if x != nil {
+		return x.NextCursor
 	}
 	return ""
 }
 
-func (x *MatchPresence) GetUsername() string {
+func (x *TournamentRecordList) GetPrevCursor() string {
+	if x != nil {
+		return x.PrevCursor
+	}
+	return ""
+}
+
+func (x *TournamentRecordList) GetRankCount() int64 {
+	if x != nil {
+		return x.RankCount
+	}
+	return 0
+}
+
+// A request to submit a score to a tournament.
+type WriteTournamentRecordRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The tournament ID to write the record for.
+	TournamentId string `protobuf:"bytes,1,opt,name=tournament_id,json=tournamentId,proto3" json:"tournament_id,omitempty"`
+	// Record input.
+	Record        *WriteTournamentRecordRequest_TournamentRecordWrite `protobuf:"bytes,2,opt,name=record,proto3" json:"record,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *WriteTournamentRecordRequest) Reset() {
+	*x = WriteTournamentRecordRequest{}
+	mi := &file_api_api_proto_msgTypes[67]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WriteTournamentRecordRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WriteTournamentRecordRequest) ProtoMessage() {}
+
+func (x *WriteTournamentRecordRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[67]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WriteTournamentRecordRequest.ProtoReflect.Descriptor instead.
+func (*WriteTournamentRecordRequest) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{67}
+}
+
+func (x *WriteTournamentRecordRequest) GetTournamentId() string {
+	if x != nil {
+		return x.TournamentId
+	}
+	return ""
+}
+
+func (x *WriteTournamentRecordRequest) GetRecord() *WriteTournamentRecordRequest_TournamentRecordWrite {
+	if x != nil {
+		return x.Record
+	}
+	return nil
+}
+
+// The request to join a tournament.
+type JoinTournamentRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The ID of the tournament to join. The tournament must already exist.
+	TournamentId  string `protobuf:"bytes,1,opt,name=tournament_id,json=tournamentId,proto3" json:"tournament_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *JoinTournamentRequest) Reset() {
+	*x = JoinTournamentRequest{}
+	mi := &file_api_api_proto_msgTypes[68]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *JoinTournamentRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*JoinTournamentRequest) ProtoMessage() {}
+
+func (x *JoinTournamentRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[68]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use JoinTournamentRequest.ProtoReflect.Descriptor instead.
+func (*JoinTournamentRequest) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{68}
+}
+
+func (x *JoinTournamentRequest) GetTournamentId() string {
+	if x != nil {
+		return x.TournamentId
+	}
+	return ""
+}
+
+// List active/upcoming tournaments based on given filters.
+type ListTournamentsRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The start of the categories to include. Defaults to 0.
+	CategoryStart *wrapperspb.UInt32Value `protobuf:"bytes,1,opt,name=category_start,json=categoryStart,proto3" json:"category_start,omitempty"`
+	// The end of the categories to include. Defaults to 128.
+	CategoryEnd *wrapperspb.UInt32Value `protobuf:"bytes,2,opt,name=category_end,json=categoryEnd,proto3" json:"category_end,omitempty"`
+	// The start time for tournaments. Defaults to epoch.
+	StartTime *wrapperspb.UInt32Value `protobuf:"bytes,3,opt,name=start_time,json=startTime,proto3" json:"start_time,omitempty"`
+	// The end time for tournaments. Defaults to +1 year from current Unix time.
+	EndTime *wrapperspb.UInt32Value `protobuf:"bytes,4,opt,name=end_time,json=endTime,proto3" json:"end_time,omitempty"`
+	// Max number of records to return. Between 1 and 100.
+	Limit *wrapperspb.Int32Value `protobuf:"bytes,6,opt,name=limit,proto3" json:"limit,omitempty"`
+	// A next page cursor for listings (optional).
+	Cursor        string `protobuf:"bytes,8,opt,name=cursor,proto3" json:"cursor,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListTournamentsRequest) Reset() {
+	*x = ListTournamentsRequest{}
+	mi := &file_api_api_proto_msgTypes[69]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListTournamentsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListTournamentsRequest) ProtoMessage() {}
+
+func (x *ListTournamentsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[69]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListTournamentsRequest.ProtoReflect.Descriptor instead.
+func (*ListTournamentsRequest) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{69}
+}
+
+func (x *ListTournamentsRequest) GetCategoryStart() *wrapperspb.UInt32Value {
+	if x != nil {
+		return x.CategoryStart
+	}
+	return nil
+}
+
+func (x *ListTournamentsRequest) GetCategoryEnd() *wrapperspb.UInt32Value {
+	if x != nil {
+		return x.CategoryEnd
+	}
+	return nil
+}
+
+func (x *ListTournamentsRequest) GetStartTime() *wrapperspb.UInt32Value {
+	if x != nil {
+		return x.StartTime
+	}
+	return nil
+}
+
+func (x *ListTournamentsRequest) GetEndTime() *wrapperspb.UInt32Value {
+	if x != nil {
+		return x.EndTime
+	}
+	return nil
+}
+
+func (x *ListTournamentsRequest) GetLimit() *wrapperspb.Int32Value {
+	if x != nil {
+		return x.Limit
+	}
+	return nil
+}
+
+func (x *ListTournamentsRequest) GetCursor() string {
+	if x != nil {
+		return x.Cursor
+	}
+	return ""
+}
+
+// List tournament records from a given tournament.
+type ListTournamentRecordsRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The ID of the tournament to list for.
+	TournamentId string `protobuf:"bytes,1,opt,name=tournament_id,json=tournamentId,proto3" json:"tournament_id,omitempty"`
+	// One or more owners to retrieve records for.
+	OwnerIds []string `protobuf:"bytes,2,rep,name=owner_ids,json=ownerIds,proto3" json:"owner_ids,omitempty"`
+	// Max number of records to return. Between 1 and 100.
+	Limit *wrapperspb.Int32Value `protobuf:"bytes,3,opt,name=limit,proto3" json:"limit,omitempty"`
+	// A next or previous page cursor.
+	Cursor string `protobuf:"bytes,4,opt,name=cursor,proto3" json:"cursor,omitempty"`
+	// Expiry in seconds (since epoch) to begin fetching records from.
+	Expiry        *wrapperspb.Int64Value `protobuf:"bytes,5,opt,name=expiry,proto3" json:"expiry,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListTournamentRecordsRequest) Reset() {
+	*x = ListTournamentRecordsRequest{}
+	mi := &file_api_api_proto_msgTypes[70]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListTournamentRecordsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListTournamentRecordsRequest) ProtoMessage() {}
+
+func (x *ListTournamentRecordsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[70]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListTournamentRecordsRequest.ProtoReflect.Descriptor instead.
+func (*ListTournamentRecordsRequest) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{70}
+}
+
+func (x *ListTournamentRecordsRequest) GetTournamentId() string {
+	if x != nil {
+		return x.TournamentId
+	}
+	return ""
+}
+
+func (x *ListTournamentRecordsRequest) GetOwnerIds() []string {
+	if x != nil {
+		return x.OwnerIds
+	}
+	return nil
+}
+
+func (x *ListTournamentRecordsRequest) GetLimit() *wrapperspb.Int32Value {
+	if x != nil {
+		return x.Limit
+	}
+	return nil
+}
+
+func (x *ListTournamentRecordsRequest) GetCursor() string {
+	if x != nil {
+		return x.Cursor
+	}
+	return ""
+}
+
+func (x *ListTournamentRecordsRequest) GetExpiry() *wrapperspb.Int64Value {
+	if x != nil {
+		return x.Expiry
+	}
+	return nil
+}
+
+// List tournament records from a given tournament around the owner.
+type ListTournamentRecordsAroundOwnerRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The ID of the tournament to list for.
+	TournamentId string `protobuf:"bytes,1,opt,name=tournament_id,json=tournamentId,proto3" json:"tournament_id,omitempty"`
+	// Max number of records to return. Between 1 and 100.
+	Limit *wrapperspb.UInt32Value `protobuf:"bytes,2,opt,name=limit,proto3" json:"limit,omitempty"`
+	// The owner to retrieve records around.
+	OwnerId string `protobuf:"bytes,3,opt,name=owner_id,json=ownerId,proto3" json:"owner_id,omitempty"`
+	// Expiry in seconds (since epoch) to begin fetching records from.
+	Expiry *wrapperspb.Int64Value `protobuf:"bytes,4,opt,name=expiry,proto3" json:"expiry,omitempty"`
+	// A next or previous page cursor.
+	Cursor        string `protobuf:"bytes,5,opt,name=cursor,proto3" json:"cursor,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListTournamentRecordsAroundOwnerRequest) Reset() {
+	*x = ListTournamentRecordsAroundOwnerRequest{}
+	mi := &file_api_api_proto_msgTypes[71]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListTournamentRecordsAroundOwnerRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListTournamentRecordsAroundOwnerRequest) ProtoMessage() {}
+
+func (x *ListTournamentRecordsAroundOwnerRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[71]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListTournamentRecordsAroundOwnerRequest.ProtoReflect.Descriptor instead.
+func (*ListTournamentRecordsAroundOwnerRequest) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{71}
+}
+
+func (x *ListTournamentRecordsAroundOwnerRequest) GetTournamentId() string {
+	if x != nil {
+		return x.TournamentId
+	}
+	return ""
+}
+
+func (x *ListTournamentRecordsAroundOwnerRequest) GetLimit() *wrapperspb.UInt32Value {
+	if x != nil {
+		return x.Limit
+	}
+	return nil
+}
+
+func (x *ListTournamentRecordsAroundOwnerRequest) GetOwnerId() string {
+	if x != nil {
+		return x.OwnerId
+	}
+	return ""
+}
+
+func (x *ListTournamentRecordsAroundOwnerRequest) GetExpiry() *wrapperspb.Int64Value {
+	if x != nil {
+		return x.Expiry
+	}
+	return nil
+}
+
+func (x *ListTournamentRecordsAroundOwnerRequest) GetCursor() string {
+	if x != nil {
+		return x.Cursor
+	}
+	return ""
+}
+
+// Delete a tournament record.
+type DeleteTournamentRecordRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The tournament ID to delete from.
+	TournamentId  string `protobuf:"bytes,1,opt,name=tournament_id,json=tournamentId,proto3" json:"tournament_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteTournamentRecordRequest) Reset() {
+	*x = DeleteTournamentRecordRequest{}
+	mi := &file_api_api_proto_msgTypes[72]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteTournamentRecordRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteTournamentRecordRequest) ProtoMessage() {}
+
+func (x *DeleteTournamentRecordRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[72]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteTournamentRecordRequest.ProtoReflect.Descriptor instead.
+func (*DeleteTournamentRecordRequest) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{72}
+}
+
+func (x *DeleteTournamentRecordRequest) GetTournamentId() string {
+	if x != nil {
+		return x.TournamentId
+	}
+	return ""
+}
+
+// A message sent on a channel.
+type ChannelMessage struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The channel this message belongs to.
+	ChannelId string `protobuf:"bytes,1,opt,name=channel_id,json=channelId,proto3" json:"channel_id,omitempty"`
+	// The unique ID of this message.
+	MessageId string `protobuf:"bytes,2,opt,name=message_id,json=messageId,proto3" json:"message_id,omitempty"`
+	// The code representing a message type or category.
+	Code *wrapperspb.Int32Value `protobuf:"bytes,3,opt,name=code,proto3" json:"code,omitempty"`
+	// Message sender, usually a user ID.
+	SenderId string `protobuf:"bytes,4,opt,name=sender_id,json=senderId,proto3" json:"sender_id,omitempty"`
+	// The username of the message sender, if any.
+	Username string `protobuf:"bytes,5,opt,name=username,proto3" json:"username,omitempty"`
+	// The content payload.
+	Content string `protobuf:"bytes,6,opt,name=content,proto3" json:"content,omitempty"`
+	// The UNIX time when the message was created.
+	CreateTime *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=create_time,json=createTime,proto3" json:"create_time,omitempty"`
+	// The UNIX time when the message was last updated.
+	UpdateTime *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=update_time,json=updateTime,proto3" json:"update_time,omitempty"`
+	// True if the message was persisted to the channel's history, false otherwise.
+	Persistent *wrapperspb.BoolValue `protobuf:"bytes,9,opt,name=persistent,proto3" json:"persistent,omitempty"`
+	// The name of the chat room, or an empty string if this message was not sent through a chat room.
+	RoomName string `protobuf:"bytes,10,opt,name=room_name,json=roomName,proto3" json:"room_name,omitempty"`
+	// The ID of the group, or an empty string if this message was not sent through a group channel.
+	GroupId string `protobuf:"bytes,11,opt,name=group_id,json=groupId,proto3" json:"group_id,omitempty"`
+	// The ID of the first DM user, or an empty string if this message was not sent through a DM chat.
+	UserIdOne string `protobuf:"bytes,12,opt,name=user_id_one,json=userIdOne,proto3" json:"user_id_one,omitempty"`
+	// The ID of the second DM user, or an empty string if this message was not sent through a DM chat.
+	UserIdTwo     string `protobuf:"bytes,13,opt,name=user_id_two,json=userIdTwo,proto3" json:"user_id_two,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ChannelMessage) Reset() {
+	*x = ChannelMessage{}
+	mi := &file_api_api_proto_msgTypes[73]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ChannelMessage) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ChannelMessage) ProtoMessage() {}
+
+func (x *ChannelMessage) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[73]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ChannelMessage.ProtoReflect.Descriptor instead.
+func (*ChannelMessage) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{73}
+}
+
+func (x *ChannelMessage) GetChannelId() string {
+	if x != nil {
+		return x.ChannelId
+	}
+	return ""
+}
+
+func (x *ChannelMessage) GetMessageId() string {
+	if x != nil {
+		return x.MessageId
+	}
+	return ""
+}
+
+func (x *ChannelMessage) GetCode() *wrapperspb.Int32Value {
+	if x != nil {
+		return x.Code
+	}
+	return nil
+}
+
+func (x *ChannelMessage) GetSenderId() string {
+	if x != nil {
+		return x.SenderId
+	}
+	return ""
+}
+
+func (x *ChannelMessage) GetUsername() string {
 	if x != nil {
 		return x.Username
 	}
 	return ""
 }
 
-func (x *MatchPresence) GetSessionId() string {
+func (x *ChannelMessage) GetContent() string {
 	if x != nil {
-		return x.SessionId
+		return x.Content
 	}
 	return ""
 }
 
+func (x *ChannelMessage) GetCreateTime() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreateTime
+	}
+	return nil
+}
+
+func (x *ChannelMessage) GetUpdateTime() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdateTime
+	}
+	return nil
+}
+
+func (x *ChannelMessage) GetPersistent() *wrapperspb.BoolValue {
+	if x != nil {
+		return x.Persistent
+	}
+	return nil
+}
+
+func (x *ChannelMessage) GetRoomName() string {
+	if x != nil {
+		return x.RoomName
+	}
+	return ""
+}
+
+func (x *ChannelMessage) GetGroupId() string {
+	if x != nil {
+		return x.GroupId
+	}
+	return ""
+}
+
+func (x *ChannelMessage) GetUserIdOne() string {
+	if x != nil {
+		return x.UserIdOne
+	}
+	return ""
+}
+
+func (x *ChannelMessage) GetUserIdTwo() string {
+	if x != nil {
+		return x.UserIdTwo
+	}
+	return ""
+}
+
+// A list of channel messages, usually a result of a list operation.
+type ChannelMessageList struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// A list of messages.
+	Messages []*ChannelMessage `protobuf:"bytes,1,rep,name=messages,proto3" json:"messages,omitempty"`
+	// The cursor to send when retrieving the next page, if any.
+	NextCursor string `protobuf:"bytes,2,opt,name=next_cursor,json=nextCursor,proto3" json:"next_cursor,omitempty"`
+	// The cursor to send when retrieving the previous page, if any.
+	PrevCursor string `protobuf:"bytes,3,opt,name=prev_cursor,json=prevCursor,proto3" json:"prev_cursor,omitempty"`
+	// Cacheable cursor to list newer messages.
+	CacheableCursor string `protobuf:"bytes,4,opt,name=cacheable_cursor,json=cacheableCursor,proto3" json:"cacheable_cursor,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *ChannelMessageList) Reset() {
+	*x = ChannelMessageList{}
+	mi := &file_api_api_proto_msgTypes[74]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ChannelMessageList) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ChannelMessageList) ProtoMessage() {}
+
+func (x *ChannelMessageList) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[74]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ChannelMessageList.ProtoReflect.Descriptor instead.
+func (*ChannelMessageList) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{74}
+}
+
+func (x *ChannelMessageList) GetMessages() []*ChannelMessage {
+	if x != nil {
+		return x.Messages
+	}
+	return nil
+}
+
+func (x *ChannelMessageList) GetNextCursor() string {
+	if x != nil {
+		return x.NextCursor
+	}
+	return ""
+}
+
+func (x *ChannelMessageList) GetPrevCursor() string {
+	if x != nil {
+		return x.PrevCursor
+	}
+	return ""
+}
+
+func (x *ChannelMessageList) GetCacheableCursor() string {
+	if x != nil {
+		return x.CacheableCursor
+	}
+	return ""
+}
+
+// List a channel's message history.
+type ListChannelMessagesRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The channel ID to list from.
+	ChannelId string `protobuf:"bytes,1,opt,name=channel_id,json=channelId,proto3" json:"channel_id,omitempty"`
+	// Max number of records to return. Between 1 and 100.
+	Limit *wrapperspb.Int32Value `protobuf:"bytes,2,opt,name=limit,proto3" json:"limit,omitempty"`
+	// True if listing should be older messages to newer, false if reverse.
+	Forward *wrapperspb.BoolValue `protobuf:"bytes,3,opt,name=forward,proto3" json:"forward,omitempty"`
+	// A pagination cursor, if any.
+	Cursor        string `protobuf:"bytes,4,opt,name=cursor,proto3" json:"cursor,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListChannelMessagesRequest) Reset() {
+	*x = ListChannelMessagesRequest{}
+	mi := &file_api_api_proto_msgTypes[75]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListChannelMessagesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListChannelMessagesRequest) ProtoMessage() {}
+
+func (x *ListChannelMessagesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[75]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListChannelMessagesRequest.ProtoReflect.Descriptor instead.
+func (*ListChannelMessagesRequest) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{75}
+}
+
+func (x *ListChannelMessagesRequest) GetChannelId() string {
+	if x != nil {
+		return x.ChannelId
+	}
+	return ""
+}
+
+func (x *ListChannelMessagesRequest) GetLimit() *wrapperspb.Int32Value {
+	if x != nil {
+		return x.Limit
+	}
+	return nil
+}
+
+func (x *ListChannelMessagesRequest) GetForward() *wrapperspb.BoolValue {
+	if x != nil {
+		return x.Forward
+	}
+	return nil
+}
+
+func (x *ListChannelMessagesRequest) GetCursor() string {
+	if x != nil {
+		return x.Cursor
+	}
+	return ""
+}
+
+// A notification in the server.
+type Notification struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// ID of the Notification.
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// Subject of the notification.
+	Subject string `protobuf:"bytes,2,opt,name=subject,proto3" json:"subject,omitempty"`
+	// Content of the notification in JSON.
+	Content string `protobuf:"bytes,3,opt,name=content,proto3" json:"content,omitempty"`
+	// Category code for this notification.
+	Code int32 `protobuf:"varint,4,opt,name=code,proto3" json:"code,omitempty"`
+	// ID of the sender, if a user. Otherwise 'null'.
+	SenderId string `protobuf:"bytes,5,opt,name=sender_id,json=senderId,proto3" json:"sender_id,omitempty"`
+	// The UNIX time when the notification was created.
+	CreateTime *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=create_time,json=createTime,proto3" json:"create_time,omitempty"`
+	// True if this notification was persisted to the database.
+	Persistent    bool `protobuf:"varint,7,opt,name=persistent,proto3" json:"persistent,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Notification) Reset() {
+	*x = Notification{}
+	mi := &file_api_api_proto_msgTypes[76]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Notification) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Notification) ProtoMessage() {}
+
+func (x *Notification) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[76]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Notification.ProtoReflect.Descriptor instead.
+func (*Notification) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{76}
+}
+
+func (x *Notification) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *Notification) GetSubject() string {
+	if x != nil {
+		return x.Subject
+	}
+	return ""
+}
+
+func (x *Notification) GetContent() string {
+	if x != nil {
+		return x.Content
+	}
+	return ""
+}
+
+func (x *Notification) GetCode() int32 {
+	if x != nil {
+		return x.Code
+	}
+	return 0
+}
+
+func (x *Notification) GetSenderId() string {
+	if x != nil {
+		return x.SenderId
+	}
+	return ""
+}
+
+func (x *Notification) GetCreateTime() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreateTime
+	}
+	return nil
+}
+
+func (x *Notification) GetPersistent() bool {
+	if x != nil {
+		return x.Persistent
+	}
+	return false
+}
+
+// A collection of zero or more notifications.
+type NotificationList struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Collection of notifications.
+	Notifications []*Notification `protobuf:"bytes,1,rep,name=notifications,proto3" json:"notifications,omitempty"`
+	// Use this cursor to paginate notifications. Cache this to catch up to new notifications.
+	CacheableCursor string `protobuf:"bytes,2,opt,name=cacheable_cursor,json=cacheableCursor,proto3" json:"cacheable_cursor,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *NotificationList) Reset() {
+	*x = NotificationList{}
+	mi := &file_api_api_proto_msgTypes[77]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *NotificationList) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*NotificationList) ProtoMessage() {}
+
+func (x *NotificationList) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[77]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use NotificationList.ProtoReflect.Descriptor instead.
+func (*NotificationList) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{77}
+}
+
+func (x *NotificationList) GetNotifications() []*Notification {
+	if x != nil {
+		return x.Notifications
+	}
+	return nil
+}
+
+func (x *NotificationList) GetCacheableCursor() string {
+	if x != nil {
+		return x.CacheableCursor
+	}
+	return ""
+}
+
+// Get a list of unexpired notifications.
+type ListNotificationsRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The number of notifications to get. Between 1 and 100.
+	Limit *wrapperspb.Int32Value `protobuf:"bytes,1,opt,name=limit,proto3" json:"limit,omitempty"`
+	// A cursor to page through notifications.
+	CacheableCursor string `protobuf:"bytes,2,opt,name=cacheable_cursor,json=cacheableCursor,proto3" json:"cacheable_cursor,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *ListNotificationsRequest) Reset() {
+	*x = ListNotificationsRequest{}
+	mi := &file_api_api_proto_msgTypes[78]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListNotificationsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListNotificationsRequest) ProtoMessage() {}
+
+func (x *ListNotificationsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[78]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListNotificationsRequest.ProtoReflect.Descriptor instead.
+func (*ListNotificationsRequest) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{78}
+}
+
+func (x *ListNotificationsRequest) GetLimit() *wrapperspb.Int32Value {
+	if x != nil {
+		return x.Limit
+	}
+	return nil
+}
+
+func (x *ListNotificationsRequest) GetCacheableCursor() string {
+	if x != nil {
+		return x.CacheableCursor
+	}
+	return ""
+}
+
+// Delete one or more notifications for the current user.
+type DeleteNotificationsRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The id of notifications.
+	Ids           []string `protobuf:"bytes,1,rep,name=ids,proto3" json:"ids,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteNotificationsRequest) Reset() {
+	*x = DeleteNotificationsRequest{}
+	mi := &file_api_api_proto_msgTypes[79]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteNotificationsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteNotificationsRequest) ProtoMessage() {}
+
+func (x *DeleteNotificationsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[79]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteNotificationsRequest.ProtoReflect.Descriptor instead.
+func (*DeleteNotificationsRequest) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{79}
+}
+
+func (x *DeleteNotificationsRequest) GetIds() []string {
+	if x != nil {
+		return x.Ids
+	}
+	return nil
+}
+
+// Represents a realtime match.
 type Match struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	MatchId       string                 `protobuf:"bytes,1,opt,name=match_id,json=matchId,proto3" json:"match_id,omitempty"`
-	Authoritative bool                   `protobuf:"varint,2,opt,name=authoritative,proto3" json:"authoritative,omitempty"`
-	Label         string                 `protobuf:"bytes,3,opt,name=label,proto3" json:"label,omitempty"`
-	Size          int32                  `protobuf:"varint,4,opt,name=size,proto3" json:"size,omitempty"`
-	MaxSize       int32                  `protobuf:"varint,5,opt,name=max_size,json=maxSize,proto3" json:"max_size,omitempty"`
-	Presences     []*MatchPresence       `protobuf:"bytes,6,rep,name=presences,proto3" json:"presences,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The ID of the match, can be used to join.
+	MatchId string `protobuf:"bytes,1,opt,name=match_id,json=matchId,proto3" json:"match_id,omitempty"`
+	// True if it's an server-managed authoritative match, false otherwise.
+	Authoritative bool `protobuf:"varint,2,opt,name=authoritative,proto3" json:"authoritative,omitempty"`
+	// Match label, if any.
+	Label *wrapperspb.StringValue `protobuf:"bytes,3,opt,name=label,proto3" json:"label,omitempty"`
+	// Current number of users in the match.
+	Size int32 `protobuf:"varint,4,opt,name=size,proto3" json:"size,omitempty"`
+	// Tick Rate.
+	TickRate int32 `protobuf:"varint,5,opt,name=tick_rate,json=tickRate,proto3" json:"tick_rate,omitempty"`
+	// Handler name.
+	HandlerName   string `protobuf:"bytes,6,opt,name=handler_name,json=handlerName,proto3" json:"handler_name,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -5471,11 +6120,11 @@ func (x *Match) GetAuthoritative() bool {
 	return false
 }
 
-func (x *Match) GetLabel() string {
+func (x *Match) GetLabel() *wrapperspb.StringValue {
 	if x != nil {
 		return x.Label
 	}
-	return ""
+	return nil
 }
 
 func (x *Match) GetSize() int32 {
@@ -5485,23 +6134,25 @@ func (x *Match) GetSize() int32 {
 	return 0
 }
 
-func (x *Match) GetMaxSize() int32 {
+func (x *Match) GetTickRate() int32 {
 	if x != nil {
-		return x.MaxSize
+		return x.TickRate
 	}
 	return 0
 }
 
-func (x *Match) GetPresences() []*MatchPresence {
+func (x *Match) GetHandlerName() string {
 	if x != nil {
-		return x.Presences
+		return x.HandlerName
 	}
-	return nil
+	return ""
 }
 
+// A list of realtime matches.
 type MatchList struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Matches       []*Match               `protobuf:"bytes,1,rep,name=matches,proto3" json:"matches,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// A number of matches corresponding to a list operation.
+	Matches       []*Match `protobuf:"bytes,1,rep,name=matches,proto3" json:"matches,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -5543,28 +6194,39 @@ func (x *MatchList) GetMatches() []*Match {
 	return nil
 }
 
-type MatchSignalRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	MatchId       string                 `protobuf:"bytes,1,opt,name=match_id,json=matchId,proto3" json:"match_id,omitempty"`
-	Payload       string                 `protobuf:"bytes,2,opt,name=payload,proto3" json:"payload,omitempty"`
+// List realtime matches.
+type ListMatchesRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Limit the number of returned matches.
+	Limit *wrapperspb.Int32Value `protobuf:"bytes,1,opt,name=limit,proto3" json:"limit,omitempty"`
+	// Authoritative or relayed matches.
+	Authoritative *wrapperspb.BoolValue `protobuf:"bytes,2,opt,name=authoritative,proto3" json:"authoritative,omitempty"`
+	// Label filter.
+	Label *wrapperspb.StringValue `protobuf:"bytes,3,opt,name=label,proto3" json:"label,omitempty"`
+	// Minimum user count.
+	MinSize *wrapperspb.Int32Value `protobuf:"bytes,4,opt,name=min_size,json=minSize,proto3" json:"min_size,omitempty"`
+	// Maximum user count.
+	MaxSize *wrapperspb.Int32Value `protobuf:"bytes,5,opt,name=max_size,json=maxSize,proto3" json:"max_size,omitempty"`
+	// Arbitrary label query.
+	Query         *wrapperspb.StringValue `protobuf:"bytes,6,opt,name=query,proto3" json:"query,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *MatchSignalRequest) Reset() {
-	*x = MatchSignalRequest{}
+func (x *ListMatchesRequest) Reset() {
+	*x = ListMatchesRequest{}
 	mi := &file_api_api_proto_msgTypes[82]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *MatchSignalRequest) String() string {
+func (x *ListMatchesRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*MatchSignalRequest) ProtoMessage() {}
+func (*ListMatchesRequest) ProtoMessage() {}
 
-func (x *MatchSignalRequest) ProtoReflect() protoreflect.Message {
+func (x *ListMatchesRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_api_api_proto_msgTypes[82]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -5576,82 +6238,71 @@ func (x *MatchSignalRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use MatchSignalRequest.ProtoReflect.Descriptor instead.
-func (*MatchSignalRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use ListMatchesRequest.ProtoReflect.Descriptor instead.
+func (*ListMatchesRequest) Descriptor() ([]byte, []int) {
 	return file_api_api_proto_rawDescGZIP(), []int{82}
 }
 
-func (x *MatchSignalRequest) GetMatchId() string {
+func (x *ListMatchesRequest) GetLimit() *wrapperspb.Int32Value {
 	if x != nil {
-		return x.MatchId
+		return x.Limit
 	}
-	return ""
+	return nil
 }
 
-func (x *MatchSignalRequest) GetPayload() string {
+func (x *ListMatchesRequest) GetAuthoritative() *wrapperspb.BoolValue {
 	if x != nil {
-		return x.Payload
+		return x.Authoritative
 	}
-	return ""
+	return nil
 }
 
-type MatchSignalResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Response      string                 `protobuf:"bytes,1,opt,name=response,proto3" json:"response,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *MatchSignalResponse) Reset() {
-	*x = MatchSignalResponse{}
-	mi := &file_api_api_proto_msgTypes[83]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *MatchSignalResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*MatchSignalResponse) ProtoMessage() {}
-
-func (x *MatchSignalResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[83]
+func (x *ListMatchesRequest) GetLabel() *wrapperspb.StringValue {
 	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
+		return x.Label
 	}
-	return mi.MessageOf(x)
+	return nil
 }
 
-// Deprecated: Use MatchSignalResponse.ProtoReflect.Descriptor instead.
-func (*MatchSignalResponse) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{83}
-}
-
-func (x *MatchSignalResponse) GetResponse() string {
+func (x *ListMatchesRequest) GetMinSize() *wrapperspb.Int32Value {
 	if x != nil {
-		return x.Response
+		return x.MinSize
 	}
-	return ""
+	return nil
 }
 
+func (x *ListMatchesRequest) GetMaxSize() *wrapperspb.Int32Value {
+	if x != nil {
+		return x.MaxSize
+	}
+	return nil
+}
+
+func (x *ListMatchesRequest) GetQuery() *wrapperspb.StringValue {
+	if x != nil {
+		return x.Query
+	}
+	return nil
+}
+
+// A request to list parties.
 type ListPartiesRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Limit         int32                  `protobuf:"varint,1,opt,name=limit,proto3" json:"limit,omitempty"`
-	Open          *bool                  `protobuf:"varint,2,opt,name=open,proto3,oneof" json:"open,omitempty"`
-	Query         string                 `protobuf:"bytes,3,opt,name=query,proto3" json:"query,omitempty"`
-	Cursor        string                 `protobuf:"bytes,4,opt,name=cursor,proto3" json:"cursor,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Limit the number of returned parties.
+	Limit *wrapperspb.Int32Value `protobuf:"bytes,1,opt,name=limit,proto3" json:"limit,omitempty"`
+	// Optionally filter by open/closed parties.
+	Open *wrapperspb.BoolValue `protobuf:"bytes,2,opt,name=open,proto3" json:"open,omitempty"`
+	// Arbitrary label query.
+	Query *wrapperspb.StringValue `protobuf:"bytes,3,opt,name=query,proto3" json:"query,omitempty"`
+	// Cursor for the next page of results, if any.
+	Cursor        *wrapperspb.StringValue `protobuf:"bytes,4,opt,name=cursor,proto3" json:"cursor,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ListPartiesRequest) Reset() {
 	*x = ListPartiesRequest{}
-	mi := &file_api_api_proto_msgTypes[84]
+	mi := &file_api_api_proto_msgTypes[83]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5663,7 +6314,7 @@ func (x *ListPartiesRequest) String() string {
 func (*ListPartiesRequest) ProtoMessage() {}
 
 func (x *ListPartiesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[84]
+	mi := &file_api_api_proto_msgTypes[83]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5676,51 +6327,57 @@ func (x *ListPartiesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListPartiesRequest.ProtoReflect.Descriptor instead.
 func (*ListPartiesRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{84}
+	return file_api_api_proto_rawDescGZIP(), []int{83}
 }
 
-func (x *ListPartiesRequest) GetLimit() int32 {
+func (x *ListPartiesRequest) GetLimit() *wrapperspb.Int32Value {
 	if x != nil {
 		return x.Limit
 	}
-	return 0
+	return nil
 }
 
-func (x *ListPartiesRequest) GetOpen() bool {
-	if x != nil && x.Open != nil {
-		return *x.Open
+func (x *ListPartiesRequest) GetOpen() *wrapperspb.BoolValue {
+	if x != nil {
+		return x.Open
 	}
-	return false
+	return nil
 }
 
-func (x *ListPartiesRequest) GetQuery() string {
+func (x *ListPartiesRequest) GetQuery() *wrapperspb.StringValue {
 	if x != nil {
 		return x.Query
 	}
-	return ""
+	return nil
 }
 
-func (x *ListPartiesRequest) GetCursor() string {
+func (x *ListPartiesRequest) GetCursor() *wrapperspb.StringValue {
 	if x != nil {
 		return x.Cursor
 	}
-	return ""
+	return nil
 }
 
+// Incoming information about a party.
 type Party struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Open          bool                   `protobuf:"varint,2,opt,name=open,proto3" json:"open,omitempty"`
-	Hidden        bool                   `protobuf:"varint,3,opt,name=hidden,proto3" json:"hidden,omitempty"`
-	MaxSize       int32                  `protobuf:"varint,4,opt,name=max_size,json=maxSize,proto3" json:"max_size,omitempty"`
-	Label         string                 `protobuf:"bytes,5,opt,name=label,proto3" json:"label,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Unique party identifier.
+	PartyId string `protobuf:"bytes,1,opt,name=party_id,json=partyId,proto3" json:"party_id,omitempty"`
+	// Open flag.
+	Open bool `protobuf:"varint,2,opt,name=open,proto3" json:"open,omitempty"`
+	// Hidden flag.
+	Hidden bool `protobuf:"varint,3,opt,name=hidden,proto3" json:"hidden,omitempty"`
+	// Maximum number of party members.
+	MaxSize int32 `protobuf:"varint,4,opt,name=max_size,json=maxSize,proto3" json:"max_size,omitempty"`
+	// The party label, if any.
+	Label         string `protobuf:"bytes,5,opt,name=label,proto3" json:"label,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *Party) Reset() {
 	*x = Party{}
-	mi := &file_api_api_proto_msgTypes[85]
+	mi := &file_api_api_proto_msgTypes[84]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5732,7 +6389,7 @@ func (x *Party) String() string {
 func (*Party) ProtoMessage() {}
 
 func (x *Party) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[85]
+	mi := &file_api_api_proto_msgTypes[84]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5745,12 +6402,12 @@ func (x *Party) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Party.ProtoReflect.Descriptor instead.
 func (*Party) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{85}
+	return file_api_api_proto_rawDescGZIP(), []int{84}
 }
 
-func (x *Party) GetId() string {
+func (x *Party) GetPartyId() string {
 	if x != nil {
-		return x.Id
+		return x.PartyId
 	}
 	return ""
 }
@@ -5783,17 +6440,20 @@ func (x *Party) GetLabel() string {
 	return ""
 }
 
+// A list of parties.
 type PartyList struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Parties       []*Party               `protobuf:"bytes,1,rep,name=parties,proto3" json:"parties,omitempty"`
-	Cursor        string                 `protobuf:"bytes,2,opt,name=cursor,proto3" json:"cursor,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// A number of parties corresponding to a list operation.
+	Parties []*Party `protobuf:"bytes,1,rep,name=parties,proto3" json:"parties,omitempty"`
+	// A cursor to send when retrieving the next page, if any.
+	Cursor        string `protobuf:"bytes,2,opt,name=cursor,proto3" json:"cursor,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *PartyList) Reset() {
 	*x = PartyList{}
-	mi := &file_api_api_proto_msgTypes[86]
+	mi := &file_api_api_proto_msgTypes[85]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5805,7 +6465,7 @@ func (x *PartyList) String() string {
 func (*PartyList) ProtoMessage() {}
 
 func (x *PartyList) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[86]
+	mi := &file_api_api_proto_msgTypes[85]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5818,7 +6478,7 @@ func (x *PartyList) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PartyList.ProtoReflect.Descriptor instead.
 func (*PartyList) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{86}
+	return file_api_api_proto_rawDescGZIP(), []int{85}
 }
 
 func (x *PartyList) GetParties() []*Party {
@@ -5835,30 +6495,83 @@ func (x *PartyList) GetCursor() string {
 	return ""
 }
 
-type ListChannelMessagesRequest struct {
+// Matchmaker ticket completion stats.
+type MatchmakerCompletionStats struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	ChannelId     string                 `protobuf:"bytes,1,opt,name=channel_id,json=channelId,proto3" json:"channel_id,omitempty"`
-	Limit         int32                  `protobuf:"varint,2,opt,name=limit,proto3" json:"limit,omitempty"`
-	Forward       *bool                  `protobuf:"varint,3,opt,name=forward,proto3,oneof" json:"forward,omitempty"`
-	Cursor        string                 `protobuf:"bytes,4,opt,name=cursor,proto3" json:"cursor,omitempty"`
+	CreateTime    *timestamppb.Timestamp `protobuf:"bytes,1,opt,name=create_time,json=createTime,proto3" json:"create_time,omitempty"`
+	CompleteTime  *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=complete_time,json=completeTime,proto3" json:"complete_time,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *ListChannelMessagesRequest) Reset() {
-	*x = ListChannelMessagesRequest{}
+func (x *MatchmakerCompletionStats) Reset() {
+	*x = MatchmakerCompletionStats{}
+	mi := &file_api_api_proto_msgTypes[86]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MatchmakerCompletionStats) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MatchmakerCompletionStats) ProtoMessage() {}
+
+func (x *MatchmakerCompletionStats) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[86]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MatchmakerCompletionStats.ProtoReflect.Descriptor instead.
+func (*MatchmakerCompletionStats) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{86}
+}
+
+func (x *MatchmakerCompletionStats) GetCreateTime() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreateTime
+	}
+	return nil
+}
+
+func (x *MatchmakerCompletionStats) GetCompleteTime() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CompleteTime
+	}
+	return nil
+}
+
+// Matchmaker stats.
+type MatchmakerStats struct {
+	state                  protoimpl.MessageState       `protogen:"open.v1"`
+	TicketCount            int32                        `protobuf:"varint,1,opt,name=ticket_count,json=ticketCount,proto3" json:"ticket_count,omitempty"`
+	OldestTicketCreateTime *timestamppb.Timestamp       `protobuf:"bytes,2,opt,name=oldest_ticket_create_time,json=oldestTicketCreateTime,proto3" json:"oldest_ticket_create_time,omitempty"`
+	Completions            []*MatchmakerCompletionStats `protobuf:"bytes,3,rep,name=completions,proto3" json:"completions,omitempty"`
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
+}
+
+func (x *MatchmakerStats) Reset() {
+	*x = MatchmakerStats{}
 	mi := &file_api_api_proto_msgTypes[87]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *ListChannelMessagesRequest) String() string {
+func (x *MatchmakerStats) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ListChannelMessagesRequest) ProtoMessage() {}
+func (*MatchmakerStats) ProtoMessage() {}
 
-func (x *ListChannelMessagesRequest) ProtoReflect() protoreflect.Message {
+func (x *MatchmakerStats) ProtoReflect() protoreflect.Message {
 	mi := &file_api_api_proto_msgTypes[87]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -5870,72 +6583,61 @@ func (x *ListChannelMessagesRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ListChannelMessagesRequest.ProtoReflect.Descriptor instead.
-func (*ListChannelMessagesRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use MatchmakerStats.ProtoReflect.Descriptor instead.
+func (*MatchmakerStats) Descriptor() ([]byte, []int) {
 	return file_api_api_proto_rawDescGZIP(), []int{87}
 }
 
-func (x *ListChannelMessagesRequest) GetChannelId() string {
+func (x *MatchmakerStats) GetTicketCount() int32 {
 	if x != nil {
-		return x.ChannelId
-	}
-	return ""
-}
-
-func (x *ListChannelMessagesRequest) GetLimit() int32 {
-	if x != nil {
-		return x.Limit
+		return x.TicketCount
 	}
 	return 0
 }
 
-func (x *ListChannelMessagesRequest) GetForward() bool {
-	if x != nil && x.Forward != nil {
-		return *x.Forward
-	}
-	return false
-}
-
-func (x *ListChannelMessagesRequest) GetCursor() string {
+func (x *MatchmakerStats) GetOldestTicketCreateTime() *timestamppb.Timestamp {
 	if x != nil {
-		return x.Cursor
+		return x.OldestTicketCreateTime
 	}
-	return ""
+	return nil
 }
 
-type ChannelMessage struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ChannelId     string                 `protobuf:"bytes,1,opt,name=channel_id,json=channelId,proto3" json:"channel_id,omitempty"`
-	MessageId     string                 `protobuf:"bytes,2,opt,name=message_id,json=messageId,proto3" json:"message_id,omitempty"`
-	Code          int32                  `protobuf:"varint,3,opt,name=code,proto3" json:"code,omitempty"`
-	SenderId      string                 `protobuf:"bytes,4,opt,name=sender_id,json=senderId,proto3" json:"sender_id,omitempty"`
-	Username      string                 `protobuf:"bytes,5,opt,name=username,proto3" json:"username,omitempty"`
-	Content       string                 `protobuf:"bytes,6,opt,name=content,proto3" json:"content,omitempty"`
-	CreateTime    *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=create_time,json=createTime,proto3" json:"create_time,omitempty"`
-	UpdateTime    *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=update_time,json=updateTime,proto3" json:"update_time,omitempty"`
-	Persistent    bool                   `protobuf:"varint,9,opt,name=persistent,proto3" json:"persistent,omitempty"`
-	RoomName      string                 `protobuf:"bytes,10,opt,name=room_name,json=roomName,proto3" json:"room_name,omitempty"`
-	GroupId       string                 `protobuf:"bytes,11,opt,name=group_id,json=groupId,proto3" json:"group_id,omitempty"`
-	UserIdOne     string                 `protobuf:"bytes,12,opt,name=user_id_one,json=userIdOne,proto3" json:"user_id_one,omitempty"`
-	UserIdTwo     string                 `protobuf:"bytes,13,opt,name=user_id_two,json=userIdTwo,proto3" json:"user_id_two,omitempty"`
+func (x *MatchmakerStats) GetCompletions() []*MatchmakerCompletionStats {
+	if x != nil {
+		return x.Completions
+	}
+	return nil
+}
+
+// Represents an event to be passed through the server to registered event handlers.
+type Event struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// An event name, type, category, or identifier.
+	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	// Arbitrary event property values.
+	Properties map[string]string `protobuf:"bytes,2,rep,name=properties,proto3" json:"properties,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	// The time when the event was triggered.
+	Timestamp *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
+	// True if the event came directly from a client call, false otherwise.
+	External      bool `protobuf:"varint,4,opt,name=external,proto3" json:"external,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *ChannelMessage) Reset() {
-	*x = ChannelMessage{}
+func (x *Event) Reset() {
+	*x = Event{}
 	mi := &file_api_api_proto_msgTypes[88]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *ChannelMessage) String() string {
+func (x *Event) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ChannelMessage) ProtoMessage() {}
+func (*Event) ProtoMessage() {}
 
-func (x *ChannelMessage) ProtoReflect() protoreflect.Message {
+func (x *Event) ProtoReflect() protoreflect.Message {
 	mi := &file_api_api_proto_msgTypes[88]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -5947,126 +6649,66 @@ func (x *ChannelMessage) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ChannelMessage.ProtoReflect.Descriptor instead.
-func (*ChannelMessage) Descriptor() ([]byte, []int) {
+// Deprecated: Use Event.ProtoReflect.Descriptor instead.
+func (*Event) Descriptor() ([]byte, []int) {
 	return file_api_api_proto_rawDescGZIP(), []int{88}
 }
 
-func (x *ChannelMessage) GetChannelId() string {
+func (x *Event) GetName() string {
 	if x != nil {
-		return x.ChannelId
+		return x.Name
 	}
 	return ""
 }
 
-func (x *ChannelMessage) GetMessageId() string {
+func (x *Event) GetProperties() map[string]string {
 	if x != nil {
-		return x.MessageId
-	}
-	return ""
-}
-
-func (x *ChannelMessage) GetCode() int32 {
-	if x != nil {
-		return x.Code
-	}
-	return 0
-}
-
-func (x *ChannelMessage) GetSenderId() string {
-	if x != nil {
-		return x.SenderId
-	}
-	return ""
-}
-
-func (x *ChannelMessage) GetUsername() string {
-	if x != nil {
-		return x.Username
-	}
-	return ""
-}
-
-func (x *ChannelMessage) GetContent() string {
-	if x != nil {
-		return x.Content
-	}
-	return ""
-}
-
-func (x *ChannelMessage) GetCreateTime() *timestamppb.Timestamp {
-	if x != nil {
-		return x.CreateTime
+		return x.Properties
 	}
 	return nil
 }
 
-func (x *ChannelMessage) GetUpdateTime() *timestamppb.Timestamp {
+func (x *Event) GetTimestamp() *timestamppb.Timestamp {
 	if x != nil {
-		return x.UpdateTime
+		return x.Timestamp
 	}
 	return nil
 }
 
-func (x *ChannelMessage) GetPersistent() bool {
+func (x *Event) GetExternal() bool {
 	if x != nil {
-		return x.Persistent
+		return x.External
 	}
 	return false
 }
 
-func (x *ChannelMessage) GetRoomName() string {
-	if x != nil {
-		return x.RoomName
-	}
-	return ""
+// Storage objects to get.
+type ReadStorageObjectId struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The collection which stores the object.
+	Collection string `protobuf:"bytes,1,opt,name=collection,proto3" json:"collection,omitempty"`
+	// The key of the object within the collection.
+	Key string `protobuf:"bytes,2,opt,name=key,proto3" json:"key,omitempty"`
+	// The user owner of the object.
+	UserId        string `protobuf:"bytes,3,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
-func (x *ChannelMessage) GetGroupId() string {
-	if x != nil {
-		return x.GroupId
-	}
-	return ""
-}
-
-func (x *ChannelMessage) GetUserIdOne() string {
-	if x != nil {
-		return x.UserIdOne
-	}
-	return ""
-}
-
-func (x *ChannelMessage) GetUserIdTwo() string {
-	if x != nil {
-		return x.UserIdTwo
-	}
-	return ""
-}
-
-type ChannelMessageList struct {
-	state           protoimpl.MessageState `protogen:"open.v1"`
-	Messages        []*ChannelMessage      `protobuf:"bytes,1,rep,name=messages,proto3" json:"messages,omitempty"`
-	NextCursor      string                 `protobuf:"bytes,2,opt,name=next_cursor,json=nextCursor,proto3" json:"next_cursor,omitempty"`
-	PrevCursor      string                 `protobuf:"bytes,3,opt,name=prev_cursor,json=prevCursor,proto3" json:"prev_cursor,omitempty"`
-	CacheableCursor string                 `protobuf:"bytes,4,opt,name=cacheable_cursor,json=cacheableCursor,proto3" json:"cacheable_cursor,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
-}
-
-func (x *ChannelMessageList) Reset() {
-	*x = ChannelMessageList{}
+func (x *ReadStorageObjectId) Reset() {
+	*x = ReadStorageObjectId{}
 	mi := &file_api_api_proto_msgTypes[89]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *ChannelMessageList) String() string {
+func (x *ReadStorageObjectId) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ChannelMessageList) ProtoMessage() {}
+func (*ReadStorageObjectId) ProtoMessage() {}
 
-func (x *ChannelMessageList) ProtoReflect() protoreflect.Message {
+func (x *ReadStorageObjectId) ProtoReflect() protoreflect.Message {
 	mi := &file_api_api_proto_msgTypes[89]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -6078,481 +6720,540 @@ func (x *ChannelMessageList) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ChannelMessageList.ProtoReflect.Descriptor instead.
-func (*ChannelMessageList) Descriptor() ([]byte, []int) {
+// Deprecated: Use ReadStorageObjectId.ProtoReflect.Descriptor instead.
+func (*ReadStorageObjectId) Descriptor() ([]byte, []int) {
 	return file_api_api_proto_rawDescGZIP(), []int{89}
 }
 
-func (x *ChannelMessageList) GetMessages() []*ChannelMessage {
+func (x *ReadStorageObjectId) GetCollection() string {
 	if x != nil {
-		return x.Messages
-	}
-	return nil
-}
-
-func (x *ChannelMessageList) GetNextCursor() string {
-	if x != nil {
-		return x.NextCursor
+		return x.Collection
 	}
 	return ""
 }
 
-func (x *ChannelMessageList) GetPrevCursor() string {
+func (x *ReadStorageObjectId) GetKey() string {
 	if x != nil {
-		return x.PrevCursor
+		return x.Key
 	}
 	return ""
 }
 
-func (x *ChannelMessageList) GetCacheableCursor() string {
-	if x != nil {
-		return x.CacheableCursor
-	}
-	return ""
-}
-
-type ListNotificationsRequest struct {
-	state           protoimpl.MessageState `protogen:"open.v1"`
-	Limit           int32                  `protobuf:"varint,1,opt,name=limit,proto3" json:"limit,omitempty"`
-	CacheableCursor string                 `protobuf:"bytes,2,opt,name=cacheable_cursor,json=cacheableCursor,proto3" json:"cacheable_cursor,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
-}
-
-func (x *ListNotificationsRequest) Reset() {
-	*x = ListNotificationsRequest{}
-	mi := &file_api_api_proto_msgTypes[90]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ListNotificationsRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ListNotificationsRequest) ProtoMessage() {}
-
-func (x *ListNotificationsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[90]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ListNotificationsRequest.ProtoReflect.Descriptor instead.
-func (*ListNotificationsRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{90}
-}
-
-func (x *ListNotificationsRequest) GetLimit() int32 {
-	if x != nil {
-		return x.Limit
-	}
-	return 0
-}
-
-func (x *ListNotificationsRequest) GetCacheableCursor() string {
-	if x != nil {
-		return x.CacheableCursor
-	}
-	return ""
-}
-
-type ApiNotification struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Subject       string                 `protobuf:"bytes,2,opt,name=subject,proto3" json:"subject,omitempty"`
-	Content       string                 `protobuf:"bytes,3,opt,name=content,proto3" json:"content,omitempty"`
-	Code          int32                  `protobuf:"varint,4,opt,name=code,proto3" json:"code,omitempty"`
-	SenderId      string                 `protobuf:"bytes,5,opt,name=sender_id,json=senderId,proto3" json:"sender_id,omitempty"`
-	CreateTime    *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=create_time,json=createTime,proto3" json:"create_time,omitempty"`
-	Persistent    bool                   `protobuf:"varint,7,opt,name=persistent,proto3" json:"persistent,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *ApiNotification) Reset() {
-	*x = ApiNotification{}
-	mi := &file_api_api_proto_msgTypes[91]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ApiNotification) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ApiNotification) ProtoMessage() {}
-
-func (x *ApiNotification) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[91]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ApiNotification.ProtoReflect.Descriptor instead.
-func (*ApiNotification) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{91}
-}
-
-func (x *ApiNotification) GetId() string {
-	if x != nil {
-		return x.Id
-	}
-	return ""
-}
-
-func (x *ApiNotification) GetSubject() string {
-	if x != nil {
-		return x.Subject
-	}
-	return ""
-}
-
-func (x *ApiNotification) GetContent() string {
-	if x != nil {
-		return x.Content
-	}
-	return ""
-}
-
-func (x *ApiNotification) GetCode() int32 {
-	if x != nil {
-		return x.Code
-	}
-	return 0
-}
-
-func (x *ApiNotification) GetSenderId() string {
-	if x != nil {
-		return x.SenderId
-	}
-	return ""
-}
-
-func (x *ApiNotification) GetCreateTime() *timestamppb.Timestamp {
-	if x != nil {
-		return x.CreateTime
-	}
-	return nil
-}
-
-func (x *ApiNotification) GetPersistent() bool {
-	if x != nil {
-		return x.Persistent
-	}
-	return false
-}
-
-type NotificationList struct {
-	state           protoimpl.MessageState `protogen:"open.v1"`
-	Notifications   []*ApiNotification     `protobuf:"bytes,1,rep,name=notifications,proto3" json:"notifications,omitempty"`
-	CacheableCursor string                 `protobuf:"bytes,2,opt,name=cacheable_cursor,json=cacheableCursor,proto3" json:"cacheable_cursor,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
-}
-
-func (x *NotificationList) Reset() {
-	*x = NotificationList{}
-	mi := &file_api_api_proto_msgTypes[92]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *NotificationList) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*NotificationList) ProtoMessage() {}
-
-func (x *NotificationList) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[92]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use NotificationList.ProtoReflect.Descriptor instead.
-func (*NotificationList) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{92}
-}
-
-func (x *NotificationList) GetNotifications() []*ApiNotification {
-	if x != nil {
-		return x.Notifications
-	}
-	return nil
-}
-
-func (x *NotificationList) GetCacheableCursor() string {
-	if x != nil {
-		return x.CacheableCursor
-	}
-	return ""
-}
-
-type DeleteNotificationsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Ids           []string               `protobuf:"bytes,1,rep,name=ids,proto3" json:"ids,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *DeleteNotificationsRequest) Reset() {
-	*x = DeleteNotificationsRequest{}
-	mi := &file_api_api_proto_msgTypes[93]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *DeleteNotificationsRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*DeleteNotificationsRequest) ProtoMessage() {}
-
-func (x *DeleteNotificationsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[93]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use DeleteNotificationsRequest.ProtoReflect.Descriptor instead.
-func (*DeleteNotificationsRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{93}
-}
-
-func (x *DeleteNotificationsRequest) GetIds() []string {
-	if x != nil {
-		return x.Ids
-	}
-	return nil
-}
-
-type Wallet struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Wallet        string                 `protobuf:"bytes,1,opt,name=wallet,proto3" json:"wallet,omitempty"` // JSON string of balances
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *Wallet) Reset() {
-	*x = Wallet{}
-	mi := &file_api_api_proto_msgTypes[94]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *Wallet) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*Wallet) ProtoMessage() {}
-
-func (x *Wallet) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[94]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use Wallet.ProtoReflect.Descriptor instead.
-func (*Wallet) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{94}
-}
-
-func (x *Wallet) GetWallet() string {
-	if x != nil {
-		return x.Wallet
-	}
-	return ""
-}
-
-type ListWalletLedgerRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Limit         int32                  `protobuf:"varint,1,opt,name=limit,proto3" json:"limit,omitempty"`
-	Cursor        string                 `protobuf:"bytes,2,opt,name=cursor,proto3" json:"cursor,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *ListWalletLedgerRequest) Reset() {
-	*x = ListWalletLedgerRequest{}
-	mi := &file_api_api_proto_msgTypes[95]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ListWalletLedgerRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ListWalletLedgerRequest) ProtoMessage() {}
-
-func (x *ListWalletLedgerRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[95]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ListWalletLedgerRequest.ProtoReflect.Descriptor instead.
-func (*ListWalletLedgerRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{95}
-}
-
-func (x *ListWalletLedgerRequest) GetLimit() int32 {
-	if x != nil {
-		return x.Limit
-	}
-	return 0
-}
-
-func (x *ListWalletLedgerRequest) GetCursor() string {
-	if x != nil {
-		return x.Cursor
-	}
-	return ""
-}
-
-type WalletLedgerItem struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	UserId        string                 `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	Changeset     string                 `protobuf:"bytes,3,opt,name=changeset,proto3" json:"changeset,omitempty"`
-	Metadata      string                 `protobuf:"bytes,4,opt,name=metadata,proto3" json:"metadata,omitempty"`
-	CreateTime    *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=create_time,json=createTime,proto3" json:"create_time,omitempty"`
-	UpdateTime    *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=update_time,json=updateTime,proto3" json:"update_time,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *WalletLedgerItem) Reset() {
-	*x = WalletLedgerItem{}
-	mi := &file_api_api_proto_msgTypes[96]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *WalletLedgerItem) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*WalletLedgerItem) ProtoMessage() {}
-
-func (x *WalletLedgerItem) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[96]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use WalletLedgerItem.ProtoReflect.Descriptor instead.
-func (*WalletLedgerItem) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{96}
-}
-
-func (x *WalletLedgerItem) GetId() string {
-	if x != nil {
-		return x.Id
-	}
-	return ""
-}
-
-func (x *WalletLedgerItem) GetUserId() string {
+func (x *ReadStorageObjectId) GetUserId() string {
 	if x != nil {
 		return x.UserId
 	}
 	return ""
 }
 
-func (x *WalletLedgerItem) GetChangeset() string {
+// Batch get storage objects.
+type ReadStorageObjectsRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Batch of storage objects.
+	ObjectIds     []*ReadStorageObjectId `protobuf:"bytes,1,rep,name=object_ids,json=objectIds,proto3" json:"object_ids,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReadStorageObjectsRequest) Reset() {
+	*x = ReadStorageObjectsRequest{}
+	mi := &file_api_api_proto_msgTypes[90]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReadStorageObjectsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReadStorageObjectsRequest) ProtoMessage() {}
+
+func (x *ReadStorageObjectsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[90]
 	if x != nil {
-		return x.Changeset
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReadStorageObjectsRequest.ProtoReflect.Descriptor instead.
+func (*ReadStorageObjectsRequest) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{90}
+}
+
+func (x *ReadStorageObjectsRequest) GetObjectIds() []*ReadStorageObjectId {
+	if x != nil {
+		return x.ObjectIds
+	}
+	return nil
+}
+
+// An object within the storage engine.
+type StorageObject struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The collection which stores the object.
+	Collection string `protobuf:"bytes,1,opt,name=collection,proto3" json:"collection,omitempty"`
+	// The key of the object within the collection.
+	Key string `protobuf:"bytes,2,opt,name=key,proto3" json:"key,omitempty"`
+	// The user owner of the object.
+	UserId string `protobuf:"bytes,3,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	// The value of the object.
+	Value string `protobuf:"bytes,4,opt,name=value,proto3" json:"value,omitempty"`
+	// The version hash of the object.
+	Version string `protobuf:"bytes,5,opt,name=version,proto3" json:"version,omitempty"`
+	// The read access permissions for the object.
+	PermissionRead int32 `protobuf:"varint,6,opt,name=permission_read,json=permissionRead,proto3" json:"permission_read,omitempty"`
+	// The write access permissions for the object.
+	PermissionWrite int32 `protobuf:"varint,7,opt,name=permission_write,json=permissionWrite,proto3" json:"permission_write,omitempty"`
+	// The UNIX time when the object was created.
+	CreateTime *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=create_time,json=createTime,proto3" json:"create_time,omitempty"`
+	// The UNIX time when the object was last updated.
+	UpdateTime    *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=update_time,json=updateTime,proto3" json:"update_time,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *StorageObject) Reset() {
+	*x = StorageObject{}
+	mi := &file_api_api_proto_msgTypes[91]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StorageObject) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StorageObject) ProtoMessage() {}
+
+func (x *StorageObject) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[91]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StorageObject.ProtoReflect.Descriptor instead.
+func (*StorageObject) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{91}
+}
+
+func (x *StorageObject) GetCollection() string {
+	if x != nil {
+		return x.Collection
 	}
 	return ""
 }
 
-func (x *WalletLedgerItem) GetMetadata() string {
+func (x *StorageObject) GetKey() string {
 	if x != nil {
-		return x.Metadata
+		return x.Key
 	}
 	return ""
 }
 
-func (x *WalletLedgerItem) GetCreateTime() *timestamppb.Timestamp {
+func (x *StorageObject) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *StorageObject) GetValue() string {
+	if x != nil {
+		return x.Value
+	}
+	return ""
+}
+
+func (x *StorageObject) GetVersion() string {
+	if x != nil {
+		return x.Version
+	}
+	return ""
+}
+
+func (x *StorageObject) GetPermissionRead() int32 {
+	if x != nil {
+		return x.PermissionRead
+	}
+	return 0
+}
+
+func (x *StorageObject) GetPermissionWrite() int32 {
+	if x != nil {
+		return x.PermissionWrite
+	}
+	return 0
+}
+
+func (x *StorageObject) GetCreateTime() *timestamppb.Timestamp {
 	if x != nil {
 		return x.CreateTime
 	}
 	return nil
 }
 
-func (x *WalletLedgerItem) GetUpdateTime() *timestamppb.Timestamp {
+func (x *StorageObject) GetUpdateTime() *timestamppb.Timestamp {
 	if x != nil {
 		return x.UpdateTime
 	}
 	return nil
 }
 
-type WalletLedgerList struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Items         []*WalletLedgerItem    `protobuf:"bytes,1,rep,name=items,proto3" json:"items,omitempty"`
-	NextCursor    string                 `protobuf:"bytes,2,opt,name=next_cursor,json=nextCursor,proto3" json:"next_cursor,omitempty"`
+// Batch of storage objects.
+type StorageObjects struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The batch of storage objects.
+	Objects       []*StorageObject `protobuf:"bytes,1,rep,name=objects,proto3" json:"objects,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *WalletLedgerList) Reset() {
-	*x = WalletLedgerList{}
+func (x *StorageObjects) Reset() {
+	*x = StorageObjects{}
+	mi := &file_api_api_proto_msgTypes[92]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StorageObjects) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StorageObjects) ProtoMessage() {}
+
+func (x *StorageObjects) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[92]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StorageObjects.ProtoReflect.Descriptor instead.
+func (*StorageObjects) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{92}
+}
+
+func (x *StorageObjects) GetObjects() []*StorageObject {
+	if x != nil {
+		return x.Objects
+	}
+	return nil
+}
+
+// List of storage objects.
+type StorageObjectList struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The list of storage objects.
+	Objects []*StorageObject `protobuf:"bytes,1,rep,name=objects,proto3" json:"objects,omitempty"`
+	// The cursor for the next page of results, if any.
+	Cursor        string `protobuf:"bytes,2,opt,name=cursor,proto3" json:"cursor,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *StorageObjectList) Reset() {
+	*x = StorageObjectList{}
+	mi := &file_api_api_proto_msgTypes[93]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StorageObjectList) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StorageObjectList) ProtoMessage() {}
+
+func (x *StorageObjectList) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[93]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StorageObjectList.ProtoReflect.Descriptor instead.
+func (*StorageObjectList) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{93}
+}
+
+func (x *StorageObjectList) GetObjects() []*StorageObject {
+	if x != nil {
+		return x.Objects
+	}
+	return nil
+}
+
+func (x *StorageObjectList) GetCursor() string {
+	if x != nil {
+		return x.Cursor
+	}
+	return ""
+}
+
+// List publicly readable storage objects in a given collection.
+type ListStorageObjectsRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// ID of the user.
+	UserId string `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	// The collection which stores the object.
+	Collection string `protobuf:"bytes,2,opt,name=collection,proto3" json:"collection,omitempty"`
+	// The number of storage objects to list. Between 1 and 100.
+	Limit *wrapperspb.Int32Value `protobuf:"bytes,3,opt,name=limit,proto3" json:"limit,omitempty"`
+	// The cursor to page through results from.
+	Cursor        string `protobuf:"bytes,4,opt,name=cursor,proto3" json:"cursor,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListStorageObjectsRequest) Reset() {
+	*x = ListStorageObjectsRequest{}
+	mi := &file_api_api_proto_msgTypes[94]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListStorageObjectsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListStorageObjectsRequest) ProtoMessage() {}
+
+func (x *ListStorageObjectsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[94]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListStorageObjectsRequest.ProtoReflect.Descriptor instead.
+func (*ListStorageObjectsRequest) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{94}
+}
+
+func (x *ListStorageObjectsRequest) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *ListStorageObjectsRequest) GetCollection() string {
+	if x != nil {
+		return x.Collection
+	}
+	return ""
+}
+
+func (x *ListStorageObjectsRequest) GetLimit() *wrapperspb.Int32Value {
+	if x != nil {
+		return x.Limit
+	}
+	return nil
+}
+
+func (x *ListStorageObjectsRequest) GetCursor() string {
+	if x != nil {
+		return x.Cursor
+	}
+	return ""
+}
+
+// The object to store.
+type WriteStorageObject struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The collection to store the object.
+	Collection string `protobuf:"bytes,1,opt,name=collection,proto3" json:"collection,omitempty"`
+	// The key for the object within the collection.
+	Key string `protobuf:"bytes,2,opt,name=key,proto3" json:"key,omitempty"`
+	// The value of the object.
+	Value string `protobuf:"bytes,3,opt,name=value,proto3" json:"value,omitempty"`
+	// The version hash of the object to check.
+	Version string `protobuf:"bytes,4,opt,name=version,proto3" json:"version,omitempty"`
+	// The read access permissions for the object.
+	PermissionRead *wrapperspb.Int32Value `protobuf:"bytes,5,opt,name=permission_read,json=permissionRead,proto3" json:"permission_read,omitempty"`
+	// The write access permissions for the object.
+	PermissionWrite *wrapperspb.Int32Value `protobuf:"bytes,6,opt,name=permission_write,json=permissionWrite,proto3" json:"permission_write,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *WriteStorageObject) Reset() {
+	*x = WriteStorageObject{}
+	mi := &file_api_api_proto_msgTypes[95]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WriteStorageObject) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WriteStorageObject) ProtoMessage() {}
+
+func (x *WriteStorageObject) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[95]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WriteStorageObject.ProtoReflect.Descriptor instead.
+func (*WriteStorageObject) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{95}
+}
+
+func (x *WriteStorageObject) GetCollection() string {
+	if x != nil {
+		return x.Collection
+	}
+	return ""
+}
+
+func (x *WriteStorageObject) GetKey() string {
+	if x != nil {
+		return x.Key
+	}
+	return ""
+}
+
+func (x *WriteStorageObject) GetValue() string {
+	if x != nil {
+		return x.Value
+	}
+	return ""
+}
+
+func (x *WriteStorageObject) GetVersion() string {
+	if x != nil {
+		return x.Version
+	}
+	return ""
+}
+
+func (x *WriteStorageObject) GetPermissionRead() *wrapperspb.Int32Value {
+	if x != nil {
+		return x.PermissionRead
+	}
+	return nil
+}
+
+func (x *WriteStorageObject) GetPermissionWrite() *wrapperspb.Int32Value {
+	if x != nil {
+		return x.PermissionWrite
+	}
+	return nil
+}
+
+// Write objects to the storage engine.
+type WriteStorageObjectsRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The objects to store on the server.
+	Objects       []*WriteStorageObject `protobuf:"bytes,1,rep,name=objects,proto3" json:"objects,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *WriteStorageObjectsRequest) Reset() {
+	*x = WriteStorageObjectsRequest{}
+	mi := &file_api_api_proto_msgTypes[96]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WriteStorageObjectsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WriteStorageObjectsRequest) ProtoMessage() {}
+
+func (x *WriteStorageObjectsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[96]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WriteStorageObjectsRequest.ProtoReflect.Descriptor instead.
+func (*WriteStorageObjectsRequest) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{96}
+}
+
+func (x *WriteStorageObjectsRequest) GetObjects() []*WriteStorageObject {
+	if x != nil {
+		return x.Objects
+	}
+	return nil
+}
+
+// A storage acknowledgement.
+type StorageObjectAck struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The collection which stores the object.
+	Collection string `protobuf:"bytes,1,opt,name=collection,proto3" json:"collection,omitempty"`
+	// The key of the object within the collection.
+	Key string `protobuf:"bytes,2,opt,name=key,proto3" json:"key,omitempty"`
+	// The version hash of the object.
+	Version string `protobuf:"bytes,3,opt,name=version,proto3" json:"version,omitempty"`
+	// The owner of the object.
+	UserId string `protobuf:"bytes,4,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	// The UNIX time when the object was created.
+	CreateTime *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=create_time,json=createTime,proto3" json:"create_time,omitempty"`
+	// The UNIX time when the object was last updated.
+	UpdateTime    *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=update_time,json=updateTime,proto3" json:"update_time,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *StorageObjectAck) Reset() {
+	*x = StorageObjectAck{}
 	mi := &file_api_api_proto_msgTypes[97]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *WalletLedgerList) String() string {
+func (x *StorageObjectAck) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*WalletLedgerList) ProtoMessage() {}
+func (*StorageObjectAck) ProtoMessage() {}
 
-func (x *WalletLedgerList) ProtoReflect() protoreflect.Message {
+func (x *StorageObjectAck) ProtoReflect() protoreflect.Message {
 	mi := &file_api_api_proto_msgTypes[97]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -6564,36 +7265,287 @@ func (x *WalletLedgerList) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use WalletLedgerList.ProtoReflect.Descriptor instead.
-func (*WalletLedgerList) Descriptor() ([]byte, []int) {
+// Deprecated: Use StorageObjectAck.ProtoReflect.Descriptor instead.
+func (*StorageObjectAck) Descriptor() ([]byte, []int) {
 	return file_api_api_proto_rawDescGZIP(), []int{97}
 }
 
-func (x *WalletLedgerList) GetItems() []*WalletLedgerItem {
+func (x *StorageObjectAck) GetCollection() string {
 	if x != nil {
-		return x.Items
-	}
-	return nil
-}
-
-func (x *WalletLedgerList) GetNextCursor() string {
-	if x != nil {
-		return x.NextCursor
+		return x.Collection
 	}
 	return ""
 }
 
+func (x *StorageObjectAck) GetKey() string {
+	if x != nil {
+		return x.Key
+	}
+	return ""
+}
+
+func (x *StorageObjectAck) GetVersion() string {
+	if x != nil {
+		return x.Version
+	}
+	return ""
+}
+
+func (x *StorageObjectAck) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *StorageObjectAck) GetCreateTime() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreateTime
+	}
+	return nil
+}
+
+func (x *StorageObjectAck) GetUpdateTime() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdateTime
+	}
+	return nil
+}
+
+// Batch of acknowledgements for the storage object write.
+type StorageObjectAcks struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Batch of storage write acknowledgements.
+	Acks          []*StorageObjectAck `protobuf:"bytes,1,rep,name=acks,proto3" json:"acks,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *StorageObjectAcks) Reset() {
+	*x = StorageObjectAcks{}
+	mi := &file_api_api_proto_msgTypes[98]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StorageObjectAcks) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StorageObjectAcks) ProtoMessage() {}
+
+func (x *StorageObjectAcks) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[98]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StorageObjectAcks.ProtoReflect.Descriptor instead.
+func (*StorageObjectAcks) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{98}
+}
+
+func (x *StorageObjectAcks) GetAcks() []*StorageObjectAck {
+	if x != nil {
+		return x.Acks
+	}
+	return nil
+}
+
+// Storage objects to delete.
+type DeleteStorageObjectId struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The collection which stores the object.
+	Collection string `protobuf:"bytes,1,opt,name=collection,proto3" json:"collection,omitempty"`
+	// The key of the object within the collection.
+	Key string `protobuf:"bytes,2,opt,name=key,proto3" json:"key,omitempty"`
+	// The version hash of the object.
+	Version       string `protobuf:"bytes,3,opt,name=version,proto3" json:"version,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteStorageObjectId) Reset() {
+	*x = DeleteStorageObjectId{}
+	mi := &file_api_api_proto_msgTypes[99]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteStorageObjectId) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteStorageObjectId) ProtoMessage() {}
+
+func (x *DeleteStorageObjectId) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[99]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteStorageObjectId.ProtoReflect.Descriptor instead.
+func (*DeleteStorageObjectId) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{99}
+}
+
+func (x *DeleteStorageObjectId) GetCollection() string {
+	if x != nil {
+		return x.Collection
+	}
+	return ""
+}
+
+func (x *DeleteStorageObjectId) GetKey() string {
+	if x != nil {
+		return x.Key
+	}
+	return ""
+}
+
+func (x *DeleteStorageObjectId) GetVersion() string {
+	if x != nil {
+		return x.Version
+	}
+	return ""
+}
+
+// Batch delete storage objects.
+type DeleteStorageObjectsRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Batch of storage objects.
+	ObjectIds     []*DeleteStorageObjectId `protobuf:"bytes,1,rep,name=object_ids,json=objectIds,proto3" json:"object_ids,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteStorageObjectsRequest) Reset() {
+	*x = DeleteStorageObjectsRequest{}
+	mi := &file_api_api_proto_msgTypes[100]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteStorageObjectsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteStorageObjectsRequest) ProtoMessage() {}
+
+func (x *DeleteStorageObjectsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[100]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteStorageObjectsRequest.ProtoReflect.Descriptor instead.
+func (*DeleteStorageObjectsRequest) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{100}
+}
+
+func (x *DeleteStorageObjectsRequest) GetObjectIds() []*DeleteStorageObjectId {
+	if x != nil {
+		return x.ObjectIds
+	}
+	return nil
+}
+
+// Execute a function on the server.
+type Rpc struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The identifier of the function.
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// The payload of the function which must be a JSON object.
+	Payload string `protobuf:"bytes,2,opt,name=payload,proto3" json:"payload,omitempty"`
+	// The authentication key used when executed as a non-client HTTP request.
+	HttpKey       string `protobuf:"bytes,3,opt,name=http_key,json=httpKey,proto3" json:"http_key,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Rpc) Reset() {
+	*x = Rpc{}
+	mi := &file_api_api_proto_msgTypes[101]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Rpc) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Rpc) ProtoMessage() {}
+
+func (x *Rpc) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[101]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Rpc.ProtoReflect.Descriptor instead.
+func (*Rpc) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{101}
+}
+
+func (x *Rpc) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *Rpc) GetPayload() string {
+	if x != nil {
+		return x.Payload
+	}
+	return ""
+}
+
+func (x *Rpc) GetHttpKey() string {
+	if x != nil {
+		return x.HttpKey
+	}
+	return ""
+}
+
+// Apple IAP Purchases validation request.
 type ValidatePurchaseAppleRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Receipt       string                 `protobuf:"bytes,1,opt,name=receipt,proto3" json:"receipt,omitempty"`
-	Persist       *bool                  `protobuf:"varint,2,opt,name=persist,proto3,oneof" json:"persist,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Base64 encoded Apple receipt data payload.
+	Receipt string `protobuf:"bytes,1,opt,name=receipt,proto3" json:"receipt,omitempty"`
+	// Persist the purchase.
+	Persist       *wrapperspb.BoolValue `protobuf:"bytes,2,opt,name=persist,proto3" json:"persist,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ValidatePurchaseAppleRequest) Reset() {
 	*x = ValidatePurchaseAppleRequest{}
-	mi := &file_api_api_proto_msgTypes[98]
+	mi := &file_api_api_proto_msgTypes[102]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6605,7 +7557,7 @@ func (x *ValidatePurchaseAppleRequest) String() string {
 func (*ValidatePurchaseAppleRequest) ProtoMessage() {}
 
 func (x *ValidatePurchaseAppleRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[98]
+	mi := &file_api_api_proto_msgTypes[102]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6618,7 +7570,7 @@ func (x *ValidatePurchaseAppleRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ValidatePurchaseAppleRequest.ProtoReflect.Descriptor instead.
 func (*ValidatePurchaseAppleRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{98}
+	return file_api_api_proto_rawDescGZIP(), []int{102}
 }
 
 func (x *ValidatePurchaseAppleRequest) GetReceipt() string {
@@ -6628,28 +7580,27 @@ func (x *ValidatePurchaseAppleRequest) GetReceipt() string {
 	return ""
 }
 
-func (x *ValidatePurchaseAppleRequest) GetPersist() bool {
-	if x != nil && x.Persist != nil {
-		return *x.Persist
+func (x *ValidatePurchaseAppleRequest) GetPersist() *wrapperspb.BoolValue {
+	if x != nil {
+		return x.Persist
 	}
-	return false
+	return nil
 }
 
+// Google IAP Purchase validation request.
 type ValidatePurchaseGoogleRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// Reference-shaped JSON purchase blob (productId/product_id + purchaseToken/purchase_token).
+	// JSON encoded Google purchase payload.
 	Purchase string `protobuf:"bytes,1,opt,name=purchase,proto3" json:"purchase,omitempty"`
-	// Legacy fields retained for one-release dual-accept.
-	ProductId     string `protobuf:"bytes,2,opt,name=product_id,json=productId,proto3" json:"product_id,omitempty"`
-	PurchaseToken string `protobuf:"bytes,3,opt,name=purchase_token,json=purchaseToken,proto3" json:"purchase_token,omitempty"`
-	Persist       *bool  `protobuf:"varint,4,opt,name=persist,proto3,oneof" json:"persist,omitempty"`
+	// Persist the purchase.
+	Persist       *wrapperspb.BoolValue `protobuf:"bytes,2,opt,name=persist,proto3" json:"persist,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ValidatePurchaseGoogleRequest) Reset() {
 	*x = ValidatePurchaseGoogleRequest{}
-	mi := &file_api_api_proto_msgTypes[99]
+	mi := &file_api_api_proto_msgTypes[103]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6661,7 +7612,7 @@ func (x *ValidatePurchaseGoogleRequest) String() string {
 func (*ValidatePurchaseGoogleRequest) ProtoMessage() {}
 
 func (x *ValidatePurchaseGoogleRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[99]
+	mi := &file_api_api_proto_msgTypes[103]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6674,7 +7625,7 @@ func (x *ValidatePurchaseGoogleRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ValidatePurchaseGoogleRequest.ProtoReflect.Descriptor instead.
 func (*ValidatePurchaseGoogleRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{99}
+	return file_api_api_proto_rawDescGZIP(), []int{103}
 }
 
 func (x *ValidatePurchaseGoogleRequest) GetPurchase() string {
@@ -6684,41 +7635,29 @@ func (x *ValidatePurchaseGoogleRequest) GetPurchase() string {
 	return ""
 }
 
-func (x *ValidatePurchaseGoogleRequest) GetProductId() string {
+func (x *ValidatePurchaseGoogleRequest) GetPersist() *wrapperspb.BoolValue {
 	if x != nil {
-		return x.ProductId
+		return x.Persist
 	}
-	return ""
+	return nil
 }
 
-func (x *ValidatePurchaseGoogleRequest) GetPurchaseToken() string {
-	if x != nil {
-		return x.PurchaseToken
-	}
-	return ""
-}
-
-func (x *ValidatePurchaseGoogleRequest) GetPersist() bool {
-	if x != nil && x.Persist != nil {
-		return *x.Persist
-	}
-	return false
-}
-
+// Huawei IAP Purchase validation request.
 type ValidatePurchaseHuaweiRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// Reference field name; also accept purchase_data in HTTP JSON.
-	Purchase      string `protobuf:"bytes,1,opt,name=purchase,proto3" json:"purchase,omitempty"`
-	PurchaseData  string `protobuf:"bytes,2,opt,name=purchase_data,json=purchaseData,proto3" json:"purchase_data,omitempty"`
-	Signature     string `protobuf:"bytes,3,opt,name=signature,proto3" json:"signature,omitempty"`
-	Persist       *bool  `protobuf:"varint,4,opt,name=persist,proto3,oneof" json:"persist,omitempty"`
+	// JSON encoded Huawei InAppPurchaseData.
+	Purchase string `protobuf:"bytes,1,opt,name=purchase,proto3" json:"purchase,omitempty"`
+	// InAppPurchaseData signature.
+	Signature string `protobuf:"bytes,2,opt,name=signature,proto3" json:"signature,omitempty"`
+	// Persist the purchase.
+	Persist       *wrapperspb.BoolValue `protobuf:"bytes,3,opt,name=persist,proto3" json:"persist,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ValidatePurchaseHuaweiRequest) Reset() {
 	*x = ValidatePurchaseHuaweiRequest{}
-	mi := &file_api_api_proto_msgTypes[100]
+	mi := &file_api_api_proto_msgTypes[104]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6730,7 +7669,7 @@ func (x *ValidatePurchaseHuaweiRequest) String() string {
 func (*ValidatePurchaseHuaweiRequest) ProtoMessage() {}
 
 func (x *ValidatePurchaseHuaweiRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[100]
+	mi := &file_api_api_proto_msgTypes[104]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6743,19 +7682,12 @@ func (x *ValidatePurchaseHuaweiRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ValidatePurchaseHuaweiRequest.ProtoReflect.Descriptor instead.
 func (*ValidatePurchaseHuaweiRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{100}
+	return file_api_api_proto_rawDescGZIP(), []int{104}
 }
 
 func (x *ValidatePurchaseHuaweiRequest) GetPurchase() string {
 	if x != nil {
 		return x.Purchase
-	}
-	return ""
-}
-
-func (x *ValidatePurchaseHuaweiRequest) GetPurchaseData() string {
-	if x != nil {
-		return x.PurchaseData
 	}
 	return ""
 }
@@ -6767,24 +7699,27 @@ func (x *ValidatePurchaseHuaweiRequest) GetSignature() string {
 	return ""
 }
 
-func (x *ValidatePurchaseHuaweiRequest) GetPersist() bool {
-	if x != nil && x.Persist != nil {
-		return *x.Persist
+func (x *ValidatePurchaseHuaweiRequest) GetPersist() *wrapperspb.BoolValue {
+	if x != nil {
+		return x.Persist
 	}
-	return false
+	return nil
 }
 
+// Facebook Instant IAP Purchase validation request.
 type ValidatePurchaseFacebookInstantRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	SignedRequest string                 `protobuf:"bytes,1,opt,name=signed_request,json=signedRequest,proto3" json:"signed_request,omitempty"`
-	Persist       *bool                  `protobuf:"varint,2,opt,name=persist,proto3,oneof" json:"persist,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Base64 encoded Facebook Instant signedRequest receipt data payload.
+	SignedRequest string `protobuf:"bytes,1,opt,name=signed_request,json=signedRequest,proto3" json:"signed_request,omitempty"`
+	// Persist the purchase.
+	Persist       *wrapperspb.BoolValue `protobuf:"bytes,2,opt,name=persist,proto3" json:"persist,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ValidatePurchaseFacebookInstantRequest) Reset() {
 	*x = ValidatePurchaseFacebookInstantRequest{}
-	mi := &file_api_api_proto_msgTypes[101]
+	mi := &file_api_api_proto_msgTypes[105]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6796,7 +7731,7 @@ func (x *ValidatePurchaseFacebookInstantRequest) String() string {
 func (*ValidatePurchaseFacebookInstantRequest) ProtoMessage() {}
 
 func (x *ValidatePurchaseFacebookInstantRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[101]
+	mi := &file_api_api_proto_msgTypes[105]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6809,7 +7744,7 @@ func (x *ValidatePurchaseFacebookInstantRequest) ProtoReflect() protoreflect.Mes
 
 // Deprecated: Use ValidatePurchaseFacebookInstantRequest.ProtoReflect.Descriptor instead.
 func (*ValidatePurchaseFacebookInstantRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{101}
+	return file_api_api_proto_rawDescGZIP(), []int{105}
 }
 
 func (x *ValidatePurchaseFacebookInstantRequest) GetSignedRequest() string {
@@ -6819,24 +7754,27 @@ func (x *ValidatePurchaseFacebookInstantRequest) GetSignedRequest() string {
 	return ""
 }
 
-func (x *ValidatePurchaseFacebookInstantRequest) GetPersist() bool {
-	if x != nil && x.Persist != nil {
-		return *x.Persist
+func (x *ValidatePurchaseFacebookInstantRequest) GetPersist() *wrapperspb.BoolValue {
+	if x != nil {
+		return x.Persist
 	}
-	return false
+	return nil
 }
 
+// Samsung IAP Purchase validation request.
 type ValidatePurchaseSamsungRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	PurchaseId    string                 `protobuf:"bytes,1,opt,name=purchase_id,json=purchaseId,proto3" json:"purchase_id,omitempty"`
-	Persist       *bool                  `protobuf:"varint,2,opt,name=persist,proto3,oneof" json:"persist,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The purchase ID returned by the Samsung IAP SDK PurchaseVo.
+	PurchaseId string `protobuf:"bytes,1,opt,name=purchase_id,json=purchaseId,proto3" json:"purchase_id,omitempty"`
+	// Persist the purchase.
+	Persist       *wrapperspb.BoolValue `protobuf:"bytes,2,opt,name=persist,proto3" json:"persist,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ValidatePurchaseSamsungRequest) Reset() {
 	*x = ValidatePurchaseSamsungRequest{}
-	mi := &file_api_api_proto_msgTypes[102]
+	mi := &file_api_api_proto_msgTypes[106]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6848,7 +7786,7 @@ func (x *ValidatePurchaseSamsungRequest) String() string {
 func (*ValidatePurchaseSamsungRequest) ProtoMessage() {}
 
 func (x *ValidatePurchaseSamsungRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[102]
+	mi := &file_api_api_proto_msgTypes[106]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6861,7 +7799,7 @@ func (x *ValidatePurchaseSamsungRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ValidatePurchaseSamsungRequest.ProtoReflect.Descriptor instead.
 func (*ValidatePurchaseSamsungRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{102}
+	return file_api_api_proto_rawDescGZIP(), []int{106}
 }
 
 func (x *ValidatePurchaseSamsungRequest) GetPurchaseId() string {
@@ -6871,33 +7809,155 @@ func (x *ValidatePurchaseSamsungRequest) GetPurchaseId() string {
 	return ""
 }
 
-func (x *ValidatePurchaseSamsungRequest) GetPersist() bool {
-	if x != nil && x.Persist != nil {
-		return *x.Persist
+func (x *ValidatePurchaseSamsungRequest) GetPersist() *wrapperspb.BoolValue {
+	if x != nil {
+		return x.Persist
 	}
-	return false
+	return nil
 }
 
+// Apple Subscription validation request.
+type ValidateSubscriptionAppleRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Base64 encoded Apple receipt data payload.
+	Receipt string `protobuf:"bytes,1,opt,name=receipt,proto3" json:"receipt,omitempty"`
+	// Persist the subscription.
+	Persist       *wrapperspb.BoolValue `protobuf:"bytes,2,opt,name=persist,proto3" json:"persist,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ValidateSubscriptionAppleRequest) Reset() {
+	*x = ValidateSubscriptionAppleRequest{}
+	mi := &file_api_api_proto_msgTypes[107]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ValidateSubscriptionAppleRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ValidateSubscriptionAppleRequest) ProtoMessage() {}
+
+func (x *ValidateSubscriptionAppleRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[107]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ValidateSubscriptionAppleRequest.ProtoReflect.Descriptor instead.
+func (*ValidateSubscriptionAppleRequest) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{107}
+}
+
+func (x *ValidateSubscriptionAppleRequest) GetReceipt() string {
+	if x != nil {
+		return x.Receipt
+	}
+	return ""
+}
+
+func (x *ValidateSubscriptionAppleRequest) GetPersist() *wrapperspb.BoolValue {
+	if x != nil {
+		return x.Persist
+	}
+	return nil
+}
+
+// Google Subscription validation request.
+type ValidateSubscriptionGoogleRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// JSON encoded Google purchase payload.
+	Receipt string `protobuf:"bytes,1,opt,name=receipt,proto3" json:"receipt,omitempty"`
+	// Persist the subscription.
+	Persist       *wrapperspb.BoolValue `protobuf:"bytes,2,opt,name=persist,proto3" json:"persist,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ValidateSubscriptionGoogleRequest) Reset() {
+	*x = ValidateSubscriptionGoogleRequest{}
+	mi := &file_api_api_proto_msgTypes[108]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ValidateSubscriptionGoogleRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ValidateSubscriptionGoogleRequest) ProtoMessage() {}
+
+func (x *ValidateSubscriptionGoogleRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[108]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ValidateSubscriptionGoogleRequest.ProtoReflect.Descriptor instead.
+func (*ValidateSubscriptionGoogleRequest) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{108}
+}
+
+func (x *ValidateSubscriptionGoogleRequest) GetReceipt() string {
+	if x != nil {
+		return x.Receipt
+	}
+	return ""
+}
+
+func (x *ValidateSubscriptionGoogleRequest) GetPersist() *wrapperspb.BoolValue {
+	if x != nil {
+		return x.Persist
+	}
+	return nil
+}
+
+// Validated Purchase stored by the server.
 type ValidatedPurchase struct {
-	state            protoimpl.MessageState `protogen:"open.v1"`
-	UserId           string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	ProductId        string                 `protobuf:"bytes,2,opt,name=product_id,json=productId,proto3" json:"product_id,omitempty"`
-	TransactionId    string                 `protobuf:"bytes,3,opt,name=transaction_id,json=transactionId,proto3" json:"transaction_id,omitempty"`
-	Store            int32                  `protobuf:"varint,4,opt,name=store,proto3" json:"store,omitempty"`
-	PurchaseTime     *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=purchase_time,json=purchaseTime,proto3" json:"purchase_time,omitempty"`
-	SeenBefore       bool                   `protobuf:"varint,6,opt,name=seen_before,json=seenBefore,proto3" json:"seen_before,omitempty"`
-	Environment      int32                  `protobuf:"varint,7,opt,name=environment,proto3" json:"environment,omitempty"`
-	CreateTime       *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=create_time,json=createTime,proto3" json:"create_time,omitempty"`
-	UpdateTime       *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=update_time,json=updateTime,proto3" json:"update_time,omitempty"`
-	RefundTime       *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=refund_time,json=refundTime,proto3" json:"refund_time,omitempty"`
-	ProviderResponse string                 `protobuf:"bytes,11,opt,name=provider_response,json=providerResponse,proto3" json:"provider_response,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Purchase User ID.
+	UserId string `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	// Purchase Product ID.
+	ProductId string `protobuf:"bytes,2,opt,name=product_id,json=productId,proto3" json:"product_id,omitempty"`
+	// Purchase Transaction ID.
+	TransactionId string `protobuf:"bytes,3,opt,name=transaction_id,json=transactionId,proto3" json:"transaction_id,omitempty"`
+	// Store identifier.
+	Store StoreProvider `protobuf:"varint,4,opt,name=store,proto3,enum=ultimate.server.api.StoreProvider" json:"store,omitempty"`
+	// Timestamp when the purchase was done.
+	PurchaseTime *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=purchase_time,json=purchaseTime,proto3" json:"purchase_time,omitempty"`
+	// Timestamp when the receipt validation was stored in DB.
+	CreateTime *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=create_time,json=createTime,proto3" json:"create_time,omitempty"`
+	// Timestamp when the receipt validation was updated in DB.
+	UpdateTime *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=update_time,json=updateTime,proto3" json:"update_time,omitempty"`
+	// Timestamp when the purchase was refunded.
+	RefundTime *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=refund_time,json=refundTime,proto3" json:"refund_time,omitempty"`
+	// Raw provider validation response.
+	ProviderResponse string `protobuf:"bytes,9,opt,name=provider_response,json=providerResponse,proto3" json:"provider_response,omitempty"`
+	// Whether the purchase was done in production or sandbox environment.
+	Environment StoreEnvironment `protobuf:"varint,10,opt,name=environment,proto3,enum=ultimate.server.api.StoreEnvironment" json:"environment,omitempty"`
+	// Whether the purchase had already been validated before.
+	SeenBefore    bool `protobuf:"varint,11,opt,name=seen_before,json=seenBefore,proto3" json:"seen_before,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ValidatedPurchase) Reset() {
 	*x = ValidatedPurchase{}
-	mi := &file_api_api_proto_msgTypes[103]
+	mi := &file_api_api_proto_msgTypes[109]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6909,7 +7969,7 @@ func (x *ValidatedPurchase) String() string {
 func (*ValidatedPurchase) ProtoMessage() {}
 
 func (x *ValidatedPurchase) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[103]
+	mi := &file_api_api_proto_msgTypes[109]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6922,7 +7982,7 @@ func (x *ValidatedPurchase) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ValidatedPurchase.ProtoReflect.Descriptor instead.
 func (*ValidatedPurchase) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{103}
+	return file_api_api_proto_rawDescGZIP(), []int{109}
 }
 
 func (x *ValidatedPurchase) GetUserId() string {
@@ -6946,11 +8006,11 @@ func (x *ValidatedPurchase) GetTransactionId() string {
 	return ""
 }
 
-func (x *ValidatedPurchase) GetStore() int32 {
+func (x *ValidatedPurchase) GetStore() StoreProvider {
 	if x != nil {
 		return x.Store
 	}
-	return 0
+	return StoreProvider_APPLE_APP_STORE
 }
 
 func (x *ValidatedPurchase) GetPurchaseTime() *timestamppb.Timestamp {
@@ -6958,20 +8018,6 @@ func (x *ValidatedPurchase) GetPurchaseTime() *timestamppb.Timestamp {
 		return x.PurchaseTime
 	}
 	return nil
-}
-
-func (x *ValidatedPurchase) GetSeenBefore() bool {
-	if x != nil {
-		return x.SeenBefore
-	}
-	return false
-}
-
-func (x *ValidatedPurchase) GetEnvironment() int32 {
-	if x != nil {
-		return x.Environment
-	}
-	return 0
 }
 
 func (x *ValidatedPurchase) GetCreateTime() *timestamppb.Timestamp {
@@ -7002,16 +8048,32 @@ func (x *ValidatedPurchase) GetProviderResponse() string {
 	return ""
 }
 
+func (x *ValidatedPurchase) GetEnvironment() StoreEnvironment {
+	if x != nil {
+		return x.Environment
+	}
+	return StoreEnvironment_UNKNOWN
+}
+
+func (x *ValidatedPurchase) GetSeenBefore() bool {
+	if x != nil {
+		return x.SeenBefore
+	}
+	return false
+}
+
+// Validate IAP response.
 type ValidatePurchaseResponse struct {
-	state              protoimpl.MessageState `protogen:"open.v1"`
-	ValidatedPurchases []*ValidatedPurchase   `protobuf:"bytes,1,rep,name=validated_purchases,json=validatedPurchases,proto3" json:"validated_purchases,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Newly seen validated purchases.
+	ValidatedPurchases []*ValidatedPurchase `protobuf:"bytes,1,rep,name=validated_purchases,json=validatedPurchases,proto3" json:"validated_purchases,omitempty"`
 	unknownFields      protoimpl.UnknownFields
 	sizeCache          protoimpl.SizeCache
 }
 
 func (x *ValidatePurchaseResponse) Reset() {
 	*x = ValidatePurchaseResponse{}
-	mi := &file_api_api_proto_msgTypes[104]
+	mi := &file_api_api_proto_msgTypes[110]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7023,7 +8085,7 @@ func (x *ValidatePurchaseResponse) String() string {
 func (*ValidatePurchaseResponse) ProtoMessage() {}
 
 func (x *ValidatePurchaseResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[104]
+	mi := &file_api_api_proto_msgTypes[110]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7036,7 +8098,7 @@ func (x *ValidatePurchaseResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ValidatePurchaseResponse.ProtoReflect.Descriptor instead.
 func (*ValidatePurchaseResponse) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{104}
+	return file_api_api_proto_rawDescGZIP(), []int{110}
 }
 
 func (x *ValidatePurchaseResponse) GetValidatedPurchases() []*ValidatedPurchase {
@@ -7046,118 +8108,7 @@ func (x *ValidatePurchaseResponse) GetValidatedPurchases() []*ValidatedPurchase 
 	return nil
 }
 
-type ValidateSubscriptionAppleRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Receipt       string                 `protobuf:"bytes,1,opt,name=receipt,proto3" json:"receipt,omitempty"`
-	Persist       *bool                  `protobuf:"varint,2,opt,name=persist,proto3,oneof" json:"persist,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *ValidateSubscriptionAppleRequest) Reset() {
-	*x = ValidateSubscriptionAppleRequest{}
-	mi := &file_api_api_proto_msgTypes[105]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ValidateSubscriptionAppleRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ValidateSubscriptionAppleRequest) ProtoMessage() {}
-
-func (x *ValidateSubscriptionAppleRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[105]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ValidateSubscriptionAppleRequest.ProtoReflect.Descriptor instead.
-func (*ValidateSubscriptionAppleRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{105}
-}
-
-func (x *ValidateSubscriptionAppleRequest) GetReceipt() string {
-	if x != nil {
-		return x.Receipt
-	}
-	return ""
-}
-
-func (x *ValidateSubscriptionAppleRequest) GetPersist() bool {
-	if x != nil && x.Persist != nil {
-		return *x.Persist
-	}
-	return false
-}
-
-type ValidateSubscriptionGoogleRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ProductId     string                 `protobuf:"bytes,1,opt,name=product_id,json=productId,proto3" json:"product_id,omitempty"`
-	PurchaseToken string                 `protobuf:"bytes,2,opt,name=purchase_token,json=purchaseToken,proto3" json:"purchase_token,omitempty"`
-	Persist       *bool                  `protobuf:"varint,3,opt,name=persist,proto3,oneof" json:"persist,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *ValidateSubscriptionGoogleRequest) Reset() {
-	*x = ValidateSubscriptionGoogleRequest{}
-	mi := &file_api_api_proto_msgTypes[106]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ValidateSubscriptionGoogleRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ValidateSubscriptionGoogleRequest) ProtoMessage() {}
-
-func (x *ValidateSubscriptionGoogleRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[106]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ValidateSubscriptionGoogleRequest.ProtoReflect.Descriptor instead.
-func (*ValidateSubscriptionGoogleRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{106}
-}
-
-func (x *ValidateSubscriptionGoogleRequest) GetProductId() string {
-	if x != nil {
-		return x.ProductId
-	}
-	return ""
-}
-
-func (x *ValidateSubscriptionGoogleRequest) GetPurchaseToken() string {
-	if x != nil {
-		return x.PurchaseToken
-	}
-	return ""
-}
-
-func (x *ValidateSubscriptionGoogleRequest) GetPersist() bool {
-	if x != nil && x.Persist != nil {
-		return *x.Persist
-	}
-	return false
-}
-
+// Validate Subscription response.
 type ValidateSubscriptionResponse struct {
 	state                 protoimpl.MessageState `protogen:"open.v1"`
 	ValidatedSubscription *ValidatedSubscription `protobuf:"bytes,1,opt,name=validated_subscription,json=validatedSubscription,proto3" json:"validated_subscription,omitempty"`
@@ -7167,7 +8118,7 @@ type ValidateSubscriptionResponse struct {
 
 func (x *ValidateSubscriptionResponse) Reset() {
 	*x = ValidateSubscriptionResponse{}
-	mi := &file_api_api_proto_msgTypes[107]
+	mi := &file_api_api_proto_msgTypes[111]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7179,7 +8130,7 @@ func (x *ValidateSubscriptionResponse) String() string {
 func (*ValidateSubscriptionResponse) ProtoMessage() {}
 
 func (x *ValidateSubscriptionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[107]
+	mi := &file_api_api_proto_msgTypes[111]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7192,7 +8143,7 @@ func (x *ValidateSubscriptionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ValidateSubscriptionResponse.ProtoReflect.Descriptor instead.
 func (*ValidateSubscriptionResponse) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{107}
+	return file_api_api_proto_rawDescGZIP(), []int{111}
 }
 
 func (x *ValidateSubscriptionResponse) GetValidatedSubscription() *ValidatedSubscription {
@@ -7202,28 +8153,42 @@ func (x *ValidateSubscriptionResponse) GetValidatedSubscription() *ValidatedSubs
 	return nil
 }
 
+// Validated Subscription stored by the server.
 type ValidatedSubscription struct {
-	state                 protoimpl.MessageState `protogen:"open.v1"`
-	UserId                string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	ProductId             string                 `protobuf:"bytes,2,opt,name=product_id,json=productId,proto3" json:"product_id,omitempty"`
-	OriginalTransactionId string                 `protobuf:"bytes,3,opt,name=original_transaction_id,json=originalTransactionId,proto3" json:"original_transaction_id,omitempty"`
-	Store                 int32                  `protobuf:"varint,4,opt,name=store,proto3" json:"store,omitempty"`
-	PurchaseTime          *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=purchase_time,json=purchaseTime,proto3" json:"purchase_time,omitempty"`
-	ExpireTime            *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=expire_time,json=expireTime,proto3" json:"expire_time,omitempty"`
-	Active                bool                   `protobuf:"varint,7,opt,name=active,proto3" json:"active,omitempty"`
-	SeenBefore            bool                   `protobuf:"varint,8,opt,name=seen_before,json=seenBefore,proto3" json:"seen_before,omitempty"`
-	Environment           int32                  `protobuf:"varint,9,opt,name=environment,proto3" json:"environment,omitempty"`
-	CreateTime            *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=create_time,json=createTime,proto3" json:"create_time,omitempty"`
-	UpdateTime            *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=update_time,json=updateTime,proto3" json:"update_time,omitempty"`
-	RefundTime            *timestamppb.Timestamp `protobuf:"bytes,12,opt,name=refund_time,json=refundTime,proto3" json:"refund_time,omitempty"`
-	ProviderResponse      string                 `protobuf:"bytes,13,opt,name=provider_response,json=providerResponse,proto3" json:"provider_response,omitempty"`
-	unknownFields         protoimpl.UnknownFields
-	sizeCache             protoimpl.SizeCache
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Subscription User ID.
+	UserId string `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	// Purchase Product ID.
+	ProductId string `protobuf:"bytes,2,opt,name=product_id,json=productId,proto3" json:"product_id,omitempty"`
+	// Purchase Original transaction ID.
+	OriginalTransactionId string `protobuf:"bytes,3,opt,name=original_transaction_id,json=originalTransactionId,proto3" json:"original_transaction_id,omitempty"`
+	// Store identifier.
+	Store StoreProvider `protobuf:"varint,4,opt,name=store,proto3,enum=ultimate.server.api.StoreProvider" json:"store,omitempty"`
+	// UNIX Timestamp when the purchase was done.
+	PurchaseTime *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=purchase_time,json=purchaseTime,proto3" json:"purchase_time,omitempty"`
+	// UNIX Timestamp when the receipt validation was stored in DB.
+	CreateTime *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=create_time,json=createTime,proto3" json:"create_time,omitempty"`
+	// UNIX Timestamp when the receipt validation was updated in DB.
+	UpdateTime *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=update_time,json=updateTime,proto3" json:"update_time,omitempty"`
+	// Whether the purchase was done in production or sandbox environment.
+	Environment StoreEnvironment `protobuf:"varint,8,opt,name=environment,proto3,enum=ultimate.server.api.StoreEnvironment" json:"environment,omitempty"`
+	// Subscription expiration time.
+	ExpiryTime *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=expiry_time,json=expiryTime,proto3" json:"expiry_time,omitempty"`
+	// Subscription refund time.
+	RefundTime *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=refund_time,json=refundTime,proto3" json:"refund_time,omitempty"`
+	// Raw provider validation response body.
+	ProviderResponse string `protobuf:"bytes,11,opt,name=provider_response,json=providerResponse,proto3" json:"provider_response,omitempty"`
+	// Raw provider notification body.
+	ProviderNotification string `protobuf:"bytes,12,opt,name=provider_notification,json=providerNotification,proto3" json:"provider_notification,omitempty"`
+	// Whether the subscription is currently active or not.
+	Active        bool `protobuf:"varint,13,opt,name=active,proto3" json:"active,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ValidatedSubscription) Reset() {
 	*x = ValidatedSubscription{}
-	mi := &file_api_api_proto_msgTypes[108]
+	mi := &file_api_api_proto_msgTypes[112]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7235,7 +8200,7 @@ func (x *ValidatedSubscription) String() string {
 func (*ValidatedSubscription) ProtoMessage() {}
 
 func (x *ValidatedSubscription) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[108]
+	mi := &file_api_api_proto_msgTypes[112]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7248,7 +8213,7 @@ func (x *ValidatedSubscription) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ValidatedSubscription.ProtoReflect.Descriptor instead.
 func (*ValidatedSubscription) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{108}
+	return file_api_api_proto_rawDescGZIP(), []int{112}
 }
 
 func (x *ValidatedSubscription) GetUserId() string {
@@ -7272,11 +8237,11 @@ func (x *ValidatedSubscription) GetOriginalTransactionId() string {
 	return ""
 }
 
-func (x *ValidatedSubscription) GetStore() int32 {
+func (x *ValidatedSubscription) GetStore() StoreProvider {
 	if x != nil {
 		return x.Store
 	}
-	return 0
+	return StoreProvider_APPLE_APP_STORE
 }
 
 func (x *ValidatedSubscription) GetPurchaseTime() *timestamppb.Timestamp {
@@ -7284,34 +8249,6 @@ func (x *ValidatedSubscription) GetPurchaseTime() *timestamppb.Timestamp {
 		return x.PurchaseTime
 	}
 	return nil
-}
-
-func (x *ValidatedSubscription) GetExpireTime() *timestamppb.Timestamp {
-	if x != nil {
-		return x.ExpireTime
-	}
-	return nil
-}
-
-func (x *ValidatedSubscription) GetActive() bool {
-	if x != nil {
-		return x.Active
-	}
-	return false
-}
-
-func (x *ValidatedSubscription) GetSeenBefore() bool {
-	if x != nil {
-		return x.SeenBefore
-	}
-	return false
-}
-
-func (x *ValidatedSubscription) GetEnvironment() int32 {
-	if x != nil {
-		return x.Environment
-	}
-	return 0
 }
 
 func (x *ValidatedSubscription) GetCreateTime() *timestamppb.Timestamp {
@@ -7324,6 +8261,20 @@ func (x *ValidatedSubscription) GetCreateTime() *timestamppb.Timestamp {
 func (x *ValidatedSubscription) GetUpdateTime() *timestamppb.Timestamp {
 	if x != nil {
 		return x.UpdateTime
+	}
+	return nil
+}
+
+func (x *ValidatedSubscription) GetEnvironment() StoreEnvironment {
+	if x != nil {
+		return x.Environment
+	}
+	return StoreEnvironment_UNKNOWN
+}
+
+func (x *ValidatedSubscription) GetExpiryTime() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ExpiryTime
 	}
 	return nil
 }
@@ -7342,29 +8293,48 @@ func (x *ValidatedSubscription) GetProviderResponse() string {
 	return ""
 }
 
-type ListSubscriptionsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Limit         int32                  `protobuf:"varint,1,opt,name=limit,proto3" json:"limit,omitempty"`
-	Cursor        string                 `protobuf:"bytes,2,opt,name=cursor,proto3" json:"cursor,omitempty"`
+func (x *ValidatedSubscription) GetProviderNotification() string {
+	if x != nil {
+		return x.ProviderNotification
+	}
+	return ""
+}
+
+func (x *ValidatedSubscription) GetActive() bool {
+	if x != nil {
+		return x.Active
+	}
+	return false
+}
+
+// A list of validated purchases.
+type PurchaseList struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Stored validated purchases.
+	ValidatedPurchases []*ValidatedPurchase `protobuf:"bytes,1,rep,name=validated_purchases,json=validatedPurchases,proto3" json:"validated_purchases,omitempty"`
+	// The cursor to send when retrieving the next page, if any.
+	Cursor string `protobuf:"bytes,2,opt,name=cursor,proto3" json:"cursor,omitempty"`
+	// The cursor to send when retrieving the previous page, if any.
+	PrevCursor    string `protobuf:"bytes,3,opt,name=prev_cursor,json=prevCursor,proto3" json:"prev_cursor,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *ListSubscriptionsRequest) Reset() {
-	*x = ListSubscriptionsRequest{}
-	mi := &file_api_api_proto_msgTypes[109]
+func (x *PurchaseList) Reset() {
+	*x = PurchaseList{}
+	mi := &file_api_api_proto_msgTypes[113]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *ListSubscriptionsRequest) String() string {
+func (x *PurchaseList) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ListSubscriptionsRequest) ProtoMessage() {}
+func (*PurchaseList) ProtoMessage() {}
 
-func (x *ListSubscriptionsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[109]
+func (x *PurchaseList) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[113]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7375,37 +8345,48 @@ func (x *ListSubscriptionsRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ListSubscriptionsRequest.ProtoReflect.Descriptor instead.
-func (*ListSubscriptionsRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{109}
+// Deprecated: Use PurchaseList.ProtoReflect.Descriptor instead.
+func (*PurchaseList) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{113}
 }
 
-func (x *ListSubscriptionsRequest) GetLimit() int32 {
+func (x *PurchaseList) GetValidatedPurchases() []*ValidatedPurchase {
 	if x != nil {
-		return x.Limit
+		return x.ValidatedPurchases
 	}
-	return 0
+	return nil
 }
 
-func (x *ListSubscriptionsRequest) GetCursor() string {
+func (x *PurchaseList) GetCursor() string {
 	if x != nil {
 		return x.Cursor
 	}
 	return ""
 }
 
+func (x *PurchaseList) GetPrevCursor() string {
+	if x != nil {
+		return x.PrevCursor
+	}
+	return ""
+}
+
+// A list of validated subscriptions.
 type SubscriptionList struct {
-	state                  protoimpl.MessageState   `protogen:"open.v1"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Stored validated subscriptions.
 	ValidatedSubscriptions []*ValidatedSubscription `protobuf:"bytes,1,rep,name=validated_subscriptions,json=validatedSubscriptions,proto3" json:"validated_subscriptions,omitempty"`
-	Cursor                 string                   `protobuf:"bytes,2,opt,name=cursor,proto3" json:"cursor,omitempty"`
-	PrevCursor             string                   `protobuf:"bytes,3,opt,name=prev_cursor,json=prevCursor,proto3" json:"prev_cursor,omitempty"`
-	unknownFields          protoimpl.UnknownFields
-	sizeCache              protoimpl.SizeCache
+	// The cursor to send when retrieving the next page, if any.
+	Cursor string `protobuf:"bytes,2,opt,name=cursor,proto3" json:"cursor,omitempty"`
+	// The cursor to send when retrieving the previous page, if any.
+	PrevCursor    string `protobuf:"bytes,3,opt,name=prev_cursor,json=prevCursor,proto3" json:"prev_cursor,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *SubscriptionList) Reset() {
 	*x = SubscriptionList{}
-	mi := &file_api_api_proto_msgTypes[110]
+	mi := &file_api_api_proto_msgTypes[114]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7417,7 +8398,7 @@ func (x *SubscriptionList) String() string {
 func (*SubscriptionList) ProtoMessage() {}
 
 func (x *SubscriptionList) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[110]
+	mi := &file_api_api_proto_msgTypes[114]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7430,7 +8411,7 @@ func (x *SubscriptionList) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SubscriptionList.ProtoReflect.Descriptor instead.
 func (*SubscriptionList) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{110}
+	return file_api_api_proto_rawDescGZIP(), []int{114}
 }
 
 func (x *SubscriptionList) GetValidatedSubscriptions() []*ValidatedSubscription {
@@ -7454,16 +8435,73 @@ func (x *SubscriptionList) GetPrevCursor() string {
 	return ""
 }
 
+// List user subscriptions.
+type ListSubscriptionsRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Max number of results per page.
+	Limit *wrapperspb.Int32Value `protobuf:"bytes,1,opt,name=limit,proto3" json:"limit,omitempty"`
+	// Cursor to retrieve a page of records from.
+	Cursor        string `protobuf:"bytes,2,opt,name=cursor,proto3" json:"cursor,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListSubscriptionsRequest) Reset() {
+	*x = ListSubscriptionsRequest{}
+	mi := &file_api_api_proto_msgTypes[115]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListSubscriptionsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListSubscriptionsRequest) ProtoMessage() {}
+
+func (x *ListSubscriptionsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[115]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListSubscriptionsRequest.ProtoReflect.Descriptor instead.
+func (*ListSubscriptionsRequest) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{115}
+}
+
+func (x *ListSubscriptionsRequest) GetLimit() *wrapperspb.Int32Value {
+	if x != nil {
+		return x.Limit
+	}
+	return nil
+}
+
+func (x *ListSubscriptionsRequest) GetCursor() string {
+	if x != nil {
+		return x.Cursor
+	}
+	return ""
+}
+
+// Fetch a subscription by product id.
 type GetSubscriptionRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ProductId     string                 `protobuf:"bytes,1,opt,name=product_id,json=productId,proto3" json:"product_id,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Product id of the subscription.
+	ProductId     string `protobuf:"bytes,1,opt,name=product_id,json=productId,proto3" json:"product_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *GetSubscriptionRequest) Reset() {
 	*x = GetSubscriptionRequest{}
-	mi := &file_api_api_proto_msgTypes[111]
+	mi := &file_api_api_proto_msgTypes[116]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7475,7 +8513,7 @@ func (x *GetSubscriptionRequest) String() string {
 func (*GetSubscriptionRequest) ProtoMessage() {}
 
 func (x *GetSubscriptionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[111]
+	mi := &file_api_api_proto_msgTypes[116]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7488,7 +8526,7 @@ func (x *GetSubscriptionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetSubscriptionRequest.ProtoReflect.Descriptor instead.
 func (*GetSubscriptionRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{111}
+	return file_api_api_proto_rawDescGZIP(), []int{116}
 }
 
 func (x *GetSubscriptionRequest) GetProductId() string {
@@ -7498,30 +8536,32 @@ func (x *GetSubscriptionRequest) GetProductId() string {
 	return ""
 }
 
-type Rpc struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Payload       string                 `protobuf:"bytes,2,opt,name=payload,proto3" json:"payload,omitempty"`
-	HttpKey       string                 `protobuf:"bytes,3,opt,name=http_key,json=httpKey,proto3" json:"http_key,omitempty"`
+// A friend of a friend.
+type FriendsOfFriendsList_FriendOfFriend struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The user who referred its friend.
+	Referrer string `protobuf:"bytes,1,opt,name=referrer,proto3" json:"referrer,omitempty"`
+	// User.
+	User          *User `protobuf:"bytes,2,opt,name=user,proto3" json:"user,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *Rpc) Reset() {
-	*x = Rpc{}
-	mi := &file_api_api_proto_msgTypes[112]
+func (x *FriendsOfFriendsList_FriendOfFriend) Reset() {
+	*x = FriendsOfFriendsList_FriendOfFriend{}
+	mi := &file_api_api_proto_msgTypes[128]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *Rpc) String() string {
+func (x *FriendsOfFriendsList_FriendOfFriend) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*Rpc) ProtoMessage() {}
+func (*FriendsOfFriendsList_FriendOfFriend) ProtoMessage() {}
 
-func (x *Rpc) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[112]
+func (x *FriendsOfFriendsList_FriendOfFriend) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[128]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7532,56 +8572,51 @@ func (x *Rpc) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use Rpc.ProtoReflect.Descriptor instead.
-func (*Rpc) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{112}
+// Deprecated: Use FriendsOfFriendsList_FriendOfFriend.ProtoReflect.Descriptor instead.
+func (*FriendsOfFriendsList_FriendOfFriend) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{34, 0}
 }
 
-func (x *Rpc) GetId() string {
+func (x *FriendsOfFriendsList_FriendOfFriend) GetReferrer() string {
 	if x != nil {
-		return x.Id
+		return x.Referrer
 	}
 	return ""
 }
 
-func (x *Rpc) GetPayload() string {
+func (x *FriendsOfFriendsList_FriendOfFriend) GetUser() *User {
 	if x != nil {
-		return x.Payload
+		return x.User
 	}
-	return ""
+	return nil
 }
 
-func (x *Rpc) GetHttpKey() string {
-	if x != nil {
-		return x.HttpKey
-	}
-	return ""
-}
-
-type GetUsersRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Ids           []string               `protobuf:"bytes,1,rep,name=ids,proto3" json:"ids,omitempty"`
-	Usernames     []string               `protobuf:"bytes,2,rep,name=usernames,proto3" json:"usernames,omitempty"`
-	FacebookIds   []string               `protobuf:"bytes,3,rep,name=facebook_ids,json=facebookIds,proto3" json:"facebook_ids,omitempty"`
+// A single user-role pair.
+type GroupUserList_GroupUser struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// User.
+	User *User `protobuf:"bytes,1,opt,name=user,proto3" json:"user,omitempty"`
+	// Their relationship to the group.
+	State         *wrapperspb.Int32Value `protobuf:"bytes,2,opt,name=state,proto3" json:"state,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *GetUsersRequest) Reset() {
-	*x = GetUsersRequest{}
-	mi := &file_api_api_proto_msgTypes[113]
+func (x *GroupUserList_GroupUser) Reset() {
+	*x = GroupUserList_GroupUser{}
+	mi := &file_api_api_proto_msgTypes[129]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *GetUsersRequest) String() string {
+func (x *GroupUserList_GroupUser) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*GetUsersRequest) ProtoMessage() {}
+func (*GroupUserList_GroupUser) ProtoMessage() {}
 
-func (x *GetUsersRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[113]
+func (x *GroupUserList_GroupUser) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[129]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7592,54 +8627,51 @@ func (x *GetUsersRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use GetUsersRequest.ProtoReflect.Descriptor instead.
-func (*GetUsersRequest) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{113}
+// Deprecated: Use GroupUserList_GroupUser.ProtoReflect.Descriptor instead.
+func (*GroupUserList_GroupUser) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{52, 0}
 }
 
-func (x *GetUsersRequest) GetIds() []string {
+func (x *GroupUserList_GroupUser) GetUser() *User {
 	if x != nil {
-		return x.Ids
+		return x.User
 	}
 	return nil
 }
 
-func (x *GetUsersRequest) GetUsernames() []string {
+func (x *GroupUserList_GroupUser) GetState() *wrapperspb.Int32Value {
 	if x != nil {
-		return x.Usernames
+		return x.State
 	}
 	return nil
 }
 
-func (x *GetUsersRequest) GetFacebookIds() []string {
-	if x != nil {
-		return x.FacebookIds
-	}
-	return nil
-}
-
-type Users struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Users         []*User                `protobuf:"bytes,1,rep,name=users,proto3" json:"users,omitempty"`
+// A single group-role pair.
+type UserGroupList_UserGroup struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Group.
+	Group *Group `protobuf:"bytes,1,opt,name=group,proto3" json:"group,omitempty"`
+	// The user's relationship to the group.
+	State         *wrapperspb.Int32Value `protobuf:"bytes,2,opt,name=state,proto3" json:"state,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *Users) Reset() {
-	*x = Users{}
-	mi := &file_api_api_proto_msgTypes[114]
+func (x *UserGroupList_UserGroup) Reset() {
+	*x = UserGroupList_UserGroup{}
+	mi := &file_api_api_proto_msgTypes[130]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *Users) String() string {
+func (x *UserGroupList_UserGroup) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*Users) ProtoMessage() {}
+func (*UserGroupList_UserGroup) ProtoMessage() {}
 
-func (x *Users) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[114]
+func (x *UserGroupList_UserGroup) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[130]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7650,43 +8682,55 @@ func (x *Users) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use Users.ProtoReflect.Descriptor instead.
-func (*Users) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{114}
+// Deprecated: Use UserGroupList_UserGroup.ProtoReflect.Descriptor instead.
+func (*UserGroupList_UserGroup) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{53, 0}
 }
 
-func (x *Users) GetUsers() []*User {
+func (x *UserGroupList_UserGroup) GetGroup() *Group {
 	if x != nil {
-		return x.Users
+		return x.Group
 	}
 	return nil
 }
 
-type ClientEvent struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	Properties    map[string]string      `protobuf:"bytes,2,rep,name=properties,proto3" json:"properties,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	Timestamp     int64                  `protobuf:"varint,3,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
-	External      bool                   `protobuf:"varint,4,opt,name=external,proto3" json:"external,omitempty"`
+func (x *UserGroupList_UserGroup) GetState() *wrapperspb.Int32Value {
+	if x != nil {
+		return x.State
+	}
+	return nil
+}
+
+// Record values to write.
+type WriteLeaderboardRecordRequest_LeaderboardRecordWrite struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The score value to submit.
+	Score int64 `protobuf:"varint,1,opt,name=score,proto3" json:"score,omitempty"`
+	// An optional secondary value.
+	Subscore int64 `protobuf:"varint,2,opt,name=subscore,proto3" json:"subscore,omitempty"`
+	// Optional record metadata.
+	Metadata string `protobuf:"bytes,3,opt,name=metadata,proto3" json:"metadata,omitempty"`
+	// Operator override.
+	Operator      Operator `protobuf:"varint,4,opt,name=operator,proto3,enum=ultimate.server.api.Operator" json:"operator,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *ClientEvent) Reset() {
-	*x = ClientEvent{}
-	mi := &file_api_api_proto_msgTypes[115]
+func (x *WriteLeaderboardRecordRequest_LeaderboardRecordWrite) Reset() {
+	*x = WriteLeaderboardRecordRequest_LeaderboardRecordWrite{}
+	mi := &file_api_api_proto_msgTypes[131]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *ClientEvent) String() string {
+func (x *WriteLeaderboardRecordRequest_LeaderboardRecordWrite) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ClientEvent) ProtoMessage() {}
+func (*WriteLeaderboardRecordRequest_LeaderboardRecordWrite) ProtoMessage() {}
 
-func (x *ClientEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_api_api_proto_msgTypes[115]
+func (x *WriteLeaderboardRecordRequest_LeaderboardRecordWrite) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[131]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7697,44 +8741,196 @@ func (x *ClientEvent) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ClientEvent.ProtoReflect.Descriptor instead.
-func (*ClientEvent) Descriptor() ([]byte, []int) {
-	return file_api_api_proto_rawDescGZIP(), []int{115}
+// Deprecated: Use WriteLeaderboardRecordRequest_LeaderboardRecordWrite.ProtoReflect.Descriptor instead.
+func (*WriteLeaderboardRecordRequest_LeaderboardRecordWrite) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{60, 0}
 }
 
-func (x *ClientEvent) GetName() string {
+func (x *WriteLeaderboardRecordRequest_LeaderboardRecordWrite) GetScore() int64 {
 	if x != nil {
-		return x.Name
-	}
-	return ""
-}
-
-func (x *ClientEvent) GetProperties() map[string]string {
-	if x != nil {
-		return x.Properties
-	}
-	return nil
-}
-
-func (x *ClientEvent) GetTimestamp() int64 {
-	if x != nil {
-		return x.Timestamp
+		return x.Score
 	}
 	return 0
 }
 
-func (x *ClientEvent) GetExternal() bool {
+func (x *WriteLeaderboardRecordRequest_LeaderboardRecordWrite) GetSubscore() int64 {
 	if x != nil {
-		return x.External
+		return x.Subscore
 	}
-	return false
+	return 0
+}
+
+func (x *WriteLeaderboardRecordRequest_LeaderboardRecordWrite) GetMetadata() string {
+	if x != nil {
+		return x.Metadata
+	}
+	return ""
+}
+
+func (x *WriteLeaderboardRecordRequest_LeaderboardRecordWrite) GetOperator() Operator {
+	if x != nil {
+		return x.Operator
+	}
+	return Operator_NO_OVERRIDE
+}
+
+// Record values to write.
+type WriteTournamentRecordRequest_TournamentRecordWrite struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The score value to submit.
+	Score int64 `protobuf:"varint,1,opt,name=score,proto3" json:"score,omitempty"`
+	// An optional secondary value.
+	Subscore int64 `protobuf:"varint,2,opt,name=subscore,proto3" json:"subscore,omitempty"`
+	// A JSON object of additional properties (optional).
+	Metadata string `protobuf:"bytes,3,opt,name=metadata,proto3" json:"metadata,omitempty"`
+	// Operator override.
+	Operator      Operator `protobuf:"varint,4,opt,name=operator,proto3,enum=ultimate.server.api.Operator" json:"operator,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *WriteTournamentRecordRequest_TournamentRecordWrite) Reset() {
+	*x = WriteTournamentRecordRequest_TournamentRecordWrite{}
+	mi := &file_api_api_proto_msgTypes[132]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WriteTournamentRecordRequest_TournamentRecordWrite) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WriteTournamentRecordRequest_TournamentRecordWrite) ProtoMessage() {}
+
+func (x *WriteTournamentRecordRequest_TournamentRecordWrite) ProtoReflect() protoreflect.Message {
+	mi := &file_api_api_proto_msgTypes[132]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WriteTournamentRecordRequest_TournamentRecordWrite.ProtoReflect.Descriptor instead.
+func (*WriteTournamentRecordRequest_TournamentRecordWrite) Descriptor() ([]byte, []int) {
+	return file_api_api_proto_rawDescGZIP(), []int{67, 0}
+}
+
+func (x *WriteTournamentRecordRequest_TournamentRecordWrite) GetScore() int64 {
+	if x != nil {
+		return x.Score
+	}
+	return 0
+}
+
+func (x *WriteTournamentRecordRequest_TournamentRecordWrite) GetSubscore() int64 {
+	if x != nil {
+		return x.Subscore
+	}
+	return 0
+}
+
+func (x *WriteTournamentRecordRequest_TournamentRecordWrite) GetMetadata() string {
+	if x != nil {
+		return x.Metadata
+	}
+	return ""
+}
+
+func (x *WriteTournamentRecordRequest_TournamentRecordWrite) GetOperator() Operator {
+	if x != nil {
+		return x.Operator
+	}
+	return Operator_NO_OVERRIDE
 }
 
 var File_api_api_proto protoreflect.FileDescriptor
 
 const file_api_api_proto_rawDesc = "" +
 	"\n" +
-	"\rapi/api.proto\x12\x13ultimate.server.api\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\x94\x03\n" +
+	"\rapi/api.proto\x12\x13ultimate.server.api\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1egoogle/protobuf/wrappers.proto\"\x9e\x01\n" +
+	"\fAccountApple\x12\x14\n" +
+	"\x05token\x18\x01 \x01(\tR\x05token\x12?\n" +
+	"\x04vars\x18\x02 \x03(\v2+.ultimate.server.api.AccountApple.VarsEntryR\x04vars\x1a7\n" +
+	"\tVarsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\x9a\x01\n" +
+	"\rAccountCustom\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12@\n" +
+	"\x04vars\x18\x02 \x03(\v2,.ultimate.server.api.AccountCustom.VarsEntryR\x04vars\x1a7\n" +
+	"\tVarsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\x9a\x01\n" +
+	"\rAccountDevice\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12@\n" +
+	"\x04vars\x18\x02 \x03(\v2,.ultimate.server.api.AccountDevice.VarsEntryR\x04vars\x1a7\n" +
+	"\tVarsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xba\x01\n" +
+	"\fAccountEmail\x12\x14\n" +
+	"\x05email\x18\x01 \x01(\tR\x05email\x12\x1a\n" +
+	"\bpassword\x18\x02 \x01(\tR\bpassword\x12?\n" +
+	"\x04vars\x18\x03 \x03(\v2+.ultimate.server.api.AccountEmail.VarsEntryR\x04vars\x1a7\n" +
+	"\tVarsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xa4\x01\n" +
+	"\x0fAccountFacebook\x12\x14\n" +
+	"\x05token\x18\x01 \x01(\tR\x05token\x12B\n" +
+	"\x04vars\x18\x02 \x03(\v2..ultimate.server.api.AccountFacebook.VarsEntryR\x04vars\x1a7\n" +
+	"\tVarsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xd2\x01\n" +
+	"\x1aAccountFacebookInstantGame\x12,\n" +
+	"\x12signed_player_info\x18\x01 \x01(\tR\x10signedPlayerInfo\x12M\n" +
+	"\x04vars\x18\x02 \x03(\v29.ultimate.server.api.AccountFacebookInstantGame.VarsEntryR\x04vars\x1a7\n" +
+	"\tVarsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xd1\x02\n" +
+	"\x11AccountGameCenter\x12\x1b\n" +
+	"\tplayer_id\x18\x01 \x01(\tR\bplayerId\x12\x1b\n" +
+	"\tbundle_id\x18\x02 \x01(\tR\bbundleId\x12+\n" +
+	"\x11timestamp_seconds\x18\x03 \x01(\x03R\x10timestampSeconds\x12\x12\n" +
+	"\x04salt\x18\x04 \x01(\tR\x04salt\x12\x1c\n" +
+	"\tsignature\x18\x05 \x01(\tR\tsignature\x12$\n" +
+	"\x0epublic_key_url\x18\x06 \x01(\tR\fpublicKeyUrl\x12D\n" +
+	"\x04vars\x18\a \x03(\v20.ultimate.server.api.AccountGameCenter.VarsEntryR\x04vars\x1a7\n" +
+	"\tVarsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xa0\x01\n" +
+	"\rAccountGoogle\x12\x14\n" +
+	"\x05token\x18\x01 \x01(\tR\x05token\x12@\n" +
+	"\x04vars\x18\x02 \x03(\v2,.ultimate.server.api.AccountGoogle.VarsEntryR\x04vars\x1a7\n" +
+	"\tVarsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\x9e\x01\n" +
+	"\fAccountSteam\x12\x14\n" +
+	"\x05token\x18\x01 \x01(\tR\x05token\x12?\n" +
+	"\x04vars\x18\x02 \x03(\v2+.ultimate.server.api.AccountSteam.VarsEntryR\x04vars\x1a7\n" +
+	"\tVarsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xa2\x01\n" +
+	"\x0eAccountRefresh\x12\x14\n" +
+	"\x05token\x18\x01 \x01(\tR\x05token\x12A\n" +
+	"\x04vars\x18\x02 \x03(\v2-.ultimate.server.api.AccountRefresh.VarsEntryR\x04vars\x1a7\n" +
+	"\tVarsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xbd\x02\n" +
+	"\aAccount\x12-\n" +
+	"\x04user\x18\x01 \x01(\v2\x19.ultimate.server.api.UserR\x04user\x12\x16\n" +
+	"\x06wallet\x18\x02 \x01(\tR\x06wallet\x12\x14\n" +
+	"\x05email\x18\x03 \x01(\tR\x05email\x12<\n" +
+	"\adevices\x18\x04 \x03(\v2\".ultimate.server.api.AccountDeviceR\adevices\x12\x1b\n" +
+	"\tcustom_id\x18\x05 \x01(\tR\bcustomId\x12;\n" +
+	"\vverify_time\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"verifyTime\x12=\n" +
+	"\fdisable_time\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\vdisableTime\"^\n" +
+	"\aSession\x12\x18\n" +
+	"\acreated\x18\x01 \x01(\bR\acreated\x12\x14\n" +
+	"\x05token\x18\x02 \x01(\tR\x05token\x12#\n" +
+	"\rrefresh_token\x18\x03 \x01(\tR\frefreshToken\"\xe6\x04\n" +
 	"\x04User\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1a\n" +
 	"\busername\x18\x02 \x01(\tR\busername\x12!\n" +
@@ -7744,350 +8940,185 @@ const file_api_api_proto_rawDesc = "" +
 	"\blang_tag\x18\x05 \x01(\tR\alangTag\x12\x1a\n" +
 	"\blocation\x18\x06 \x01(\tR\blocation\x12\x1a\n" +
 	"\btimezone\x18\a \x01(\tR\btimezone\x12\x1a\n" +
-	"\bmetadata\x18\b \x01(\tR\bmetadata\x12;\n" +
-	"\vcreate_time\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"createTime\x12;\n" +
-	"\vupdate_time\x18\n" +
-	" \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"updateTime\x12\x16\n" +
-	"\x06online\x18\v \x01(\bR\x06online\x12\x1d\n" +
+	"\bmetadata\x18\b \x01(\tR\bmetadata\x12\x1f\n" +
+	"\vfacebook_id\x18\t \x01(\tR\n" +
+	"facebookId\x12\x1b\n" +
+	"\tgoogle_id\x18\n" +
+	" \x01(\tR\bgoogleId\x12#\n" +
+	"\rgamecenter_id\x18\v \x01(\tR\fgamecenterId\x12\x19\n" +
+	"\bsteam_id\x18\f \x01(\tR\asteamId\x12\x16\n" +
+	"\x06online\x18\r \x01(\bR\x06online\x12\x1d\n" +
 	"\n" +
-	"edge_count\x18\f \x01(\x05R\tedgeCount\"\xa3\x01\n" +
-	"\x18AuthenticateEmailRequest\x12\x14\n" +
-	"\x05email\x18\x01 \x01(\tR\x05email\x12\x1a\n" +
-	"\bpassword\x18\x02 \x01(\tR\bpassword\x12\x16\n" +
-	"\x06create\x18\x03 \x01(\bR\x06create\x12\x1a\n" +
-	"\busername\x18\x04 \x01(\tR\busername\x12!\n" +
-	"\fdisplay_name\x18\x05 \x01(\tR\vdisplayName\"_\n" +
-	"\x19AuthenticateDeviceRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
-	"\x06create\x18\x02 \x01(\bR\x06create\x12\x1a\n" +
-	"\busername\x18\x03 \x01(\tR\busername\"d\n" +
-	"\x18AuthenticateAppleRequest\x12\x14\n" +
-	"\x05token\x18\x01 \x01(\tR\x05token\x12\x16\n" +
-	"\x06create\x18\x02 \x01(\bR\x06create\x12\x1a\n" +
-	"\busername\x18\x03 \x01(\tR\busername\"e\n" +
-	"\x19AuthenticateGoogleRequest\x12\x14\n" +
-	"\x05token\x18\x01 \x01(\tR\x05token\x12\x16\n" +
-	"\x06create\x18\x02 \x01(\bR\x06create\x12\x1a\n" +
-	"\busername\x18\x03 \x01(\tR\busername\"g\n" +
-	"\x1bAuthenticateFacebookRequest\x12\x14\n" +
-	"\x05token\x18\x01 \x01(\tR\x05token\x12\x16\n" +
-	"\x06create\x18\x02 \x01(\bR\x06create\x12\x1a\n" +
-	"\busername\x18\x03 \x01(\tR\busername\"f\n" +
-	"\x18AuthenticateSteamRequest\x12\x16\n" +
-	"\x06ticket\x18\x01 \x01(\fR\x06ticket\x12\x16\n" +
-	"\x06create\x18\x02 \x01(\bR\x06create\x12\x1a\n" +
-	"\busername\x18\x03 \x01(\tR\busername\"\x83\x02\n" +
-	"\x1dAuthenticateGameCenterRequest\x12\x1b\n" +
-	"\tplayer_id\x18\x01 \x01(\tR\bplayerId\x12\x1b\n" +
-	"\tbundle_id\x18\x02 \x01(\tR\bbundleId\x12\x1c\n" +
-	"\ttimestamp\x18\x03 \x01(\x03R\ttimestamp\x12\x12\n" +
-	"\x04salt\x18\x04 \x01(\tR\x04salt\x12\x1c\n" +
-	"\tsignature\x18\x05 \x01(\tR\tsignature\x12$\n" +
-	"\x0epublic_key_url\x18\x06 \x01(\tR\fpublicKeyUrl\x12\x16\n" +
-	"\x06create\x18\a \x01(\bR\x06create\x12\x1a\n" +
-	"\busername\x18\b \x01(\tR\busername\"\x8a\x01\n" +
-	"&AuthenticateFacebookInstantGameRequest\x12,\n" +
-	"\x12signed_player_info\x18\x01 \x01(\tR\x10signedPlayerInfo\x12\x16\n" +
-	"\x06create\x18\x02 \x01(\bR\x06create\x12\x1a\n" +
-	"\busername\x18\x03 \x01(\tR\busername\"_\n" +
-	"\x19AuthenticateCustomRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
-	"\x06create\x18\x02 \x01(\bR\x06create\x12\x1a\n" +
-	"\busername\x18\x03 \x01(\tR\busername\"R\n" +
+	"edge_count\x18\x0e \x01(\x05R\tedgeCount\x12;\n" +
+	"\vcreate_time\x18\x0f \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"createTime\x12;\n" +
+	"\vupdate_time\x18\x10 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"updateTime\x127\n" +
+	"\x18facebook_instant_game_id\x18\x11 \x01(\tR\x15facebookInstantGameId\x12\x19\n" +
+	"\bapple_id\x18\x12 \x01(\tR\aappleId\"8\n" +
+	"\x05Users\x12/\n" +
+	"\x05users\x18\x01 \x03(\v2\x19.ultimate.server.api.UserR\x05users\"d\n" +
+	"\x0fGetUsersRequest\x12\x10\n" +
+	"\x03ids\x18\x01 \x03(\tR\x03ids\x12\x1c\n" +
+	"\tusernames\x18\x02 \x03(\tR\tusernames\x12!\n" +
+	"\ffacebook_ids\x18\x03 \x03(\tR\vfacebookIds\"\xfb\x02\n" +
+	"\x14UpdateAccountRequest\x128\n" +
+	"\busername\x18\x01 \x01(\v2\x1c.google.protobuf.StringValueR\busername\x12?\n" +
+	"\fdisplay_name\x18\x02 \x01(\v2\x1c.google.protobuf.StringValueR\vdisplayName\x12;\n" +
+	"\n" +
+	"avatar_url\x18\x03 \x01(\v2\x1c.google.protobuf.StringValueR\tavatarUrl\x127\n" +
+	"\blang_tag\x18\x04 \x01(\v2\x1c.google.protobuf.StringValueR\alangTag\x128\n" +
+	"\blocation\x18\x05 \x01(\v2\x1c.google.protobuf.StringValueR\blocation\x128\n" +
+	"\btimezone\x18\x06 \x01(\v2\x1c.google.protobuf.StringValueR\btimezone\"\xb0\x01\n" +
 	"\x15SessionRefreshRequest\x12\x14\n" +
-	"\x05token\x18\x01 \x01(\tR\x05token\x12#\n" +
-	"\rrefresh_token\x18\x02 \x01(\tR\frefreshToken\"Q\n" +
+	"\x05token\x18\x01 \x01(\tR\x05token\x12H\n" +
+	"\x04vars\x18\x02 \x03(\v24.ultimate.server.api.SessionRefreshRequest.VarsEntryR\x04vars\x1a7\n" +
+	"\tVarsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"Q\n" +
 	"\x14SessionLogoutRequest\x12\x14\n" +
 	"\x05token\x18\x01 \x01(\tR\x05token\x12#\n" +
-	"\rrefresh_token\x18\x02 \x01(\tR\frefreshToken\"\x93\x01\n" +
-	"\aSession\x12\x14\n" +
-	"\x05token\x18\x01 \x01(\tR\x05token\x12#\n" +
-	"\rrefresh_token\x18\x02 \x01(\tR\frefreshToken\x12\x18\n" +
-	"\acreated\x18\x03 \x01(\bR\acreated\x12\x17\n" +
-	"\auser_id\x18\x04 \x01(\tR\x06userId\x12\x1a\n" +
-	"\busername\x18\x05 \x01(\tR\busername\"\x18\n" +
-	"\x06Device\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"\xf7\x01\n" +
-	"\aAccount\x12-\n" +
-	"\x04user\x18\x01 \x01(\v2\x19.ultimate.server.api.UserR\x04user\x125\n" +
-	"\adevices\x18\x02 \x03(\v2\x1b.ultimate.server.api.DeviceR\adevices\x12\x14\n" +
-	"\x05email\x18\x03 \x01(\tR\x05email\x12\x1b\n" +
-	"\tcustom_id\x18\x04 \x01(\tR\bcustomId\x12;\n" +
-	"\vverify_time\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"verifyTime\x12\x16\n" +
-	"\x06wallet\x18\x06 \x01(\tR\x06wallet\"\xe3\x01\n" +
-	"\x14UpdateAccountRequest\x12!\n" +
-	"\fdisplay_name\x18\x01 \x01(\tR\vdisplayName\x12\x1d\n" +
-	"\n" +
-	"avatar_url\x18\x02 \x01(\tR\tavatarUrl\x12\x19\n" +
-	"\blang_tag\x18\x03 \x01(\tR\alangTag\x12\x1a\n" +
-	"\blocation\x18\x04 \x01(\tR\blocation\x12\x1a\n" +
-	"\btimezone\x18\x05 \x01(\tR\btimezone\x12\x1a\n" +
-	"\bmetadata\x18\x06 \x01(\tR\bmetadata\x12\x1a\n" +
-	"\busername\x18\a \x01(\tR\busername\"\x1f\n" +
-	"\rUnlinkRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"\xf1\x01\n" +
-	"\x18CreateLeaderboardRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
-	"\n" +
-	"sort_order\x18\x02 \x01(\tR\tsortOrder\x12\x1a\n" +
-	"\boperator\x18\x03 \x01(\tR\boperator\x12%\n" +
-	"\x0ereset_schedule\x18\x04 \x01(\tR\rresetSchedule\x12\x1a\n" +
-	"\bmetadata\x18\x05 \x01(\tR\bmetadata\x12$\n" +
-	"\rauthoritative\x18\x06 \x01(\bR\rauthoritative\x12!\n" +
-	"\fenable_ranks\x18\a \x01(\bR\venableRanks\"G\n" +
-	"\x17ListLeaderboardsRequest\x12\x14\n" +
-	"\x05limit\x18\x01 \x01(\x05R\x05limit\x12\x16\n" +
-	"\x06cursor\x18\x02 \x01(\tR\x06cursor\"\xdf\x02\n" +
-	"\vLeaderboard\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
-	"\n" +
-	"sort_order\x18\x02 \x01(\tR\tsortOrder\x12\x1a\n" +
-	"\boperator\x18\x03 \x01(\tR\boperator\x12%\n" +
-	"\x0ereset_schedule\x18\x04 \x01(\tR\rresetSchedule\x12\x1a\n" +
-	"\bmetadata\x18\x05 \x01(\tR\bmetadata\x12$\n" +
-	"\rauthoritative\x18\x06 \x01(\bR\rauthoritative\x12;\n" +
-	"\vcreate_time\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"createTime\x12\x1d\n" +
-	"\n" +
-	"prev_reset\x18\b \x01(\x03R\tprevReset\x12\x1d\n" +
-	"\n" +
-	"next_reset\x18\t \x01(\x03R\tnextReset\x12!\n" +
-	"\fenable_ranks\x18\n" +
-	" \x01(\bR\venableRanks\"x\n" +
-	"\x0fLeaderboardList\x12D\n" +
-	"\fleaderboards\x18\x01 \x03(\v2 .ultimate.server.api.LeaderboardR\fleaderboards\x12\x1f\n" +
-	"\vnext_cursor\x18\x02 \x01(\tR\n" +
-	"nextCursor\"*\n" +
-	"\x18DeleteLeaderboardRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"\xe0\x01\n" +
-	"\x1dWriteLeaderboardRecordRequest\x12%\n" +
-	"\x0eleaderboard_id\x18\x01 \x01(\tR\rleaderboardId\x12\x14\n" +
-	"\x05score\x18\x02 \x01(\x03R\x05score\x12\x1a\n" +
-	"\bsubscore\x18\x03 \x01(\x03R\bsubscore\x12\x1a\n" +
-	"\bmetadata\x18\x04 \x01(\tR\bmetadata\x12J\n" +
-	"\x11override_operator\x18\x05 \x01(\x0e2\x1d.ultimate.server.api.OperatorR\x10overrideOperator\"\xcb\x03\n" +
-	"\x11LeaderboardRecord\x12%\n" +
-	"\x0eleaderboard_id\x18\x01 \x01(\tR\rleaderboardId\x12\x19\n" +
-	"\bowner_id\x18\x02 \x01(\tR\aownerId\x12\x1a\n" +
-	"\busername\x18\x03 \x01(\tR\busername\x12\x14\n" +
-	"\x05score\x18\x04 \x01(\x03R\x05score\x12\x1a\n" +
-	"\bsubscore\x18\x05 \x01(\x03R\bsubscore\x12\x1a\n" +
-	"\bmetadata\x18\x06 \x01(\tR\bmetadata\x12\x12\n" +
-	"\x04rank\x18\a \x01(\x03R\x04rank\x12;\n" +
-	"\vcreate_time\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"createTime\x12;\n" +
-	"\vupdate_time\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"updateTime\x12;\n" +
-	"\vexpiry_time\x18\n" +
-	" \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"expiryTime\x12\x1b\n" +
-	"\tnum_score\x18\v \x01(\x05R\bnumScore\x12\"\n" +
-	"\rmax_num_score\x18\f \x01(\x05R\vmaxNumScore\"\xa9\x01\n" +
-	"\x1dListLeaderboardRecordsRequest\x12%\n" +
-	"\x0eleaderboard_id\x18\x01 \x01(\tR\rleaderboardId\x12\x14\n" +
-	"\x05limit\x18\x02 \x01(\x05R\x05limit\x12\x16\n" +
-	"\x06cursor\x18\x03 \x01(\tR\x06cursor\x12\x1b\n" +
-	"\towner_ids\x18\x04 \x03(\tR\bownerIds\x12\x16\n" +
-	"\x06expiry\x18\x05 \x01(\x03R\x06expiry\"\x9a\x01\n" +
-	"(ListLeaderboardRecordsAroundOwnerRequest\x12%\n" +
-	"\x0eleaderboard_id\x18\x01 \x01(\tR\rleaderboardId\x12\x19\n" +
-	"\bowner_id\x18\x02 \x01(\tR\aownerId\x12\x14\n" +
-	"\x05limit\x18\x03 \x01(\x05R\x05limit\x12\x16\n" +
-	"\x06expiry\x18\x04 \x01(\x03R\x06expiry\"\xe8\x01\n" +
-	"\x15LeaderboardRecordList\x12@\n" +
-	"\arecords\x18\x01 \x03(\v2&.ultimate.server.api.LeaderboardRecordR\arecords\x12\x1f\n" +
-	"\vnext_cursor\x18\x02 \x01(\tR\n" +
-	"nextCursor\x12\x1f\n" +
-	"\vprev_cursor\x18\x03 \x01(\tR\n" +
-	"prevCursor\x12K\n" +
-	"\rowner_records\x18\x04 \x03(\v2&.ultimate.server.api.LeaderboardRecordR\fownerRecords\"G\n" +
-	"\x1eDeleteLeaderboardRecordRequest\x12%\n" +
-	"\x0eleaderboard_id\x18\x01 \x01(\tR\rleaderboardId\"\x93\x04\n" +
-	"\x17CreateTournamentRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
-	"\n" +
-	"sort_order\x18\x02 \x01(\tR\tsortOrder\x12\x1a\n" +
-	"\boperator\x18\x03 \x01(\tR\boperator\x12%\n" +
-	"\x0ereset_schedule\x18\x04 \x01(\tR\rresetSchedule\x12\x1a\n" +
-	"\bmetadata\x18\x05 \x01(\tR\bmetadata\x12$\n" +
-	"\rauthoritative\x18\x06 \x01(\bR\rauthoritative\x12\x1a\n" +
-	"\bcategory\x18\a \x01(\x05R\bcategory\x12 \n" +
-	"\vdescription\x18\b \x01(\tR\vdescription\x12\x1a\n" +
-	"\bduration\x18\t \x01(\x05R\bduration\x125\n" +
-	"\bend_time\x18\n" +
-	" \x01(\v2\x1a.google.protobuf.TimestampR\aendTime\x12#\n" +
-	"\rjoin_required\x18\v \x01(\bR\fjoinRequired\x12\x19\n" +
-	"\bmax_size\x18\f \x01(\x05R\amaxSize\x12\"\n" +
-	"\rmax_num_score\x18\r \x01(\x05R\vmaxNumScore\x12\x14\n" +
-	"\x05title\x18\x0e \x01(\tR\x05title\x129\n" +
-	"\n" +
-	"start_time\x18\x0f \x01(\v2\x1a.google.protobuf.TimestampR\tstartTime\")\n" +
-	"\x17DeleteTournamentRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"'\n" +
-	"\x15JoinTournamentRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"\x9a\x02\n" +
-	"\x16ListTournamentsRequest\x12%\n" +
-	"\x0ecategory_start\x18\x01 \x01(\x05R\rcategoryStart\x12!\n" +
-	"\fcategory_end\x18\x02 \x01(\x05R\vcategoryEnd\x129\n" +
-	"\n" +
-	"start_time\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\tstartTime\x125\n" +
-	"\bend_time\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\aendTime\x12\x14\n" +
-	"\x05limit\x18\x05 \x01(\x05R\x05limit\x12\x16\n" +
-	"\x06cursor\x18\x06 \x01(\tR\x06cursor\x12\x16\n" +
-	"\x06active\x18\a \x01(\bR\x06active\"\xb7\x05\n" +
-	"\n" +
-	"Tournament\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
-	"\n" +
-	"sort_order\x18\x02 \x01(\tR\tsortOrder\x12\x1a\n" +
-	"\boperator\x18\x03 \x01(\tR\boperator\x12%\n" +
-	"\x0ereset_schedule\x18\x04 \x01(\tR\rresetSchedule\x12\x1a\n" +
-	"\bmetadata\x18\x05 \x01(\tR\bmetadata\x12$\n" +
-	"\rauthoritative\x18\x06 \x01(\bR\rauthoritative\x12\x1a\n" +
-	"\bcategory\x18\a \x01(\x05R\bcategory\x12 \n" +
-	"\vdescription\x18\b \x01(\tR\vdescription\x12\x1a\n" +
-	"\bduration\x18\t \x01(\x05R\bduration\x125\n" +
-	"\bend_time\x18\n" +
-	" \x01(\v2\x1a.google.protobuf.TimestampR\aendTime\x12#\n" +
-	"\rjoin_required\x18\v \x01(\bR\fjoinRequired\x12\x19\n" +
-	"\bmax_size\x18\f \x01(\x05R\amaxSize\x12\"\n" +
-	"\rmax_num_score\x18\r \x01(\x05R\vmaxNumScore\x12\x14\n" +
-	"\x05title\x18\x0e \x01(\tR\x05title\x129\n" +
-	"\n" +
-	"start_time\x18\x0f \x01(\v2\x1a.google.protobuf.TimestampR\tstartTime\x12\x12\n" +
-	"\x04size\x18\x10 \x01(\x05R\x04size\x12\x1b\n" +
-	"\tcan_enter\x18\x11 \x01(\bR\bcanEnter\x12!\n" +
-	"\fstart_active\x18\x12 \x01(\x03R\vstartActive\x12\x1d\n" +
-	"\n" +
-	"end_active\x18\x13 \x01(\x03R\tendActive\x12\x1d\n" +
-	"\n" +
-	"prev_reset\x18\x14 \x01(\x03R\tprevReset\x12\x1d\n" +
-	"\n" +
-	"next_reset\x18\x15 \x01(\x03R\tnextReset\"t\n" +
-	"\x0eTournamentList\x12A\n" +
-	"\vtournaments\x18\x01 \x03(\v2\x1f.ultimate.server.api.TournamentR\vtournaments\x12\x1f\n" +
-	"\vnext_cursor\x18\x02 \x01(\tR\n" +
-	"nextCursor\"\xdd\x01\n" +
-	"\x1cWriteTournamentRecordRequest\x12#\n" +
-	"\rtournament_id\x18\x01 \x01(\tR\ftournamentId\x12\x14\n" +
-	"\x05score\x18\x02 \x01(\x03R\x05score\x12\x1a\n" +
-	"\bsubscore\x18\x03 \x01(\x03R\bsubscore\x12\x1a\n" +
-	"\bmetadata\x18\x04 \x01(\tR\bmetadata\x12J\n" +
-	"\x11override_operator\x18\x05 \x01(\x0e2\x1d.ultimate.server.api.OperatorR\x10overrideOperator\"\xa6\x01\n" +
-	"\x1cListTournamentRecordsRequest\x12#\n" +
-	"\rtournament_id\x18\x01 \x01(\tR\ftournamentId\x12\x14\n" +
-	"\x05limit\x18\x02 \x01(\x05R\x05limit\x12\x16\n" +
-	"\x06cursor\x18\x03 \x01(\tR\x06cursor\x12\x1b\n" +
-	"\towner_ids\x18\x04 \x03(\tR\bownerIds\x12\x16\n" +
-	"\x06expiry\x18\x05 \x01(\x03R\x06expiry\"\x97\x01\n" +
-	"'ListTournamentRecordsAroundOwnerRequest\x12#\n" +
-	"\rtournament_id\x18\x01 \x01(\tR\ftournamentId\x12\x19\n" +
-	"\bowner_id\x18\x02 \x01(\tR\aownerId\x12\x14\n" +
-	"\x05limit\x18\x03 \x01(\x05R\x05limit\x12\x16\n" +
-	"\x06expiry\x18\x04 \x01(\x03R\x06expiry\"D\n" +
-	"\x1dDeleteTournamentRecordRequest\x12#\n" +
-	"\rtournament_id\x18\x01 \x01(\tR\ftournamentId\"C\n" +
+	"\rrefresh_token\x18\x02 \x01(\tR\frefreshToken\"\xa7\x01\n" +
+	"\x18AuthenticateAppleRequest\x12;\n" +
+	"\aaccount\x18\x01 \x01(\v2!.ultimate.server.api.AccountAppleR\aaccount\x122\n" +
+	"\x06create\x18\x02 \x01(\v2\x1a.google.protobuf.BoolValueR\x06create\x12\x1a\n" +
+	"\busername\x18\x03 \x01(\tR\busername\"\xa9\x01\n" +
+	"\x19AuthenticateCustomRequest\x12<\n" +
+	"\aaccount\x18\x01 \x01(\v2\".ultimate.server.api.AccountCustomR\aaccount\x122\n" +
+	"\x06create\x18\x02 \x01(\v2\x1a.google.protobuf.BoolValueR\x06create\x12\x1a\n" +
+	"\busername\x18\x03 \x01(\tR\busername\"\xa9\x01\n" +
+	"\x19AuthenticateDeviceRequest\x12<\n" +
+	"\aaccount\x18\x01 \x01(\v2\".ultimate.server.api.AccountDeviceR\aaccount\x122\n" +
+	"\x06create\x18\x02 \x01(\v2\x1a.google.protobuf.BoolValueR\x06create\x12\x1a\n" +
+	"\busername\x18\x03 \x01(\tR\busername\"\xa7\x01\n" +
+	"\x18AuthenticateEmailRequest\x12;\n" +
+	"\aaccount\x18\x01 \x01(\v2!.ultimate.server.api.AccountEmailR\aaccount\x122\n" +
+	"\x06create\x18\x02 \x01(\v2\x1a.google.protobuf.BoolValueR\x06create\x12\x1a\n" +
+	"\busername\x18\x03 \x01(\tR\busername\"\xdd\x01\n" +
+	"\x1bAuthenticateFacebookRequest\x12>\n" +
+	"\aaccount\x18\x01 \x01(\v2$.ultimate.server.api.AccountFacebookR\aaccount\x122\n" +
+	"\x06create\x18\x02 \x01(\v2\x1a.google.protobuf.BoolValueR\x06create\x12\x1a\n" +
+	"\busername\x18\x03 \x01(\tR\busername\x12.\n" +
+	"\x04sync\x18\x04 \x01(\v2\x1a.google.protobuf.BoolValueR\x04sync\"\xc3\x01\n" +
+	"&AuthenticateFacebookInstantGameRequest\x12I\n" +
+	"\aaccount\x18\x01 \x01(\v2/.ultimate.server.api.AccountFacebookInstantGameR\aaccount\x122\n" +
+	"\x06create\x18\x02 \x01(\v2\x1a.google.protobuf.BoolValueR\x06create\x12\x1a\n" +
+	"\busername\x18\x03 \x01(\tR\busername\"\xb1\x01\n" +
+	"\x1dAuthenticateGameCenterRequest\x12@\n" +
+	"\aaccount\x18\x01 \x01(\v2&.ultimate.server.api.AccountGameCenterR\aaccount\x122\n" +
+	"\x06create\x18\x02 \x01(\v2\x1a.google.protobuf.BoolValueR\x06create\x12\x1a\n" +
+	"\busername\x18\x03 \x01(\tR\busername\"\xa9\x01\n" +
+	"\x19AuthenticateGoogleRequest\x12<\n" +
+	"\aaccount\x18\x01 \x01(\v2\".ultimate.server.api.AccountGoogleR\aaccount\x122\n" +
+	"\x06create\x18\x02 \x01(\v2\x1a.google.protobuf.BoolValueR\x06create\x12\x1a\n" +
+	"\busername\x18\x03 \x01(\tR\busername\"\xd7\x01\n" +
+	"\x18AuthenticateSteamRequest\x12;\n" +
+	"\aaccount\x18\x01 \x01(\v2!.ultimate.server.api.AccountSteamR\aaccount\x122\n" +
+	"\x06create\x18\x02 \x01(\v2\x1a.google.protobuf.BoolValueR\x06create\x12\x1a\n" +
+	"\busername\x18\x03 \x01(\tR\busername\x12.\n" +
+	"\x04sync\x18\x04 \x01(\v2\x1a.google.protobuf.BoolValueR\x04sync\"_\n" +
 	"\x11AddFriendsRequest\x12\x10\n" +
 	"\x03ids\x18\x01 \x03(\tR\x03ids\x12\x1c\n" +
-	"\tusernames\x18\x02 \x03(\tR\tusernames\"X\n" +
-	"\x12ListFriendsRequest\x12\x14\n" +
-	"\x05limit\x18\x01 \x01(\x05R\x05limit\x12\x14\n" +
-	"\x05state\x18\x02 \x01(\x05R\x05state\x12\x16\n" +
-	"\x06cursor\x18\x03 \x01(\tR\x06cursor\"K\n" +
-	"\x1bListFriendsOfFriendsRequest\x12\x14\n" +
-	"\x05limit\x18\x01 \x01(\x05R\x05limit\x12\x16\n" +
-	"\x06cursor\x18\x02 \x01(\tR\x06cursor\"\xa6\x01\n" +
-	"\x06Friend\x12-\n" +
-	"\x04user\x18\x01 \x01(\v2\x19.ultimate.server.api.UserR\x04user\x12\x14\n" +
-	"\x05state\x18\x02 \x01(\x05R\x05state\x12;\n" +
-	"\vupdate_time\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"updateTime\x12\x1a\n" +
-	"\bmetadata\x18\x04 \x01(\tR\bmetadata\"d\n" +
-	"\n" +
-	"FriendList\x125\n" +
-	"\afriends\x18\x01 \x03(\v2\x1b.ultimate.server.api.FriendR\afriends\x12\x1f\n" +
-	"\vnext_cursor\x18\x02 \x01(\tR\n" +
-	"nextCursor\"[\n" +
-	"\x0eFriendOfFriend\x12\x1a\n" +
-	"\breferrer\x18\x01 \x01(\tR\breferrer\x12-\n" +
-	"\x04user\x18\x02 \x01(\v2\x19.ultimate.server.api.UserR\x04user\"\x81\x01\n" +
-	"\x14FriendsOfFriendsList\x12Q\n" +
-	"\x12friends_of_friends\x18\x01 \x03(\v2#.ultimate.server.api.FriendOfFriendR\x10friendsOfFriends\x12\x16\n" +
-	"\x06cursor\x18\x02 \x01(\tR\x06cursor\"F\n" +
+	"\tusernames\x18\x02 \x03(\tR\tusernames\x12\x1a\n" +
+	"\bmetadata\x18\x03 \x01(\tR\bmetadata\"F\n" +
 	"\x14DeleteFriendsRequest\x12\x10\n" +
 	"\x03ids\x18\x01 \x03(\tR\x03ids\x12\x1c\n" +
 	"\tusernames\x18\x02 \x03(\tR\tusernames\"E\n" +
 	"\x13BlockFriendsRequest\x12\x10\n" +
 	"\x03ids\x18\x01 \x03(\tR\x03ids\x12\x1c\n" +
-	"\tusernames\x18\x02 \x03(\tR\tusernames\"G\n" +
-	"\x15UnblockFriendsRequest\x12\x10\n" +
-	"\x03ids\x18\x01 \x03(\tR\x03ids\x12\x1c\n" +
-	"\tusernames\x18\x02 \x03(\tR\tusernames\"J\n" +
-	"\x1cImportFacebookFriendsRequest\x12\x14\n" +
-	"\x05token\x18\x01 \x01(\tR\x05token\x12\x14\n" +
-	"\x05reset\x18\x02 \x01(\bR\x05reset\"R\n" +
-	"\x19ImportSteamFriendsRequest\x12\x1f\n" +
-	"\vsteam_token\x18\x01 \x01(\tR\n" +
-	"steamToken\x12\x14\n" +
-	"\x05reset\x18\x02 \x01(\bR\x05reset\"\xd1\x01\n" +
+	"\tusernames\x18\x02 \x03(\tR\tusernames\"\x92\x01\n" +
+	"\x12ListFriendsRequest\x121\n" +
+	"\x05limit\x18\x01 \x01(\v2\x1b.google.protobuf.Int32ValueR\x05limit\x121\n" +
+	"\x05state\x18\x02 \x01(\v2\x1b.google.protobuf.Int32ValueR\x05state\x12\x16\n" +
+	"\x06cursor\x18\x03 \x01(\tR\x06cursor\"h\n" +
+	"\x1bListFriendsOfFriendsRequest\x121\n" +
+	"\x05limit\x18\x01 \x01(\v2\x1b.google.protobuf.Int32ValueR\x05limit\x12\x16\n" +
+	"\x06cursor\x18\x02 \x01(\tR\x06cursor\"\x8b\x02\n" +
+	"\x06Friend\x12-\n" +
+	"\x04user\x18\x01 \x01(\v2\x19.ultimate.server.api.UserR\x04user\x121\n" +
+	"\x05state\x18\x02 \x01(\v2\x1b.google.protobuf.Int32ValueR\x05state\x12;\n" +
+	"\vupdate_time\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"updateTime\x12\x1a\n" +
+	"\bmetadata\x18\x04 \x01(\tR\bmetadata\"F\n" +
+	"\x05State\x12\n" +
+	"\n" +
+	"\x06FRIEND\x10\x00\x12\x0f\n" +
+	"\vINVITE_SENT\x10\x01\x12\x13\n" +
+	"\x0fINVITE_RECEIVED\x10\x02\x12\v\n" +
+	"\aBLOCKED\x10\x03\"[\n" +
+	"\n" +
+	"FriendList\x125\n" +
+	"\afriends\x18\x01 \x03(\v2\x1b.ultimate.server.api.FriendR\afriends\x12\x16\n" +
+	"\x06cursor\x18\x02 \x01(\tR\x06cursor\"\xf3\x01\n" +
+	"\x14FriendsOfFriendsList\x12f\n" +
+	"\x12friends_of_friends\x18\x01 \x03(\v28.ultimate.server.api.FriendsOfFriendsList.FriendOfFriendR\x10friendsOfFriends\x12\x16\n" +
+	"\x06cursor\x18\x02 \x01(\tR\x06cursor\x1a[\n" +
+	"\x0eFriendOfFriend\x12\x1a\n" +
+	"\breferrer\x18\x01 \x01(\tR\breferrer\x12-\n" +
+	"\x04user\x18\x02 \x01(\v2\x19.ultimate.server.api.UserR\x04user\"\x90\x01\n" +
+	"\x1cImportFacebookFriendsRequest\x12>\n" +
+	"\aaccount\x18\x01 \x01(\v2$.ultimate.server.api.AccountFacebookR\aaccount\x120\n" +
+	"\x05reset\x18\x02 \x01(\v2\x1a.google.protobuf.BoolValueR\x05reset\"\x8a\x01\n" +
+	"\x19ImportSteamFriendsRequest\x12;\n" +
+	"\aaccount\x18\x01 \x01(\v2!.ultimate.server.api.AccountSteamR\aaccount\x120\n" +
+	"\x05reset\x18\x02 \x01(\v2\x1a.google.protobuf.BoolValueR\x05reset\"\x85\x01\n" +
+	"\x13LinkFacebookRequest\x12>\n" +
+	"\aaccount\x18\x01 \x01(\v2$.ultimate.server.api.AccountFacebookR\aaccount\x12.\n" +
+	"\x04sync\x18\x02 \x01(\v2\x1a.google.protobuf.BoolValueR\x04sync\"\x7f\n" +
+	"\x10LinkSteamRequest\x12;\n" +
+	"\aaccount\x18\x01 \x01(\v2!.ultimate.server.api.AccountSteamR\aaccount\x12.\n" +
+	"\x04sync\x18\x02 \x01(\v2\x1a.google.protobuf.BoolValueR\x04sync\"\xb5\x01\n" +
 	"\x12CreateGroupRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12 \n" +
-	"\vdescription\x18\x02 \x01(\tR\vdescription\x12\x1d\n" +
+	"\vdescription\x18\x02 \x01(\tR\vdescription\x12\x19\n" +
+	"\blang_tag\x18\x03 \x01(\tR\alangTag\x12\x1d\n" +
 	"\n" +
-	"avatar_url\x18\x03 \x01(\tR\tavatarUrl\x12\x19\n" +
-	"\blang_tag\x18\x04 \x01(\tR\alangTag\x12\x12\n" +
+	"avatar_url\x18\x04 \x01(\tR\tavatarUrl\x12\x12\n" +
 	"\x04open\x18\x05 \x01(\bR\x04open\x12\x1b\n" +
-	"\tmax_count\x18\x06 \x01(\x05R\bmaxCount\x12\x1a\n" +
-	"\bmetadata\x18\a \x01(\tR\bmetadata\"\x8c\x03\n" +
+	"\tmax_count\x18\x06 \x01(\x05R\bmaxCount\"\xa8\x03\n" +
 	"\x05Group\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
 	"\n" +
 	"creator_id\x18\x02 \x01(\tR\tcreatorId\x12\x12\n" +
 	"\x04name\x18\x03 \x01(\tR\x04name\x12 \n" +
-	"\vdescription\x18\x04 \x01(\tR\vdescription\x12\x1d\n" +
+	"\vdescription\x18\x04 \x01(\tR\vdescription\x12\x19\n" +
+	"\blang_tag\x18\x05 \x01(\tR\alangTag\x12\x1a\n" +
+	"\bmetadata\x18\x06 \x01(\tR\bmetadata\x12\x1d\n" +
 	"\n" +
-	"avatar_url\x18\x05 \x01(\tR\tavatarUrl\x12\x19\n" +
-	"\blang_tag\x18\x06 \x01(\tR\alangTag\x12\x12\n" +
-	"\x04open\x18\a \x01(\bR\x04open\x12\x1d\n" +
+	"avatar_url\x18\a \x01(\tR\tavatarUrl\x12.\n" +
+	"\x04open\x18\b \x01(\v2\x1a.google.protobuf.BoolValueR\x04open\x12\x1d\n" +
 	"\n" +
-	"edge_count\x18\b \x01(\x05R\tedgeCount\x12\x1b\n" +
-	"\tmax_count\x18\t \x01(\x05R\bmaxCount\x12\x1a\n" +
-	"\bmetadata\x18\n" +
-	" \x01(\tR\bmetadata\x12;\n" +
+	"edge_count\x18\t \x01(\x05R\tedgeCount\x12\x1b\n" +
+	"\tmax_count\x18\n" +
+	" \x01(\x05R\bmaxCount\x12;\n" +
 	"\vcreate_time\x18\v \x01(\v2\x1a.google.protobuf.TimestampR\n" +
 	"createTime\x12;\n" +
 	"\vupdate_time\x18\f \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"updateTime\"\xc4\x01\n" +
-	"\x12UpdateGroupRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
-	"\x04name\x18\x02 \x01(\tR\x04name\x12 \n" +
-	"\vdescription\x18\x03 \x01(\tR\vdescription\x12\x1d\n" +
-	"\n" +
-	"avatar_url\x18\x04 \x01(\tR\tavatarUrl\x12\x19\n" +
-	"\blang_tag\x18\x05 \x01(\tR\alangTag\x12\x12\n" +
-	"\x04open\x18\x06 \x01(\bR\x04open\x12\x1a\n" +
-	"\bmetadata\x18\a \x01(\tR\bmetadata\"$\n" +
-	"\x12DeleteGroupRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"\xac\x01\n" +
-	"\x11ListGroupsRequest\x12\x12\n" +
-	"\x04name\x18\x01 \x01(\tR\x04name\x12\x19\n" +
-	"\blang_tag\x18\x02 \x01(\tR\alangTag\x12\x17\n" +
-	"\x04open\x18\x03 \x01(\bH\x00R\x04open\x88\x01\x01\x12\x14\n" +
-	"\x05limit\x18\x04 \x01(\x05R\x05limit\x12\x16\n" +
-	"\x06cursor\x18\x05 \x01(\tR\x06cursor\x12\x18\n" +
-	"\amembers\x18\x06 \x01(\x05R\amembersB\a\n" +
-	"\x05_open\"`\n" +
+	"updateTime\"W\n" +
 	"\tGroupList\x122\n" +
-	"\x06groups\x18\x01 \x03(\v2\x1a.ultimate.server.api.GroupR\x06groups\x12\x1f\n" +
-	"\vnext_cursor\x18\x02 \x01(\tR\n" +
-	"nextCursor\"\"\n" +
-	"\x10JoinGroupRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"#\n" +
-	"\x11LeaveGroupRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"L\n" +
+	"\x06groups\x18\x01 \x03(\v2\x1a.ultimate.server.api.GroupR\x06groups\x12\x16\n" +
+	"\x06cursor\x18\x02 \x01(\tR\x06cursor\"\xc7\x02\n" +
+	"\x12UpdateGroupRequest\x12\x19\n" +
+	"\bgroup_id\x18\x01 \x01(\tR\agroupId\x120\n" +
+	"\x04name\x18\x02 \x01(\v2\x1c.google.protobuf.StringValueR\x04name\x12>\n" +
+	"\vdescription\x18\x03 \x01(\v2\x1c.google.protobuf.StringValueR\vdescription\x127\n" +
+	"\blang_tag\x18\x04 \x01(\v2\x1c.google.protobuf.StringValueR\alangTag\x12;\n" +
+	"\n" +
+	"avatar_url\x18\x05 \x01(\v2\x1c.google.protobuf.StringValueR\tavatarUrl\x12.\n" +
+	"\x04open\x18\x06 \x01(\v2\x1a.google.protobuf.BoolValueR\x04open\"/\n" +
+	"\x12DeleteGroupRequest\x12\x19\n" +
+	"\bgroup_id\x18\x01 \x01(\tR\agroupId\"\xf4\x01\n" +
+	"\x11ListGroupsRequest\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12\x16\n" +
+	"\x06cursor\x18\x02 \x01(\tR\x06cursor\x121\n" +
+	"\x05limit\x18\x03 \x01(\v2\x1b.google.protobuf.Int32ValueR\x05limit\x12\x19\n" +
+	"\blang_tag\x18\x04 \x01(\tR\alangTag\x125\n" +
+	"\amembers\x18\x05 \x01(\v2\x1b.google.protobuf.Int32ValueR\amembers\x12.\n" +
+	"\x04open\x18\x06 \x01(\v2\x1a.google.protobuf.BoolValueR\x04open\"-\n" +
+	"\x10JoinGroupRequest\x12\x19\n" +
+	"\bgroup_id\x18\x01 \x01(\tR\agroupId\".\n" +
+	"\x11LeaveGroupRequest\x12\x19\n" +
+	"\bgroup_id\x18\x01 \x01(\tR\agroupId\"L\n" +
 	"\x14AddGroupUsersRequest\x12\x19\n" +
 	"\bgroup_id\x18\x01 \x01(\tR\agroupId\x12\x19\n" +
 	"\buser_ids\x18\x02 \x03(\tR\auserIds\"M\n" +
@@ -8102,144 +9133,198 @@ const file_api_api_proto_rawDesc = "" +
 	"\buser_ids\x18\x02 \x03(\tR\auserIds\"L\n" +
 	"\x14BanGroupUsersRequest\x12\x19\n" +
 	"\bgroup_id\x18\x01 \x01(\tR\agroupId\x12\x19\n" +
-	"\buser_ids\x18\x02 \x03(\tR\auserIds\"P\n" +
+	"\buser_ids\x18\x02 \x03(\tR\auserIds\"\xa8\x02\n" +
+	"\rGroupUserList\x12M\n" +
+	"\vgroup_users\x18\x01 \x03(\v2,.ultimate.server.api.GroupUserList.GroupUserR\n" +
+	"groupUsers\x12\x16\n" +
+	"\x06cursor\x18\x02 \x01(\tR\x06cursor\x1a\xaf\x01\n" +
 	"\tGroupUser\x12-\n" +
-	"\x04user\x18\x01 \x01(\v2\x19.ultimate.server.api.UserR\x04user\x12\x14\n" +
-	"\x05state\x18\x02 \x01(\x05R\x05state\"q\n" +
-	"\rGroupUserList\x12?\n" +
-	"\vgroup_users\x18\x01 \x03(\v2\x1e.ultimate.server.api.GroupUserR\n" +
-	"groupUsers\x12\x1f\n" +
-	"\vnext_cursor\x18\x02 \x01(\tR\n" +
-	"nextCursor\"S\n" +
+	"\x04user\x18\x01 \x01(\v2\x19.ultimate.server.api.UserR\x04user\x121\n" +
+	"\x05state\x18\x02 \x01(\v2\x1b.google.protobuf.Int32ValueR\x05state\"@\n" +
+	"\x05State\x12\x0e\n" +
+	"\n" +
+	"SUPERADMIN\x10\x00\x12\t\n" +
+	"\x05ADMIN\x10\x01\x12\n" +
+	"\n" +
+	"\x06MEMBER\x10\x02\x12\x10\n" +
+	"\fJOIN_REQUEST\x10\x03\"\xab\x02\n" +
+	"\rUserGroupList\x12M\n" +
+	"\vuser_groups\x18\x01 \x03(\v2,.ultimate.server.api.UserGroupList.UserGroupR\n" +
+	"userGroups\x12\x16\n" +
+	"\x06cursor\x18\x02 \x01(\tR\x06cursor\x1a\xb2\x01\n" +
 	"\tUserGroup\x120\n" +
-	"\x05group\x18\x01 \x01(\v2\x1a.ultimate.server.api.GroupR\x05group\x12\x14\n" +
-	"\x05state\x18\x02 \x01(\x05R\x05state\"q\n" +
-	"\rUserGroupList\x12?\n" +
-	"\vuser_groups\x18\x01 \x03(\v2\x1e.ultimate.server.api.UserGroupR\n" +
-	"userGroups\x12\x1f\n" +
-	"\vnext_cursor\x18\x02 \x01(\tR\n" +
-	"nextCursor\"`\n" +
+	"\x05group\x18\x01 \x01(\v2\x1a.ultimate.server.api.GroupR\x05group\x121\n" +
+	"\x05state\x18\x02 \x01(\v2\x1b.google.protobuf.Int32ValueR\x05state\"@\n" +
+	"\x05State\x12\x0e\n" +
+	"\n" +
+	"SUPERADMIN\x10\x00\x12\t\n" +
+	"\x05ADMIN\x10\x01\x12\n" +
+	"\n" +
+	"\x06MEMBER\x10\x02\x12\x10\n" +
+	"\fJOIN_REQUEST\x10\x03\"\xb0\x01\n" +
 	"\x15ListGroupUsersRequest\x12\x19\n" +
-	"\bgroup_id\x18\x01 \x01(\tR\agroupId\x12\x14\n" +
-	"\x05limit\x18\x02 \x01(\x05R\x05limit\x12\x16\n" +
-	"\x06cursor\x18\x03 \x01(\tR\x06cursor\"^\n" +
+	"\bgroup_id\x18\x01 \x01(\tR\agroupId\x121\n" +
+	"\x05limit\x18\x02 \x01(\v2\x1b.google.protobuf.Int32ValueR\x05limit\x121\n" +
+	"\x05state\x18\x03 \x01(\v2\x1b.google.protobuf.Int32ValueR\x05state\x12\x16\n" +
+	"\x06cursor\x18\x04 \x01(\tR\x06cursor\"\xae\x01\n" +
 	"\x15ListUserGroupsRequest\x12\x17\n" +
-	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x14\n" +
-	"\x05limit\x18\x02 \x01(\x05R\x05limit\x12\x16\n" +
-	"\x06cursor\x18\x03 \x01(\tR\x06cursor\"\xc3\x04\n" +
-	"\x14AddMatchmakerRequest\x12\x1d\n" +
+	"\auser_id\x18\x01 \x01(\tR\x06userId\x121\n" +
+	"\x05limit\x18\x02 \x01(\v2\x1b.google.protobuf.Int32ValueR\x05limit\x121\n" +
+	"\x05state\x18\x03 \x01(\v2\x1b.google.protobuf.Int32ValueR\x05state\x12\x16\n" +
+	"\x06cursor\x18\x04 \x01(\tR\x06cursor\"\xb4\x02\n" +
+	"\vLeaderboard\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
 	"\n" +
-	"queue_name\x18\x01 \x01(\tR\tqueueName\x12\x1b\n" +
-	"\tmin_count\x18\x02 \x01(\x05R\bminCount\x12\x1b\n" +
-	"\tmax_count\x18\x03 \x01(\x05R\bmaxCount\x12l\n" +
-	"\x11string_properties\x18\x04 \x03(\v2?.ultimate.server.api.AddMatchmakerRequest.StringPropertiesEntryR\x10stringProperties\x12o\n" +
-	"\x12numeric_properties\x18\x05 \x03(\v2@.ultimate.server.api.AddMatchmakerRequest.NumericPropertiesEntryR\x11numericProperties\x12%\n" +
-	"\x0ecount_multiple\x18\x06 \x01(\x05R\rcountMultiple\x12+\n" +
-	"\x11reverse_precision\x18\a \x01(\bR\x10reversePrecision\x12\x14\n" +
-	"\x05query\x18\b \x01(\tR\x05query\x1aC\n" +
-	"\x15StringPropertiesEntry\x12\x10\n" +
-	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\x1aD\n" +
-	"\x16NumericPropertiesEntry\x12\x10\n" +
-	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\x01R\x05value:\x028\x01\"\xa2\x01\n" +
-	"\x10MatchmakerTicket\x12\x1b\n" +
-	"\tticket_id\x18\x01 \x01(\tR\bticketId\x12\x1d\n" +
+	"sort_order\x18\x02 \x01(\rR\tsortOrder\x129\n" +
+	"\boperator\x18\x03 \x01(\x0e2\x1d.ultimate.server.api.OperatorR\boperator\x12\x1d\n" +
 	"\n" +
-	"queue_name\x18\x02 \x01(\tR\tqueueName\x12\x16\n" +
-	"\x06status\x18\x03 \x01(\tR\x06status\x12\x19\n" +
-	"\bmatch_id\x18\x04 \x01(\tR\amatchId\x12\x1f\n" +
-	"\vmatch_token\x18\x05 \x01(\tR\n" +
-	"matchToken\"6\n" +
-	"\x17RemoveMatchmakerRequest\x12\x1b\n" +
-	"\tticket_id\x18\x01 \x01(\tR\bticketId\"9\n" +
-	"\x1aGetMatchmakerTicketRequest\x12\x1b\n" +
-	"\tticket_id\x18\x01 \x01(\tR\bticketId\"5\n" +
-	"\x14GetQueueStatsRequest\x12\x1d\n" +
+	"prev_reset\x18\x04 \x01(\rR\tprevReset\x12\x1d\n" +
 	"\n" +
-	"queue_name\x18\x01 \x01(\tR\tqueueName\"\x9f\x01\n" +
+	"next_reset\x18\x05 \x01(\rR\tnextReset\x12\x1a\n" +
+	"\bmetadata\x18\x06 \x01(\tR\bmetadata\x12;\n" +
+	"\vcreate_time\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"createTime\x12$\n" +
+	"\rauthoritative\x18\b \x01(\bR\rauthoritative\"o\n" +
+	"\x0fLeaderboardList\x12D\n" +
+	"\fleaderboards\x18\x01 \x03(\v2 .ultimate.server.api.LeaderboardR\fleaderboards\x12\x16\n" +
+	"\x06cursor\x18\x02 \x01(\tR\x06cursor\"\xe9\x03\n" +
+	"\x11LeaderboardRecord\x12%\n" +
+	"\x0eleaderboard_id\x18\x01 \x01(\tR\rleaderboardId\x12\x19\n" +
+	"\bowner_id\x18\x02 \x01(\tR\aownerId\x128\n" +
+	"\busername\x18\x03 \x01(\v2\x1c.google.protobuf.StringValueR\busername\x12\x14\n" +
+	"\x05score\x18\x04 \x01(\x03R\x05score\x12\x1a\n" +
+	"\bsubscore\x18\x05 \x01(\x03R\bsubscore\x12\x1b\n" +
+	"\tnum_score\x18\x06 \x01(\x05R\bnumScore\x12\x1a\n" +
+	"\bmetadata\x18\a \x01(\tR\bmetadata\x12;\n" +
+	"\vcreate_time\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"createTime\x12;\n" +
+	"\vupdate_time\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"updateTime\x12;\n" +
+	"\vexpiry_time\x18\n" +
+	" \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"expiryTime\x12\x12\n" +
+	"\x04rank\x18\v \x01(\x03R\x04rank\x12\"\n" +
+	"\rmax_num_score\x18\f \x01(\rR\vmaxNumScore\"\x87\x02\n" +
+	"\x15LeaderboardRecordList\x12@\n" +
+	"\arecords\x18\x01 \x03(\v2&.ultimate.server.api.LeaderboardRecordR\arecords\x12K\n" +
+	"\rowner_records\x18\x02 \x03(\v2&.ultimate.server.api.LeaderboardRecordR\fownerRecords\x12\x1f\n" +
+	"\vnext_cursor\x18\x03 \x01(\tR\n" +
+	"nextCursor\x12\x1f\n" +
+	"\vprev_cursor\x18\x04 \x01(\tR\n" +
+	"prevCursor\x12\x1d\n" +
 	"\n" +
-	"QueueStats\x12\x1d\n" +
+	"rank_count\x18\x05 \x01(\x03R\trankCount\"\xcd\x02\n" +
+	"\x1dWriteLeaderboardRecordRequest\x12%\n" +
+	"\x0eleaderboard_id\x18\x01 \x01(\tR\rleaderboardId\x12a\n" +
+	"\x06record\x18\x02 \x01(\v2I.ultimate.server.api.WriteLeaderboardRecordRequest.LeaderboardRecordWriteR\x06record\x1a\xa1\x01\n" +
+	"\x16LeaderboardRecordWrite\x12\x14\n" +
+	"\x05score\x18\x01 \x01(\x03R\x05score\x12\x1a\n" +
+	"\bsubscore\x18\x02 \x01(\x03R\bsubscore\x12\x1a\n" +
+	"\bmetadata\x18\x03 \x01(\tR\bmetadata\x129\n" +
+	"\boperator\x18\x04 \x01(\x0e2\x1d.ultimate.server.api.OperatorR\boperator\"\xe3\x01\n" +
+	"\x1dListLeaderboardRecordsRequest\x12%\n" +
+	"\x0eleaderboard_id\x18\x01 \x01(\tR\rleaderboardId\x12\x1b\n" +
+	"\towner_ids\x18\x02 \x03(\tR\bownerIds\x121\n" +
+	"\x05limit\x18\x03 \x01(\v2\x1b.google.protobuf.Int32ValueR\x05limit\x12\x16\n" +
+	"\x06cursor\x18\x04 \x01(\tR\x06cursor\x123\n" +
+	"\x06expiry\x18\x05 \x01(\v2\x1b.google.protobuf.Int64ValueR\x06expiry\"\xed\x01\n" +
+	"(ListLeaderboardRecordsAroundOwnerRequest\x12%\n" +
+	"\x0eleaderboard_id\x18\x01 \x01(\tR\rleaderboardId\x122\n" +
+	"\x05limit\x18\x02 \x01(\v2\x1c.google.protobuf.UInt32ValueR\x05limit\x12\x19\n" +
+	"\bowner_id\x18\x03 \x01(\tR\aownerId\x123\n" +
+	"\x06expiry\x18\x04 \x01(\v2\x1b.google.protobuf.Int64ValueR\x06expiry\x12\x16\n" +
+	"\x06cursor\x18\x05 \x01(\tR\x06cursor\"G\n" +
+	"\x1eDeleteLeaderboardRecordRequest\x12%\n" +
+	"\x0eleaderboard_id\x18\x01 \x01(\tR\rleaderboardId\"\xec\x05\n" +
 	"\n" +
-	"queue_name\x18\x02 \x01(\tR\tqueueName\x12!\n" +
-	"\fticket_count\x18\x03 \x01(\x05R\vticketCount\x12(\n" +
-	"\x10average_wait_sec\x18\x04 \x01(\x05R\x0eaverageWaitSec\x12%\n" +
-	"\x0eactive_matches\x18\x05 \x01(\x05R\ractiveMatches\"\x9a\x01\n" +
-	"\x0fMatchmakerStats\x12!\n" +
-	"\fticket_count\x18\x01 \x01(\x05R\vticketCount\x129\n" +
-	"\x19oldest_ticket_create_time\x18\x02 \x01(\tR\x16oldestTicketCreateTime\x12)\n" +
-	"\x10completion_count\x18\x03 \x01(\x05R\x0fcompletionCount\"\xb4\x01\n" +
-	"\x12CreateMatchRequest\x12\x16\n" +
-	"\x06module\x18\x01 \x01(\tR\x06module\x12K\n" +
-	"\x06params\x18\x02 \x03(\v23.ultimate.server.api.CreateMatchRequest.ParamsEntryR\x06params\x1a9\n" +
-	"\vParamsEntry\x12\x10\n" +
-	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\x9c\x01\n" +
-	"\x12ListMatchesRequest\x12\x14\n" +
-	"\x05limit\x18\x01 \x01(\x05R\x05limit\x12$\n" +
-	"\rauthoritative\x18\x02 \x01(\bR\rauthoritative\x12\x14\n" +
-	"\x05label\x18\x03 \x01(\tR\x05label\x12\x19\n" +
-	"\bmin_size\x18\x04 \x01(\x05R\aminSize\x12\x19\n" +
-	"\bmax_size\x18\x05 \x01(\x05R\amaxSize\",\n" +
-	"\x0fGetMatchRequest\x12\x19\n" +
-	"\bmatch_id\x18\x01 \x01(\tR\amatchId\"c\n" +
-	"\rMatchPresence\x12\x17\n" +
-	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x1a\n" +
-	"\busername\x18\x02 \x01(\tR\busername\x12\x1d\n" +
+	"Tournament\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
+	"\x05title\x18\x02 \x01(\tR\x05title\x12 \n" +
+	"\vdescription\x18\x03 \x01(\tR\vdescription\x12\x1a\n" +
+	"\bcategory\x18\x04 \x01(\rR\bcategory\x12\x1d\n" +
 	"\n" +
-	"session_id\x18\x03 \x01(\tR\tsessionId\"\xcf\x01\n" +
-	"\x05Match\x12\x19\n" +
-	"\bmatch_id\x18\x01 \x01(\tR\amatchId\x12$\n" +
-	"\rauthoritative\x18\x02 \x01(\bR\rauthoritative\x12\x14\n" +
-	"\x05label\x18\x03 \x01(\tR\x05label\x12\x12\n" +
-	"\x04size\x18\x04 \x01(\x05R\x04size\x12\x19\n" +
-	"\bmax_size\x18\x05 \x01(\x05R\amaxSize\x12@\n" +
-	"\tpresences\x18\x06 \x03(\v2\".ultimate.server.api.MatchPresenceR\tpresences\"A\n" +
-	"\tMatchList\x124\n" +
-	"\amatches\x18\x01 \x03(\v2\x1a.ultimate.server.api.MatchR\amatches\"I\n" +
-	"\x12MatchSignalRequest\x12\x19\n" +
-	"\bmatch_id\x18\x01 \x01(\tR\amatchId\x12\x18\n" +
-	"\apayload\x18\x02 \x01(\tR\apayload\"1\n" +
-	"\x13MatchSignalResponse\x12\x1a\n" +
-	"\bresponse\x18\x01 \x01(\tR\bresponse\"z\n" +
-	"\x12ListPartiesRequest\x12\x14\n" +
-	"\x05limit\x18\x01 \x01(\x05R\x05limit\x12\x17\n" +
-	"\x04open\x18\x02 \x01(\bH\x00R\x04open\x88\x01\x01\x12\x14\n" +
-	"\x05query\x18\x03 \x01(\tR\x05query\x12\x16\n" +
-	"\x06cursor\x18\x04 \x01(\tR\x06cursorB\a\n" +
-	"\x05_open\"t\n" +
-	"\x05Party\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
-	"\x04open\x18\x02 \x01(\bR\x04open\x12\x16\n" +
-	"\x06hidden\x18\x03 \x01(\bR\x06hidden\x12\x19\n" +
-	"\bmax_size\x18\x04 \x01(\x05R\amaxSize\x12\x14\n" +
-	"\x05label\x18\x05 \x01(\tR\x05label\"Y\n" +
-	"\tPartyList\x124\n" +
-	"\aparties\x18\x01 \x03(\v2\x1a.ultimate.server.api.PartyR\aparties\x12\x16\n" +
-	"\x06cursor\x18\x02 \x01(\tR\x06cursor\"\x94\x01\n" +
-	"\x1aListChannelMessagesRequest\x12\x1d\n" +
+	"sort_order\x18\x05 \x01(\rR\tsortOrder\x12\x12\n" +
+	"\x04size\x18\x06 \x01(\rR\x04size\x12\x19\n" +
+	"\bmax_size\x18\a \x01(\rR\amaxSize\x12\"\n" +
+	"\rmax_num_score\x18\b \x01(\rR\vmaxNumScore\x12\x1b\n" +
+	"\tcan_enter\x18\t \x01(\bR\bcanEnter\x12\x1d\n" +
 	"\n" +
-	"channel_id\x18\x01 \x01(\tR\tchannelId\x12\x14\n" +
-	"\x05limit\x18\x02 \x01(\x05R\x05limit\x12\x1d\n" +
-	"\aforward\x18\x03 \x01(\bH\x00R\aforward\x88\x01\x01\x12\x16\n" +
-	"\x06cursor\x18\x04 \x01(\tR\x06cursorB\n" +
+	"end_active\x18\n" +
+	" \x01(\rR\tendActive\x12\x1d\n" +
 	"\n" +
-	"\b_forward\"\xc7\x03\n" +
+	"next_reset\x18\v \x01(\rR\tnextReset\x12\x1a\n" +
+	"\bmetadata\x18\f \x01(\tR\bmetadata\x12;\n" +
+	"\vcreate_time\x18\r \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"createTime\x129\n" +
+	"\n" +
+	"start_time\x18\x0e \x01(\v2\x1a.google.protobuf.TimestampR\tstartTime\x125\n" +
+	"\bend_time\x18\x0f \x01(\v2\x1a.google.protobuf.TimestampR\aendTime\x12\x1a\n" +
+	"\bduration\x18\x10 \x01(\rR\bduration\x12!\n" +
+	"\fstart_active\x18\x11 \x01(\rR\vstartActive\x12\x1d\n" +
+	"\n" +
+	"prev_reset\x18\x12 \x01(\rR\tprevReset\x129\n" +
+	"\boperator\x18\x13 \x01(\x0e2\x1d.ultimate.server.api.OperatorR\boperator\x12$\n" +
+	"\rauthoritative\x18\x14 \x01(\bR\rauthoritative\x12#\n" +
+	"\rjoin_required\x18\x15 \x01(\bR\fjoinRequired\"k\n" +
+	"\x0eTournamentList\x12A\n" +
+	"\vtournaments\x18\x01 \x03(\v2\x1f.ultimate.server.api.TournamentR\vtournaments\x12\x16\n" +
+	"\x06cursor\x18\x02 \x01(\tR\x06cursor\"\x86\x02\n" +
+	"\x14TournamentRecordList\x12@\n" +
+	"\arecords\x18\x01 \x03(\v2&.ultimate.server.api.LeaderboardRecordR\arecords\x12K\n" +
+	"\rowner_records\x18\x02 \x03(\v2&.ultimate.server.api.LeaderboardRecordR\fownerRecords\x12\x1f\n" +
+	"\vnext_cursor\x18\x03 \x01(\tR\n" +
+	"nextCursor\x12\x1f\n" +
+	"\vprev_cursor\x18\x04 \x01(\tR\n" +
+	"prevCursor\x12\x1d\n" +
+	"\n" +
+	"rank_count\x18\x05 \x01(\x03R\trankCount\"\xc7\x02\n" +
+	"\x1cWriteTournamentRecordRequest\x12#\n" +
+	"\rtournament_id\x18\x01 \x01(\tR\ftournamentId\x12_\n" +
+	"\x06record\x18\x02 \x01(\v2G.ultimate.server.api.WriteTournamentRecordRequest.TournamentRecordWriteR\x06record\x1a\xa0\x01\n" +
+	"\x15TournamentRecordWrite\x12\x14\n" +
+	"\x05score\x18\x01 \x01(\x03R\x05score\x12\x1a\n" +
+	"\bsubscore\x18\x02 \x01(\x03R\bsubscore\x12\x1a\n" +
+	"\bmetadata\x18\x03 \x01(\tR\bmetadata\x129\n" +
+	"\boperator\x18\x04 \x01(\x0e2\x1d.ultimate.server.api.OperatorR\boperator\"<\n" +
+	"\x15JoinTournamentRequest\x12#\n" +
+	"\rtournament_id\x18\x01 \x01(\tR\ftournamentId\"\xdf\x02\n" +
+	"\x16ListTournamentsRequest\x12C\n" +
+	"\x0ecategory_start\x18\x01 \x01(\v2\x1c.google.protobuf.UInt32ValueR\rcategoryStart\x12?\n" +
+	"\fcategory_end\x18\x02 \x01(\v2\x1c.google.protobuf.UInt32ValueR\vcategoryEnd\x12;\n" +
+	"\n" +
+	"start_time\x18\x03 \x01(\v2\x1c.google.protobuf.UInt32ValueR\tstartTime\x127\n" +
+	"\bend_time\x18\x04 \x01(\v2\x1c.google.protobuf.UInt32ValueR\aendTime\x121\n" +
+	"\x05limit\x18\x06 \x01(\v2\x1b.google.protobuf.Int32ValueR\x05limit\x12\x16\n" +
+	"\x06cursor\x18\b \x01(\tR\x06cursor\"\xe0\x01\n" +
+	"\x1cListTournamentRecordsRequest\x12#\n" +
+	"\rtournament_id\x18\x01 \x01(\tR\ftournamentId\x12\x1b\n" +
+	"\towner_ids\x18\x02 \x03(\tR\bownerIds\x121\n" +
+	"\x05limit\x18\x03 \x01(\v2\x1b.google.protobuf.Int32ValueR\x05limit\x12\x16\n" +
+	"\x06cursor\x18\x04 \x01(\tR\x06cursor\x123\n" +
+	"\x06expiry\x18\x05 \x01(\v2\x1b.google.protobuf.Int64ValueR\x06expiry\"\xea\x01\n" +
+	"'ListTournamentRecordsAroundOwnerRequest\x12#\n" +
+	"\rtournament_id\x18\x01 \x01(\tR\ftournamentId\x122\n" +
+	"\x05limit\x18\x02 \x01(\v2\x1c.google.protobuf.UInt32ValueR\x05limit\x12\x19\n" +
+	"\bowner_id\x18\x03 \x01(\tR\aownerId\x123\n" +
+	"\x06expiry\x18\x04 \x01(\v2\x1b.google.protobuf.Int64ValueR\x06expiry\x12\x16\n" +
+	"\x06cursor\x18\x05 \x01(\tR\x06cursor\"D\n" +
+	"\x1dDeleteTournamentRecordRequest\x12#\n" +
+	"\rtournament_id\x18\x01 \x01(\tR\ftournamentId\"\x80\x04\n" +
 	"\x0eChannelMessage\x12\x1d\n" +
 	"\n" +
 	"channel_id\x18\x01 \x01(\tR\tchannelId\x12\x1d\n" +
 	"\n" +
-	"message_id\x18\x02 \x01(\tR\tmessageId\x12\x12\n" +
-	"\x04code\x18\x03 \x01(\x05R\x04code\x12\x1b\n" +
+	"message_id\x18\x02 \x01(\tR\tmessageId\x12/\n" +
+	"\x04code\x18\x03 \x01(\v2\x1b.google.protobuf.Int32ValueR\x04code\x12\x1b\n" +
 	"\tsender_id\x18\x04 \x01(\tR\bsenderId\x12\x1a\n" +
 	"\busername\x18\x05 \x01(\tR\busername\x12\x18\n" +
 	"\acontent\x18\x06 \x01(\tR\acontent\x12;\n" +
 	"\vcreate_time\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\n" +
 	"createTime\x12;\n" +
 	"\vupdate_time\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"updateTime\x12\x1e\n" +
+	"updateTime\x12:\n" +
 	"\n" +
-	"persistent\x18\t \x01(\bR\n" +
+	"persistent\x18\t \x01(\v2\x1a.google.protobuf.BoolValueR\n" +
 	"persistent\x12\x1b\n" +
 	"\troom_name\x18\n" +
 	" \x01(\tR\broomName\x12\x19\n" +
@@ -8252,11 +9337,14 @@ const file_api_api_proto_rawDesc = "" +
 	"nextCursor\x12\x1f\n" +
 	"\vprev_cursor\x18\x03 \x01(\tR\n" +
 	"prevCursor\x12)\n" +
-	"\x10cacheable_cursor\x18\x04 \x01(\tR\x0fcacheableCursor\"[\n" +
-	"\x18ListNotificationsRequest\x12\x14\n" +
-	"\x05limit\x18\x01 \x01(\x05R\x05limit\x12)\n" +
-	"\x10cacheable_cursor\x18\x02 \x01(\tR\x0fcacheableCursor\"\xe3\x01\n" +
-	"\x0fApiNotification\x12\x0e\n" +
+	"\x10cacheable_cursor\x18\x04 \x01(\tR\x0fcacheableCursor\"\xbc\x01\n" +
+	"\x1aListChannelMessagesRequest\x12\x1d\n" +
+	"\n" +
+	"channel_id\x18\x01 \x01(\tR\tchannelId\x121\n" +
+	"\x05limit\x18\x02 \x01(\v2\x1b.google.protobuf.Int32ValueR\x05limit\x124\n" +
+	"\aforward\x18\x03 \x01(\v2\x1a.google.protobuf.BoolValueR\aforward\x12\x16\n" +
+	"\x06cursor\x18\x04 \x01(\tR\x06cursor\"\xe0\x01\n" +
+	"\fNotification\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x18\n" +
 	"\asubject\x18\x02 \x01(\tR\asubject\x12\x18\n" +
 	"\acontent\x18\x03 \x01(\tR\acontent\x12\x12\n" +
@@ -8266,274 +9354,326 @@ const file_api_api_proto_rawDesc = "" +
 	"createTime\x12\x1e\n" +
 	"\n" +
 	"persistent\x18\a \x01(\bR\n" +
-	"persistent\"\x89\x01\n" +
-	"\x10NotificationList\x12J\n" +
-	"\rnotifications\x18\x01 \x03(\v2$.ultimate.server.api.ApiNotificationR\rnotifications\x12)\n" +
+	"persistent\"\x86\x01\n" +
+	"\x10NotificationList\x12G\n" +
+	"\rnotifications\x18\x01 \x03(\v2!.ultimate.server.api.NotificationR\rnotifications\x12)\n" +
+	"\x10cacheable_cursor\x18\x02 \x01(\tR\x0fcacheableCursor\"x\n" +
+	"\x18ListNotificationsRequest\x121\n" +
+	"\x05limit\x18\x01 \x01(\v2\x1b.google.protobuf.Int32ValueR\x05limit\x12)\n" +
 	"\x10cacheable_cursor\x18\x02 \x01(\tR\x0fcacheableCursor\".\n" +
 	"\x1aDeleteNotificationsRequest\x12\x10\n" +
-	"\x03ids\x18\x01 \x03(\tR\x03ids\" \n" +
-	"\x06Wallet\x12\x16\n" +
-	"\x06wallet\x18\x01 \x01(\tR\x06wallet\"G\n" +
-	"\x17ListWalletLedgerRequest\x12\x14\n" +
-	"\x05limit\x18\x01 \x01(\x05R\x05limit\x12\x16\n" +
-	"\x06cursor\x18\x02 \x01(\tR\x06cursor\"\xef\x01\n" +
-	"\x10WalletLedgerItem\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
-	"\auser_id\x18\x02 \x01(\tR\x06userId\x12\x1c\n" +
-	"\tchangeset\x18\x03 \x01(\tR\tchangeset\x12\x1a\n" +
-	"\bmetadata\x18\x04 \x01(\tR\bmetadata\x12;\n" +
+	"\x03ids\x18\x01 \x03(\tR\x03ids\"\xd0\x01\n" +
+	"\x05Match\x12\x19\n" +
+	"\bmatch_id\x18\x01 \x01(\tR\amatchId\x12$\n" +
+	"\rauthoritative\x18\x02 \x01(\bR\rauthoritative\x122\n" +
+	"\x05label\x18\x03 \x01(\v2\x1c.google.protobuf.StringValueR\x05label\x12\x12\n" +
+	"\x04size\x18\x04 \x01(\x05R\x04size\x12\x1b\n" +
+	"\ttick_rate\x18\x05 \x01(\x05R\btickRate\x12!\n" +
+	"\fhandler_name\x18\x06 \x01(\tR\vhandlerName\"A\n" +
+	"\tMatchList\x124\n" +
+	"\amatches\x18\x01 \x03(\v2\x1a.ultimate.server.api.MatchR\amatches\"\xe1\x02\n" +
+	"\x12ListMatchesRequest\x121\n" +
+	"\x05limit\x18\x01 \x01(\v2\x1b.google.protobuf.Int32ValueR\x05limit\x12@\n" +
+	"\rauthoritative\x18\x02 \x01(\v2\x1a.google.protobuf.BoolValueR\rauthoritative\x122\n" +
+	"\x05label\x18\x03 \x01(\v2\x1c.google.protobuf.StringValueR\x05label\x126\n" +
+	"\bmin_size\x18\x04 \x01(\v2\x1b.google.protobuf.Int32ValueR\aminSize\x126\n" +
+	"\bmax_size\x18\x05 \x01(\v2\x1b.google.protobuf.Int32ValueR\amaxSize\x122\n" +
+	"\x05query\x18\x06 \x01(\v2\x1c.google.protobuf.StringValueR\x05query\"\xe1\x01\n" +
+	"\x12ListPartiesRequest\x121\n" +
+	"\x05limit\x18\x01 \x01(\v2\x1b.google.protobuf.Int32ValueR\x05limit\x12.\n" +
+	"\x04open\x18\x02 \x01(\v2\x1a.google.protobuf.BoolValueR\x04open\x122\n" +
+	"\x05query\x18\x03 \x01(\v2\x1c.google.protobuf.StringValueR\x05query\x124\n" +
+	"\x06cursor\x18\x04 \x01(\v2\x1c.google.protobuf.StringValueR\x06cursor\"\x7f\n" +
+	"\x05Party\x12\x19\n" +
+	"\bparty_id\x18\x01 \x01(\tR\apartyId\x12\x12\n" +
+	"\x04open\x18\x02 \x01(\bR\x04open\x12\x16\n" +
+	"\x06hidden\x18\x03 \x01(\bR\x06hidden\x12\x19\n" +
+	"\bmax_size\x18\x04 \x01(\x05R\amaxSize\x12\x14\n" +
+	"\x05label\x18\x05 \x01(\tR\x05label\"Y\n" +
+	"\tPartyList\x124\n" +
+	"\aparties\x18\x01 \x03(\v2\x1a.ultimate.server.api.PartyR\aparties\x12\x16\n" +
+	"\x06cursor\x18\x02 \x01(\tR\x06cursor\"\x99\x01\n" +
+	"\x19MatchmakerCompletionStats\x12;\n" +
+	"\vcreate_time\x18\x01 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"createTime\x12?\n" +
+	"\rcomplete_time\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\fcompleteTime\"\xdd\x01\n" +
+	"\x0fMatchmakerStats\x12!\n" +
+	"\fticket_count\x18\x01 \x01(\x05R\vticketCount\x12U\n" +
+	"\x19oldest_ticket_create_time\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\x16oldestTicketCreateTime\x12P\n" +
+	"\vcompletions\x18\x03 \x03(\v2..ultimate.server.api.MatchmakerCompletionStatsR\vcompletions\"\xfc\x01\n" +
+	"\x05Event\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12J\n" +
+	"\n" +
+	"properties\x18\x02 \x03(\v2*.ultimate.server.api.Event.PropertiesEntryR\n" +
+	"properties\x128\n" +
+	"\ttimestamp\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\x12\x1a\n" +
+	"\bexternal\x18\x04 \x01(\bR\bexternal\x1a=\n" +
+	"\x0fPropertiesEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"`\n" +
+	"\x13ReadStorageObjectId\x12\x1e\n" +
+	"\n" +
+	"collection\x18\x01 \x01(\tR\n" +
+	"collection\x12\x10\n" +
+	"\x03key\x18\x02 \x01(\tR\x03key\x12\x17\n" +
+	"\auser_id\x18\x03 \x01(\tR\x06userId\"d\n" +
+	"\x19ReadStorageObjectsRequest\x12G\n" +
+	"\n" +
+	"object_ids\x18\x01 \x03(\v2(.ultimate.server.api.ReadStorageObjectIdR\tobjectIds\"\xd8\x02\n" +
+	"\rStorageObject\x12\x1e\n" +
+	"\n" +
+	"collection\x18\x01 \x01(\tR\n" +
+	"collection\x12\x10\n" +
+	"\x03key\x18\x02 \x01(\tR\x03key\x12\x17\n" +
+	"\auser_id\x18\x03 \x01(\tR\x06userId\x12\x14\n" +
+	"\x05value\x18\x04 \x01(\tR\x05value\x12\x18\n" +
+	"\aversion\x18\x05 \x01(\tR\aversion\x12'\n" +
+	"\x0fpermission_read\x18\x06 \x01(\x05R\x0epermissionRead\x12)\n" +
+	"\x10permission_write\x18\a \x01(\x05R\x0fpermissionWrite\x12;\n" +
+	"\vcreate_time\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"createTime\x12;\n" +
+	"\vupdate_time\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"updateTime\"N\n" +
+	"\x0eStorageObjects\x12<\n" +
+	"\aobjects\x18\x01 \x03(\v2\".ultimate.server.api.StorageObjectR\aobjects\"i\n" +
+	"\x11StorageObjectList\x12<\n" +
+	"\aobjects\x18\x01 \x03(\v2\".ultimate.server.api.StorageObjectR\aobjects\x12\x16\n" +
+	"\x06cursor\x18\x02 \x01(\tR\x06cursor\"\x9f\x01\n" +
+	"\x19ListStorageObjectsRequest\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x1e\n" +
+	"\n" +
+	"collection\x18\x02 \x01(\tR\n" +
+	"collection\x121\n" +
+	"\x05limit\x18\x03 \x01(\v2\x1b.google.protobuf.Int32ValueR\x05limit\x12\x16\n" +
+	"\x06cursor\x18\x04 \x01(\tR\x06cursor\"\x84\x02\n" +
+	"\x12WriteStorageObject\x12\x1e\n" +
+	"\n" +
+	"collection\x18\x01 \x01(\tR\n" +
+	"collection\x12\x10\n" +
+	"\x03key\x18\x02 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x03 \x01(\tR\x05value\x12\x18\n" +
+	"\aversion\x18\x04 \x01(\tR\aversion\x12D\n" +
+	"\x0fpermission_read\x18\x05 \x01(\v2\x1b.google.protobuf.Int32ValueR\x0epermissionRead\x12F\n" +
+	"\x10permission_write\x18\x06 \x01(\v2\x1b.google.protobuf.Int32ValueR\x0fpermissionWrite\"_\n" +
+	"\x1aWriteStorageObjectsRequest\x12A\n" +
+	"\aobjects\x18\x01 \x03(\v2'.ultimate.server.api.WriteStorageObjectR\aobjects\"\xf1\x01\n" +
+	"\x10StorageObjectAck\x12\x1e\n" +
+	"\n" +
+	"collection\x18\x01 \x01(\tR\n" +
+	"collection\x12\x10\n" +
+	"\x03key\x18\x02 \x01(\tR\x03key\x12\x18\n" +
+	"\aversion\x18\x03 \x01(\tR\aversion\x12\x17\n" +
+	"\auser_id\x18\x04 \x01(\tR\x06userId\x12;\n" +
 	"\vcreate_time\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
 	"createTime\x12;\n" +
 	"\vupdate_time\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"updateTime\"p\n" +
-	"\x10WalletLedgerList\x12;\n" +
-	"\x05items\x18\x01 \x03(\v2%.ultimate.server.api.WalletLedgerItemR\x05items\x12\x1f\n" +
-	"\vnext_cursor\x18\x02 \x01(\tR\n" +
-	"nextCursor\"c\n" +
+	"updateTime\"N\n" +
+	"\x11StorageObjectAcks\x129\n" +
+	"\x04acks\x18\x01 \x03(\v2%.ultimate.server.api.StorageObjectAckR\x04acks\"c\n" +
+	"\x15DeleteStorageObjectId\x12\x1e\n" +
+	"\n" +
+	"collection\x18\x01 \x01(\tR\n" +
+	"collection\x12\x10\n" +
+	"\x03key\x18\x02 \x01(\tR\x03key\x12\x18\n" +
+	"\aversion\x18\x03 \x01(\tR\aversion\"h\n" +
+	"\x1bDeleteStorageObjectsRequest\x12I\n" +
+	"\n" +
+	"object_ids\x18\x01 \x03(\v2*.ultimate.server.api.DeleteStorageObjectIdR\tobjectIds\"J\n" +
+	"\x03Rpc\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x18\n" +
+	"\apayload\x18\x02 \x01(\tR\apayload\x12\x19\n" +
+	"\bhttp_key\x18\x03 \x01(\tR\ahttpKey\"n\n" +
 	"\x1cValidatePurchaseAppleRequest\x12\x18\n" +
-	"\areceipt\x18\x01 \x01(\tR\areceipt\x12\x1d\n" +
-	"\apersist\x18\x02 \x01(\bH\x00R\apersist\x88\x01\x01B\n" +
-	"\n" +
-	"\b_persist\"\xac\x01\n" +
+	"\areceipt\x18\x01 \x01(\tR\areceipt\x124\n" +
+	"\apersist\x18\x02 \x01(\v2\x1a.google.protobuf.BoolValueR\apersist\"q\n" +
 	"\x1dValidatePurchaseGoogleRequest\x12\x1a\n" +
-	"\bpurchase\x18\x01 \x01(\tR\bpurchase\x12\x1d\n" +
-	"\n" +
-	"product_id\x18\x02 \x01(\tR\tproductId\x12%\n" +
-	"\x0epurchase_token\x18\x03 \x01(\tR\rpurchaseToken\x12\x1d\n" +
-	"\apersist\x18\x04 \x01(\bH\x00R\apersist\x88\x01\x01B\n" +
-	"\n" +
-	"\b_persist\"\xa9\x01\n" +
+	"\bpurchase\x18\x01 \x01(\tR\bpurchase\x124\n" +
+	"\apersist\x18\x02 \x01(\v2\x1a.google.protobuf.BoolValueR\apersist\"\x8f\x01\n" +
 	"\x1dValidatePurchaseHuaweiRequest\x12\x1a\n" +
-	"\bpurchase\x18\x01 \x01(\tR\bpurchase\x12#\n" +
-	"\rpurchase_data\x18\x02 \x01(\tR\fpurchaseData\x12\x1c\n" +
-	"\tsignature\x18\x03 \x01(\tR\tsignature\x12\x1d\n" +
-	"\apersist\x18\x04 \x01(\bH\x00R\apersist\x88\x01\x01B\n" +
-	"\n" +
-	"\b_persist\"z\n" +
+	"\bpurchase\x18\x01 \x01(\tR\bpurchase\x12\x1c\n" +
+	"\tsignature\x18\x02 \x01(\tR\tsignature\x124\n" +
+	"\apersist\x18\x03 \x01(\v2\x1a.google.protobuf.BoolValueR\apersist\"\x85\x01\n" +
 	"&ValidatePurchaseFacebookInstantRequest\x12%\n" +
-	"\x0esigned_request\x18\x01 \x01(\tR\rsignedRequest\x12\x1d\n" +
-	"\apersist\x18\x02 \x01(\bH\x00R\apersist\x88\x01\x01B\n" +
-	"\n" +
-	"\b_persist\"l\n" +
+	"\x0esigned_request\x18\x01 \x01(\tR\rsignedRequest\x124\n" +
+	"\apersist\x18\x02 \x01(\v2\x1a.google.protobuf.BoolValueR\apersist\"w\n" +
 	"\x1eValidatePurchaseSamsungRequest\x12\x1f\n" +
 	"\vpurchase_id\x18\x01 \x01(\tR\n" +
-	"purchaseId\x12\x1d\n" +
-	"\apersist\x18\x02 \x01(\bH\x00R\apersist\x88\x01\x01B\n" +
-	"\n" +
-	"\b_persist\"\xf0\x03\n" +
+	"purchaseId\x124\n" +
+	"\apersist\x18\x02 \x01(\v2\x1a.google.protobuf.BoolValueR\apersist\"r\n" +
+	" ValidateSubscriptionAppleRequest\x12\x18\n" +
+	"\areceipt\x18\x01 \x01(\tR\areceipt\x124\n" +
+	"\apersist\x18\x02 \x01(\v2\x1a.google.protobuf.BoolValueR\apersist\"s\n" +
+	"!ValidateSubscriptionGoogleRequest\x12\x18\n" +
+	"\areceipt\x18\x01 \x01(\tR\areceipt\x124\n" +
+	"\apersist\x18\x02 \x01(\v2\x1a.google.protobuf.BoolValueR\apersist\"\xbb\x04\n" +
 	"\x11ValidatedPurchase\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x1d\n" +
 	"\n" +
 	"product_id\x18\x02 \x01(\tR\tproductId\x12%\n" +
-	"\x0etransaction_id\x18\x03 \x01(\tR\rtransactionId\x12\x14\n" +
-	"\x05store\x18\x04 \x01(\x05R\x05store\x12?\n" +
-	"\rpurchase_time\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\fpurchaseTime\x12\x1f\n" +
-	"\vseen_before\x18\x06 \x01(\bR\n" +
-	"seenBefore\x12 \n" +
-	"\venvironment\x18\a \x01(\x05R\venvironment\x12;\n" +
-	"\vcreate_time\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"\x0etransaction_id\x18\x03 \x01(\tR\rtransactionId\x128\n" +
+	"\x05store\x18\x04 \x01(\x0e2\".ultimate.server.api.StoreProviderR\x05store\x12?\n" +
+	"\rpurchase_time\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\fpurchaseTime\x12;\n" +
+	"\vcreate_time\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
 	"createTime\x12;\n" +
-	"\vupdate_time\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"\vupdate_time\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\n" +
 	"updateTime\x12;\n" +
-	"\vrefund_time\x18\n" +
-	" \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"\vrefund_time\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\n" +
 	"refundTime\x12+\n" +
-	"\x11provider_response\x18\v \x01(\tR\x10providerResponse\"s\n" +
+	"\x11provider_response\x18\t \x01(\tR\x10providerResponse\x12G\n" +
+	"\venvironment\x18\n" +
+	" \x01(\x0e2%.ultimate.server.api.StoreEnvironmentR\venvironment\x12\x1f\n" +
+	"\vseen_before\x18\v \x01(\bR\n" +
+	"seenBefore\"s\n" +
 	"\x18ValidatePurchaseResponse\x12W\n" +
-	"\x13validated_purchases\x18\x01 \x03(\v2&.ultimate.server.api.ValidatedPurchaseR\x12validatedPurchases\"g\n" +
-	" ValidateSubscriptionAppleRequest\x12\x18\n" +
-	"\areceipt\x18\x01 \x01(\tR\areceipt\x12\x1d\n" +
-	"\apersist\x18\x02 \x01(\bH\x00R\apersist\x88\x01\x01B\n" +
-	"\n" +
-	"\b_persist\"\x94\x01\n" +
-	"!ValidateSubscriptionGoogleRequest\x12\x1d\n" +
-	"\n" +
-	"product_id\x18\x01 \x01(\tR\tproductId\x12%\n" +
-	"\x0epurchase_token\x18\x02 \x01(\tR\rpurchaseToken\x12\x1d\n" +
-	"\apersist\x18\x03 \x01(\bH\x00R\apersist\x88\x01\x01B\n" +
-	"\n" +
-	"\b_persist\"\x81\x01\n" +
+	"\x13validated_purchases\x18\x01 \x03(\v2&.ultimate.server.api.ValidatedPurchaseR\x12validatedPurchases\"\x81\x01\n" +
 	"\x1cValidateSubscriptionResponse\x12a\n" +
-	"\x16validated_subscription\x18\x01 \x01(\v2*.ultimate.server.api.ValidatedSubscriptionR\x15validatedSubscription\"\xda\x04\n" +
+	"\x16validated_subscription\x18\x01 \x01(\v2*.ultimate.server.api.ValidatedSubscriptionR\x15validatedSubscription\"\xb9\x05\n" +
 	"\x15ValidatedSubscription\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x1d\n" +
 	"\n" +
 	"product_id\x18\x02 \x01(\tR\tproductId\x126\n" +
-	"\x17original_transaction_id\x18\x03 \x01(\tR\x15originalTransactionId\x12\x14\n" +
-	"\x05store\x18\x04 \x01(\x05R\x05store\x12?\n" +
+	"\x17original_transaction_id\x18\x03 \x01(\tR\x15originalTransactionId\x128\n" +
+	"\x05store\x18\x04 \x01(\x0e2\".ultimate.server.api.StoreProviderR\x05store\x12?\n" +
 	"\rpurchase_time\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\fpurchaseTime\x12;\n" +
-	"\vexpire_time\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"expireTime\x12\x16\n" +
-	"\x06active\x18\a \x01(\bR\x06active\x12\x1f\n" +
-	"\vseen_before\x18\b \x01(\bR\n" +
-	"seenBefore\x12 \n" +
-	"\venvironment\x18\t \x01(\x05R\venvironment\x12;\n" +
-	"\vcreate_time\x18\n" +
-	" \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"\vcreate_time\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
 	"createTime\x12;\n" +
-	"\vupdate_time\x18\v \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"updateTime\x12;\n" +
-	"\vrefund_time\x18\f \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"\vupdate_time\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"updateTime\x12G\n" +
+	"\venvironment\x18\b \x01(\x0e2%.ultimate.server.api.StoreEnvironmentR\venvironment\x12;\n" +
+	"\vexpiry_time\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"expiryTime\x12;\n" +
+	"\vrefund_time\x18\n" +
+	" \x01(\v2\x1a.google.protobuf.TimestampR\n" +
 	"refundTime\x12+\n" +
-	"\x11provider_response\x18\r \x01(\tR\x10providerResponse\"H\n" +
-	"\x18ListSubscriptionsRequest\x12\x14\n" +
-	"\x05limit\x18\x01 \x01(\x05R\x05limit\x12\x16\n" +
-	"\x06cursor\x18\x02 \x01(\tR\x06cursor\"\xb0\x01\n" +
+	"\x11provider_response\x18\v \x01(\tR\x10providerResponse\x123\n" +
+	"\x15provider_notification\x18\f \x01(\tR\x14providerNotification\x12\x16\n" +
+	"\x06active\x18\r \x01(\bR\x06active\"\xa0\x01\n" +
+	"\fPurchaseList\x12W\n" +
+	"\x13validated_purchases\x18\x01 \x03(\v2&.ultimate.server.api.ValidatedPurchaseR\x12validatedPurchases\x12\x16\n" +
+	"\x06cursor\x18\x02 \x01(\tR\x06cursor\x12\x1f\n" +
+	"\vprev_cursor\x18\x03 \x01(\tR\n" +
+	"prevCursor\"\xb0\x01\n" +
 	"\x10SubscriptionList\x12c\n" +
 	"\x17validated_subscriptions\x18\x01 \x03(\v2*.ultimate.server.api.ValidatedSubscriptionR\x16validatedSubscriptions\x12\x16\n" +
 	"\x06cursor\x18\x02 \x01(\tR\x06cursor\x12\x1f\n" +
 	"\vprev_cursor\x18\x03 \x01(\tR\n" +
-	"prevCursor\"7\n" +
+	"prevCursor\"e\n" +
+	"\x18ListSubscriptionsRequest\x121\n" +
+	"\x05limit\x18\x01 \x01(\v2\x1b.google.protobuf.Int32ValueR\x05limit\x12\x16\n" +
+	"\x06cursor\x18\x02 \x01(\tR\x06cursor\"7\n" +
 	"\x16GetSubscriptionRequest\x12\x1d\n" +
 	"\n" +
-	"product_id\x18\x01 \x01(\tR\tproductId\"J\n" +
-	"\x03Rpc\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12\x18\n" +
-	"\apayload\x18\x02 \x01(\tR\apayload\x12\x19\n" +
-	"\bhttp_key\x18\x03 \x01(\tR\ahttpKey\"d\n" +
-	"\x0fGetUsersRequest\x12\x10\n" +
-	"\x03ids\x18\x01 \x03(\tR\x03ids\x12\x1c\n" +
-	"\tusernames\x18\x02 \x03(\tR\tusernames\x12!\n" +
-	"\ffacebook_ids\x18\x03 \x03(\tR\vfacebookIds\"8\n" +
-	"\x05Users\x12/\n" +
-	"\x05users\x18\x01 \x03(\v2\x19.ultimate.server.api.UserR\x05users\"\xec\x01\n" +
-	"\vClientEvent\x12\x12\n" +
-	"\x04name\x18\x01 \x01(\tR\x04name\x12P\n" +
-	"\n" +
-	"properties\x18\x02 \x03(\v20.ultimate.server.api.ClientEvent.PropertiesEntryR\n" +
-	"properties\x12\x1c\n" +
-	"\ttimestamp\x18\x03 \x01(\x03R\ttimestamp\x12\x1a\n" +
-	"\bexternal\x18\x04 \x01(\bR\bexternal\x1a=\n" +
-	"\x0fPropertiesEntry\x12\x10\n" +
-	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01*L\n" +
+	"product_id\x18\x01 \x01(\tR\tproductId*L\n" +
 	"\bOperator\x12\x0f\n" +
 	"\vNO_OVERRIDE\x10\x00\x12\b\n" +
 	"\x04BEST\x10\x01\x12\a\n" +
 	"\x03SET\x10\x02\x12\r\n" +
 	"\tINCREMENT\x10\x03\x12\r\n" +
-	"\tDECREMENT\x10\x042\xa6\x16\n" +
-	"\x15AuthenticationService\x12`\n" +
-	"\x11AuthenticateEmail\x12-.ultimate.server.api.AuthenticateEmailRequest\x1a\x1c.ultimate.server.api.Session\x12b\n" +
-	"\x12AuthenticateDevice\x12..ultimate.server.api.AuthenticateDeviceRequest\x1a\x1c.ultimate.server.api.Session\x12`\n" +
-	"\x11AuthenticateApple\x12-.ultimate.server.api.AuthenticateAppleRequest\x1a\x1c.ultimate.server.api.Session\x12b\n" +
-	"\x12AuthenticateGoogle\x12..ultimate.server.api.AuthenticateGoogleRequest\x1a\x1c.ultimate.server.api.Session\x12f\n" +
-	"\x14AuthenticateFacebook\x120.ultimate.server.api.AuthenticateFacebookRequest\x1a\x1c.ultimate.server.api.Session\x12`\n" +
-	"\x11AuthenticateSteam\x12-.ultimate.server.api.AuthenticateSteamRequest\x1a\x1c.ultimate.server.api.Session\x12j\n" +
-	"\x16AuthenticateGameCenter\x122.ultimate.server.api.AuthenticateGameCenterRequest\x1a\x1c.ultimate.server.api.Session\x12|\n" +
-	"\x1fAuthenticateFacebookInstantGame\x12;.ultimate.server.api.AuthenticateFacebookInstantGameRequest\x1a\x1c.ultimate.server.api.Session\x12b\n" +
-	"\x12AuthenticateCustom\x12..ultimate.server.api.AuthenticateCustomRequest\x1a\x1c.ultimate.server.api.Session\x12Z\n" +
+	"\tDECREMENT\x10\x04*\x89\x01\n" +
+	"\rStoreProvider\x12\x13\n" +
+	"\x0fAPPLE_APP_STORE\x10\x00\x12\x15\n" +
+	"\x11GOOGLE_PLAY_STORE\x10\x01\x12\x16\n" +
+	"\x12HUAWEI_APP_GALLERY\x10\x02\x12\x1a\n" +
+	"\x16FACEBOOK_INSTANT_STORE\x10\x03\x12\x18\n" +
+	"\x14SAMSUNG_GALAXY_STORE\x10\x04*<\n" +
+	"\x10StoreEnvironment\x12\v\n" +
+	"\aUNKNOWN\x10\x00\x12\v\n" +
+	"\aSANDBOX\x10\x01\x12\x0e\n" +
+	"\n" +
+	"PRODUCTION\x10\x022\x93?\n" +
+	"\x12UltimateGameEngine\x12L\n" +
+	"\n" +
+	"AddFriends\x12&.ultimate.server.api.AddFriendsRequest\x1a\x16.google.protobuf.Empty\x12R\n" +
+	"\rAddGroupUsers\x12).ultimate.server.api.AddGroupUsersRequest\x1a\x16.google.protobuf.Empty\x12Z\n" +
 	"\x0eSessionRefresh\x12*.ultimate.server.api.SessionRefreshRequest\x1a\x1c.ultimate.server.api.Session\x12R\n" +
-	"\rSessionLogout\x12).ultimate.server.api.SessionLogoutRequest\x1a\x16.google.protobuf.Empty\x12B\n" +
-	"\n" +
-	"GetAccount\x12\x16.google.protobuf.Empty\x1a\x1c.ultimate.server.api.Account\x12R\n" +
-	"\rUpdateAccount\x12).ultimate.server.api.UpdateAccountRequest\x1a\x16.google.protobuf.Empty\x12?\n" +
+	"\rSessionLogout\x12).ultimate.server.api.SessionLogoutRequest\x1a\x16.google.protobuf.Empty\x12`\n" +
+	"\x11AuthenticateApple\x12-.ultimate.server.api.AuthenticateAppleRequest\x1a\x1c.ultimate.server.api.Session\x12b\n" +
+	"\x12AuthenticateCustom\x12..ultimate.server.api.AuthenticateCustomRequest\x1a\x1c.ultimate.server.api.Session\x12b\n" +
+	"\x12AuthenticateDevice\x12..ultimate.server.api.AuthenticateDeviceRequest\x1a\x1c.ultimate.server.api.Session\x12`\n" +
+	"\x11AuthenticateEmail\x12-.ultimate.server.api.AuthenticateEmailRequest\x1a\x1c.ultimate.server.api.Session\x12f\n" +
+	"\x14AuthenticateFacebook\x120.ultimate.server.api.AuthenticateFacebookRequest\x1a\x1c.ultimate.server.api.Session\x12|\n" +
+	"\x1fAuthenticateFacebookInstantGame\x12;.ultimate.server.api.AuthenticateFacebookInstantGameRequest\x1a\x1c.ultimate.server.api.Session\x12j\n" +
+	"\x16AuthenticateGameCenter\x122.ultimate.server.api.AuthenticateGameCenterRequest\x1a\x1c.ultimate.server.api.Session\x12b\n" +
+	"\x12AuthenticateGoogle\x12..ultimate.server.api.AuthenticateGoogleRequest\x1a\x1c.ultimate.server.api.Session\x12`\n" +
+	"\x11AuthenticateSteam\x12-.ultimate.server.api.AuthenticateSteamRequest\x1a\x1c.ultimate.server.api.Session\x12R\n" +
+	"\rBanGroupUsers\x12).ultimate.server.api.BanGroupUsersRequest\x1a\x16.google.protobuf.Empty\x12P\n" +
+	"\fBlockFriends\x12(.ultimate.server.api.BlockFriendsRequest\x1a\x16.google.protobuf.Empty\x12R\n" +
+	"\vCreateGroup\x12'.ultimate.server.api.CreateGroupRequest\x1a\x1a.ultimate.server.api.Group\x12?\n" +
 	"\rDeleteAccount\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.Empty\x12R\n" +
-	"\tLinkEmail\x12-.ultimate.server.api.AuthenticateEmailRequest\x1a\x16.google.protobuf.Empty\x12T\n" +
+	"\rDeleteFriends\x12).ultimate.server.api.DeleteFriendsRequest\x1a\x16.google.protobuf.Empty\x12N\n" +
+	"\vDeleteGroup\x12'.ultimate.server.api.DeleteGroupRequest\x1a\x16.google.protobuf.Empty\x12f\n" +
+	"\x17DeleteLeaderboardRecord\x123.ultimate.server.api.DeleteLeaderboardRecordRequest\x1a\x16.google.protobuf.Empty\x12^\n" +
+	"\x13DeleteNotifications\x12/.ultimate.server.api.DeleteNotificationsRequest\x1a\x16.google.protobuf.Empty\x12d\n" +
+	"\x16DeleteTournamentRecord\x122.ultimate.server.api.DeleteTournamentRecordRequest\x1a\x16.google.protobuf.Empty\x12`\n" +
+	"\x14DeleteStorageObjects\x120.ultimate.server.api.DeleteStorageObjectsRequest\x1a\x16.google.protobuf.Empty\x12X\n" +
+	"\x10DemoteGroupUsers\x12,.ultimate.server.api.DemoteGroupUsersRequest\x1a\x16.google.protobuf.Empty\x12;\n" +
+	"\x05Event\x12\x1a.ultimate.server.api.Event\x1a\x16.google.protobuf.Empty\x12B\n" +
 	"\n" +
-	"LinkDevice\x12..ultimate.server.api.AuthenticateDeviceRequest\x1a\x16.google.protobuf.Empty\x12R\n" +
-	"\tLinkApple\x12-.ultimate.server.api.AuthenticateAppleRequest\x1a\x16.google.protobuf.Empty\x12T\n" +
-	"\n" +
-	"LinkGoogle\x12..ultimate.server.api.AuthenticateGoogleRequest\x1a\x16.google.protobuf.Empty\x12X\n" +
-	"\fLinkFacebook\x120.ultimate.server.api.AuthenticateFacebookRequest\x1a\x16.google.protobuf.Empty\x12R\n" +
-	"\tLinkSteam\x12-.ultimate.server.api.AuthenticateSteamRequest\x1a\x16.google.protobuf.Empty\x12T\n" +
-	"\n" +
-	"LinkCustom\x12..ultimate.server.api.AuthenticateCustomRequest\x1a\x16.google.protobuf.Empty\x12\\\n" +
-	"\x0eLinkGameCenter\x122.ultimate.server.api.AuthenticateGameCenterRequest\x1a\x16.google.protobuf.Empty\x12n\n" +
-	"\x17LinkFacebookInstantGame\x12;.ultimate.server.api.AuthenticateFacebookInstantGameRequest\x1a\x16.google.protobuf.Empty\x12I\n" +
-	"\vUnlinkEmail\x12\".ultimate.server.api.UnlinkRequest\x1a\x16.google.protobuf.Empty\x12J\n" +
-	"\fUnlinkDevice\x12\".ultimate.server.api.UnlinkRequest\x1a\x16.google.protobuf.Empty\x12I\n" +
-	"\vUnlinkApple\x12\".ultimate.server.api.UnlinkRequest\x1a\x16.google.protobuf.Empty\x12J\n" +
-	"\fUnlinkGoogle\x12\".ultimate.server.api.UnlinkRequest\x1a\x16.google.protobuf.Empty\x12L\n" +
-	"\x0eUnlinkFacebook\x12\".ultimate.server.api.UnlinkRequest\x1a\x16.google.protobuf.Empty\x12I\n" +
-	"\vUnlinkSteam\x12\".ultimate.server.api.UnlinkRequest\x1a\x16.google.protobuf.Empty\x12J\n" +
-	"\fUnlinkCustom\x12\".ultimate.server.api.UnlinkRequest\x1a\x16.google.protobuf.Empty\x12N\n" +
-	"\x10UnlinkGameCenter\x12\".ultimate.server.api.UnlinkRequest\x1a\x16.google.protobuf.Empty\x12W\n" +
-	"\x19UnlinkFacebookInstantGame\x12\".ultimate.server.api.UnlinkRequest\x1a\x16.google.protobuf.Empty2\x9d\x06\n" +
-	"\x12LeaderboardService\x12Z\n" +
-	"\x11CreateLeaderboard\x12-.ultimate.server.api.CreateLeaderboardRequest\x1a\x16.google.protobuf.Empty\x12Z\n" +
-	"\x11DeleteLeaderboard\x12-.ultimate.server.api.DeleteLeaderboardRequest\x1a\x16.google.protobuf.Empty\x12f\n" +
-	"\x10ListLeaderboards\x12,.ultimate.server.api.ListLeaderboardsRequest\x1a$.ultimate.server.api.LeaderboardList\x12t\n" +
-	"\x16WriteLeaderboardRecord\x122.ultimate.server.api.WriteLeaderboardRecordRequest\x1a&.ultimate.server.api.LeaderboardRecord\x12x\n" +
-	"\x16ListLeaderboardRecords\x122.ultimate.server.api.ListLeaderboardRecordsRequest\x1a*.ultimate.server.api.LeaderboardRecordList\x12\x8e\x01\n" +
-	"!ListLeaderboardRecordsAroundOwner\x12=.ultimate.server.api.ListLeaderboardRecordsAroundOwnerRequest\x1a*.ultimate.server.api.LeaderboardRecordList\x12f\n" +
-	"\x17DeleteLeaderboardRecord\x123.ultimate.server.api.DeleteLeaderboardRecordRequest\x1a\x16.google.protobuf.Empty2\xe3\x06\n" +
-	"\x11TournamentService\x12X\n" +
-	"\x10CreateTournament\x12,.ultimate.server.api.CreateTournamentRequest\x1a\x16.google.protobuf.Empty\x12X\n" +
-	"\x10DeleteTournament\x12,.ultimate.server.api.DeleteTournamentRequest\x1a\x16.google.protobuf.Empty\x12T\n" +
-	"\x0eJoinTournament\x12*.ultimate.server.api.JoinTournamentRequest\x1a\x16.google.protobuf.Empty\x12c\n" +
-	"\x0fListTournaments\x12+.ultimate.server.api.ListTournamentsRequest\x1a#.ultimate.server.api.TournamentList\x12r\n" +
-	"\x15WriteTournamentRecord\x121.ultimate.server.api.WriteTournamentRecordRequest\x1a&.ultimate.server.api.LeaderboardRecord\x12v\n" +
-	"\x15ListTournamentRecords\x121.ultimate.server.api.ListTournamentRecordsRequest\x1a*.ultimate.server.api.LeaderboardRecordList\x12\x8c\x01\n" +
-	" ListTournamentRecordsAroundOwner\x12<.ultimate.server.api.ListTournamentRecordsAroundOwnerRequest\x1a*.ultimate.server.api.LeaderboardRecordList\x12d\n" +
-	"\x16DeleteTournamentRecord\x122.ultimate.server.api.DeleteTournamentRecordRequest\x1a\x16.google.protobuf.Empty2\xea\x05\n" +
-	"\x0eFriendsService\x12L\n" +
-	"\n" +
-	"AddFriends\x12&.ultimate.server.api.AddFriendsRequest\x1a\x16.google.protobuf.Empty\x12W\n" +
-	"\vListFriends\x12'.ultimate.server.api.ListFriendsRequest\x1a\x1f.ultimate.server.api.FriendList\x12s\n" +
-	"\x14ListFriendsOfFriends\x120.ultimate.server.api.ListFriendsOfFriendsRequest\x1a).ultimate.server.api.FriendsOfFriendsList\x12R\n" +
-	"\rDeleteFriends\x12).ultimate.server.api.DeleteFriendsRequest\x1a\x16.google.protobuf.Empty\x12P\n" +
-	"\fBlockFriends\x12(.ultimate.server.api.BlockFriendsRequest\x1a\x16.google.protobuf.Empty\x12T\n" +
-	"\x0eUnblockFriends\x12*.ultimate.server.api.UnblockFriendsRequest\x1a\x16.google.protobuf.Empty\x12b\n" +
+	"GetAccount\x12\x16.google.protobuf.Empty\x1a\x1c.ultimate.server.api.Account\x12L\n" +
+	"\bGetUsers\x12$.ultimate.server.api.GetUsersRequest\x1a\x1a.ultimate.server.api.Users\x12j\n" +
+	"\x0fGetSubscription\x12+.ultimate.server.api.GetSubscriptionRequest\x1a*.ultimate.server.api.ValidatedSubscription\x12R\n" +
+	"\x12GetMatchmakerStats\x12\x16.google.protobuf.Empty\x1a$.ultimate.server.api.MatchmakerStats\x12=\n" +
+	"\vHealthcheck\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.Empty\x12b\n" +
 	"\x15ImportFacebookFriends\x121.ultimate.server.api.ImportFacebookFriendsRequest\x1a\x16.google.protobuf.Empty\x12\\\n" +
-	"\x12ImportSteamFriends\x12..ultimate.server.api.ImportSteamFriendsRequest\x1a\x16.google.protobuf.Empty2\xea\b\n" +
-	"\fGroupService\x12R\n" +
-	"\vCreateGroup\x12'.ultimate.server.api.CreateGroupRequest\x1a\x1a.ultimate.server.api.Group\x12N\n" +
-	"\vUpdateGroup\x12'.ultimate.server.api.UpdateGroupRequest\x1a\x16.google.protobuf.Empty\x12N\n" +
-	"\vDeleteGroup\x12'.ultimate.server.api.DeleteGroupRequest\x1a\x16.google.protobuf.Empty\x12T\n" +
+	"\x12ImportSteamFriends\x12..ultimate.server.api.ImportSteamFriendsRequest\x1a\x16.google.protobuf.Empty\x12J\n" +
+	"\tJoinGroup\x12%.ultimate.server.api.JoinGroupRequest\x1a\x16.google.protobuf.Empty\x12T\n" +
+	"\x0eJoinTournament\x12*.ultimate.server.api.JoinTournamentRequest\x1a\x16.google.protobuf.Empty\x12T\n" +
+	"\x0eKickGroupUsers\x12*.ultimate.server.api.KickGroupUsersRequest\x1a\x16.google.protobuf.Empty\x12L\n" +
 	"\n" +
-	"ListGroups\x12&.ultimate.server.api.ListGroupsRequest\x1a\x1e.ultimate.server.api.GroupList\x12J\n" +
-	"\tJoinGroup\x12%.ultimate.server.api.JoinGroupRequest\x1a\x16.google.protobuf.Empty\x12L\n" +
+	"LeaveGroup\x12&.ultimate.server.api.LeaveGroupRequest\x1a\x16.google.protobuf.Empty\x12F\n" +
+	"\tLinkApple\x12!.ultimate.server.api.AccountApple\x1a\x16.google.protobuf.Empty\x12H\n" +
 	"\n" +
-	"LeaveGroup\x12&.ultimate.server.api.LeaveGroupRequest\x1a\x16.google.protobuf.Empty\x12R\n" +
-	"\rAddGroupUsers\x12).ultimate.server.api.AddGroupUsersRequest\x1a\x16.google.protobuf.Empty\x12T\n" +
-	"\x0eKickGroupUsers\x12*.ultimate.server.api.KickGroupUsersRequest\x1a\x16.google.protobuf.Empty\x12Z\n" +
-	"\x11PromoteGroupUsers\x12-.ultimate.server.api.PromoteGroupUsersRequest\x1a\x16.google.protobuf.Empty\x12X\n" +
-	"\x10DemoteGroupUsers\x12,.ultimate.server.api.DemoteGroupUsersRequest\x1a\x16.google.protobuf.Empty\x12R\n" +
-	"\rBanGroupUsers\x12).ultimate.server.api.BanGroupUsersRequest\x1a\x16.google.protobuf.Empty\x12`\n" +
-	"\x0eListGroupUsers\x12*.ultimate.server.api.ListGroupUsersRequest\x1a\".ultimate.server.api.GroupUserList\x12`\n" +
-	"\x0eListUserGroups\x12*.ultimate.server.api.ListUserGroupsRequest\x1a\".ultimate.server.api.UserGroupList2\xf0\x03\n" +
-	"\x11MatchmakerService\x12a\n" +
-	"\rAddMatchmaker\x12).ultimate.server.api.AddMatchmakerRequest\x1a%.ultimate.server.api.MatchmakerTicket\x12X\n" +
-	"\x10RemoveMatchmaker\x12,.ultimate.server.api.RemoveMatchmakerRequest\x1a\x16.google.protobuf.Empty\x12m\n" +
-	"\x13GetMatchmakerTicket\x12/.ultimate.server.api.GetMatchmakerTicketRequest\x1a%.ultimate.server.api.MatchmakerTicket\x12[\n" +
-	"\rGetQueueStats\x12).ultimate.server.api.GetQueueStatsRequest\x1a\x1f.ultimate.server.api.QueueStats\x12R\n" +
-	"\x12GetMatchmakerStats\x12\x16.google.protobuf.Empty\x1a$.ultimate.server.api.MatchmakerStats2\xed\x02\n" +
-	"\x0fRealtimeService\x12R\n" +
-	"\vCreateMatch\x12'.ultimate.server.api.CreateMatchRequest\x1a\x1a.ultimate.server.api.Match\x12V\n" +
-	"\vListMatches\x12'.ultimate.server.api.ListMatchesRequest\x1a\x1e.ultimate.server.api.MatchList\x12L\n" +
-	"\bGetMatch\x12$.ultimate.server.api.GetMatchRequest\x1a\x1a.ultimate.server.api.Match\x12`\n" +
-	"\vMatchSignal\x12'.ultimate.server.api.MatchSignalRequest\x1a(.ultimate.server.api.MatchSignalResponse2f\n" +
-	"\fPartyService\x12V\n" +
-	"\vListParties\x12'.ultimate.server.api.ListPartiesRequest\x1a\x1e.ultimate.server.api.PartyList2~\n" +
-	"\vChatService\x12o\n" +
-	"\x13ListChannelMessages\x12/.ultimate.server.api.ListChannelMessagesRequest\x1a'.ultimate.server.api.ChannelMessageList2\xe0\x01\n" +
-	"\x13NotificationService\x12i\n" +
-	"\x11ListNotifications\x12-.ultimate.server.api.ListNotificationsRequest\x1a%.ultimate.server.api.NotificationList\x12^\n" +
-	"\x13DeleteNotifications\x12/.ultimate.server.api.DeleteNotificationsRequest\x1a\x16.google.protobuf.Empty2\xbb\x01\n" +
-	"\x0eEconomyService\x12@\n" +
-	"\tGetWallet\x12\x16.google.protobuf.Empty\x1a\x1b.ultimate.server.api.Wallet\x12g\n" +
-	"\x10ListWalletLedger\x12,.ultimate.server.api.ListWalletLedgerRequest\x1a%.ultimate.server.api.WalletLedgerList2\xf9\b\n" +
+	"LinkCustom\x12\".ultimate.server.api.AccountCustom\x1a\x16.google.protobuf.Empty\x12H\n" +
 	"\n" +
-	"IAPService\x12y\n" +
+	"LinkDevice\x12\".ultimate.server.api.AccountDevice\x1a\x16.google.protobuf.Empty\x12F\n" +
+	"\tLinkEmail\x12!.ultimate.server.api.AccountEmail\x1a\x16.google.protobuf.Empty\x12P\n" +
+	"\fLinkFacebook\x12(.ultimate.server.api.LinkFacebookRequest\x1a\x16.google.protobuf.Empty\x12b\n" +
+	"\x17LinkFacebookInstantGame\x12/.ultimate.server.api.AccountFacebookInstantGame\x1a\x16.google.protobuf.Empty\x12P\n" +
+	"\x0eLinkGameCenter\x12&.ultimate.server.api.AccountGameCenter\x1a\x16.google.protobuf.Empty\x12H\n" +
+	"\n" +
+	"LinkGoogle\x12\".ultimate.server.api.AccountGoogle\x1a\x16.google.protobuf.Empty\x12J\n" +
+	"\tLinkSteam\x12%.ultimate.server.api.LinkSteamRequest\x1a\x16.google.protobuf.Empty\x12o\n" +
+	"\x13ListChannelMessages\x12/.ultimate.server.api.ListChannelMessagesRequest\x1a'.ultimate.server.api.ChannelMessageList\x12W\n" +
+	"\vListFriends\x12'.ultimate.server.api.ListFriendsRequest\x1a\x1f.ultimate.server.api.FriendList\x12s\n" +
+	"\x14ListFriendsOfFriends\x120.ultimate.server.api.ListFriendsOfFriendsRequest\x1a).ultimate.server.api.FriendsOfFriendsList\x12`\n" +
+	"\x0eListGroupUsers\x12*.ultimate.server.api.ListGroupUsersRequest\x1a\".ultimate.server.api.GroupUserList\x12T\n" +
+	"\n" +
+	"ListGroups\x12&.ultimate.server.api.ListGroupsRequest\x1a\x1e.ultimate.server.api.GroupList\x12x\n" +
+	"\x16ListLeaderboardRecords\x122.ultimate.server.api.ListLeaderboardRecordsRequest\x1a*.ultimate.server.api.LeaderboardRecordList\x12\x8e\x01\n" +
+	"!ListLeaderboardRecordsAroundOwner\x12=.ultimate.server.api.ListLeaderboardRecordsAroundOwnerRequest\x1a*.ultimate.server.api.LeaderboardRecordList\x12V\n" +
+	"\vListMatches\x12'.ultimate.server.api.ListMatchesRequest\x1a\x1e.ultimate.server.api.MatchList\x12V\n" +
+	"\vListParties\x12'.ultimate.server.api.ListPartiesRequest\x1a\x1e.ultimate.server.api.PartyList\x12i\n" +
+	"\x11ListNotifications\x12-.ultimate.server.api.ListNotificationsRequest\x1a%.ultimate.server.api.NotificationList\x12l\n" +
+	"\x12ListStorageObjects\x12..ultimate.server.api.ListStorageObjectsRequest\x1a&.ultimate.server.api.StorageObjectList\x12i\n" +
+	"\x11ListSubscriptions\x12-.ultimate.server.api.ListSubscriptionsRequest\x1a%.ultimate.server.api.SubscriptionList\x12c\n" +
+	"\x0fListTournaments\x12+.ultimate.server.api.ListTournamentsRequest\x1a#.ultimate.server.api.TournamentList\x12u\n" +
+	"\x15ListTournamentRecords\x121.ultimate.server.api.ListTournamentRecordsRequest\x1a).ultimate.server.api.TournamentRecordList\x12\x8b\x01\n" +
+	" ListTournamentRecordsAroundOwner\x12<.ultimate.server.api.ListTournamentRecordsAroundOwnerRequest\x1a).ultimate.server.api.TournamentRecordList\x12`\n" +
+	"\x0eListUserGroups\x12*.ultimate.server.api.ListUserGroupsRequest\x1a\".ultimate.server.api.UserGroupList\x12Z\n" +
+	"\x11PromoteGroupUsers\x12-.ultimate.server.api.PromoteGroupUsersRequest\x1a\x16.google.protobuf.Empty\x12i\n" +
+	"\x12ReadStorageObjects\x12..ultimate.server.api.ReadStorageObjectsRequest\x1a#.ultimate.server.api.StorageObjects\x12=\n" +
+	"\aRpcFunc\x12\x18.ultimate.server.api.Rpc\x1a\x18.ultimate.server.api.Rpc\x12H\n" +
+	"\vUnlinkApple\x12!.ultimate.server.api.AccountApple\x1a\x16.google.protobuf.Empty\x12J\n" +
+	"\fUnlinkCustom\x12\".ultimate.server.api.AccountCustom\x1a\x16.google.protobuf.Empty\x12J\n" +
+	"\fUnlinkDevice\x12\".ultimate.server.api.AccountDevice\x1a\x16.google.protobuf.Empty\x12H\n" +
+	"\vUnlinkEmail\x12!.ultimate.server.api.AccountEmail\x1a\x16.google.protobuf.Empty\x12N\n" +
+	"\x0eUnlinkFacebook\x12$.ultimate.server.api.AccountFacebook\x1a\x16.google.protobuf.Empty\x12d\n" +
+	"\x19UnlinkFacebookInstantGame\x12/.ultimate.server.api.AccountFacebookInstantGame\x1a\x16.google.protobuf.Empty\x12R\n" +
+	"\x10UnlinkGameCenter\x12&.ultimate.server.api.AccountGameCenter\x1a\x16.google.protobuf.Empty\x12J\n" +
+	"\fUnlinkGoogle\x12\".ultimate.server.api.AccountGoogle\x1a\x16.google.protobuf.Empty\x12H\n" +
+	"\vUnlinkSteam\x12!.ultimate.server.api.AccountSteam\x1a\x16.google.protobuf.Empty\x12R\n" +
+	"\rUpdateAccount\x12).ultimate.server.api.UpdateAccountRequest\x1a\x16.google.protobuf.Empty\x12N\n" +
+	"\vUpdateGroup\x12'.ultimate.server.api.UpdateGroupRequest\x1a\x16.google.protobuf.Empty\x12y\n" +
 	"\x15ValidatePurchaseApple\x121.ultimate.server.api.ValidatePurchaseAppleRequest\x1a-.ultimate.server.api.ValidatePurchaseResponse\x12{\n" +
 	"\x16ValidatePurchaseGoogle\x122.ultimate.server.api.ValidatePurchaseGoogleRequest\x1a-.ultimate.server.api.ValidatePurchaseResponse\x12{\n" +
 	"\x16ValidatePurchaseHuawei\x122.ultimate.server.api.ValidatePurchaseHuaweiRequest\x1a-.ultimate.server.api.ValidatePurchaseResponse\x12\x8d\x01\n" +
 	"\x1fValidatePurchaseFacebookInstant\x12;.ultimate.server.api.ValidatePurchaseFacebookInstantRequest\x1a-.ultimate.server.api.ValidatePurchaseResponse\x12}\n" +
 	"\x17ValidatePurchaseSamsung\x123.ultimate.server.api.ValidatePurchaseSamsungRequest\x1a-.ultimate.server.api.ValidatePurchaseResponse\x12\x85\x01\n" +
 	"\x19ValidateSubscriptionApple\x125.ultimate.server.api.ValidateSubscriptionAppleRequest\x1a1.ultimate.server.api.ValidateSubscriptionResponse\x12\x87\x01\n" +
-	"\x1aValidateSubscriptionGoogle\x126.ultimate.server.api.ValidateSubscriptionGoogleRequest\x1a1.ultimate.server.api.ValidateSubscriptionResponse\x12i\n" +
-	"\x11ListSubscriptions\x12-.ultimate.server.api.ListSubscriptionsRequest\x1a%.ultimate.server.api.SubscriptionList\x12j\n" +
-	"\x0fGetSubscription\x12+.ultimate.server.api.GetSubscriptionRequest\x1a*.ultimate.server.api.ValidatedSubscription2K\n" +
-	"\n" +
-	"RpcService\x12=\n" +
-	"\aRpcFunc\x12\x18.ultimate.server.api.Rpc\x1a\x18.ultimate.server.api.Rpc2[\n" +
-	"\vUserService\x12L\n" +
-	"\bGetUsers\x12$.ultimate.server.api.GetUsersRequest\x1a\x1a.ultimate.server.api.Users2Q\n" +
-	"\fEventService\x12A\n" +
-	"\x05Event\x12 .ultimate.server.api.ClientEvent\x1a\x16.google.protobuf.Empty2N\n" +
-	"\rSystemService\x12=\n" +
-	"\vHealthcheck\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.EmptyB)Z'ultimate-game-server/internal/api/apipbb\x06proto3"
+	"\x1aValidateSubscriptionGoogle\x126.ultimate.server.api.ValidateSubscriptionGoogleRequest\x1a1.ultimate.server.api.ValidateSubscriptionResponse\x12t\n" +
+	"\x16WriteLeaderboardRecord\x122.ultimate.server.api.WriteLeaderboardRecordRequest\x1a&.ultimate.server.api.LeaderboardRecord\x12n\n" +
+	"\x13WriteStorageObjects\x12/.ultimate.server.api.WriteStorageObjectsRequest\x1a&.ultimate.server.api.StorageObjectAcks\x12r\n" +
+	"\x15WriteTournamentRecord\x121.ultimate.server.api.WriteTournamentRecordRequest\x1a&.ultimate.server.api.LeaderboardRecordB)Z'ultimate-game-server/internal/api/apipbb\x06proto3"
 
 var (
 	file_api_api_proto_rawDescOnce sync.Once
@@ -8547,392 +9687,516 @@ func file_api_api_proto_rawDescGZIP() []byte {
 	return file_api_api_proto_rawDescData
 }
 
-var file_api_api_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_api_api_proto_msgTypes = make([]protoimpl.MessageInfo, 120)
+var file_api_api_proto_enumTypes = make([]protoimpl.EnumInfo, 6)
+var file_api_api_proto_msgTypes = make([]protoimpl.MessageInfo, 134)
 var file_api_api_proto_goTypes = []any{
 	(Operator)(0),                                    // 0: ultimate.server.api.Operator
-	(*User)(nil),                                     // 1: ultimate.server.api.User
-	(*AuthenticateEmailRequest)(nil),                 // 2: ultimate.server.api.AuthenticateEmailRequest
-	(*AuthenticateDeviceRequest)(nil),                // 3: ultimate.server.api.AuthenticateDeviceRequest
-	(*AuthenticateAppleRequest)(nil),                 // 4: ultimate.server.api.AuthenticateAppleRequest
-	(*AuthenticateGoogleRequest)(nil),                // 5: ultimate.server.api.AuthenticateGoogleRequest
-	(*AuthenticateFacebookRequest)(nil),              // 6: ultimate.server.api.AuthenticateFacebookRequest
-	(*AuthenticateSteamRequest)(nil),                 // 7: ultimate.server.api.AuthenticateSteamRequest
-	(*AuthenticateGameCenterRequest)(nil),            // 8: ultimate.server.api.AuthenticateGameCenterRequest
-	(*AuthenticateFacebookInstantGameRequest)(nil),   // 9: ultimate.server.api.AuthenticateFacebookInstantGameRequest
-	(*AuthenticateCustomRequest)(nil),                // 10: ultimate.server.api.AuthenticateCustomRequest
-	(*SessionRefreshRequest)(nil),                    // 11: ultimate.server.api.SessionRefreshRequest
-	(*SessionLogoutRequest)(nil),                     // 12: ultimate.server.api.SessionLogoutRequest
-	(*Session)(nil),                                  // 13: ultimate.server.api.Session
-	(*Device)(nil),                                   // 14: ultimate.server.api.Device
-	(*Account)(nil),                                  // 15: ultimate.server.api.Account
-	(*UpdateAccountRequest)(nil),                     // 16: ultimate.server.api.UpdateAccountRequest
-	(*UnlinkRequest)(nil),                            // 17: ultimate.server.api.UnlinkRequest
-	(*CreateLeaderboardRequest)(nil),                 // 18: ultimate.server.api.CreateLeaderboardRequest
-	(*ListLeaderboardsRequest)(nil),                  // 19: ultimate.server.api.ListLeaderboardsRequest
-	(*Leaderboard)(nil),                              // 20: ultimate.server.api.Leaderboard
-	(*LeaderboardList)(nil),                          // 21: ultimate.server.api.LeaderboardList
-	(*DeleteLeaderboardRequest)(nil),                 // 22: ultimate.server.api.DeleteLeaderboardRequest
-	(*WriteLeaderboardRecordRequest)(nil),            // 23: ultimate.server.api.WriteLeaderboardRecordRequest
-	(*LeaderboardRecord)(nil),                        // 24: ultimate.server.api.LeaderboardRecord
-	(*ListLeaderboardRecordsRequest)(nil),            // 25: ultimate.server.api.ListLeaderboardRecordsRequest
-	(*ListLeaderboardRecordsAroundOwnerRequest)(nil), // 26: ultimate.server.api.ListLeaderboardRecordsAroundOwnerRequest
-	(*LeaderboardRecordList)(nil),                    // 27: ultimate.server.api.LeaderboardRecordList
-	(*DeleteLeaderboardRecordRequest)(nil),           // 28: ultimate.server.api.DeleteLeaderboardRecordRequest
-	(*CreateTournamentRequest)(nil),                  // 29: ultimate.server.api.CreateTournamentRequest
-	(*DeleteTournamentRequest)(nil),                  // 30: ultimate.server.api.DeleteTournamentRequest
-	(*JoinTournamentRequest)(nil),                    // 31: ultimate.server.api.JoinTournamentRequest
-	(*ListTournamentsRequest)(nil),                   // 32: ultimate.server.api.ListTournamentsRequest
-	(*Tournament)(nil),                               // 33: ultimate.server.api.Tournament
-	(*TournamentList)(nil),                           // 34: ultimate.server.api.TournamentList
-	(*WriteTournamentRecordRequest)(nil),             // 35: ultimate.server.api.WriteTournamentRecordRequest
-	(*ListTournamentRecordsRequest)(nil),             // 36: ultimate.server.api.ListTournamentRecordsRequest
-	(*ListTournamentRecordsAroundOwnerRequest)(nil),  // 37: ultimate.server.api.ListTournamentRecordsAroundOwnerRequest
-	(*DeleteTournamentRecordRequest)(nil),            // 38: ultimate.server.api.DeleteTournamentRecordRequest
-	(*AddFriendsRequest)(nil),                        // 39: ultimate.server.api.AddFriendsRequest
-	(*ListFriendsRequest)(nil),                       // 40: ultimate.server.api.ListFriendsRequest
-	(*ListFriendsOfFriendsRequest)(nil),              // 41: ultimate.server.api.ListFriendsOfFriendsRequest
-	(*Friend)(nil),                                   // 42: ultimate.server.api.Friend
-	(*FriendList)(nil),                               // 43: ultimate.server.api.FriendList
-	(*FriendOfFriend)(nil),                           // 44: ultimate.server.api.FriendOfFriend
-	(*FriendsOfFriendsList)(nil),                     // 45: ultimate.server.api.FriendsOfFriendsList
-	(*DeleteFriendsRequest)(nil),                     // 46: ultimate.server.api.DeleteFriendsRequest
-	(*BlockFriendsRequest)(nil),                      // 47: ultimate.server.api.BlockFriendsRequest
-	(*UnblockFriendsRequest)(nil),                    // 48: ultimate.server.api.UnblockFriendsRequest
-	(*ImportFacebookFriendsRequest)(nil),             // 49: ultimate.server.api.ImportFacebookFriendsRequest
-	(*ImportSteamFriendsRequest)(nil),                // 50: ultimate.server.api.ImportSteamFriendsRequest
-	(*CreateGroupRequest)(nil),                       // 51: ultimate.server.api.CreateGroupRequest
-	(*Group)(nil),                                    // 52: ultimate.server.api.Group
-	(*UpdateGroupRequest)(nil),                       // 53: ultimate.server.api.UpdateGroupRequest
-	(*DeleteGroupRequest)(nil),                       // 54: ultimate.server.api.DeleteGroupRequest
-	(*ListGroupsRequest)(nil),                        // 55: ultimate.server.api.ListGroupsRequest
-	(*GroupList)(nil),                                // 56: ultimate.server.api.GroupList
-	(*JoinGroupRequest)(nil),                         // 57: ultimate.server.api.JoinGroupRequest
-	(*LeaveGroupRequest)(nil),                        // 58: ultimate.server.api.LeaveGroupRequest
-	(*AddGroupUsersRequest)(nil),                     // 59: ultimate.server.api.AddGroupUsersRequest
-	(*KickGroupUsersRequest)(nil),                    // 60: ultimate.server.api.KickGroupUsersRequest
-	(*PromoteGroupUsersRequest)(nil),                 // 61: ultimate.server.api.PromoteGroupUsersRequest
-	(*DemoteGroupUsersRequest)(nil),                  // 62: ultimate.server.api.DemoteGroupUsersRequest
-	(*BanGroupUsersRequest)(nil),                     // 63: ultimate.server.api.BanGroupUsersRequest
-	(*GroupUser)(nil),                                // 64: ultimate.server.api.GroupUser
-	(*GroupUserList)(nil),                            // 65: ultimate.server.api.GroupUserList
-	(*UserGroup)(nil),                                // 66: ultimate.server.api.UserGroup
-	(*UserGroupList)(nil),                            // 67: ultimate.server.api.UserGroupList
-	(*ListGroupUsersRequest)(nil),                    // 68: ultimate.server.api.ListGroupUsersRequest
-	(*ListUserGroupsRequest)(nil),                    // 69: ultimate.server.api.ListUserGroupsRequest
-	(*AddMatchmakerRequest)(nil),                     // 70: ultimate.server.api.AddMatchmakerRequest
-	(*MatchmakerTicket)(nil),                         // 71: ultimate.server.api.MatchmakerTicket
-	(*RemoveMatchmakerRequest)(nil),                  // 72: ultimate.server.api.RemoveMatchmakerRequest
-	(*GetMatchmakerTicketRequest)(nil),               // 73: ultimate.server.api.GetMatchmakerTicketRequest
-	(*GetQueueStatsRequest)(nil),                     // 74: ultimate.server.api.GetQueueStatsRequest
-	(*QueueStats)(nil),                               // 75: ultimate.server.api.QueueStats
-	(*MatchmakerStats)(nil),                          // 76: ultimate.server.api.MatchmakerStats
-	(*CreateMatchRequest)(nil),                       // 77: ultimate.server.api.CreateMatchRequest
-	(*ListMatchesRequest)(nil),                       // 78: ultimate.server.api.ListMatchesRequest
-	(*GetMatchRequest)(nil),                          // 79: ultimate.server.api.GetMatchRequest
-	(*MatchPresence)(nil),                            // 80: ultimate.server.api.MatchPresence
-	(*Match)(nil),                                    // 81: ultimate.server.api.Match
-	(*MatchList)(nil),                                // 82: ultimate.server.api.MatchList
-	(*MatchSignalRequest)(nil),                       // 83: ultimate.server.api.MatchSignalRequest
-	(*MatchSignalResponse)(nil),                      // 84: ultimate.server.api.MatchSignalResponse
-	(*ListPartiesRequest)(nil),                       // 85: ultimate.server.api.ListPartiesRequest
-	(*Party)(nil),                                    // 86: ultimate.server.api.Party
-	(*PartyList)(nil),                                // 87: ultimate.server.api.PartyList
-	(*ListChannelMessagesRequest)(nil),               // 88: ultimate.server.api.ListChannelMessagesRequest
-	(*ChannelMessage)(nil),                           // 89: ultimate.server.api.ChannelMessage
-	(*ChannelMessageList)(nil),                       // 90: ultimate.server.api.ChannelMessageList
-	(*ListNotificationsRequest)(nil),                 // 91: ultimate.server.api.ListNotificationsRequest
-	(*ApiNotification)(nil),                          // 92: ultimate.server.api.ApiNotification
-	(*NotificationList)(nil),                         // 93: ultimate.server.api.NotificationList
-	(*DeleteNotificationsRequest)(nil),               // 94: ultimate.server.api.DeleteNotificationsRequest
-	(*Wallet)(nil),                                   // 95: ultimate.server.api.Wallet
-	(*ListWalletLedgerRequest)(nil),                  // 96: ultimate.server.api.ListWalletLedgerRequest
-	(*WalletLedgerItem)(nil),                         // 97: ultimate.server.api.WalletLedgerItem
-	(*WalletLedgerList)(nil),                         // 98: ultimate.server.api.WalletLedgerList
-	(*ValidatePurchaseAppleRequest)(nil),             // 99: ultimate.server.api.ValidatePurchaseAppleRequest
-	(*ValidatePurchaseGoogleRequest)(nil),            // 100: ultimate.server.api.ValidatePurchaseGoogleRequest
-	(*ValidatePurchaseHuaweiRequest)(nil),            // 101: ultimate.server.api.ValidatePurchaseHuaweiRequest
-	(*ValidatePurchaseFacebookInstantRequest)(nil),   // 102: ultimate.server.api.ValidatePurchaseFacebookInstantRequest
-	(*ValidatePurchaseSamsungRequest)(nil),           // 103: ultimate.server.api.ValidatePurchaseSamsungRequest
-	(*ValidatedPurchase)(nil),                        // 104: ultimate.server.api.ValidatedPurchase
-	(*ValidatePurchaseResponse)(nil),                 // 105: ultimate.server.api.ValidatePurchaseResponse
-	(*ValidateSubscriptionAppleRequest)(nil),         // 106: ultimate.server.api.ValidateSubscriptionAppleRequest
-	(*ValidateSubscriptionGoogleRequest)(nil),        // 107: ultimate.server.api.ValidateSubscriptionGoogleRequest
-	(*ValidateSubscriptionResponse)(nil),             // 108: ultimate.server.api.ValidateSubscriptionResponse
-	(*ValidatedSubscription)(nil),                    // 109: ultimate.server.api.ValidatedSubscription
-	(*ListSubscriptionsRequest)(nil),                 // 110: ultimate.server.api.ListSubscriptionsRequest
-	(*SubscriptionList)(nil),                         // 111: ultimate.server.api.SubscriptionList
-	(*GetSubscriptionRequest)(nil),                   // 112: ultimate.server.api.GetSubscriptionRequest
-	(*Rpc)(nil),                                      // 113: ultimate.server.api.Rpc
-	(*GetUsersRequest)(nil),                          // 114: ultimate.server.api.GetUsersRequest
-	(*Users)(nil),                                    // 115: ultimate.server.api.Users
-	(*ClientEvent)(nil),                              // 116: ultimate.server.api.ClientEvent
-	nil,                                              // 117: ultimate.server.api.AddMatchmakerRequest.StringPropertiesEntry
-	nil,                                              // 118: ultimate.server.api.AddMatchmakerRequest.NumericPropertiesEntry
-	nil,                                              // 119: ultimate.server.api.CreateMatchRequest.ParamsEntry
-	nil,                                              // 120: ultimate.server.api.ClientEvent.PropertiesEntry
-	(*timestamppb.Timestamp)(nil),                    // 121: google.protobuf.Timestamp
-	(*emptypb.Empty)(nil),                            // 122: google.protobuf.Empty
+	(StoreProvider)(0),                               // 1: ultimate.server.api.StoreProvider
+	(StoreEnvironment)(0),                            // 2: ultimate.server.api.StoreEnvironment
+	(Friend_State)(0),                                // 3: ultimate.server.api.Friend.State
+	(GroupUserList_GroupUser_State)(0),               // 4: ultimate.server.api.GroupUserList.GroupUser.State
+	(UserGroupList_UserGroup_State)(0),               // 5: ultimate.server.api.UserGroupList.UserGroup.State
+	(*AccountApple)(nil),                             // 6: ultimate.server.api.AccountApple
+	(*AccountCustom)(nil),                            // 7: ultimate.server.api.AccountCustom
+	(*AccountDevice)(nil),                            // 8: ultimate.server.api.AccountDevice
+	(*AccountEmail)(nil),                             // 9: ultimate.server.api.AccountEmail
+	(*AccountFacebook)(nil),                          // 10: ultimate.server.api.AccountFacebook
+	(*AccountFacebookInstantGame)(nil),               // 11: ultimate.server.api.AccountFacebookInstantGame
+	(*AccountGameCenter)(nil),                        // 12: ultimate.server.api.AccountGameCenter
+	(*AccountGoogle)(nil),                            // 13: ultimate.server.api.AccountGoogle
+	(*AccountSteam)(nil),                             // 14: ultimate.server.api.AccountSteam
+	(*AccountRefresh)(nil),                           // 15: ultimate.server.api.AccountRefresh
+	(*Account)(nil),                                  // 16: ultimate.server.api.Account
+	(*Session)(nil),                                  // 17: ultimate.server.api.Session
+	(*User)(nil),                                     // 18: ultimate.server.api.User
+	(*Users)(nil),                                    // 19: ultimate.server.api.Users
+	(*GetUsersRequest)(nil),                          // 20: ultimate.server.api.GetUsersRequest
+	(*UpdateAccountRequest)(nil),                     // 21: ultimate.server.api.UpdateAccountRequest
+	(*SessionRefreshRequest)(nil),                    // 22: ultimate.server.api.SessionRefreshRequest
+	(*SessionLogoutRequest)(nil),                     // 23: ultimate.server.api.SessionLogoutRequest
+	(*AuthenticateAppleRequest)(nil),                 // 24: ultimate.server.api.AuthenticateAppleRequest
+	(*AuthenticateCustomRequest)(nil),                // 25: ultimate.server.api.AuthenticateCustomRequest
+	(*AuthenticateDeviceRequest)(nil),                // 26: ultimate.server.api.AuthenticateDeviceRequest
+	(*AuthenticateEmailRequest)(nil),                 // 27: ultimate.server.api.AuthenticateEmailRequest
+	(*AuthenticateFacebookRequest)(nil),              // 28: ultimate.server.api.AuthenticateFacebookRequest
+	(*AuthenticateFacebookInstantGameRequest)(nil),   // 29: ultimate.server.api.AuthenticateFacebookInstantGameRequest
+	(*AuthenticateGameCenterRequest)(nil),            // 30: ultimate.server.api.AuthenticateGameCenterRequest
+	(*AuthenticateGoogleRequest)(nil),                // 31: ultimate.server.api.AuthenticateGoogleRequest
+	(*AuthenticateSteamRequest)(nil),                 // 32: ultimate.server.api.AuthenticateSteamRequest
+	(*AddFriendsRequest)(nil),                        // 33: ultimate.server.api.AddFriendsRequest
+	(*DeleteFriendsRequest)(nil),                     // 34: ultimate.server.api.DeleteFriendsRequest
+	(*BlockFriendsRequest)(nil),                      // 35: ultimate.server.api.BlockFriendsRequest
+	(*ListFriendsRequest)(nil),                       // 36: ultimate.server.api.ListFriendsRequest
+	(*ListFriendsOfFriendsRequest)(nil),              // 37: ultimate.server.api.ListFriendsOfFriendsRequest
+	(*Friend)(nil),                                   // 38: ultimate.server.api.Friend
+	(*FriendList)(nil),                               // 39: ultimate.server.api.FriendList
+	(*FriendsOfFriendsList)(nil),                     // 40: ultimate.server.api.FriendsOfFriendsList
+	(*ImportFacebookFriendsRequest)(nil),             // 41: ultimate.server.api.ImportFacebookFriendsRequest
+	(*ImportSteamFriendsRequest)(nil),                // 42: ultimate.server.api.ImportSteamFriendsRequest
+	(*LinkFacebookRequest)(nil),                      // 43: ultimate.server.api.LinkFacebookRequest
+	(*LinkSteamRequest)(nil),                         // 44: ultimate.server.api.LinkSteamRequest
+	(*CreateGroupRequest)(nil),                       // 45: ultimate.server.api.CreateGroupRequest
+	(*Group)(nil),                                    // 46: ultimate.server.api.Group
+	(*GroupList)(nil),                                // 47: ultimate.server.api.GroupList
+	(*UpdateGroupRequest)(nil),                       // 48: ultimate.server.api.UpdateGroupRequest
+	(*DeleteGroupRequest)(nil),                       // 49: ultimate.server.api.DeleteGroupRequest
+	(*ListGroupsRequest)(nil),                        // 50: ultimate.server.api.ListGroupsRequest
+	(*JoinGroupRequest)(nil),                         // 51: ultimate.server.api.JoinGroupRequest
+	(*LeaveGroupRequest)(nil),                        // 52: ultimate.server.api.LeaveGroupRequest
+	(*AddGroupUsersRequest)(nil),                     // 53: ultimate.server.api.AddGroupUsersRequest
+	(*KickGroupUsersRequest)(nil),                    // 54: ultimate.server.api.KickGroupUsersRequest
+	(*PromoteGroupUsersRequest)(nil),                 // 55: ultimate.server.api.PromoteGroupUsersRequest
+	(*DemoteGroupUsersRequest)(nil),                  // 56: ultimate.server.api.DemoteGroupUsersRequest
+	(*BanGroupUsersRequest)(nil),                     // 57: ultimate.server.api.BanGroupUsersRequest
+	(*GroupUserList)(nil),                            // 58: ultimate.server.api.GroupUserList
+	(*UserGroupList)(nil),                            // 59: ultimate.server.api.UserGroupList
+	(*ListGroupUsersRequest)(nil),                    // 60: ultimate.server.api.ListGroupUsersRequest
+	(*ListUserGroupsRequest)(nil),                    // 61: ultimate.server.api.ListUserGroupsRequest
+	(*Leaderboard)(nil),                              // 62: ultimate.server.api.Leaderboard
+	(*LeaderboardList)(nil),                          // 63: ultimate.server.api.LeaderboardList
+	(*LeaderboardRecord)(nil),                        // 64: ultimate.server.api.LeaderboardRecord
+	(*LeaderboardRecordList)(nil),                    // 65: ultimate.server.api.LeaderboardRecordList
+	(*WriteLeaderboardRecordRequest)(nil),            // 66: ultimate.server.api.WriteLeaderboardRecordRequest
+	(*ListLeaderboardRecordsRequest)(nil),            // 67: ultimate.server.api.ListLeaderboardRecordsRequest
+	(*ListLeaderboardRecordsAroundOwnerRequest)(nil), // 68: ultimate.server.api.ListLeaderboardRecordsAroundOwnerRequest
+	(*DeleteLeaderboardRecordRequest)(nil),           // 69: ultimate.server.api.DeleteLeaderboardRecordRequest
+	(*Tournament)(nil),                               // 70: ultimate.server.api.Tournament
+	(*TournamentList)(nil),                           // 71: ultimate.server.api.TournamentList
+	(*TournamentRecordList)(nil),                     // 72: ultimate.server.api.TournamentRecordList
+	(*WriteTournamentRecordRequest)(nil),             // 73: ultimate.server.api.WriteTournamentRecordRequest
+	(*JoinTournamentRequest)(nil),                    // 74: ultimate.server.api.JoinTournamentRequest
+	(*ListTournamentsRequest)(nil),                   // 75: ultimate.server.api.ListTournamentsRequest
+	(*ListTournamentRecordsRequest)(nil),             // 76: ultimate.server.api.ListTournamentRecordsRequest
+	(*ListTournamentRecordsAroundOwnerRequest)(nil),  // 77: ultimate.server.api.ListTournamentRecordsAroundOwnerRequest
+	(*DeleteTournamentRecordRequest)(nil),            // 78: ultimate.server.api.DeleteTournamentRecordRequest
+	(*ChannelMessage)(nil),                           // 79: ultimate.server.api.ChannelMessage
+	(*ChannelMessageList)(nil),                       // 80: ultimate.server.api.ChannelMessageList
+	(*ListChannelMessagesRequest)(nil),               // 81: ultimate.server.api.ListChannelMessagesRequest
+	(*Notification)(nil),                             // 82: ultimate.server.api.Notification
+	(*NotificationList)(nil),                         // 83: ultimate.server.api.NotificationList
+	(*ListNotificationsRequest)(nil),                 // 84: ultimate.server.api.ListNotificationsRequest
+	(*DeleteNotificationsRequest)(nil),               // 85: ultimate.server.api.DeleteNotificationsRequest
+	(*Match)(nil),                                    // 86: ultimate.server.api.Match
+	(*MatchList)(nil),                                // 87: ultimate.server.api.MatchList
+	(*ListMatchesRequest)(nil),                       // 88: ultimate.server.api.ListMatchesRequest
+	(*ListPartiesRequest)(nil),                       // 89: ultimate.server.api.ListPartiesRequest
+	(*Party)(nil),                                    // 90: ultimate.server.api.Party
+	(*PartyList)(nil),                                // 91: ultimate.server.api.PartyList
+	(*MatchmakerCompletionStats)(nil),                // 92: ultimate.server.api.MatchmakerCompletionStats
+	(*MatchmakerStats)(nil),                          // 93: ultimate.server.api.MatchmakerStats
+	(*Event)(nil),                                    // 94: ultimate.server.api.Event
+	(*ReadStorageObjectId)(nil),                      // 95: ultimate.server.api.ReadStorageObjectId
+	(*ReadStorageObjectsRequest)(nil),                // 96: ultimate.server.api.ReadStorageObjectsRequest
+	(*StorageObject)(nil),                            // 97: ultimate.server.api.StorageObject
+	(*StorageObjects)(nil),                           // 98: ultimate.server.api.StorageObjects
+	(*StorageObjectList)(nil),                        // 99: ultimate.server.api.StorageObjectList
+	(*ListStorageObjectsRequest)(nil),                // 100: ultimate.server.api.ListStorageObjectsRequest
+	(*WriteStorageObject)(nil),                       // 101: ultimate.server.api.WriteStorageObject
+	(*WriteStorageObjectsRequest)(nil),               // 102: ultimate.server.api.WriteStorageObjectsRequest
+	(*StorageObjectAck)(nil),                         // 103: ultimate.server.api.StorageObjectAck
+	(*StorageObjectAcks)(nil),                        // 104: ultimate.server.api.StorageObjectAcks
+	(*DeleteStorageObjectId)(nil),                    // 105: ultimate.server.api.DeleteStorageObjectId
+	(*DeleteStorageObjectsRequest)(nil),              // 106: ultimate.server.api.DeleteStorageObjectsRequest
+	(*Rpc)(nil),                                      // 107: ultimate.server.api.Rpc
+	(*ValidatePurchaseAppleRequest)(nil),             // 108: ultimate.server.api.ValidatePurchaseAppleRequest
+	(*ValidatePurchaseGoogleRequest)(nil),            // 109: ultimate.server.api.ValidatePurchaseGoogleRequest
+	(*ValidatePurchaseHuaweiRequest)(nil),            // 110: ultimate.server.api.ValidatePurchaseHuaweiRequest
+	(*ValidatePurchaseFacebookInstantRequest)(nil),   // 111: ultimate.server.api.ValidatePurchaseFacebookInstantRequest
+	(*ValidatePurchaseSamsungRequest)(nil),           // 112: ultimate.server.api.ValidatePurchaseSamsungRequest
+	(*ValidateSubscriptionAppleRequest)(nil),         // 113: ultimate.server.api.ValidateSubscriptionAppleRequest
+	(*ValidateSubscriptionGoogleRequest)(nil),        // 114: ultimate.server.api.ValidateSubscriptionGoogleRequest
+	(*ValidatedPurchase)(nil),                        // 115: ultimate.server.api.ValidatedPurchase
+	(*ValidatePurchaseResponse)(nil),                 // 116: ultimate.server.api.ValidatePurchaseResponse
+	(*ValidateSubscriptionResponse)(nil),             // 117: ultimate.server.api.ValidateSubscriptionResponse
+	(*ValidatedSubscription)(nil),                    // 118: ultimate.server.api.ValidatedSubscription
+	(*PurchaseList)(nil),                             // 119: ultimate.server.api.PurchaseList
+	(*SubscriptionList)(nil),                         // 120: ultimate.server.api.SubscriptionList
+	(*ListSubscriptionsRequest)(nil),                 // 121: ultimate.server.api.ListSubscriptionsRequest
+	(*GetSubscriptionRequest)(nil),                   // 122: ultimate.server.api.GetSubscriptionRequest
+	nil,                                              // 123: ultimate.server.api.AccountApple.VarsEntry
+	nil,                                              // 124: ultimate.server.api.AccountCustom.VarsEntry
+	nil,                                              // 125: ultimate.server.api.AccountDevice.VarsEntry
+	nil,                                              // 126: ultimate.server.api.AccountEmail.VarsEntry
+	nil,                                              // 127: ultimate.server.api.AccountFacebook.VarsEntry
+	nil,                                              // 128: ultimate.server.api.AccountFacebookInstantGame.VarsEntry
+	nil,                                              // 129: ultimate.server.api.AccountGameCenter.VarsEntry
+	nil,                                              // 130: ultimate.server.api.AccountGoogle.VarsEntry
+	nil,                                              // 131: ultimate.server.api.AccountSteam.VarsEntry
+	nil,                                              // 132: ultimate.server.api.AccountRefresh.VarsEntry
+	nil,                                              // 133: ultimate.server.api.SessionRefreshRequest.VarsEntry
+	(*FriendsOfFriendsList_FriendOfFriend)(nil),      // 134: ultimate.server.api.FriendsOfFriendsList.FriendOfFriend
+	(*GroupUserList_GroupUser)(nil),                  // 135: ultimate.server.api.GroupUserList.GroupUser
+	(*UserGroupList_UserGroup)(nil),                  // 136: ultimate.server.api.UserGroupList.UserGroup
+	(*WriteLeaderboardRecordRequest_LeaderboardRecordWrite)(nil), // 137: ultimate.server.api.WriteLeaderboardRecordRequest.LeaderboardRecordWrite
+	(*WriteTournamentRecordRequest_TournamentRecordWrite)(nil),   // 138: ultimate.server.api.WriteTournamentRecordRequest.TournamentRecordWrite
+	nil,                            // 139: ultimate.server.api.Event.PropertiesEntry
+	(*timestamppb.Timestamp)(nil),  // 140: google.protobuf.Timestamp
+	(*wrapperspb.StringValue)(nil), // 141: google.protobuf.StringValue
+	(*wrapperspb.BoolValue)(nil),   // 142: google.protobuf.BoolValue
+	(*wrapperspb.Int32Value)(nil),  // 143: google.protobuf.Int32Value
+	(*wrapperspb.Int64Value)(nil),  // 144: google.protobuf.Int64Value
+	(*wrapperspb.UInt32Value)(nil), // 145: google.protobuf.UInt32Value
+	(*emptypb.Empty)(nil),          // 146: google.protobuf.Empty
 }
 var file_api_api_proto_depIdxs = []int32{
-	121, // 0: ultimate.server.api.User.create_time:type_name -> google.protobuf.Timestamp
-	121, // 1: ultimate.server.api.User.update_time:type_name -> google.protobuf.Timestamp
-	1,   // 2: ultimate.server.api.Account.user:type_name -> ultimate.server.api.User
-	14,  // 3: ultimate.server.api.Account.devices:type_name -> ultimate.server.api.Device
-	121, // 4: ultimate.server.api.Account.verify_time:type_name -> google.protobuf.Timestamp
-	121, // 5: ultimate.server.api.Leaderboard.create_time:type_name -> google.protobuf.Timestamp
-	20,  // 6: ultimate.server.api.LeaderboardList.leaderboards:type_name -> ultimate.server.api.Leaderboard
-	0,   // 7: ultimate.server.api.WriteLeaderboardRecordRequest.override_operator:type_name -> ultimate.server.api.Operator
-	121, // 8: ultimate.server.api.LeaderboardRecord.create_time:type_name -> google.protobuf.Timestamp
-	121, // 9: ultimate.server.api.LeaderboardRecord.update_time:type_name -> google.protobuf.Timestamp
-	121, // 10: ultimate.server.api.LeaderboardRecord.expiry_time:type_name -> google.protobuf.Timestamp
-	24,  // 11: ultimate.server.api.LeaderboardRecordList.records:type_name -> ultimate.server.api.LeaderboardRecord
-	24,  // 12: ultimate.server.api.LeaderboardRecordList.owner_records:type_name -> ultimate.server.api.LeaderboardRecord
-	121, // 13: ultimate.server.api.CreateTournamentRequest.end_time:type_name -> google.protobuf.Timestamp
-	121, // 14: ultimate.server.api.CreateTournamentRequest.start_time:type_name -> google.protobuf.Timestamp
-	121, // 15: ultimate.server.api.ListTournamentsRequest.start_time:type_name -> google.protobuf.Timestamp
-	121, // 16: ultimate.server.api.ListTournamentsRequest.end_time:type_name -> google.protobuf.Timestamp
-	121, // 17: ultimate.server.api.Tournament.end_time:type_name -> google.protobuf.Timestamp
-	121, // 18: ultimate.server.api.Tournament.start_time:type_name -> google.protobuf.Timestamp
-	33,  // 19: ultimate.server.api.TournamentList.tournaments:type_name -> ultimate.server.api.Tournament
-	0,   // 20: ultimate.server.api.WriteTournamentRecordRequest.override_operator:type_name -> ultimate.server.api.Operator
-	1,   // 21: ultimate.server.api.Friend.user:type_name -> ultimate.server.api.User
-	121, // 22: ultimate.server.api.Friend.update_time:type_name -> google.protobuf.Timestamp
-	42,  // 23: ultimate.server.api.FriendList.friends:type_name -> ultimate.server.api.Friend
-	1,   // 24: ultimate.server.api.FriendOfFriend.user:type_name -> ultimate.server.api.User
-	44,  // 25: ultimate.server.api.FriendsOfFriendsList.friends_of_friends:type_name -> ultimate.server.api.FriendOfFriend
-	121, // 26: ultimate.server.api.Group.create_time:type_name -> google.protobuf.Timestamp
-	121, // 27: ultimate.server.api.Group.update_time:type_name -> google.protobuf.Timestamp
-	52,  // 28: ultimate.server.api.GroupList.groups:type_name -> ultimate.server.api.Group
-	1,   // 29: ultimate.server.api.GroupUser.user:type_name -> ultimate.server.api.User
-	64,  // 30: ultimate.server.api.GroupUserList.group_users:type_name -> ultimate.server.api.GroupUser
-	52,  // 31: ultimate.server.api.UserGroup.group:type_name -> ultimate.server.api.Group
-	66,  // 32: ultimate.server.api.UserGroupList.user_groups:type_name -> ultimate.server.api.UserGroup
-	117, // 33: ultimate.server.api.AddMatchmakerRequest.string_properties:type_name -> ultimate.server.api.AddMatchmakerRequest.StringPropertiesEntry
-	118, // 34: ultimate.server.api.AddMatchmakerRequest.numeric_properties:type_name -> ultimate.server.api.AddMatchmakerRequest.NumericPropertiesEntry
-	119, // 35: ultimate.server.api.CreateMatchRequest.params:type_name -> ultimate.server.api.CreateMatchRequest.ParamsEntry
-	80,  // 36: ultimate.server.api.Match.presences:type_name -> ultimate.server.api.MatchPresence
-	81,  // 37: ultimate.server.api.MatchList.matches:type_name -> ultimate.server.api.Match
-	86,  // 38: ultimate.server.api.PartyList.parties:type_name -> ultimate.server.api.Party
-	121, // 39: ultimate.server.api.ChannelMessage.create_time:type_name -> google.protobuf.Timestamp
-	121, // 40: ultimate.server.api.ChannelMessage.update_time:type_name -> google.protobuf.Timestamp
-	89,  // 41: ultimate.server.api.ChannelMessageList.messages:type_name -> ultimate.server.api.ChannelMessage
-	121, // 42: ultimate.server.api.ApiNotification.create_time:type_name -> google.protobuf.Timestamp
-	92,  // 43: ultimate.server.api.NotificationList.notifications:type_name -> ultimate.server.api.ApiNotification
-	121, // 44: ultimate.server.api.WalletLedgerItem.create_time:type_name -> google.protobuf.Timestamp
-	121, // 45: ultimate.server.api.WalletLedgerItem.update_time:type_name -> google.protobuf.Timestamp
-	97,  // 46: ultimate.server.api.WalletLedgerList.items:type_name -> ultimate.server.api.WalletLedgerItem
-	121, // 47: ultimate.server.api.ValidatedPurchase.purchase_time:type_name -> google.protobuf.Timestamp
-	121, // 48: ultimate.server.api.ValidatedPurchase.create_time:type_name -> google.protobuf.Timestamp
-	121, // 49: ultimate.server.api.ValidatedPurchase.update_time:type_name -> google.protobuf.Timestamp
-	121, // 50: ultimate.server.api.ValidatedPurchase.refund_time:type_name -> google.protobuf.Timestamp
-	104, // 51: ultimate.server.api.ValidatePurchaseResponse.validated_purchases:type_name -> ultimate.server.api.ValidatedPurchase
-	109, // 52: ultimate.server.api.ValidateSubscriptionResponse.validated_subscription:type_name -> ultimate.server.api.ValidatedSubscription
-	121, // 53: ultimate.server.api.ValidatedSubscription.purchase_time:type_name -> google.protobuf.Timestamp
-	121, // 54: ultimate.server.api.ValidatedSubscription.expire_time:type_name -> google.protobuf.Timestamp
-	121, // 55: ultimate.server.api.ValidatedSubscription.create_time:type_name -> google.protobuf.Timestamp
-	121, // 56: ultimate.server.api.ValidatedSubscription.update_time:type_name -> google.protobuf.Timestamp
-	121, // 57: ultimate.server.api.ValidatedSubscription.refund_time:type_name -> google.protobuf.Timestamp
-	109, // 58: ultimate.server.api.SubscriptionList.validated_subscriptions:type_name -> ultimate.server.api.ValidatedSubscription
-	1,   // 59: ultimate.server.api.Users.users:type_name -> ultimate.server.api.User
-	120, // 60: ultimate.server.api.ClientEvent.properties:type_name -> ultimate.server.api.ClientEvent.PropertiesEntry
-	2,   // 61: ultimate.server.api.AuthenticationService.AuthenticateEmail:input_type -> ultimate.server.api.AuthenticateEmailRequest
-	3,   // 62: ultimate.server.api.AuthenticationService.AuthenticateDevice:input_type -> ultimate.server.api.AuthenticateDeviceRequest
-	4,   // 63: ultimate.server.api.AuthenticationService.AuthenticateApple:input_type -> ultimate.server.api.AuthenticateAppleRequest
-	5,   // 64: ultimate.server.api.AuthenticationService.AuthenticateGoogle:input_type -> ultimate.server.api.AuthenticateGoogleRequest
-	6,   // 65: ultimate.server.api.AuthenticationService.AuthenticateFacebook:input_type -> ultimate.server.api.AuthenticateFacebookRequest
-	7,   // 66: ultimate.server.api.AuthenticationService.AuthenticateSteam:input_type -> ultimate.server.api.AuthenticateSteamRequest
-	8,   // 67: ultimate.server.api.AuthenticationService.AuthenticateGameCenter:input_type -> ultimate.server.api.AuthenticateGameCenterRequest
-	9,   // 68: ultimate.server.api.AuthenticationService.AuthenticateFacebookInstantGame:input_type -> ultimate.server.api.AuthenticateFacebookInstantGameRequest
-	10,  // 69: ultimate.server.api.AuthenticationService.AuthenticateCustom:input_type -> ultimate.server.api.AuthenticateCustomRequest
-	11,  // 70: ultimate.server.api.AuthenticationService.SessionRefresh:input_type -> ultimate.server.api.SessionRefreshRequest
-	12,  // 71: ultimate.server.api.AuthenticationService.SessionLogout:input_type -> ultimate.server.api.SessionLogoutRequest
-	122, // 72: ultimate.server.api.AuthenticationService.GetAccount:input_type -> google.protobuf.Empty
-	16,  // 73: ultimate.server.api.AuthenticationService.UpdateAccount:input_type -> ultimate.server.api.UpdateAccountRequest
-	122, // 74: ultimate.server.api.AuthenticationService.DeleteAccount:input_type -> google.protobuf.Empty
-	2,   // 75: ultimate.server.api.AuthenticationService.LinkEmail:input_type -> ultimate.server.api.AuthenticateEmailRequest
-	3,   // 76: ultimate.server.api.AuthenticationService.LinkDevice:input_type -> ultimate.server.api.AuthenticateDeviceRequest
-	4,   // 77: ultimate.server.api.AuthenticationService.LinkApple:input_type -> ultimate.server.api.AuthenticateAppleRequest
-	5,   // 78: ultimate.server.api.AuthenticationService.LinkGoogle:input_type -> ultimate.server.api.AuthenticateGoogleRequest
-	6,   // 79: ultimate.server.api.AuthenticationService.LinkFacebook:input_type -> ultimate.server.api.AuthenticateFacebookRequest
-	7,   // 80: ultimate.server.api.AuthenticationService.LinkSteam:input_type -> ultimate.server.api.AuthenticateSteamRequest
-	10,  // 81: ultimate.server.api.AuthenticationService.LinkCustom:input_type -> ultimate.server.api.AuthenticateCustomRequest
-	8,   // 82: ultimate.server.api.AuthenticationService.LinkGameCenter:input_type -> ultimate.server.api.AuthenticateGameCenterRequest
-	9,   // 83: ultimate.server.api.AuthenticationService.LinkFacebookInstantGame:input_type -> ultimate.server.api.AuthenticateFacebookInstantGameRequest
-	17,  // 84: ultimate.server.api.AuthenticationService.UnlinkEmail:input_type -> ultimate.server.api.UnlinkRequest
-	17,  // 85: ultimate.server.api.AuthenticationService.UnlinkDevice:input_type -> ultimate.server.api.UnlinkRequest
-	17,  // 86: ultimate.server.api.AuthenticationService.UnlinkApple:input_type -> ultimate.server.api.UnlinkRequest
-	17,  // 87: ultimate.server.api.AuthenticationService.UnlinkGoogle:input_type -> ultimate.server.api.UnlinkRequest
-	17,  // 88: ultimate.server.api.AuthenticationService.UnlinkFacebook:input_type -> ultimate.server.api.UnlinkRequest
-	17,  // 89: ultimate.server.api.AuthenticationService.UnlinkSteam:input_type -> ultimate.server.api.UnlinkRequest
-	17,  // 90: ultimate.server.api.AuthenticationService.UnlinkCustom:input_type -> ultimate.server.api.UnlinkRequest
-	17,  // 91: ultimate.server.api.AuthenticationService.UnlinkGameCenter:input_type -> ultimate.server.api.UnlinkRequest
-	17,  // 92: ultimate.server.api.AuthenticationService.UnlinkFacebookInstantGame:input_type -> ultimate.server.api.UnlinkRequest
-	18,  // 93: ultimate.server.api.LeaderboardService.CreateLeaderboard:input_type -> ultimate.server.api.CreateLeaderboardRequest
-	22,  // 94: ultimate.server.api.LeaderboardService.DeleteLeaderboard:input_type -> ultimate.server.api.DeleteLeaderboardRequest
-	19,  // 95: ultimate.server.api.LeaderboardService.ListLeaderboards:input_type -> ultimate.server.api.ListLeaderboardsRequest
-	23,  // 96: ultimate.server.api.LeaderboardService.WriteLeaderboardRecord:input_type -> ultimate.server.api.WriteLeaderboardRecordRequest
-	25,  // 97: ultimate.server.api.LeaderboardService.ListLeaderboardRecords:input_type -> ultimate.server.api.ListLeaderboardRecordsRequest
-	26,  // 98: ultimate.server.api.LeaderboardService.ListLeaderboardRecordsAroundOwner:input_type -> ultimate.server.api.ListLeaderboardRecordsAroundOwnerRequest
-	28,  // 99: ultimate.server.api.LeaderboardService.DeleteLeaderboardRecord:input_type -> ultimate.server.api.DeleteLeaderboardRecordRequest
-	29,  // 100: ultimate.server.api.TournamentService.CreateTournament:input_type -> ultimate.server.api.CreateTournamentRequest
-	30,  // 101: ultimate.server.api.TournamentService.DeleteTournament:input_type -> ultimate.server.api.DeleteTournamentRequest
-	31,  // 102: ultimate.server.api.TournamentService.JoinTournament:input_type -> ultimate.server.api.JoinTournamentRequest
-	32,  // 103: ultimate.server.api.TournamentService.ListTournaments:input_type -> ultimate.server.api.ListTournamentsRequest
-	35,  // 104: ultimate.server.api.TournamentService.WriteTournamentRecord:input_type -> ultimate.server.api.WriteTournamentRecordRequest
-	36,  // 105: ultimate.server.api.TournamentService.ListTournamentRecords:input_type -> ultimate.server.api.ListTournamentRecordsRequest
-	37,  // 106: ultimate.server.api.TournamentService.ListTournamentRecordsAroundOwner:input_type -> ultimate.server.api.ListTournamentRecordsAroundOwnerRequest
-	38,  // 107: ultimate.server.api.TournamentService.DeleteTournamentRecord:input_type -> ultimate.server.api.DeleteTournamentRecordRequest
-	39,  // 108: ultimate.server.api.FriendsService.AddFriends:input_type -> ultimate.server.api.AddFriendsRequest
-	40,  // 109: ultimate.server.api.FriendsService.ListFriends:input_type -> ultimate.server.api.ListFriendsRequest
-	41,  // 110: ultimate.server.api.FriendsService.ListFriendsOfFriends:input_type -> ultimate.server.api.ListFriendsOfFriendsRequest
-	46,  // 111: ultimate.server.api.FriendsService.DeleteFriends:input_type -> ultimate.server.api.DeleteFriendsRequest
-	47,  // 112: ultimate.server.api.FriendsService.BlockFriends:input_type -> ultimate.server.api.BlockFriendsRequest
-	48,  // 113: ultimate.server.api.FriendsService.UnblockFriends:input_type -> ultimate.server.api.UnblockFriendsRequest
-	49,  // 114: ultimate.server.api.FriendsService.ImportFacebookFriends:input_type -> ultimate.server.api.ImportFacebookFriendsRequest
-	50,  // 115: ultimate.server.api.FriendsService.ImportSteamFriends:input_type -> ultimate.server.api.ImportSteamFriendsRequest
-	51,  // 116: ultimate.server.api.GroupService.CreateGroup:input_type -> ultimate.server.api.CreateGroupRequest
-	53,  // 117: ultimate.server.api.GroupService.UpdateGroup:input_type -> ultimate.server.api.UpdateGroupRequest
-	54,  // 118: ultimate.server.api.GroupService.DeleteGroup:input_type -> ultimate.server.api.DeleteGroupRequest
-	55,  // 119: ultimate.server.api.GroupService.ListGroups:input_type -> ultimate.server.api.ListGroupsRequest
-	57,  // 120: ultimate.server.api.GroupService.JoinGroup:input_type -> ultimate.server.api.JoinGroupRequest
-	58,  // 121: ultimate.server.api.GroupService.LeaveGroup:input_type -> ultimate.server.api.LeaveGroupRequest
-	59,  // 122: ultimate.server.api.GroupService.AddGroupUsers:input_type -> ultimate.server.api.AddGroupUsersRequest
-	60,  // 123: ultimate.server.api.GroupService.KickGroupUsers:input_type -> ultimate.server.api.KickGroupUsersRequest
-	61,  // 124: ultimate.server.api.GroupService.PromoteGroupUsers:input_type -> ultimate.server.api.PromoteGroupUsersRequest
-	62,  // 125: ultimate.server.api.GroupService.DemoteGroupUsers:input_type -> ultimate.server.api.DemoteGroupUsersRequest
-	63,  // 126: ultimate.server.api.GroupService.BanGroupUsers:input_type -> ultimate.server.api.BanGroupUsersRequest
-	68,  // 127: ultimate.server.api.GroupService.ListGroupUsers:input_type -> ultimate.server.api.ListGroupUsersRequest
-	69,  // 128: ultimate.server.api.GroupService.ListUserGroups:input_type -> ultimate.server.api.ListUserGroupsRequest
-	70,  // 129: ultimate.server.api.MatchmakerService.AddMatchmaker:input_type -> ultimate.server.api.AddMatchmakerRequest
-	72,  // 130: ultimate.server.api.MatchmakerService.RemoveMatchmaker:input_type -> ultimate.server.api.RemoveMatchmakerRequest
-	73,  // 131: ultimate.server.api.MatchmakerService.GetMatchmakerTicket:input_type -> ultimate.server.api.GetMatchmakerTicketRequest
-	74,  // 132: ultimate.server.api.MatchmakerService.GetQueueStats:input_type -> ultimate.server.api.GetQueueStatsRequest
-	122, // 133: ultimate.server.api.MatchmakerService.GetMatchmakerStats:input_type -> google.protobuf.Empty
-	77,  // 134: ultimate.server.api.RealtimeService.CreateMatch:input_type -> ultimate.server.api.CreateMatchRequest
-	78,  // 135: ultimate.server.api.RealtimeService.ListMatches:input_type -> ultimate.server.api.ListMatchesRequest
-	79,  // 136: ultimate.server.api.RealtimeService.GetMatch:input_type -> ultimate.server.api.GetMatchRequest
-	83,  // 137: ultimate.server.api.RealtimeService.MatchSignal:input_type -> ultimate.server.api.MatchSignalRequest
-	85,  // 138: ultimate.server.api.PartyService.ListParties:input_type -> ultimate.server.api.ListPartiesRequest
-	88,  // 139: ultimate.server.api.ChatService.ListChannelMessages:input_type -> ultimate.server.api.ListChannelMessagesRequest
-	91,  // 140: ultimate.server.api.NotificationService.ListNotifications:input_type -> ultimate.server.api.ListNotificationsRequest
-	94,  // 141: ultimate.server.api.NotificationService.DeleteNotifications:input_type -> ultimate.server.api.DeleteNotificationsRequest
-	122, // 142: ultimate.server.api.EconomyService.GetWallet:input_type -> google.protobuf.Empty
-	96,  // 143: ultimate.server.api.EconomyService.ListWalletLedger:input_type -> ultimate.server.api.ListWalletLedgerRequest
-	99,  // 144: ultimate.server.api.IAPService.ValidatePurchaseApple:input_type -> ultimate.server.api.ValidatePurchaseAppleRequest
-	100, // 145: ultimate.server.api.IAPService.ValidatePurchaseGoogle:input_type -> ultimate.server.api.ValidatePurchaseGoogleRequest
-	101, // 146: ultimate.server.api.IAPService.ValidatePurchaseHuawei:input_type -> ultimate.server.api.ValidatePurchaseHuaweiRequest
-	102, // 147: ultimate.server.api.IAPService.ValidatePurchaseFacebookInstant:input_type -> ultimate.server.api.ValidatePurchaseFacebookInstantRequest
-	103, // 148: ultimate.server.api.IAPService.ValidatePurchaseSamsung:input_type -> ultimate.server.api.ValidatePurchaseSamsungRequest
-	106, // 149: ultimate.server.api.IAPService.ValidateSubscriptionApple:input_type -> ultimate.server.api.ValidateSubscriptionAppleRequest
-	107, // 150: ultimate.server.api.IAPService.ValidateSubscriptionGoogle:input_type -> ultimate.server.api.ValidateSubscriptionGoogleRequest
-	110, // 151: ultimate.server.api.IAPService.ListSubscriptions:input_type -> ultimate.server.api.ListSubscriptionsRequest
-	112, // 152: ultimate.server.api.IAPService.GetSubscription:input_type -> ultimate.server.api.GetSubscriptionRequest
-	113, // 153: ultimate.server.api.RpcService.RpcFunc:input_type -> ultimate.server.api.Rpc
-	114, // 154: ultimate.server.api.UserService.GetUsers:input_type -> ultimate.server.api.GetUsersRequest
-	116, // 155: ultimate.server.api.EventService.Event:input_type -> ultimate.server.api.ClientEvent
-	122, // 156: ultimate.server.api.SystemService.Healthcheck:input_type -> google.protobuf.Empty
-	13,  // 157: ultimate.server.api.AuthenticationService.AuthenticateEmail:output_type -> ultimate.server.api.Session
-	13,  // 158: ultimate.server.api.AuthenticationService.AuthenticateDevice:output_type -> ultimate.server.api.Session
-	13,  // 159: ultimate.server.api.AuthenticationService.AuthenticateApple:output_type -> ultimate.server.api.Session
-	13,  // 160: ultimate.server.api.AuthenticationService.AuthenticateGoogle:output_type -> ultimate.server.api.Session
-	13,  // 161: ultimate.server.api.AuthenticationService.AuthenticateFacebook:output_type -> ultimate.server.api.Session
-	13,  // 162: ultimate.server.api.AuthenticationService.AuthenticateSteam:output_type -> ultimate.server.api.Session
-	13,  // 163: ultimate.server.api.AuthenticationService.AuthenticateGameCenter:output_type -> ultimate.server.api.Session
-	13,  // 164: ultimate.server.api.AuthenticationService.AuthenticateFacebookInstantGame:output_type -> ultimate.server.api.Session
-	13,  // 165: ultimate.server.api.AuthenticationService.AuthenticateCustom:output_type -> ultimate.server.api.Session
-	13,  // 166: ultimate.server.api.AuthenticationService.SessionRefresh:output_type -> ultimate.server.api.Session
-	122, // 167: ultimate.server.api.AuthenticationService.SessionLogout:output_type -> google.protobuf.Empty
-	15,  // 168: ultimate.server.api.AuthenticationService.GetAccount:output_type -> ultimate.server.api.Account
-	122, // 169: ultimate.server.api.AuthenticationService.UpdateAccount:output_type -> google.protobuf.Empty
-	122, // 170: ultimate.server.api.AuthenticationService.DeleteAccount:output_type -> google.protobuf.Empty
-	122, // 171: ultimate.server.api.AuthenticationService.LinkEmail:output_type -> google.protobuf.Empty
-	122, // 172: ultimate.server.api.AuthenticationService.LinkDevice:output_type -> google.protobuf.Empty
-	122, // 173: ultimate.server.api.AuthenticationService.LinkApple:output_type -> google.protobuf.Empty
-	122, // 174: ultimate.server.api.AuthenticationService.LinkGoogle:output_type -> google.protobuf.Empty
-	122, // 175: ultimate.server.api.AuthenticationService.LinkFacebook:output_type -> google.protobuf.Empty
-	122, // 176: ultimate.server.api.AuthenticationService.LinkSteam:output_type -> google.protobuf.Empty
-	122, // 177: ultimate.server.api.AuthenticationService.LinkCustom:output_type -> google.protobuf.Empty
-	122, // 178: ultimate.server.api.AuthenticationService.LinkGameCenter:output_type -> google.protobuf.Empty
-	122, // 179: ultimate.server.api.AuthenticationService.LinkFacebookInstantGame:output_type -> google.protobuf.Empty
-	122, // 180: ultimate.server.api.AuthenticationService.UnlinkEmail:output_type -> google.protobuf.Empty
-	122, // 181: ultimate.server.api.AuthenticationService.UnlinkDevice:output_type -> google.protobuf.Empty
-	122, // 182: ultimate.server.api.AuthenticationService.UnlinkApple:output_type -> google.protobuf.Empty
-	122, // 183: ultimate.server.api.AuthenticationService.UnlinkGoogle:output_type -> google.protobuf.Empty
-	122, // 184: ultimate.server.api.AuthenticationService.UnlinkFacebook:output_type -> google.protobuf.Empty
-	122, // 185: ultimate.server.api.AuthenticationService.UnlinkSteam:output_type -> google.protobuf.Empty
-	122, // 186: ultimate.server.api.AuthenticationService.UnlinkCustom:output_type -> google.protobuf.Empty
-	122, // 187: ultimate.server.api.AuthenticationService.UnlinkGameCenter:output_type -> google.protobuf.Empty
-	122, // 188: ultimate.server.api.AuthenticationService.UnlinkFacebookInstantGame:output_type -> google.protobuf.Empty
-	122, // 189: ultimate.server.api.LeaderboardService.CreateLeaderboard:output_type -> google.protobuf.Empty
-	122, // 190: ultimate.server.api.LeaderboardService.DeleteLeaderboard:output_type -> google.protobuf.Empty
-	21,  // 191: ultimate.server.api.LeaderboardService.ListLeaderboards:output_type -> ultimate.server.api.LeaderboardList
-	24,  // 192: ultimate.server.api.LeaderboardService.WriteLeaderboardRecord:output_type -> ultimate.server.api.LeaderboardRecord
-	27,  // 193: ultimate.server.api.LeaderboardService.ListLeaderboardRecords:output_type -> ultimate.server.api.LeaderboardRecordList
-	27,  // 194: ultimate.server.api.LeaderboardService.ListLeaderboardRecordsAroundOwner:output_type -> ultimate.server.api.LeaderboardRecordList
-	122, // 195: ultimate.server.api.LeaderboardService.DeleteLeaderboardRecord:output_type -> google.protobuf.Empty
-	122, // 196: ultimate.server.api.TournamentService.CreateTournament:output_type -> google.protobuf.Empty
-	122, // 197: ultimate.server.api.TournamentService.DeleteTournament:output_type -> google.protobuf.Empty
-	122, // 198: ultimate.server.api.TournamentService.JoinTournament:output_type -> google.protobuf.Empty
-	34,  // 199: ultimate.server.api.TournamentService.ListTournaments:output_type -> ultimate.server.api.TournamentList
-	24,  // 200: ultimate.server.api.TournamentService.WriteTournamentRecord:output_type -> ultimate.server.api.LeaderboardRecord
-	27,  // 201: ultimate.server.api.TournamentService.ListTournamentRecords:output_type -> ultimate.server.api.LeaderboardRecordList
-	27,  // 202: ultimate.server.api.TournamentService.ListTournamentRecordsAroundOwner:output_type -> ultimate.server.api.LeaderboardRecordList
-	122, // 203: ultimate.server.api.TournamentService.DeleteTournamentRecord:output_type -> google.protobuf.Empty
-	122, // 204: ultimate.server.api.FriendsService.AddFriends:output_type -> google.protobuf.Empty
-	43,  // 205: ultimate.server.api.FriendsService.ListFriends:output_type -> ultimate.server.api.FriendList
-	45,  // 206: ultimate.server.api.FriendsService.ListFriendsOfFriends:output_type -> ultimate.server.api.FriendsOfFriendsList
-	122, // 207: ultimate.server.api.FriendsService.DeleteFriends:output_type -> google.protobuf.Empty
-	122, // 208: ultimate.server.api.FriendsService.BlockFriends:output_type -> google.protobuf.Empty
-	122, // 209: ultimate.server.api.FriendsService.UnblockFriends:output_type -> google.protobuf.Empty
-	122, // 210: ultimate.server.api.FriendsService.ImportFacebookFriends:output_type -> google.protobuf.Empty
-	122, // 211: ultimate.server.api.FriendsService.ImportSteamFriends:output_type -> google.protobuf.Empty
-	52,  // 212: ultimate.server.api.GroupService.CreateGroup:output_type -> ultimate.server.api.Group
-	122, // 213: ultimate.server.api.GroupService.UpdateGroup:output_type -> google.protobuf.Empty
-	122, // 214: ultimate.server.api.GroupService.DeleteGroup:output_type -> google.protobuf.Empty
-	56,  // 215: ultimate.server.api.GroupService.ListGroups:output_type -> ultimate.server.api.GroupList
-	122, // 216: ultimate.server.api.GroupService.JoinGroup:output_type -> google.protobuf.Empty
-	122, // 217: ultimate.server.api.GroupService.LeaveGroup:output_type -> google.protobuf.Empty
-	122, // 218: ultimate.server.api.GroupService.AddGroupUsers:output_type -> google.protobuf.Empty
-	122, // 219: ultimate.server.api.GroupService.KickGroupUsers:output_type -> google.protobuf.Empty
-	122, // 220: ultimate.server.api.GroupService.PromoteGroupUsers:output_type -> google.protobuf.Empty
-	122, // 221: ultimate.server.api.GroupService.DemoteGroupUsers:output_type -> google.protobuf.Empty
-	122, // 222: ultimate.server.api.GroupService.BanGroupUsers:output_type -> google.protobuf.Empty
-	65,  // 223: ultimate.server.api.GroupService.ListGroupUsers:output_type -> ultimate.server.api.GroupUserList
-	67,  // 224: ultimate.server.api.GroupService.ListUserGroups:output_type -> ultimate.server.api.UserGroupList
-	71,  // 225: ultimate.server.api.MatchmakerService.AddMatchmaker:output_type -> ultimate.server.api.MatchmakerTicket
-	122, // 226: ultimate.server.api.MatchmakerService.RemoveMatchmaker:output_type -> google.protobuf.Empty
-	71,  // 227: ultimate.server.api.MatchmakerService.GetMatchmakerTicket:output_type -> ultimate.server.api.MatchmakerTicket
-	75,  // 228: ultimate.server.api.MatchmakerService.GetQueueStats:output_type -> ultimate.server.api.QueueStats
-	76,  // 229: ultimate.server.api.MatchmakerService.GetMatchmakerStats:output_type -> ultimate.server.api.MatchmakerStats
-	81,  // 230: ultimate.server.api.RealtimeService.CreateMatch:output_type -> ultimate.server.api.Match
-	82,  // 231: ultimate.server.api.RealtimeService.ListMatches:output_type -> ultimate.server.api.MatchList
-	81,  // 232: ultimate.server.api.RealtimeService.GetMatch:output_type -> ultimate.server.api.Match
-	84,  // 233: ultimate.server.api.RealtimeService.MatchSignal:output_type -> ultimate.server.api.MatchSignalResponse
-	87,  // 234: ultimate.server.api.PartyService.ListParties:output_type -> ultimate.server.api.PartyList
-	90,  // 235: ultimate.server.api.ChatService.ListChannelMessages:output_type -> ultimate.server.api.ChannelMessageList
-	93,  // 236: ultimate.server.api.NotificationService.ListNotifications:output_type -> ultimate.server.api.NotificationList
-	122, // 237: ultimate.server.api.NotificationService.DeleteNotifications:output_type -> google.protobuf.Empty
-	95,  // 238: ultimate.server.api.EconomyService.GetWallet:output_type -> ultimate.server.api.Wallet
-	98,  // 239: ultimate.server.api.EconomyService.ListWalletLedger:output_type -> ultimate.server.api.WalletLedgerList
-	105, // 240: ultimate.server.api.IAPService.ValidatePurchaseApple:output_type -> ultimate.server.api.ValidatePurchaseResponse
-	105, // 241: ultimate.server.api.IAPService.ValidatePurchaseGoogle:output_type -> ultimate.server.api.ValidatePurchaseResponse
-	105, // 242: ultimate.server.api.IAPService.ValidatePurchaseHuawei:output_type -> ultimate.server.api.ValidatePurchaseResponse
-	105, // 243: ultimate.server.api.IAPService.ValidatePurchaseFacebookInstant:output_type -> ultimate.server.api.ValidatePurchaseResponse
-	105, // 244: ultimate.server.api.IAPService.ValidatePurchaseSamsung:output_type -> ultimate.server.api.ValidatePurchaseResponse
-	108, // 245: ultimate.server.api.IAPService.ValidateSubscriptionApple:output_type -> ultimate.server.api.ValidateSubscriptionResponse
-	108, // 246: ultimate.server.api.IAPService.ValidateSubscriptionGoogle:output_type -> ultimate.server.api.ValidateSubscriptionResponse
-	111, // 247: ultimate.server.api.IAPService.ListSubscriptions:output_type -> ultimate.server.api.SubscriptionList
-	109, // 248: ultimate.server.api.IAPService.GetSubscription:output_type -> ultimate.server.api.ValidatedSubscription
-	113, // 249: ultimate.server.api.RpcService.RpcFunc:output_type -> ultimate.server.api.Rpc
-	115, // 250: ultimate.server.api.UserService.GetUsers:output_type -> ultimate.server.api.Users
-	122, // 251: ultimate.server.api.EventService.Event:output_type -> google.protobuf.Empty
-	122, // 252: ultimate.server.api.SystemService.Healthcheck:output_type -> google.protobuf.Empty
-	157, // [157:253] is the sub-list for method output_type
-	61,  // [61:157] is the sub-list for method input_type
-	61,  // [61:61] is the sub-list for extension type_name
-	61,  // [61:61] is the sub-list for extension extendee
-	0,   // [0:61] is the sub-list for field type_name
+	123, // 0: ultimate.server.api.AccountApple.vars:type_name -> ultimate.server.api.AccountApple.VarsEntry
+	124, // 1: ultimate.server.api.AccountCustom.vars:type_name -> ultimate.server.api.AccountCustom.VarsEntry
+	125, // 2: ultimate.server.api.AccountDevice.vars:type_name -> ultimate.server.api.AccountDevice.VarsEntry
+	126, // 3: ultimate.server.api.AccountEmail.vars:type_name -> ultimate.server.api.AccountEmail.VarsEntry
+	127, // 4: ultimate.server.api.AccountFacebook.vars:type_name -> ultimate.server.api.AccountFacebook.VarsEntry
+	128, // 5: ultimate.server.api.AccountFacebookInstantGame.vars:type_name -> ultimate.server.api.AccountFacebookInstantGame.VarsEntry
+	129, // 6: ultimate.server.api.AccountGameCenter.vars:type_name -> ultimate.server.api.AccountGameCenter.VarsEntry
+	130, // 7: ultimate.server.api.AccountGoogle.vars:type_name -> ultimate.server.api.AccountGoogle.VarsEntry
+	131, // 8: ultimate.server.api.AccountSteam.vars:type_name -> ultimate.server.api.AccountSteam.VarsEntry
+	132, // 9: ultimate.server.api.AccountRefresh.vars:type_name -> ultimate.server.api.AccountRefresh.VarsEntry
+	18,  // 10: ultimate.server.api.Account.user:type_name -> ultimate.server.api.User
+	8,   // 11: ultimate.server.api.Account.devices:type_name -> ultimate.server.api.AccountDevice
+	140, // 12: ultimate.server.api.Account.verify_time:type_name -> google.protobuf.Timestamp
+	140, // 13: ultimate.server.api.Account.disable_time:type_name -> google.protobuf.Timestamp
+	140, // 14: ultimate.server.api.User.create_time:type_name -> google.protobuf.Timestamp
+	140, // 15: ultimate.server.api.User.update_time:type_name -> google.protobuf.Timestamp
+	18,  // 16: ultimate.server.api.Users.users:type_name -> ultimate.server.api.User
+	141, // 17: ultimate.server.api.UpdateAccountRequest.username:type_name -> google.protobuf.StringValue
+	141, // 18: ultimate.server.api.UpdateAccountRequest.display_name:type_name -> google.protobuf.StringValue
+	141, // 19: ultimate.server.api.UpdateAccountRequest.avatar_url:type_name -> google.protobuf.StringValue
+	141, // 20: ultimate.server.api.UpdateAccountRequest.lang_tag:type_name -> google.protobuf.StringValue
+	141, // 21: ultimate.server.api.UpdateAccountRequest.location:type_name -> google.protobuf.StringValue
+	141, // 22: ultimate.server.api.UpdateAccountRequest.timezone:type_name -> google.protobuf.StringValue
+	133, // 23: ultimate.server.api.SessionRefreshRequest.vars:type_name -> ultimate.server.api.SessionRefreshRequest.VarsEntry
+	6,   // 24: ultimate.server.api.AuthenticateAppleRequest.account:type_name -> ultimate.server.api.AccountApple
+	142, // 25: ultimate.server.api.AuthenticateAppleRequest.create:type_name -> google.protobuf.BoolValue
+	7,   // 26: ultimate.server.api.AuthenticateCustomRequest.account:type_name -> ultimate.server.api.AccountCustom
+	142, // 27: ultimate.server.api.AuthenticateCustomRequest.create:type_name -> google.protobuf.BoolValue
+	8,   // 28: ultimate.server.api.AuthenticateDeviceRequest.account:type_name -> ultimate.server.api.AccountDevice
+	142, // 29: ultimate.server.api.AuthenticateDeviceRequest.create:type_name -> google.protobuf.BoolValue
+	9,   // 30: ultimate.server.api.AuthenticateEmailRequest.account:type_name -> ultimate.server.api.AccountEmail
+	142, // 31: ultimate.server.api.AuthenticateEmailRequest.create:type_name -> google.protobuf.BoolValue
+	10,  // 32: ultimate.server.api.AuthenticateFacebookRequest.account:type_name -> ultimate.server.api.AccountFacebook
+	142, // 33: ultimate.server.api.AuthenticateFacebookRequest.create:type_name -> google.protobuf.BoolValue
+	142, // 34: ultimate.server.api.AuthenticateFacebookRequest.sync:type_name -> google.protobuf.BoolValue
+	11,  // 35: ultimate.server.api.AuthenticateFacebookInstantGameRequest.account:type_name -> ultimate.server.api.AccountFacebookInstantGame
+	142, // 36: ultimate.server.api.AuthenticateFacebookInstantGameRequest.create:type_name -> google.protobuf.BoolValue
+	12,  // 37: ultimate.server.api.AuthenticateGameCenterRequest.account:type_name -> ultimate.server.api.AccountGameCenter
+	142, // 38: ultimate.server.api.AuthenticateGameCenterRequest.create:type_name -> google.protobuf.BoolValue
+	13,  // 39: ultimate.server.api.AuthenticateGoogleRequest.account:type_name -> ultimate.server.api.AccountGoogle
+	142, // 40: ultimate.server.api.AuthenticateGoogleRequest.create:type_name -> google.protobuf.BoolValue
+	14,  // 41: ultimate.server.api.AuthenticateSteamRequest.account:type_name -> ultimate.server.api.AccountSteam
+	142, // 42: ultimate.server.api.AuthenticateSteamRequest.create:type_name -> google.protobuf.BoolValue
+	142, // 43: ultimate.server.api.AuthenticateSteamRequest.sync:type_name -> google.protobuf.BoolValue
+	143, // 44: ultimate.server.api.ListFriendsRequest.limit:type_name -> google.protobuf.Int32Value
+	143, // 45: ultimate.server.api.ListFriendsRequest.state:type_name -> google.protobuf.Int32Value
+	143, // 46: ultimate.server.api.ListFriendsOfFriendsRequest.limit:type_name -> google.protobuf.Int32Value
+	18,  // 47: ultimate.server.api.Friend.user:type_name -> ultimate.server.api.User
+	143, // 48: ultimate.server.api.Friend.state:type_name -> google.protobuf.Int32Value
+	140, // 49: ultimate.server.api.Friend.update_time:type_name -> google.protobuf.Timestamp
+	38,  // 50: ultimate.server.api.FriendList.friends:type_name -> ultimate.server.api.Friend
+	134, // 51: ultimate.server.api.FriendsOfFriendsList.friends_of_friends:type_name -> ultimate.server.api.FriendsOfFriendsList.FriendOfFriend
+	10,  // 52: ultimate.server.api.ImportFacebookFriendsRequest.account:type_name -> ultimate.server.api.AccountFacebook
+	142, // 53: ultimate.server.api.ImportFacebookFriendsRequest.reset:type_name -> google.protobuf.BoolValue
+	14,  // 54: ultimate.server.api.ImportSteamFriendsRequest.account:type_name -> ultimate.server.api.AccountSteam
+	142, // 55: ultimate.server.api.ImportSteamFriendsRequest.reset:type_name -> google.protobuf.BoolValue
+	10,  // 56: ultimate.server.api.LinkFacebookRequest.account:type_name -> ultimate.server.api.AccountFacebook
+	142, // 57: ultimate.server.api.LinkFacebookRequest.sync:type_name -> google.protobuf.BoolValue
+	14,  // 58: ultimate.server.api.LinkSteamRequest.account:type_name -> ultimate.server.api.AccountSteam
+	142, // 59: ultimate.server.api.LinkSteamRequest.sync:type_name -> google.protobuf.BoolValue
+	142, // 60: ultimate.server.api.Group.open:type_name -> google.protobuf.BoolValue
+	140, // 61: ultimate.server.api.Group.create_time:type_name -> google.protobuf.Timestamp
+	140, // 62: ultimate.server.api.Group.update_time:type_name -> google.protobuf.Timestamp
+	46,  // 63: ultimate.server.api.GroupList.groups:type_name -> ultimate.server.api.Group
+	141, // 64: ultimate.server.api.UpdateGroupRequest.name:type_name -> google.protobuf.StringValue
+	141, // 65: ultimate.server.api.UpdateGroupRequest.description:type_name -> google.protobuf.StringValue
+	141, // 66: ultimate.server.api.UpdateGroupRequest.lang_tag:type_name -> google.protobuf.StringValue
+	141, // 67: ultimate.server.api.UpdateGroupRequest.avatar_url:type_name -> google.protobuf.StringValue
+	142, // 68: ultimate.server.api.UpdateGroupRequest.open:type_name -> google.protobuf.BoolValue
+	143, // 69: ultimate.server.api.ListGroupsRequest.limit:type_name -> google.protobuf.Int32Value
+	143, // 70: ultimate.server.api.ListGroupsRequest.members:type_name -> google.protobuf.Int32Value
+	142, // 71: ultimate.server.api.ListGroupsRequest.open:type_name -> google.protobuf.BoolValue
+	135, // 72: ultimate.server.api.GroupUserList.group_users:type_name -> ultimate.server.api.GroupUserList.GroupUser
+	136, // 73: ultimate.server.api.UserGroupList.user_groups:type_name -> ultimate.server.api.UserGroupList.UserGroup
+	143, // 74: ultimate.server.api.ListGroupUsersRequest.limit:type_name -> google.protobuf.Int32Value
+	143, // 75: ultimate.server.api.ListGroupUsersRequest.state:type_name -> google.protobuf.Int32Value
+	143, // 76: ultimate.server.api.ListUserGroupsRequest.limit:type_name -> google.protobuf.Int32Value
+	143, // 77: ultimate.server.api.ListUserGroupsRequest.state:type_name -> google.protobuf.Int32Value
+	0,   // 78: ultimate.server.api.Leaderboard.operator:type_name -> ultimate.server.api.Operator
+	140, // 79: ultimate.server.api.Leaderboard.create_time:type_name -> google.protobuf.Timestamp
+	62,  // 80: ultimate.server.api.LeaderboardList.leaderboards:type_name -> ultimate.server.api.Leaderboard
+	141, // 81: ultimate.server.api.LeaderboardRecord.username:type_name -> google.protobuf.StringValue
+	140, // 82: ultimate.server.api.LeaderboardRecord.create_time:type_name -> google.protobuf.Timestamp
+	140, // 83: ultimate.server.api.LeaderboardRecord.update_time:type_name -> google.protobuf.Timestamp
+	140, // 84: ultimate.server.api.LeaderboardRecord.expiry_time:type_name -> google.protobuf.Timestamp
+	64,  // 85: ultimate.server.api.LeaderboardRecordList.records:type_name -> ultimate.server.api.LeaderboardRecord
+	64,  // 86: ultimate.server.api.LeaderboardRecordList.owner_records:type_name -> ultimate.server.api.LeaderboardRecord
+	137, // 87: ultimate.server.api.WriteLeaderboardRecordRequest.record:type_name -> ultimate.server.api.WriteLeaderboardRecordRequest.LeaderboardRecordWrite
+	143, // 88: ultimate.server.api.ListLeaderboardRecordsRequest.limit:type_name -> google.protobuf.Int32Value
+	144, // 89: ultimate.server.api.ListLeaderboardRecordsRequest.expiry:type_name -> google.protobuf.Int64Value
+	145, // 90: ultimate.server.api.ListLeaderboardRecordsAroundOwnerRequest.limit:type_name -> google.protobuf.UInt32Value
+	144, // 91: ultimate.server.api.ListLeaderboardRecordsAroundOwnerRequest.expiry:type_name -> google.protobuf.Int64Value
+	140, // 92: ultimate.server.api.Tournament.create_time:type_name -> google.protobuf.Timestamp
+	140, // 93: ultimate.server.api.Tournament.start_time:type_name -> google.protobuf.Timestamp
+	140, // 94: ultimate.server.api.Tournament.end_time:type_name -> google.protobuf.Timestamp
+	0,   // 95: ultimate.server.api.Tournament.operator:type_name -> ultimate.server.api.Operator
+	70,  // 96: ultimate.server.api.TournamentList.tournaments:type_name -> ultimate.server.api.Tournament
+	64,  // 97: ultimate.server.api.TournamentRecordList.records:type_name -> ultimate.server.api.LeaderboardRecord
+	64,  // 98: ultimate.server.api.TournamentRecordList.owner_records:type_name -> ultimate.server.api.LeaderboardRecord
+	138, // 99: ultimate.server.api.WriteTournamentRecordRequest.record:type_name -> ultimate.server.api.WriteTournamentRecordRequest.TournamentRecordWrite
+	145, // 100: ultimate.server.api.ListTournamentsRequest.category_start:type_name -> google.protobuf.UInt32Value
+	145, // 101: ultimate.server.api.ListTournamentsRequest.category_end:type_name -> google.protobuf.UInt32Value
+	145, // 102: ultimate.server.api.ListTournamentsRequest.start_time:type_name -> google.protobuf.UInt32Value
+	145, // 103: ultimate.server.api.ListTournamentsRequest.end_time:type_name -> google.protobuf.UInt32Value
+	143, // 104: ultimate.server.api.ListTournamentsRequest.limit:type_name -> google.protobuf.Int32Value
+	143, // 105: ultimate.server.api.ListTournamentRecordsRequest.limit:type_name -> google.protobuf.Int32Value
+	144, // 106: ultimate.server.api.ListTournamentRecordsRequest.expiry:type_name -> google.protobuf.Int64Value
+	145, // 107: ultimate.server.api.ListTournamentRecordsAroundOwnerRequest.limit:type_name -> google.protobuf.UInt32Value
+	144, // 108: ultimate.server.api.ListTournamentRecordsAroundOwnerRequest.expiry:type_name -> google.protobuf.Int64Value
+	143, // 109: ultimate.server.api.ChannelMessage.code:type_name -> google.protobuf.Int32Value
+	140, // 110: ultimate.server.api.ChannelMessage.create_time:type_name -> google.protobuf.Timestamp
+	140, // 111: ultimate.server.api.ChannelMessage.update_time:type_name -> google.protobuf.Timestamp
+	142, // 112: ultimate.server.api.ChannelMessage.persistent:type_name -> google.protobuf.BoolValue
+	79,  // 113: ultimate.server.api.ChannelMessageList.messages:type_name -> ultimate.server.api.ChannelMessage
+	143, // 114: ultimate.server.api.ListChannelMessagesRequest.limit:type_name -> google.protobuf.Int32Value
+	142, // 115: ultimate.server.api.ListChannelMessagesRequest.forward:type_name -> google.protobuf.BoolValue
+	140, // 116: ultimate.server.api.Notification.create_time:type_name -> google.protobuf.Timestamp
+	82,  // 117: ultimate.server.api.NotificationList.notifications:type_name -> ultimate.server.api.Notification
+	143, // 118: ultimate.server.api.ListNotificationsRequest.limit:type_name -> google.protobuf.Int32Value
+	141, // 119: ultimate.server.api.Match.label:type_name -> google.protobuf.StringValue
+	86,  // 120: ultimate.server.api.MatchList.matches:type_name -> ultimate.server.api.Match
+	143, // 121: ultimate.server.api.ListMatchesRequest.limit:type_name -> google.protobuf.Int32Value
+	142, // 122: ultimate.server.api.ListMatchesRequest.authoritative:type_name -> google.protobuf.BoolValue
+	141, // 123: ultimate.server.api.ListMatchesRequest.label:type_name -> google.protobuf.StringValue
+	143, // 124: ultimate.server.api.ListMatchesRequest.min_size:type_name -> google.protobuf.Int32Value
+	143, // 125: ultimate.server.api.ListMatchesRequest.max_size:type_name -> google.protobuf.Int32Value
+	141, // 126: ultimate.server.api.ListMatchesRequest.query:type_name -> google.protobuf.StringValue
+	143, // 127: ultimate.server.api.ListPartiesRequest.limit:type_name -> google.protobuf.Int32Value
+	142, // 128: ultimate.server.api.ListPartiesRequest.open:type_name -> google.protobuf.BoolValue
+	141, // 129: ultimate.server.api.ListPartiesRequest.query:type_name -> google.protobuf.StringValue
+	141, // 130: ultimate.server.api.ListPartiesRequest.cursor:type_name -> google.protobuf.StringValue
+	90,  // 131: ultimate.server.api.PartyList.parties:type_name -> ultimate.server.api.Party
+	140, // 132: ultimate.server.api.MatchmakerCompletionStats.create_time:type_name -> google.protobuf.Timestamp
+	140, // 133: ultimate.server.api.MatchmakerCompletionStats.complete_time:type_name -> google.protobuf.Timestamp
+	140, // 134: ultimate.server.api.MatchmakerStats.oldest_ticket_create_time:type_name -> google.protobuf.Timestamp
+	92,  // 135: ultimate.server.api.MatchmakerStats.completions:type_name -> ultimate.server.api.MatchmakerCompletionStats
+	139, // 136: ultimate.server.api.Event.properties:type_name -> ultimate.server.api.Event.PropertiesEntry
+	140, // 137: ultimate.server.api.Event.timestamp:type_name -> google.protobuf.Timestamp
+	95,  // 138: ultimate.server.api.ReadStorageObjectsRequest.object_ids:type_name -> ultimate.server.api.ReadStorageObjectId
+	140, // 139: ultimate.server.api.StorageObject.create_time:type_name -> google.protobuf.Timestamp
+	140, // 140: ultimate.server.api.StorageObject.update_time:type_name -> google.protobuf.Timestamp
+	97,  // 141: ultimate.server.api.StorageObjects.objects:type_name -> ultimate.server.api.StorageObject
+	97,  // 142: ultimate.server.api.StorageObjectList.objects:type_name -> ultimate.server.api.StorageObject
+	143, // 143: ultimate.server.api.ListStorageObjectsRequest.limit:type_name -> google.protobuf.Int32Value
+	143, // 144: ultimate.server.api.WriteStorageObject.permission_read:type_name -> google.protobuf.Int32Value
+	143, // 145: ultimate.server.api.WriteStorageObject.permission_write:type_name -> google.protobuf.Int32Value
+	101, // 146: ultimate.server.api.WriteStorageObjectsRequest.objects:type_name -> ultimate.server.api.WriteStorageObject
+	140, // 147: ultimate.server.api.StorageObjectAck.create_time:type_name -> google.protobuf.Timestamp
+	140, // 148: ultimate.server.api.StorageObjectAck.update_time:type_name -> google.protobuf.Timestamp
+	103, // 149: ultimate.server.api.StorageObjectAcks.acks:type_name -> ultimate.server.api.StorageObjectAck
+	105, // 150: ultimate.server.api.DeleteStorageObjectsRequest.object_ids:type_name -> ultimate.server.api.DeleteStorageObjectId
+	142, // 151: ultimate.server.api.ValidatePurchaseAppleRequest.persist:type_name -> google.protobuf.BoolValue
+	142, // 152: ultimate.server.api.ValidatePurchaseGoogleRequest.persist:type_name -> google.protobuf.BoolValue
+	142, // 153: ultimate.server.api.ValidatePurchaseHuaweiRequest.persist:type_name -> google.protobuf.BoolValue
+	142, // 154: ultimate.server.api.ValidatePurchaseFacebookInstantRequest.persist:type_name -> google.protobuf.BoolValue
+	142, // 155: ultimate.server.api.ValidatePurchaseSamsungRequest.persist:type_name -> google.protobuf.BoolValue
+	142, // 156: ultimate.server.api.ValidateSubscriptionAppleRequest.persist:type_name -> google.protobuf.BoolValue
+	142, // 157: ultimate.server.api.ValidateSubscriptionGoogleRequest.persist:type_name -> google.protobuf.BoolValue
+	1,   // 158: ultimate.server.api.ValidatedPurchase.store:type_name -> ultimate.server.api.StoreProvider
+	140, // 159: ultimate.server.api.ValidatedPurchase.purchase_time:type_name -> google.protobuf.Timestamp
+	140, // 160: ultimate.server.api.ValidatedPurchase.create_time:type_name -> google.protobuf.Timestamp
+	140, // 161: ultimate.server.api.ValidatedPurchase.update_time:type_name -> google.protobuf.Timestamp
+	140, // 162: ultimate.server.api.ValidatedPurchase.refund_time:type_name -> google.protobuf.Timestamp
+	2,   // 163: ultimate.server.api.ValidatedPurchase.environment:type_name -> ultimate.server.api.StoreEnvironment
+	115, // 164: ultimate.server.api.ValidatePurchaseResponse.validated_purchases:type_name -> ultimate.server.api.ValidatedPurchase
+	118, // 165: ultimate.server.api.ValidateSubscriptionResponse.validated_subscription:type_name -> ultimate.server.api.ValidatedSubscription
+	1,   // 166: ultimate.server.api.ValidatedSubscription.store:type_name -> ultimate.server.api.StoreProvider
+	140, // 167: ultimate.server.api.ValidatedSubscription.purchase_time:type_name -> google.protobuf.Timestamp
+	140, // 168: ultimate.server.api.ValidatedSubscription.create_time:type_name -> google.protobuf.Timestamp
+	140, // 169: ultimate.server.api.ValidatedSubscription.update_time:type_name -> google.protobuf.Timestamp
+	2,   // 170: ultimate.server.api.ValidatedSubscription.environment:type_name -> ultimate.server.api.StoreEnvironment
+	140, // 171: ultimate.server.api.ValidatedSubscription.expiry_time:type_name -> google.protobuf.Timestamp
+	140, // 172: ultimate.server.api.ValidatedSubscription.refund_time:type_name -> google.protobuf.Timestamp
+	115, // 173: ultimate.server.api.PurchaseList.validated_purchases:type_name -> ultimate.server.api.ValidatedPurchase
+	118, // 174: ultimate.server.api.SubscriptionList.validated_subscriptions:type_name -> ultimate.server.api.ValidatedSubscription
+	143, // 175: ultimate.server.api.ListSubscriptionsRequest.limit:type_name -> google.protobuf.Int32Value
+	18,  // 176: ultimate.server.api.FriendsOfFriendsList.FriendOfFriend.user:type_name -> ultimate.server.api.User
+	18,  // 177: ultimate.server.api.GroupUserList.GroupUser.user:type_name -> ultimate.server.api.User
+	143, // 178: ultimate.server.api.GroupUserList.GroupUser.state:type_name -> google.protobuf.Int32Value
+	46,  // 179: ultimate.server.api.UserGroupList.UserGroup.group:type_name -> ultimate.server.api.Group
+	143, // 180: ultimate.server.api.UserGroupList.UserGroup.state:type_name -> google.protobuf.Int32Value
+	0,   // 181: ultimate.server.api.WriteLeaderboardRecordRequest.LeaderboardRecordWrite.operator:type_name -> ultimate.server.api.Operator
+	0,   // 182: ultimate.server.api.WriteTournamentRecordRequest.TournamentRecordWrite.operator:type_name -> ultimate.server.api.Operator
+	33,  // 183: ultimate.server.api.UltimateGameEngine.AddFriends:input_type -> ultimate.server.api.AddFriendsRequest
+	53,  // 184: ultimate.server.api.UltimateGameEngine.AddGroupUsers:input_type -> ultimate.server.api.AddGroupUsersRequest
+	22,  // 185: ultimate.server.api.UltimateGameEngine.SessionRefresh:input_type -> ultimate.server.api.SessionRefreshRequest
+	23,  // 186: ultimate.server.api.UltimateGameEngine.SessionLogout:input_type -> ultimate.server.api.SessionLogoutRequest
+	24,  // 187: ultimate.server.api.UltimateGameEngine.AuthenticateApple:input_type -> ultimate.server.api.AuthenticateAppleRequest
+	25,  // 188: ultimate.server.api.UltimateGameEngine.AuthenticateCustom:input_type -> ultimate.server.api.AuthenticateCustomRequest
+	26,  // 189: ultimate.server.api.UltimateGameEngine.AuthenticateDevice:input_type -> ultimate.server.api.AuthenticateDeviceRequest
+	27,  // 190: ultimate.server.api.UltimateGameEngine.AuthenticateEmail:input_type -> ultimate.server.api.AuthenticateEmailRequest
+	28,  // 191: ultimate.server.api.UltimateGameEngine.AuthenticateFacebook:input_type -> ultimate.server.api.AuthenticateFacebookRequest
+	29,  // 192: ultimate.server.api.UltimateGameEngine.AuthenticateFacebookInstantGame:input_type -> ultimate.server.api.AuthenticateFacebookInstantGameRequest
+	30,  // 193: ultimate.server.api.UltimateGameEngine.AuthenticateGameCenter:input_type -> ultimate.server.api.AuthenticateGameCenterRequest
+	31,  // 194: ultimate.server.api.UltimateGameEngine.AuthenticateGoogle:input_type -> ultimate.server.api.AuthenticateGoogleRequest
+	32,  // 195: ultimate.server.api.UltimateGameEngine.AuthenticateSteam:input_type -> ultimate.server.api.AuthenticateSteamRequest
+	57,  // 196: ultimate.server.api.UltimateGameEngine.BanGroupUsers:input_type -> ultimate.server.api.BanGroupUsersRequest
+	35,  // 197: ultimate.server.api.UltimateGameEngine.BlockFriends:input_type -> ultimate.server.api.BlockFriendsRequest
+	45,  // 198: ultimate.server.api.UltimateGameEngine.CreateGroup:input_type -> ultimate.server.api.CreateGroupRequest
+	146, // 199: ultimate.server.api.UltimateGameEngine.DeleteAccount:input_type -> google.protobuf.Empty
+	34,  // 200: ultimate.server.api.UltimateGameEngine.DeleteFriends:input_type -> ultimate.server.api.DeleteFriendsRequest
+	49,  // 201: ultimate.server.api.UltimateGameEngine.DeleteGroup:input_type -> ultimate.server.api.DeleteGroupRequest
+	69,  // 202: ultimate.server.api.UltimateGameEngine.DeleteLeaderboardRecord:input_type -> ultimate.server.api.DeleteLeaderboardRecordRequest
+	85,  // 203: ultimate.server.api.UltimateGameEngine.DeleteNotifications:input_type -> ultimate.server.api.DeleteNotificationsRequest
+	78,  // 204: ultimate.server.api.UltimateGameEngine.DeleteTournamentRecord:input_type -> ultimate.server.api.DeleteTournamentRecordRequest
+	106, // 205: ultimate.server.api.UltimateGameEngine.DeleteStorageObjects:input_type -> ultimate.server.api.DeleteStorageObjectsRequest
+	56,  // 206: ultimate.server.api.UltimateGameEngine.DemoteGroupUsers:input_type -> ultimate.server.api.DemoteGroupUsersRequest
+	94,  // 207: ultimate.server.api.UltimateGameEngine.Event:input_type -> ultimate.server.api.Event
+	146, // 208: ultimate.server.api.UltimateGameEngine.GetAccount:input_type -> google.protobuf.Empty
+	20,  // 209: ultimate.server.api.UltimateGameEngine.GetUsers:input_type -> ultimate.server.api.GetUsersRequest
+	122, // 210: ultimate.server.api.UltimateGameEngine.GetSubscription:input_type -> ultimate.server.api.GetSubscriptionRequest
+	146, // 211: ultimate.server.api.UltimateGameEngine.GetMatchmakerStats:input_type -> google.protobuf.Empty
+	146, // 212: ultimate.server.api.UltimateGameEngine.Healthcheck:input_type -> google.protobuf.Empty
+	41,  // 213: ultimate.server.api.UltimateGameEngine.ImportFacebookFriends:input_type -> ultimate.server.api.ImportFacebookFriendsRequest
+	42,  // 214: ultimate.server.api.UltimateGameEngine.ImportSteamFriends:input_type -> ultimate.server.api.ImportSteamFriendsRequest
+	51,  // 215: ultimate.server.api.UltimateGameEngine.JoinGroup:input_type -> ultimate.server.api.JoinGroupRequest
+	74,  // 216: ultimate.server.api.UltimateGameEngine.JoinTournament:input_type -> ultimate.server.api.JoinTournamentRequest
+	54,  // 217: ultimate.server.api.UltimateGameEngine.KickGroupUsers:input_type -> ultimate.server.api.KickGroupUsersRequest
+	52,  // 218: ultimate.server.api.UltimateGameEngine.LeaveGroup:input_type -> ultimate.server.api.LeaveGroupRequest
+	6,   // 219: ultimate.server.api.UltimateGameEngine.LinkApple:input_type -> ultimate.server.api.AccountApple
+	7,   // 220: ultimate.server.api.UltimateGameEngine.LinkCustom:input_type -> ultimate.server.api.AccountCustom
+	8,   // 221: ultimate.server.api.UltimateGameEngine.LinkDevice:input_type -> ultimate.server.api.AccountDevice
+	9,   // 222: ultimate.server.api.UltimateGameEngine.LinkEmail:input_type -> ultimate.server.api.AccountEmail
+	43,  // 223: ultimate.server.api.UltimateGameEngine.LinkFacebook:input_type -> ultimate.server.api.LinkFacebookRequest
+	11,  // 224: ultimate.server.api.UltimateGameEngine.LinkFacebookInstantGame:input_type -> ultimate.server.api.AccountFacebookInstantGame
+	12,  // 225: ultimate.server.api.UltimateGameEngine.LinkGameCenter:input_type -> ultimate.server.api.AccountGameCenter
+	13,  // 226: ultimate.server.api.UltimateGameEngine.LinkGoogle:input_type -> ultimate.server.api.AccountGoogle
+	44,  // 227: ultimate.server.api.UltimateGameEngine.LinkSteam:input_type -> ultimate.server.api.LinkSteamRequest
+	81,  // 228: ultimate.server.api.UltimateGameEngine.ListChannelMessages:input_type -> ultimate.server.api.ListChannelMessagesRequest
+	36,  // 229: ultimate.server.api.UltimateGameEngine.ListFriends:input_type -> ultimate.server.api.ListFriendsRequest
+	37,  // 230: ultimate.server.api.UltimateGameEngine.ListFriendsOfFriends:input_type -> ultimate.server.api.ListFriendsOfFriendsRequest
+	60,  // 231: ultimate.server.api.UltimateGameEngine.ListGroupUsers:input_type -> ultimate.server.api.ListGroupUsersRequest
+	50,  // 232: ultimate.server.api.UltimateGameEngine.ListGroups:input_type -> ultimate.server.api.ListGroupsRequest
+	67,  // 233: ultimate.server.api.UltimateGameEngine.ListLeaderboardRecords:input_type -> ultimate.server.api.ListLeaderboardRecordsRequest
+	68,  // 234: ultimate.server.api.UltimateGameEngine.ListLeaderboardRecordsAroundOwner:input_type -> ultimate.server.api.ListLeaderboardRecordsAroundOwnerRequest
+	88,  // 235: ultimate.server.api.UltimateGameEngine.ListMatches:input_type -> ultimate.server.api.ListMatchesRequest
+	89,  // 236: ultimate.server.api.UltimateGameEngine.ListParties:input_type -> ultimate.server.api.ListPartiesRequest
+	84,  // 237: ultimate.server.api.UltimateGameEngine.ListNotifications:input_type -> ultimate.server.api.ListNotificationsRequest
+	100, // 238: ultimate.server.api.UltimateGameEngine.ListStorageObjects:input_type -> ultimate.server.api.ListStorageObjectsRequest
+	121, // 239: ultimate.server.api.UltimateGameEngine.ListSubscriptions:input_type -> ultimate.server.api.ListSubscriptionsRequest
+	75,  // 240: ultimate.server.api.UltimateGameEngine.ListTournaments:input_type -> ultimate.server.api.ListTournamentsRequest
+	76,  // 241: ultimate.server.api.UltimateGameEngine.ListTournamentRecords:input_type -> ultimate.server.api.ListTournamentRecordsRequest
+	77,  // 242: ultimate.server.api.UltimateGameEngine.ListTournamentRecordsAroundOwner:input_type -> ultimate.server.api.ListTournamentRecordsAroundOwnerRequest
+	61,  // 243: ultimate.server.api.UltimateGameEngine.ListUserGroups:input_type -> ultimate.server.api.ListUserGroupsRequest
+	55,  // 244: ultimate.server.api.UltimateGameEngine.PromoteGroupUsers:input_type -> ultimate.server.api.PromoteGroupUsersRequest
+	96,  // 245: ultimate.server.api.UltimateGameEngine.ReadStorageObjects:input_type -> ultimate.server.api.ReadStorageObjectsRequest
+	107, // 246: ultimate.server.api.UltimateGameEngine.RpcFunc:input_type -> ultimate.server.api.Rpc
+	6,   // 247: ultimate.server.api.UltimateGameEngine.UnlinkApple:input_type -> ultimate.server.api.AccountApple
+	7,   // 248: ultimate.server.api.UltimateGameEngine.UnlinkCustom:input_type -> ultimate.server.api.AccountCustom
+	8,   // 249: ultimate.server.api.UltimateGameEngine.UnlinkDevice:input_type -> ultimate.server.api.AccountDevice
+	9,   // 250: ultimate.server.api.UltimateGameEngine.UnlinkEmail:input_type -> ultimate.server.api.AccountEmail
+	10,  // 251: ultimate.server.api.UltimateGameEngine.UnlinkFacebook:input_type -> ultimate.server.api.AccountFacebook
+	11,  // 252: ultimate.server.api.UltimateGameEngine.UnlinkFacebookInstantGame:input_type -> ultimate.server.api.AccountFacebookInstantGame
+	12,  // 253: ultimate.server.api.UltimateGameEngine.UnlinkGameCenter:input_type -> ultimate.server.api.AccountGameCenter
+	13,  // 254: ultimate.server.api.UltimateGameEngine.UnlinkGoogle:input_type -> ultimate.server.api.AccountGoogle
+	14,  // 255: ultimate.server.api.UltimateGameEngine.UnlinkSteam:input_type -> ultimate.server.api.AccountSteam
+	21,  // 256: ultimate.server.api.UltimateGameEngine.UpdateAccount:input_type -> ultimate.server.api.UpdateAccountRequest
+	48,  // 257: ultimate.server.api.UltimateGameEngine.UpdateGroup:input_type -> ultimate.server.api.UpdateGroupRequest
+	108, // 258: ultimate.server.api.UltimateGameEngine.ValidatePurchaseApple:input_type -> ultimate.server.api.ValidatePurchaseAppleRequest
+	109, // 259: ultimate.server.api.UltimateGameEngine.ValidatePurchaseGoogle:input_type -> ultimate.server.api.ValidatePurchaseGoogleRequest
+	110, // 260: ultimate.server.api.UltimateGameEngine.ValidatePurchaseHuawei:input_type -> ultimate.server.api.ValidatePurchaseHuaweiRequest
+	111, // 261: ultimate.server.api.UltimateGameEngine.ValidatePurchaseFacebookInstant:input_type -> ultimate.server.api.ValidatePurchaseFacebookInstantRequest
+	112, // 262: ultimate.server.api.UltimateGameEngine.ValidatePurchaseSamsung:input_type -> ultimate.server.api.ValidatePurchaseSamsungRequest
+	113, // 263: ultimate.server.api.UltimateGameEngine.ValidateSubscriptionApple:input_type -> ultimate.server.api.ValidateSubscriptionAppleRequest
+	114, // 264: ultimate.server.api.UltimateGameEngine.ValidateSubscriptionGoogle:input_type -> ultimate.server.api.ValidateSubscriptionGoogleRequest
+	66,  // 265: ultimate.server.api.UltimateGameEngine.WriteLeaderboardRecord:input_type -> ultimate.server.api.WriteLeaderboardRecordRequest
+	102, // 266: ultimate.server.api.UltimateGameEngine.WriteStorageObjects:input_type -> ultimate.server.api.WriteStorageObjectsRequest
+	73,  // 267: ultimate.server.api.UltimateGameEngine.WriteTournamentRecord:input_type -> ultimate.server.api.WriteTournamentRecordRequest
+	146, // 268: ultimate.server.api.UltimateGameEngine.AddFriends:output_type -> google.protobuf.Empty
+	146, // 269: ultimate.server.api.UltimateGameEngine.AddGroupUsers:output_type -> google.protobuf.Empty
+	17,  // 270: ultimate.server.api.UltimateGameEngine.SessionRefresh:output_type -> ultimate.server.api.Session
+	146, // 271: ultimate.server.api.UltimateGameEngine.SessionLogout:output_type -> google.protobuf.Empty
+	17,  // 272: ultimate.server.api.UltimateGameEngine.AuthenticateApple:output_type -> ultimate.server.api.Session
+	17,  // 273: ultimate.server.api.UltimateGameEngine.AuthenticateCustom:output_type -> ultimate.server.api.Session
+	17,  // 274: ultimate.server.api.UltimateGameEngine.AuthenticateDevice:output_type -> ultimate.server.api.Session
+	17,  // 275: ultimate.server.api.UltimateGameEngine.AuthenticateEmail:output_type -> ultimate.server.api.Session
+	17,  // 276: ultimate.server.api.UltimateGameEngine.AuthenticateFacebook:output_type -> ultimate.server.api.Session
+	17,  // 277: ultimate.server.api.UltimateGameEngine.AuthenticateFacebookInstantGame:output_type -> ultimate.server.api.Session
+	17,  // 278: ultimate.server.api.UltimateGameEngine.AuthenticateGameCenter:output_type -> ultimate.server.api.Session
+	17,  // 279: ultimate.server.api.UltimateGameEngine.AuthenticateGoogle:output_type -> ultimate.server.api.Session
+	17,  // 280: ultimate.server.api.UltimateGameEngine.AuthenticateSteam:output_type -> ultimate.server.api.Session
+	146, // 281: ultimate.server.api.UltimateGameEngine.BanGroupUsers:output_type -> google.protobuf.Empty
+	146, // 282: ultimate.server.api.UltimateGameEngine.BlockFriends:output_type -> google.protobuf.Empty
+	46,  // 283: ultimate.server.api.UltimateGameEngine.CreateGroup:output_type -> ultimate.server.api.Group
+	146, // 284: ultimate.server.api.UltimateGameEngine.DeleteAccount:output_type -> google.protobuf.Empty
+	146, // 285: ultimate.server.api.UltimateGameEngine.DeleteFriends:output_type -> google.protobuf.Empty
+	146, // 286: ultimate.server.api.UltimateGameEngine.DeleteGroup:output_type -> google.protobuf.Empty
+	146, // 287: ultimate.server.api.UltimateGameEngine.DeleteLeaderboardRecord:output_type -> google.protobuf.Empty
+	146, // 288: ultimate.server.api.UltimateGameEngine.DeleteNotifications:output_type -> google.protobuf.Empty
+	146, // 289: ultimate.server.api.UltimateGameEngine.DeleteTournamentRecord:output_type -> google.protobuf.Empty
+	146, // 290: ultimate.server.api.UltimateGameEngine.DeleteStorageObjects:output_type -> google.protobuf.Empty
+	146, // 291: ultimate.server.api.UltimateGameEngine.DemoteGroupUsers:output_type -> google.protobuf.Empty
+	146, // 292: ultimate.server.api.UltimateGameEngine.Event:output_type -> google.protobuf.Empty
+	16,  // 293: ultimate.server.api.UltimateGameEngine.GetAccount:output_type -> ultimate.server.api.Account
+	19,  // 294: ultimate.server.api.UltimateGameEngine.GetUsers:output_type -> ultimate.server.api.Users
+	118, // 295: ultimate.server.api.UltimateGameEngine.GetSubscription:output_type -> ultimate.server.api.ValidatedSubscription
+	93,  // 296: ultimate.server.api.UltimateGameEngine.GetMatchmakerStats:output_type -> ultimate.server.api.MatchmakerStats
+	146, // 297: ultimate.server.api.UltimateGameEngine.Healthcheck:output_type -> google.protobuf.Empty
+	146, // 298: ultimate.server.api.UltimateGameEngine.ImportFacebookFriends:output_type -> google.protobuf.Empty
+	146, // 299: ultimate.server.api.UltimateGameEngine.ImportSteamFriends:output_type -> google.protobuf.Empty
+	146, // 300: ultimate.server.api.UltimateGameEngine.JoinGroup:output_type -> google.protobuf.Empty
+	146, // 301: ultimate.server.api.UltimateGameEngine.JoinTournament:output_type -> google.protobuf.Empty
+	146, // 302: ultimate.server.api.UltimateGameEngine.KickGroupUsers:output_type -> google.protobuf.Empty
+	146, // 303: ultimate.server.api.UltimateGameEngine.LeaveGroup:output_type -> google.protobuf.Empty
+	146, // 304: ultimate.server.api.UltimateGameEngine.LinkApple:output_type -> google.protobuf.Empty
+	146, // 305: ultimate.server.api.UltimateGameEngine.LinkCustom:output_type -> google.protobuf.Empty
+	146, // 306: ultimate.server.api.UltimateGameEngine.LinkDevice:output_type -> google.protobuf.Empty
+	146, // 307: ultimate.server.api.UltimateGameEngine.LinkEmail:output_type -> google.protobuf.Empty
+	146, // 308: ultimate.server.api.UltimateGameEngine.LinkFacebook:output_type -> google.protobuf.Empty
+	146, // 309: ultimate.server.api.UltimateGameEngine.LinkFacebookInstantGame:output_type -> google.protobuf.Empty
+	146, // 310: ultimate.server.api.UltimateGameEngine.LinkGameCenter:output_type -> google.protobuf.Empty
+	146, // 311: ultimate.server.api.UltimateGameEngine.LinkGoogle:output_type -> google.protobuf.Empty
+	146, // 312: ultimate.server.api.UltimateGameEngine.LinkSteam:output_type -> google.protobuf.Empty
+	80,  // 313: ultimate.server.api.UltimateGameEngine.ListChannelMessages:output_type -> ultimate.server.api.ChannelMessageList
+	39,  // 314: ultimate.server.api.UltimateGameEngine.ListFriends:output_type -> ultimate.server.api.FriendList
+	40,  // 315: ultimate.server.api.UltimateGameEngine.ListFriendsOfFriends:output_type -> ultimate.server.api.FriendsOfFriendsList
+	58,  // 316: ultimate.server.api.UltimateGameEngine.ListGroupUsers:output_type -> ultimate.server.api.GroupUserList
+	47,  // 317: ultimate.server.api.UltimateGameEngine.ListGroups:output_type -> ultimate.server.api.GroupList
+	65,  // 318: ultimate.server.api.UltimateGameEngine.ListLeaderboardRecords:output_type -> ultimate.server.api.LeaderboardRecordList
+	65,  // 319: ultimate.server.api.UltimateGameEngine.ListLeaderboardRecordsAroundOwner:output_type -> ultimate.server.api.LeaderboardRecordList
+	87,  // 320: ultimate.server.api.UltimateGameEngine.ListMatches:output_type -> ultimate.server.api.MatchList
+	91,  // 321: ultimate.server.api.UltimateGameEngine.ListParties:output_type -> ultimate.server.api.PartyList
+	83,  // 322: ultimate.server.api.UltimateGameEngine.ListNotifications:output_type -> ultimate.server.api.NotificationList
+	99,  // 323: ultimate.server.api.UltimateGameEngine.ListStorageObjects:output_type -> ultimate.server.api.StorageObjectList
+	120, // 324: ultimate.server.api.UltimateGameEngine.ListSubscriptions:output_type -> ultimate.server.api.SubscriptionList
+	71,  // 325: ultimate.server.api.UltimateGameEngine.ListTournaments:output_type -> ultimate.server.api.TournamentList
+	72,  // 326: ultimate.server.api.UltimateGameEngine.ListTournamentRecords:output_type -> ultimate.server.api.TournamentRecordList
+	72,  // 327: ultimate.server.api.UltimateGameEngine.ListTournamentRecordsAroundOwner:output_type -> ultimate.server.api.TournamentRecordList
+	59,  // 328: ultimate.server.api.UltimateGameEngine.ListUserGroups:output_type -> ultimate.server.api.UserGroupList
+	146, // 329: ultimate.server.api.UltimateGameEngine.PromoteGroupUsers:output_type -> google.protobuf.Empty
+	98,  // 330: ultimate.server.api.UltimateGameEngine.ReadStorageObjects:output_type -> ultimate.server.api.StorageObjects
+	107, // 331: ultimate.server.api.UltimateGameEngine.RpcFunc:output_type -> ultimate.server.api.Rpc
+	146, // 332: ultimate.server.api.UltimateGameEngine.UnlinkApple:output_type -> google.protobuf.Empty
+	146, // 333: ultimate.server.api.UltimateGameEngine.UnlinkCustom:output_type -> google.protobuf.Empty
+	146, // 334: ultimate.server.api.UltimateGameEngine.UnlinkDevice:output_type -> google.protobuf.Empty
+	146, // 335: ultimate.server.api.UltimateGameEngine.UnlinkEmail:output_type -> google.protobuf.Empty
+	146, // 336: ultimate.server.api.UltimateGameEngine.UnlinkFacebook:output_type -> google.protobuf.Empty
+	146, // 337: ultimate.server.api.UltimateGameEngine.UnlinkFacebookInstantGame:output_type -> google.protobuf.Empty
+	146, // 338: ultimate.server.api.UltimateGameEngine.UnlinkGameCenter:output_type -> google.protobuf.Empty
+	146, // 339: ultimate.server.api.UltimateGameEngine.UnlinkGoogle:output_type -> google.protobuf.Empty
+	146, // 340: ultimate.server.api.UltimateGameEngine.UnlinkSteam:output_type -> google.protobuf.Empty
+	146, // 341: ultimate.server.api.UltimateGameEngine.UpdateAccount:output_type -> google.protobuf.Empty
+	146, // 342: ultimate.server.api.UltimateGameEngine.UpdateGroup:output_type -> google.protobuf.Empty
+	116, // 343: ultimate.server.api.UltimateGameEngine.ValidatePurchaseApple:output_type -> ultimate.server.api.ValidatePurchaseResponse
+	116, // 344: ultimate.server.api.UltimateGameEngine.ValidatePurchaseGoogle:output_type -> ultimate.server.api.ValidatePurchaseResponse
+	116, // 345: ultimate.server.api.UltimateGameEngine.ValidatePurchaseHuawei:output_type -> ultimate.server.api.ValidatePurchaseResponse
+	116, // 346: ultimate.server.api.UltimateGameEngine.ValidatePurchaseFacebookInstant:output_type -> ultimate.server.api.ValidatePurchaseResponse
+	116, // 347: ultimate.server.api.UltimateGameEngine.ValidatePurchaseSamsung:output_type -> ultimate.server.api.ValidatePurchaseResponse
+	117, // 348: ultimate.server.api.UltimateGameEngine.ValidateSubscriptionApple:output_type -> ultimate.server.api.ValidateSubscriptionResponse
+	117, // 349: ultimate.server.api.UltimateGameEngine.ValidateSubscriptionGoogle:output_type -> ultimate.server.api.ValidateSubscriptionResponse
+	64,  // 350: ultimate.server.api.UltimateGameEngine.WriteLeaderboardRecord:output_type -> ultimate.server.api.LeaderboardRecord
+	104, // 351: ultimate.server.api.UltimateGameEngine.WriteStorageObjects:output_type -> ultimate.server.api.StorageObjectAcks
+	64,  // 352: ultimate.server.api.UltimateGameEngine.WriteTournamentRecord:output_type -> ultimate.server.api.LeaderboardRecord
+	268, // [268:353] is the sub-list for method output_type
+	183, // [183:268] is the sub-list for method input_type
+	183, // [183:183] is the sub-list for extension type_name
+	183, // [183:183] is the sub-list for extension extendee
+	0,   // [0:183] is the sub-list for field type_name
 }
 
 func init() { file_api_api_proto_init() }
@@ -8940,25 +10204,15 @@ func file_api_api_proto_init() {
 	if File_api_api_proto != nil {
 		return
 	}
-	file_api_api_proto_msgTypes[54].OneofWrappers = []any{}
-	file_api_api_proto_msgTypes[84].OneofWrappers = []any{}
-	file_api_api_proto_msgTypes[87].OneofWrappers = []any{}
-	file_api_api_proto_msgTypes[98].OneofWrappers = []any{}
-	file_api_api_proto_msgTypes[99].OneofWrappers = []any{}
-	file_api_api_proto_msgTypes[100].OneofWrappers = []any{}
-	file_api_api_proto_msgTypes[101].OneofWrappers = []any{}
-	file_api_api_proto_msgTypes[102].OneofWrappers = []any{}
-	file_api_api_proto_msgTypes[105].OneofWrappers = []any{}
-	file_api_api_proto_msgTypes[106].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_api_api_proto_rawDesc), len(file_api_api_proto_rawDesc)),
-			NumEnums:      1,
-			NumMessages:   120,
+			NumEnums:      6,
+			NumMessages:   134,
 			NumExtensions: 0,
-			NumServices:   16,
+			NumServices:   1,
 		},
 		GoTypes:           file_api_api_proto_goTypes,
 		DependencyIndexes: file_api_api_proto_depIdxs,

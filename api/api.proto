@@ -6,829 +6,96 @@ option go_package = "ultimate-game-server/internal/api/apipb";
 
 import "google/protobuf/empty.proto";
 import "google/protobuf/timestamp.proto";
+import "google/protobuf/wrappers.proto";
 
-message User {
-  string id = 1;
-  string username = 2;
-  string display_name = 3;
-  string avatar_url = 4;
-  string lang_tag = 5;
-  string location = 6;
-  string timezone = 7;
-  string metadata = 8;
-  google.protobuf.Timestamp create_time = 9;
-  google.protobuf.Timestamp update_time = 10;
-  bool online = 11;
-  int32 edge_count = 12;
-}
+// --- Single Reference-Shaped Service Contract (ADR-0027) ---
 
-// Score operator override for leaderboard/tournament writes.
-enum Operator {
-  NO_OVERRIDE = 0;
-  BEST = 1;
-  SET = 2;
-  INCREMENT = 3;
-  DECREMENT = 4;
-}
-
-// --- Authentication ---
-
-service AuthenticationService {
-  rpc AuthenticateEmail(AuthenticateEmailRequest) returns (Session);
-  rpc AuthenticateDevice(AuthenticateDeviceRequest) returns (Session);
-  rpc AuthenticateApple(AuthenticateAppleRequest) returns (Session);
-  rpc AuthenticateGoogle(AuthenticateGoogleRequest) returns (Session);
-  rpc AuthenticateFacebook(AuthenticateFacebookRequest) returns (Session);
-  rpc AuthenticateSteam(AuthenticateSteamRequest) returns (Session);
-  rpc AuthenticateGameCenter(AuthenticateGameCenterRequest) returns (Session);
-  rpc AuthenticateFacebookInstantGame(AuthenticateFacebookInstantGameRequest) returns (Session);
-  rpc AuthenticateCustom(AuthenticateCustomRequest) returns (Session);
-
+service UltimateGameEngine {
+  rpc AddFriends(AddFriendsRequest) returns (google.protobuf.Empty);
+  rpc AddGroupUsers(AddGroupUsersRequest) returns (google.protobuf.Empty);
   rpc SessionRefresh(SessionRefreshRequest) returns (Session);
   rpc SessionLogout(SessionLogoutRequest) returns (google.protobuf.Empty);
 
-  rpc GetAccount(google.protobuf.Empty) returns (Account);
-  rpc UpdateAccount(UpdateAccountRequest) returns (google.protobuf.Empty);
-  rpc DeleteAccount(google.protobuf.Empty) returns (google.protobuf.Empty);
+  rpc AuthenticateApple(AuthenticateAppleRequest) returns (Session);
+  rpc AuthenticateCustom(AuthenticateCustomRequest) returns (Session);
+  rpc AuthenticateDevice(AuthenticateDeviceRequest) returns (Session);
+  rpc AuthenticateEmail(AuthenticateEmailRequest) returns (Session);
+  rpc AuthenticateFacebook(AuthenticateFacebookRequest) returns (Session);
+  rpc AuthenticateFacebookInstantGame(AuthenticateFacebookInstantGameRequest) returns (Session);
+  rpc AuthenticateGameCenter(AuthenticateGameCenterRequest) returns (Session);
+  rpc AuthenticateGoogle(AuthenticateGoogleRequest) returns (Session);
+  rpc AuthenticateSteam(AuthenticateSteamRequest) returns (Session);
 
-  rpc LinkEmail(AuthenticateEmailRequest) returns (google.protobuf.Empty);
-  rpc LinkDevice(AuthenticateDeviceRequest) returns (google.protobuf.Empty);
-  rpc LinkApple(AuthenticateAppleRequest) returns (google.protobuf.Empty);
-  rpc LinkGoogle(AuthenticateGoogleRequest) returns (google.protobuf.Empty);
-  rpc LinkFacebook(AuthenticateFacebookRequest) returns (google.protobuf.Empty);
-  rpc LinkSteam(AuthenticateSteamRequest) returns (google.protobuf.Empty);
-  rpc LinkCustom(AuthenticateCustomRequest) returns (google.protobuf.Empty);
-  rpc LinkGameCenter(AuthenticateGameCenterRequest) returns (google.protobuf.Empty);
-  rpc LinkFacebookInstantGame(AuthenticateFacebookInstantGameRequest) returns (google.protobuf.Empty);
-
-  rpc UnlinkEmail(UnlinkRequest) returns (google.protobuf.Empty);
-  rpc UnlinkDevice(UnlinkRequest) returns (google.protobuf.Empty);
-  rpc UnlinkApple(UnlinkRequest) returns (google.protobuf.Empty);
-  rpc UnlinkGoogle(UnlinkRequest) returns (google.protobuf.Empty);
-  rpc UnlinkFacebook(UnlinkRequest) returns (google.protobuf.Empty);
-  rpc UnlinkSteam(UnlinkRequest) returns (google.protobuf.Empty);
-  rpc UnlinkCustom(UnlinkRequest) returns (google.protobuf.Empty);
-  rpc UnlinkGameCenter(UnlinkRequest) returns (google.protobuf.Empty);
-  rpc UnlinkFacebookInstantGame(UnlinkRequest) returns (google.protobuf.Empty);
-}
-
-message AuthenticateEmailRequest {
-  string email = 1;
-  string password = 2;
-  bool create = 3;
-  string username = 4;
-  string display_name = 5;
-}
-
-message AuthenticateDeviceRequest {
-  string id = 1;
-  bool create = 2;
-  string username = 3;
-}
-
-message AuthenticateAppleRequest {
-  string token = 1;
-  bool create = 2;
-  string username = 3;
-}
-
-message AuthenticateGoogleRequest {
-  string token = 1;
-  bool create = 2;
-  string username = 3;
-}
-
-message AuthenticateFacebookRequest {
-  string token = 1;
-  bool create = 2;
-  string username = 3;
-}
-
-message AuthenticateSteamRequest {
-  bytes ticket = 1;
-  bool create = 2;
-  string username = 3;
-}
-
-message AuthenticateGameCenterRequest {
-  string player_id = 1;
-  string bundle_id = 2;
-  int64 timestamp = 3;
-  string salt = 4;
-  string signature = 5;
-  string public_key_url = 6;
-  bool create = 7;
-  string username = 8;
-}
-
-message AuthenticateFacebookInstantGameRequest {
-  string signed_player_info = 1;
-  bool create = 2;
-  string username = 3;
-}
-
-message AuthenticateCustomRequest {
-  string id = 1;
-  bool create = 2;
-  string username = 3;
-}
-
-message SessionRefreshRequest {
-  string token = 1;
-  string refresh_token = 2;
-}
-
-message SessionLogoutRequest {
-  string token = 1;
-  string refresh_token = 2;
-}
-
-message Session {
-  string token = 1;
-  string refresh_token = 2;
-  bool created = 3;
-  string user_id = 4;
-  string username = 5;
-}
-
-message Device {
-  string id = 1;
-}
-
-message Account {
-  User user = 1;
-  repeated Device devices = 2;
-  string email = 3;
-  string custom_id = 4;
-  google.protobuf.Timestamp verify_time = 5;
-  string wallet = 6; // JSON string of currency balances
-}
-
-message UpdateAccountRequest {
-  string display_name = 1;
-  string avatar_url = 2;
-  string lang_tag = 3;
-  string location = 4;
-  string timezone = 5;
-  string metadata = 6;
-  string username = 7;
-}
-
-message UnlinkRequest {
-  string id = 1;
-}
-
-// --- Leaderboard ---
-
-service LeaderboardService {
-  rpc CreateLeaderboard(CreateLeaderboardRequest) returns (google.protobuf.Empty);
-  rpc DeleteLeaderboard(DeleteLeaderboardRequest) returns (google.protobuf.Empty);
-  rpc ListLeaderboards(ListLeaderboardsRequest) returns (LeaderboardList);
-  rpc WriteLeaderboardRecord(WriteLeaderboardRecordRequest) returns (LeaderboardRecord);
-  rpc ListLeaderboardRecords(ListLeaderboardRecordsRequest) returns (LeaderboardRecordList);
-  rpc ListLeaderboardRecordsAroundOwner(ListLeaderboardRecordsAroundOwnerRequest) returns (LeaderboardRecordList);
-  rpc DeleteLeaderboardRecord(DeleteLeaderboardRecordRequest) returns (google.protobuf.Empty);
-}
-
-message CreateLeaderboardRequest {
-  string id = 1;
-  string sort_order = 2; // "ascending" or "descending"
-  string operator = 3;   // "best", "set", "increment", "decrement"
-  string reset_schedule = 4; // Cron format
-  string metadata = 5; // JSON string format
-  bool authoritative = 6;
-  bool enable_ranks = 7;
-}
-
-message ListLeaderboardsRequest {
-  int32 limit = 1;
-  string cursor = 2;
-}
-
-message Leaderboard {
-  string id = 1;
-  string sort_order = 2;
-  string operator = 3;
-  string reset_schedule = 4;
-  string metadata = 5;
-  bool authoritative = 6;
-  google.protobuf.Timestamp create_time = 7;
-  int64 prev_reset = 8;
-  int64 next_reset = 9;
-  bool enable_ranks = 10;
-}
-
-message LeaderboardList {
-  repeated Leaderboard leaderboards = 1;
-  string next_cursor = 2;
-}
-
-message DeleteLeaderboardRequest {
-  string id = 1;
-}
-
-message WriteLeaderboardRecordRequest {
-  string leaderboard_id = 1;
-  int64 score = 2;
-  int64 subscore = 3;
-  string metadata = 4; // JSON string format
-  Operator override_operator = 5;
-}
-
-message LeaderboardRecord {
-  string leaderboard_id = 1;
-  string owner_id = 2;
-  string username = 3;
-  int64 score = 4;
-  int64 subscore = 5;
-  string metadata = 6; // JSON string format
-  int64 rank = 7;
-  google.protobuf.Timestamp create_time = 8;
-  google.protobuf.Timestamp update_time = 9;
-  google.protobuf.Timestamp expiry_time = 10;
-  int32 num_score = 11;
-  int32 max_num_score = 12;
-}
-
-message ListLeaderboardRecordsRequest {
-  string leaderboard_id = 1;
-  int32 limit = 2;
-  string cursor = 3;
-  repeated string owner_ids = 4;
-  int64 expiry = 5; // optional override unix expiry
-}
-
-message ListLeaderboardRecordsAroundOwnerRequest {
-  string leaderboard_id = 1;
-  string owner_id = 2;
-  int32 limit = 3;
-  int64 expiry = 4;
-}
-
-message LeaderboardRecordList {
-  repeated LeaderboardRecord records = 1;
-  string next_cursor = 2;
-  string prev_cursor = 3;
-  repeated LeaderboardRecord owner_records = 4;
-}
-
-message DeleteLeaderboardRecordRequest {
-  string leaderboard_id = 1;
-}
-
-// --- Tournament ---
-
-service TournamentService {
-  rpc CreateTournament(CreateTournamentRequest) returns (google.protobuf.Empty);
-  rpc DeleteTournament(DeleteTournamentRequest) returns (google.protobuf.Empty);
-  rpc JoinTournament(JoinTournamentRequest) returns (google.protobuf.Empty);
-  rpc ListTournaments(ListTournamentsRequest) returns (TournamentList);
-  rpc WriteTournamentRecord(WriteTournamentRecordRequest) returns (LeaderboardRecord);
-  rpc ListTournamentRecords(ListTournamentRecordsRequest) returns (LeaderboardRecordList);
-  rpc ListTournamentRecordsAroundOwner(ListTournamentRecordsAroundOwnerRequest) returns (LeaderboardRecordList);
-  rpc DeleteTournamentRecord(DeleteTournamentRecordRequest) returns (google.protobuf.Empty);
-}
-
-message CreateTournamentRequest {
-  string id = 1;
-  string sort_order = 2;
-  string operator = 3;
-  string reset_schedule = 4;
-  string metadata = 5;
-  bool authoritative = 6;
-  int32 category = 7;
-  string description = 8;
-  int32 duration = 9;
-  google.protobuf.Timestamp end_time = 10;
-  bool join_required = 11;
-  int32 max_size = 12;
-  int32 max_num_score = 13;
-  string title = 14;
-  google.protobuf.Timestamp start_time = 15;
-}
-
-message DeleteTournamentRequest {
-  string id = 1;
-}
-
-message JoinTournamentRequest {
-  string id = 1;
-}
-
-message ListTournamentsRequest {
-  int32 category_start = 1;
-  int32 category_end = 2;
-  google.protobuf.Timestamp start_time = 3;
-  google.protobuf.Timestamp end_time = 4;
-  int32 limit = 5;
-  string cursor = 6;
-  bool active = 7;
-}
-
-message Tournament {
-  string id = 1;
-  string sort_order = 2;
-  string operator = 3;
-  string reset_schedule = 4;
-  string metadata = 5;
-  bool authoritative = 6;
-  int32 category = 7;
-  string description = 8;
-  int32 duration = 9;
-  google.protobuf.Timestamp end_time = 10;
-  bool join_required = 11;
-  int32 max_size = 12;
-  int32 max_num_score = 13;
-  string title = 14;
-  google.protobuf.Timestamp start_time = 15;
-  int32 size = 16;
-  bool can_enter = 17;
-  int64 start_active = 18;
-  int64 end_active = 19;
-  int64 prev_reset = 20;
-  int64 next_reset = 21;
-}
-
-message TournamentList {
-  repeated Tournament tournaments = 1;
-  string next_cursor = 2;
-}
-
-message WriteTournamentRecordRequest {
-  string tournament_id = 1;
-  int64 score = 2;
-  int64 subscore = 3;
-  string metadata = 4;
-  Operator override_operator = 5;
-}
-
-message ListTournamentRecordsRequest {
-  string tournament_id = 1;
-  int32 limit = 2;
-  string cursor = 3;
-  repeated string owner_ids = 4;
-  int64 expiry = 5;
-}
-
-message ListTournamentRecordsAroundOwnerRequest {
-  string tournament_id = 1;
-  string owner_id = 2;
-  int32 limit = 3;
-  int64 expiry = 4;
-}
-
-message DeleteTournamentRecordRequest {
-  string tournament_id = 1;
-}
-
-// --- Friends ---
-
-service FriendsService {
-  rpc AddFriends(AddFriendsRequest) returns (google.protobuf.Empty);
-  rpc ListFriends(ListFriendsRequest) returns (FriendList);
-  rpc ListFriendsOfFriends(ListFriendsOfFriendsRequest) returns (FriendsOfFriendsList);
-  rpc DeleteFriends(DeleteFriendsRequest) returns (google.protobuf.Empty);
+  rpc BanGroupUsers(BanGroupUsersRequest) returns (google.protobuf.Empty);
   rpc BlockFriends(BlockFriendsRequest) returns (google.protobuf.Empty);
-  rpc UnblockFriends(UnblockFriendsRequest) returns (google.protobuf.Empty);
+  rpc CreateGroup(CreateGroupRequest) returns (Group);
+  rpc DeleteAccount(google.protobuf.Empty) returns (google.protobuf.Empty);
+  rpc DeleteFriends(DeleteFriendsRequest) returns (google.protobuf.Empty);
+  rpc DeleteGroup(DeleteGroupRequest) returns (google.protobuf.Empty);
+  rpc DeleteLeaderboardRecord(DeleteLeaderboardRecordRequest) returns (google.protobuf.Empty);
+  rpc DeleteNotifications(DeleteNotificationsRequest) returns (google.protobuf.Empty);
+  rpc DeleteTournamentRecord(DeleteTournamentRecordRequest) returns (google.protobuf.Empty);
+  rpc DeleteStorageObjects(DeleteStorageObjectsRequest) returns (google.protobuf.Empty);
+
+  rpc DemoteGroupUsers(DemoteGroupUsersRequest) returns (google.protobuf.Empty);
+  rpc Event(ultimate.server.api.Event) returns (google.protobuf.Empty);
+  rpc GetAccount(google.protobuf.Empty) returns (Account);
+  rpc GetUsers(GetUsersRequest) returns (Users);
+  rpc GetSubscription(GetSubscriptionRequest) returns (ValidatedSubscription);
+  rpc GetMatchmakerStats(google.protobuf.Empty) returns (MatchmakerStats);
+  rpc Healthcheck(google.protobuf.Empty) returns (google.protobuf.Empty);
+
   rpc ImportFacebookFriends(ImportFacebookFriendsRequest) returns (google.protobuf.Empty);
   rpc ImportSteamFriends(ImportSteamFriendsRequest) returns (google.protobuf.Empty);
-}
-
-message AddFriendsRequest {
-  repeated string ids = 1;
-  repeated string usernames = 2;
-}
-
-message ListFriendsRequest {
-  int32 limit = 1;
-  int32 state = 2; // 0=friends, 1=sent request, 2=received request, 3=blocked
-  string cursor = 3;
-}
-
-message ListFriendsOfFriendsRequest {
-  int32 limit = 1;
-  string cursor = 2;
-}
-
-message Friend {
-  User user = 1;
-  int32 state = 2;
-  google.protobuf.Timestamp update_time = 3;
-  string metadata = 4;
-}
-
-message FriendList {
-  repeated Friend friends = 1;
-  string next_cursor = 2;
-}
-
-message FriendOfFriend {
-  string referrer = 1;
-  User user = 2;
-}
-
-message FriendsOfFriendsList {
-  repeated FriendOfFriend friends_of_friends = 1;
-  string cursor = 2;
-}
-
-message DeleteFriendsRequest {
-  repeated string ids = 1;
-  repeated string usernames = 2;
-}
-
-message BlockFriendsRequest {
-  repeated string ids = 1;
-  repeated string usernames = 2;
-}
-
-message UnblockFriendsRequest {
-  repeated string ids = 1;
-  repeated string usernames = 2;
-}
-
-message ImportFacebookFriendsRequest {
-  string token = 1;
-  bool reset = 2;
-}
-
-message ImportSteamFriendsRequest {
-  string steam_token = 1;
-  bool reset = 2;
-}
-
-// --- Groups ---
-
-service GroupService {
-  rpc CreateGroup(CreateGroupRequest) returns (Group);
-  rpc UpdateGroup(UpdateGroupRequest) returns (google.protobuf.Empty);
-  rpc DeleteGroup(DeleteGroupRequest) returns (google.protobuf.Empty);
-  rpc ListGroups(ListGroupsRequest) returns (GroupList);
   rpc JoinGroup(JoinGroupRequest) returns (google.protobuf.Empty);
-  rpc LeaveGroup(LeaveGroupRequest) returns (google.protobuf.Empty);
-  
-  rpc AddGroupUsers(AddGroupUsersRequest) returns (google.protobuf.Empty);
+  rpc JoinTournament(JoinTournamentRequest) returns (google.protobuf.Empty);
   rpc KickGroupUsers(KickGroupUsersRequest) returns (google.protobuf.Empty);
-  rpc PromoteGroupUsers(PromoteGroupUsersRequest) returns (google.protobuf.Empty);
-  rpc DemoteGroupUsers(DemoteGroupUsersRequest) returns (google.protobuf.Empty);
-  rpc BanGroupUsers(BanGroupUsersRequest) returns (google.protobuf.Empty);
-  
-  rpc ListGroupUsers(ListGroupUsersRequest) returns (GroupUserList);
-  rpc ListUserGroups(ListUserGroupsRequest) returns (UserGroupList);
-}
+  rpc LeaveGroup(LeaveGroupRequest) returns (google.protobuf.Empty);
 
-message CreateGroupRequest {
-  string name = 1;
-  string description = 2;
-  string avatar_url = 3;
-  string lang_tag = 4;
-  bool open = 5;
-  int32 max_count = 6;
-  string metadata = 7;
-}
+  rpc LinkApple(AccountApple) returns (google.protobuf.Empty);
+  rpc LinkCustom(AccountCustom) returns (google.protobuf.Empty);
+  rpc LinkDevice(AccountDevice) returns (google.protobuf.Empty);
+  rpc LinkEmail(AccountEmail) returns (google.protobuf.Empty);
+  rpc LinkFacebook(LinkFacebookRequest) returns (google.protobuf.Empty);
+  rpc LinkFacebookInstantGame(AccountFacebookInstantGame) returns (google.protobuf.Empty);
+  rpc LinkGameCenter(AccountGameCenter) returns (google.protobuf.Empty);
+  rpc LinkGoogle(AccountGoogle) returns (google.protobuf.Empty);
+  rpc LinkSteam(LinkSteamRequest) returns (google.protobuf.Empty);
 
-message Group {
-  string id = 1;
-  string creator_id = 2;
-  string name = 3;
-  string description = 4;
-  string avatar_url = 5;
-  string lang_tag = 6;
-  bool open = 7;
-  int32 edge_count = 8;
-  int32 max_count = 9;
-  string metadata = 10;
-  google.protobuf.Timestamp create_time = 11;
-  google.protobuf.Timestamp update_time = 12;
-}
-
-message UpdateGroupRequest {
-  string id = 1;
-  string name = 2;
-  string description = 3;
-  string avatar_url = 4;
-  string lang_tag = 5;
-  bool open = 6;
-  string metadata = 7;
-}
-
-message DeleteGroupRequest {
-  string id = 1;
-}
-
-message ListGroupsRequest {
-  string name = 1;
-  string lang_tag = 2;
-  optional bool open = 3;
-  int32 limit = 4;
-  string cursor = 5;
-  int32 members = 6;
-}
-
-message GroupList {
-  repeated Group groups = 1;
-  string next_cursor = 2;
-}
-
-message JoinGroupRequest {
-  string id = 1;
-}
-
-message LeaveGroupRequest {
-  string id = 1;
-}
-
-message AddGroupUsersRequest {
-  string group_id = 1;
-  repeated string user_ids = 2;
-}
-
-message KickGroupUsersRequest {
-  string group_id = 1;
-  repeated string user_ids = 2;
-}
-
-message PromoteGroupUsersRequest {
-  string group_id = 1;
-  repeated string user_ids = 2;
-}
-
-message DemoteGroupUsersRequest {
-  string group_id = 1;
-  repeated string user_ids = 2;
-}
-
-message BanGroupUsersRequest {
-  string group_id = 1;
-  repeated string user_ids = 2;
-}
-
-message GroupUser {
-  User user = 1;
-  int32 state = 2; // 0=superadmin, 1=admin, 2=member, 3=join_request
-}
-
-message GroupUserList {
-  repeated GroupUser group_users = 1;
-  string next_cursor = 2;
-}
-
-message UserGroup {
-  Group group = 1;
-  int32 state = 2;
-}
-
-message UserGroupList {
-  repeated UserGroup user_groups = 1;
-  string next_cursor = 2;
-}
-
-message ListGroupUsersRequest {
-  string group_id = 1;
-  int32 limit = 2;
-  string cursor = 3;
-}
-
-message ListUserGroupsRequest {
-  string user_id = 1;
-  int32 limit = 2;
-  string cursor = 3;
-}
-
-// --- Matchmaking ---
-
-service MatchmakerService {
-  rpc AddMatchmaker(AddMatchmakerRequest) returns (MatchmakerTicket);
-  rpc RemoveMatchmaker(RemoveMatchmakerRequest) returns (google.protobuf.Empty);
-  rpc GetMatchmakerTicket(GetMatchmakerTicketRequest) returns (MatchmakerTicket);
-  rpc GetQueueStats(GetQueueStatsRequest) returns (QueueStats);
-  rpc GetMatchmakerStats(google.protobuf.Empty) returns (MatchmakerStats);
-}
-
-message AddMatchmakerRequest {
-  string queue_name = 1;
-  int32 min_count = 2;
-  int32 max_count = 3;
-  map<string, string> string_properties = 4;
-  map<string, double> numeric_properties = 5;
-  int32 count_multiple = 6;
-  bool reverse_precision = 7;
-  string query = 8;
-}
-
-message MatchmakerTicket {
-  string ticket_id = 1;
-  string queue_name = 2;
-  string status = 3; // "queued", "matched", "cancelled", "expired"
-  string match_id = 4; // empty if not matched yet
-  string match_token = 5; // empty if not matched yet
-}
-
-message RemoveMatchmakerRequest {
-  string ticket_id = 1;
-}
-
-message GetMatchmakerTicketRequest {
-  string ticket_id = 1;
-}
-
-message GetQueueStatsRequest {
-  string queue_name = 1;
-}
-
-message QueueStats {
-  string queue_name = 2;
-  int32 ticket_count = 3;
-  int32 average_wait_sec = 4;
-  int32 active_matches = 5;
-}
-
-message MatchmakerStats {
-  int32 ticket_count = 1;
-  string oldest_ticket_create_time = 2;
-  int32 completion_count = 3;
-}
-
-// --- Realtime / Match Service ---
-
-service RealtimeService {
-  rpc CreateMatch(CreateMatchRequest) returns (Match);
-  rpc ListMatches(ListMatchesRequest) returns (MatchList);
-  rpc GetMatch(GetMatchRequest) returns (Match);
-  rpc MatchSignal(MatchSignalRequest) returns (MatchSignalResponse);
-}
-
-message CreateMatchRequest {
-  string module = 1;
-  map<string, string> params = 2;
-}
-
-message ListMatchesRequest {
-  int32 limit = 1;
-  bool authoritative = 2;
-  string label = 3;
-  int32 min_size = 4;
-  int32 max_size = 5;
-}
-
-message GetMatchRequest {
-  string match_id = 1;
-}
-
-message MatchPresence {
-  string user_id = 1;
-  string username = 2;
-  string session_id = 3;
-}
-
-message Match {
-  string match_id = 1;
-  bool authoritative = 2;
-  string label = 3;
-  int32 size = 4;
-  int32 max_size = 5;
-  repeated MatchPresence presences = 6;
-}
-
-message MatchList {
-  repeated Match matches = 1;
-}
-
-message MatchSignalRequest {
-  string match_id = 1;
-  string payload = 2;
-}
-
-message MatchSignalResponse {
-  string response = 1;
-}
-
-// --- Party Service ---
-
-service PartyService {
-  rpc ListParties(ListPartiesRequest) returns (PartyList);
-}
-
-message ListPartiesRequest {
-  int32 limit = 1;
-  optional bool open = 2;
-  string query = 3;
-  string cursor = 4;
-}
-
-message Party {
-  string id = 1;
-  bool open = 2;
-  bool hidden = 3;
-  int32 max_size = 4;
-  string label = 5;
-}
-
-message PartyList {
-  repeated Party parties = 1;
-  string cursor = 2;
-}
-
-// --- Chat Service ---
-
-service ChatService {
   rpc ListChannelMessages(ListChannelMessagesRequest) returns (ChannelMessageList);
-}
-
-message ListChannelMessagesRequest {
-  string channel_id = 1;
-  int32 limit = 2;
-  optional bool forward = 3;
-  string cursor = 4;
-}
-
-message ChannelMessage {
-  string channel_id = 1;
-  string message_id = 2;
-  int32 code = 3;
-  string sender_id = 4;
-  string username = 5;
-  string content = 6;
-  google.protobuf.Timestamp create_time = 7;
-  google.protobuf.Timestamp update_time = 8;
-  bool persistent = 9;
-  string room_name = 10;
-  string group_id = 11;
-  string user_id_one = 12;
-  string user_id_two = 13;
-}
-
-message ChannelMessageList {
-  repeated ChannelMessage messages = 1;
-  string next_cursor = 2;
-  string prev_cursor = 3;
-  string cacheable_cursor = 4;
-}
-
-// --- Notification Service ---
-
-service NotificationService {
+  rpc ListFriends(ListFriendsRequest) returns (FriendList);
+  rpc ListFriendsOfFriends(ListFriendsOfFriendsRequest) returns (FriendsOfFriendsList);
+  rpc ListGroupUsers(ListGroupUsersRequest) returns (GroupUserList);
+  rpc ListGroups(ListGroupsRequest) returns (GroupList);
+  rpc ListLeaderboardRecords(ListLeaderboardRecordsRequest) returns (LeaderboardRecordList);
+  rpc ListLeaderboardRecordsAroundOwner(ListLeaderboardRecordsAroundOwnerRequest) returns (LeaderboardRecordList);
+  rpc ListMatches(ListMatchesRequest) returns (MatchList);
+  rpc ListParties(ListPartiesRequest) returns (PartyList);
   rpc ListNotifications(ListNotificationsRequest) returns (NotificationList);
-  rpc DeleteNotifications(DeleteNotificationsRequest) returns (google.protobuf.Empty);
-}
+  rpc ListStorageObjects(ListStorageObjectsRequest) returns (StorageObjectList);
+  rpc ListSubscriptions(ListSubscriptionsRequest) returns (SubscriptionList);
+  rpc ListTournaments(ListTournamentsRequest) returns (TournamentList);
+  rpc ListTournamentRecords(ListTournamentRecordsRequest) returns (TournamentRecordList);
+  rpc ListTournamentRecordsAroundOwner(ListTournamentRecordsAroundOwnerRequest) returns (TournamentRecordList);
+  rpc ListUserGroups(ListUserGroupsRequest) returns (UserGroupList);
 
-message ListNotificationsRequest {
-  int32 limit = 1;
-  string cacheable_cursor = 2;
-}
+  rpc PromoteGroupUsers(PromoteGroupUsersRequest) returns (google.protobuf.Empty);
+  rpc ReadStorageObjects(ReadStorageObjectsRequest) returns (StorageObjects);
+  rpc RpcFunc(Rpc) returns (Rpc);
 
-message ApiNotification {
-  string id = 1;
-  string subject = 2;
-  string content = 3;
-  int32 code = 4;
-  string sender_id = 5;
-  google.protobuf.Timestamp create_time = 6;
-  bool persistent = 7;
-}
+  rpc UnlinkApple(AccountApple) returns (google.protobuf.Empty);
+  rpc UnlinkCustom(AccountCustom) returns (google.protobuf.Empty);
+  rpc UnlinkDevice(AccountDevice) returns (google.protobuf.Empty);
+  rpc UnlinkEmail(AccountEmail) returns (google.protobuf.Empty);
+  rpc UnlinkFacebook(AccountFacebook) returns (google.protobuf.Empty);
+  rpc UnlinkFacebookInstantGame(AccountFacebookInstantGame) returns (google.protobuf.Empty);
+  rpc UnlinkGameCenter(AccountGameCenter) returns (google.protobuf.Empty);
+  rpc UnlinkGoogle(AccountGoogle) returns (google.protobuf.Empty);
+  rpc UnlinkSteam(AccountSteam) returns (google.protobuf.Empty);
 
-message NotificationList {
-  repeated ApiNotification notifications = 1;
-  string cacheable_cursor = 2;
-}
+  rpc UpdateAccount(UpdateAccountRequest) returns (google.protobuf.Empty);
+  rpc UpdateGroup(UpdateGroupRequest) returns (google.protobuf.Empty);
 
-message DeleteNotificationsRequest {
-  repeated string ids = 1;
-}
-
-// --- Economy Service ---
-
-service EconomyService {
-  rpc GetWallet(google.protobuf.Empty) returns (Wallet);
-  rpc ListWalletLedger(ListWalletLedgerRequest) returns (WalletLedgerList);
-}
-
-message Wallet {
-  string wallet = 1; // JSON string of balances
-}
-
-message ListWalletLedgerRequest {
-  int32 limit = 1;
-  string cursor = 2;
-}
-
-message WalletLedgerItem {
-  string id = 1;
-  string user_id = 2;
-  string changeset = 3;
-  string metadata = 4;
-  google.protobuf.Timestamp create_time = 5;
-  google.protobuf.Timestamp update_time = 6;
-}
-
-message WalletLedgerList {
-  repeated WalletLedgerItem items = 1;
-  string next_cursor = 2;
-}
-
-// --- IAP Service ---
-
-service IAPService {
   rpc ValidatePurchaseApple(ValidatePurchaseAppleRequest) returns (ValidatePurchaseResponse);
   rpc ValidatePurchaseGoogle(ValidatePurchaseGoogleRequest) returns (ValidatePurchaseResponse);
   rpc ValidatePurchaseHuawei(ValidatePurchaseHuaweiRequest) returns (ValidatePurchaseResponse);
@@ -836,147 +103,1513 @@ service IAPService {
   rpc ValidatePurchaseSamsung(ValidatePurchaseSamsungRequest) returns (ValidatePurchaseResponse);
   rpc ValidateSubscriptionApple(ValidateSubscriptionAppleRequest) returns (ValidateSubscriptionResponse);
   rpc ValidateSubscriptionGoogle(ValidateSubscriptionGoogleRequest) returns (ValidateSubscriptionResponse);
-  rpc ListSubscriptions(ListSubscriptionsRequest) returns (SubscriptionList);
-  rpc GetSubscription(GetSubscriptionRequest) returns (ValidatedSubscription);
+
+  rpc WriteLeaderboardRecord(WriteLeaderboardRecordRequest) returns (LeaderboardRecord);
+  rpc WriteStorageObjects(WriteStorageObjectsRequest) returns (StorageObjectAcks);
+  rpc WriteTournamentRecord(WriteTournamentRecordRequest) returns (LeaderboardRecord);
 }
 
-message ValidatePurchaseAppleRequest {
-  string receipt = 1;
-  optional bool persist = 2;
+// ============================================================================
+// Enums
+// ============================================================================
+
+// Operator that can be used to override the one set in the leaderboard.
+enum Operator {
+  // Do not override the leaderboard operator.
+  NO_OVERRIDE = 0;
+  // Override the leaderboard operator with BEST.
+  BEST = 1;
+  // Override the leaderboard operator with SET.
+  SET = 2;
+  // Override the leaderboard operator with INCREMENT.
+  INCREMENT = 3;
+  // Override the leaderboard operator with DECREMENT.
+  DECREMENT = 4;
 }
 
-message ValidatePurchaseGoogleRequest {
-  // Reference-shaped JSON purchase blob (productId/product_id + purchaseToken/purchase_token).
-  string purchase = 1;
-  // Legacy fields retained for one-release dual-accept.
-  string product_id = 2;
-  string purchase_token = 3;
-  optional bool persist = 4;
+// Validation Provider.
+enum StoreProvider {
+  // Apple App Store
+  APPLE_APP_STORE = 0;
+  // Google Play Store
+  GOOGLE_PLAY_STORE = 1;
+  // Huawei App Gallery
+  HUAWEI_APP_GALLERY = 2;
+  // Facebook Instant Store
+  FACEBOOK_INSTANT_STORE = 3;
+  // Samsung Galaxy Store
+  SAMSUNG_GALAXY_STORE = 4;
 }
 
-message ValidatePurchaseHuaweiRequest {
-  // Reference field name; also accept purchase_data in HTTP JSON.
-  string purchase = 1;
-  string purchase_data = 2;
-  string signature = 3;
-  optional bool persist = 4;
+// Environment where a purchase/subscription took place.
+enum StoreEnvironment {
+  // Unknown environment.
+  UNKNOWN = 0;
+  // Sandbox/test environment.
+  SANDBOX = 1;
+  // Production environment.
+  PRODUCTION = 2;
 }
 
-message ValidatePurchaseFacebookInstantRequest {
-  string signed_request = 1;
-  optional bool persist = 2;
+// ============================================================================
+// Account types (used for authenticate/link/unlink)
+// ============================================================================
+
+// Send a Apple Sign In token to the server. Used with authenticate/link/unlink.
+message AccountApple {
+  // The ID token received from Apple to validate.
+  string token = 1;
+  // Extra information that will be bundled in the session token.
+  map<string, string> vars = 2;
 }
 
-message ValidatePurchaseSamsungRequest {
-  string purchase_id = 1;
-  optional bool persist = 2;
+// Send a custom ID to the server. Used with authenticate/link/unlink.
+message AccountCustom {
+  // A custom identifier.
+  string id = 1;
+  // Extra information that will be bundled in the session token.
+  map<string, string> vars = 2;
 }
 
-message ValidatedPurchase {
+// Send a device to the server. Used with authenticate/link/unlink and user.
+message AccountDevice {
+  // A device identifier. Should be obtained by a platform-specific device API.
+  string id = 1;
+  // Extra information that will be bundled in the session token.
+  map<string, string> vars = 2;
+}
+
+// Send an email with password to the server. Used with authenticate/link/unlink.
+message AccountEmail {
+  // A valid RFC-5322 email address.
+  string email = 1;
+  // A password for the user account.
+  string password = 2;
+  // Extra information that will be bundled in the session token.
+  map<string, string> vars = 3;
+}
+
+// Send a Facebook token to the server. Used with authenticate/link/unlink.
+message AccountFacebook {
+  // The OAuth token received from Facebook to access their profile API.
+  string token = 1;
+  // Extra information that will be bundled in the session token.
+  map<string, string> vars = 2;
+}
+
+// Send a Facebook Instant Game token to the server. Used with authenticate/link/unlink.
+message AccountFacebookInstantGame {
+  // The OAuth token received from a Facebook Instant Game.
+  string signed_player_info = 1;
+  // Extra information that will be bundled in the session token.
+  map<string, string> vars = 2;
+}
+
+// Send Apple's Game Center account credentials to the server. Used with authenticate/link/unlink.
+message AccountGameCenter {
+  // Player ID (generated by GameCenter).
+  string player_id = 1;
+  // Bundle ID (generated by GameCenter).
+  string bundle_id = 2;
+  // Time since UNIX epoch when the signature was created.
+  int64 timestamp_seconds = 3;
+  // A random "NSString" used to compute the hash and keep it randomized.
+  string salt = 4;
+  // The verification signature data generated.
+  string signature = 5;
+  // The URL for the public encryption key.
+  string public_key_url = 6;
+  // Extra information that will be bundled in the session token.
+  map<string, string> vars = 7;
+}
+
+// Send a Google token to the server. Used with authenticate/link/unlink.
+message AccountGoogle {
+  // The OAuth token received from Google to access their profile API.
+  string token = 1;
+  // Extra information that will be bundled in the session token.
+  map<string, string> vars = 2;
+}
+
+// Send a Steam token to the server. Used with authenticate/link/unlink.
+message AccountSteam {
+  // The account token received from Steam to access their profile API.
+  string token = 1;
+  // Extra information that will be bundled in the session token.
+  map<string, string> vars = 2;
+}
+
+// Obtain a new authentication token using a refresh token.
+message AccountRefresh {
+  // Refresh token.
+  string token = 1;
+  // Extra information that will be bundled in the session token.
+  map<string, string> vars = 2;
+}
+
+// ============================================================================
+// Account & Session
+// ============================================================================
+
+// A user with additional account details. Always the current user.
+message Account {
+  // The user object.
+  User user = 1;
+  // The user's wallet data.
+  string wallet = 2;
+  // The email address of the user.
+  string email = 3;
+  // The devices which belong to the user's account.
+  repeated AccountDevice devices = 4;
+  // The custom id in the user's account.
+  string custom_id = 5;
+  // The UNIX time when the user's email was verified.
+  google.protobuf.Timestamp verify_time = 6;
+  // The UNIX time when the user's account was disabled/banned.
+  google.protobuf.Timestamp disable_time = 7;
+}
+
+// A user's session used to authenticate messages.
+message Session {
+  // True if the corresponding account was just created, false otherwise.
+  bool created = 1;
+  // Authentication credentials.
+  string token = 2;
+  // Refresh token that can be used for session token renewal.
+  string refresh_token = 3;
+}
+
+// A user in the server.
+message User {
+  // The id of the user's account.
+  string id = 1;
+  // The username of the user's account.
+  string username = 2;
+  // The display name of the user.
+  string display_name = 3;
+  // A URL for an avatar image.
+  string avatar_url = 4;
+  // The language expected to be a tag which follows the BCP-47 spec.
+  string lang_tag = 5;
+  // The location set by the user.
+  string location = 6;
+  // The timezone set by the user.
+  string timezone = 7;
+  // Additional information stored as a JSON object.
+  string metadata = 8;
+  // The Facebook id in the user's account.
+  string facebook_id = 9;
+  // The Google id in the user's account.
+  string google_id = 10;
+  // The Apple Game Center in of the user's account.
+  string gamecenter_id = 11;
+  // The Steam id in the user's account.
+  string steam_id = 12;
+  // Indicates whether the user is currently online.
+  bool online = 13;
+  // Number of related edges to this user.
+  int32 edge_count = 14;
+  // The UNIX time when the user was created.
+  google.protobuf.Timestamp create_time = 15;
+  // The UNIX time when the user was last updated.
+  google.protobuf.Timestamp update_time = 16;
+  // The Facebook Instant Game ID in the user's account.
+  string facebook_instant_game_id = 17;
+  // The Apple Sign In ID in the user's account.
+  string apple_id = 18;
+}
+
+// A collection of zero or more users.
+message Users {
+  // The User objects.
+  repeated User users = 1;
+}
+
+// Fetch a batch of zero or more users from the server.
+message GetUsersRequest {
+  // The account id of a user.
+  repeated string ids = 1;
+  // The account username of a user.
+  repeated string usernames = 2;
+  // The Facebook ID of a user.
+  repeated string facebook_ids = 3;
+}
+
+// Update a user's account details.
+message UpdateAccountRequest {
+  // The username of the user's account.
+  google.protobuf.StringValue username = 1;
+  // The display name of the user.
+  google.protobuf.StringValue display_name = 2;
+  // A URL for an avatar image.
+  google.protobuf.StringValue avatar_url = 3;
+  // The language expected to be a tag which follows the BCP-47 spec.
+  google.protobuf.StringValue lang_tag = 4;
+  // The location set by the user.
+  google.protobuf.StringValue location = 5;
+  // The timezone set by the user.
+  google.protobuf.StringValue timezone = 6;
+}
+
+// ============================================================================
+// Authentication
+// ============================================================================
+
+// Authenticate against the server with a refresh token.
+message SessionRefreshRequest {
+  // Refresh token.
+  string token = 1;
+  // Extra information that will be bundled in the session token.
+  map<string, string> vars = 2;
+}
+
+// Log out a session, invalidate a refresh token, or log out all sessions/refresh tokens for a user.
+message SessionLogoutRequest {
+  // Session token to log out.
+  string token = 1;
+  // Refresh token to invalidate.
+  string refresh_token = 2;
+}
+
+// Authenticate against the server with Apple Sign In.
+message AuthenticateAppleRequest {
+  // The Apple account details.
+  AccountApple account = 1;
+  // Register the account if the user does not already exist.
+  google.protobuf.BoolValue create = 2;
+  // Set the username on the account at register. Must be unique.
+  string username = 3;
+}
+
+// Authenticate against the server with a custom ID.
+message AuthenticateCustomRequest {
+  // The custom account details.
+  AccountCustom account = 1;
+  // Register the account if the user does not already exist.
+  google.protobuf.BoolValue create = 2;
+  // Set the username on the account at register. Must be unique.
+  string username = 3;
+}
+
+// Authenticate against the server with a device ID.
+message AuthenticateDeviceRequest {
+  // The device account details.
+  AccountDevice account = 1;
+  // Register the account if the user does not already exist.
+  google.protobuf.BoolValue create = 2;
+  // Set the username on the account at register. Must be unique.
+  string username = 3;
+}
+
+// Authenticate against the server with email+password.
+message AuthenticateEmailRequest {
+  // The email account details.
+  AccountEmail account = 1;
+  // Register the account if the user does not already exist.
+  google.protobuf.BoolValue create = 2;
+  // Set the username on the account at register. Must be unique.
+  string username = 3;
+}
+
+// Authenticate against the server with Facebook.
+message AuthenticateFacebookRequest {
+  // The Facebook account details.
+  AccountFacebook account = 1;
+  // Register the account if the user does not already exist.
+  google.protobuf.BoolValue create = 2;
+  // Set the username on the account at register. Must be unique.
+  string username = 3;
+  // Import Facebook friends for the user.
+  google.protobuf.BoolValue sync = 4;
+}
+
+// Authenticate against the server with Facebook Instant Game token.
+message AuthenticateFacebookInstantGameRequest {
+  // The Facebook Instant Game account details.
+  AccountFacebookInstantGame account = 1;
+  // Register the account if the user does not already exist.
+  google.protobuf.BoolValue create = 2;
+  // Set the username on the account at register. Must be unique.
+  string username = 3;
+}
+
+// Authenticate against the server with Apple's Game Center.
+message AuthenticateGameCenterRequest {
+  // The Game Center account details.
+  AccountGameCenter account = 1;
+  // Register the account if the user does not already exist.
+  google.protobuf.BoolValue create = 2;
+  // Set the username on the account at register. Must be unique.
+  string username = 3;
+}
+
+// Authenticate against the server with Google.
+message AuthenticateGoogleRequest {
+  // The Google account details.
+  AccountGoogle account = 1;
+  // Register the account if the user does not already exist.
+  google.protobuf.BoolValue create = 2;
+  // Set the username on the account at register. Must be unique.
+  string username = 3;
+}
+
+// Authenticate against the server with Steam.
+message AuthenticateSteamRequest {
+  // The Steam account details.
+  AccountSteam account = 1;
+  // Register the account if the user does not already exist.
+  google.protobuf.BoolValue create = 2;
+  // Set the username on the account at register. Must be unique.
+  string username = 3;
+  // Import Steam friends for the user.
+  google.protobuf.BoolValue sync = 4;
+}
+
+// ============================================================================
+// Friends
+// ============================================================================
+
+// Add one or more friends to the current user.
+message AddFriendsRequest {
+  // The account id of a user.
+  repeated string ids = 1;
+  // The account username of a user.
+  repeated string usernames = 2;
+  // Optional metadata to add to friends.
+  string metadata = 3;
+}
+
+// Delete one or more friends for the current user.
+message DeleteFriendsRequest {
+  // The account id of a user.
+  repeated string ids = 1;
+  // The account username of a user.
+  repeated string usernames = 2;
+}
+
+// Block one or more friends for the current user.
+message BlockFriendsRequest {
+  // The account id of a user.
+  repeated string ids = 1;
+  // The account username of a user.
+  repeated string usernames = 2;
+}
+
+// List friends for a user.
+message ListFriendsRequest {
+  // Max number of records to return. Between 1 and 1000.
+  google.protobuf.Int32Value limit = 1;
+  // The friend state to list.
+  google.protobuf.Int32Value state = 2;
+  // An optional next page cursor.
+  string cursor = 3;
+}
+
+// List friends of friends for the current user.
+message ListFriendsOfFriendsRequest {
+  // Max number of records to return. Between 1 and 100.
+  google.protobuf.Int32Value limit = 1;
+  // An optional next page cursor.
+  string cursor = 2;
+}
+
+// A friend of a user.
+message Friend {
+  // The friendship status.
+  enum State {
+    // The user is a friend of the current user.
+    FRIEND = 0;
+    // The current user has sent an invite to the user.
+    INVITE_SENT = 1;
+    // The current user has received an invite from this user.
+    INVITE_RECEIVED = 2;
+    // The current user has blocked this user.
+    BLOCKED = 3;
+  }
+
+  // The user object.
+  User user = 1;
+  // The friend status.
+  google.protobuf.Int32Value state = 2;
+  // Time of the latest relationship update.
+  google.protobuf.Timestamp update_time = 3;
+  // Metadata.
+  string metadata = 4;
+}
+
+// A collection of zero or more friends of the user.
+message FriendList {
+  // The Friend objects.
+  repeated Friend friends = 1;
+  // Cursor for the next page of results, if any.
+  string cursor = 2;
+}
+
+// A List of friends of friends.
+message FriendsOfFriendsList {
+  // A friend of a friend.
+  message FriendOfFriend {
+    // The user who referred its friend.
+    string referrer = 1;
+    // User.
+    User user = 2;
+  }
+  // User friends of friends.
+  repeated FriendOfFriend friends_of_friends = 1;
+  // Cursor for the next page of results, if any.
+  string cursor = 2;
+}
+
+// Import Facebook friends into the current user's account.
+message ImportFacebookFriendsRequest {
+  // The Facebook account details.
+  AccountFacebook account = 1;
+  // Reset the current user's friends list.
+  google.protobuf.BoolValue reset = 2;
+}
+
+// Import Steam friends into the current user's account.
+message ImportSteamFriendsRequest {
+  // The Steam account details.
+  AccountSteam account = 1;
+  // Reset the current user's friends list.
+  google.protobuf.BoolValue reset = 2;
+}
+
+// Link Facebook to the current user's account.
+message LinkFacebookRequest {
+  // The Facebook account details.
+  AccountFacebook account = 1;
+  // Import Facebook friends for the user.
+  google.protobuf.BoolValue sync = 2;
+}
+
+// Link Steam to the current user's account.
+message LinkSteamRequest {
+  // The Steam account details.
+  AccountSteam account = 1;
+  // Import Steam friends for the user.
+  google.protobuf.BoolValue sync = 2;
+}
+
+// ============================================================================
+// Groups
+// ============================================================================
+
+// Create a group with the current user as owner.
+message CreateGroupRequest {
+  // A unique name for the group.
+  string name = 1;
+  // A description for the group.
+  string description = 2;
+  // The language expected to be a tag which follows the BCP-47 spec.
+  string lang_tag = 3;
+  // A URL for an avatar image.
+  string avatar_url = 4;
+  // Mark a group as open or not where only admins can accept members.
+  bool open = 5;
+  // Maximum number of group members.
+  int32 max_count = 6;
+}
+
+// A group in the server.
+message Group {
+  // The id of a group.
+  string id = 1;
+  // The id of the user who created the group.
+  string creator_id = 2;
+  // The unique name of the group.
+  string name = 3;
+  // A description for the group.
+  string description = 4;
+  // The language expected to be a tag which follows the BCP-47 spec.
+  string lang_tag = 5;
+  // Additional information stored as a JSON object.
+  string metadata = 6;
+  // A URL for an avatar image.
+  string avatar_url = 7;
+  // Anyone can join open groups, otherwise only admins can accept members.
+  google.protobuf.BoolValue open = 8;
+  // The current count of all members in the group.
+  int32 edge_count = 9;
+  // The maximum number of members allowed.
+  int32 max_count = 10;
+  // The UNIX time when the group was created.
+  google.protobuf.Timestamp create_time = 11;
+  // The UNIX time when the group was last updated.
+  google.protobuf.Timestamp update_time = 12;
+}
+
+// One or more groups returned from a listing operation.
+message GroupList {
+  // One or more groups.
+  repeated Group groups = 1;
+  // A cursor used to get the next page.
+  string cursor = 2;
+}
+
+// Update fields in a given group.
+message UpdateGroupRequest {
+  // The ID of the group to update.
+  string group_id = 1;
+  // Name.
+  google.protobuf.StringValue name = 2;
+  // Description string.
+  google.protobuf.StringValue description = 3;
+  // Lang tag.
+  google.protobuf.StringValue lang_tag = 4;
+  // Avatar URL.
+  google.protobuf.StringValue avatar_url = 5;
+  // Open is true if anyone should be allowed to join.
+  google.protobuf.BoolValue open = 6;
+}
+
+// Delete a group the user has access to.
+message DeleteGroupRequest {
+  // The id of a group.
+  string group_id = 1;
+}
+
+// List groups based on given filters.
+message ListGroupsRequest {
+  // List groups that contain this value in their names.
+  string name = 1;
+  // Optional pagination cursor.
+  string cursor = 2;
+  // Max number of groups to return. Between 1 and 100.
+  google.protobuf.Int32Value limit = 3;
+  // Language tag filter.
+  string lang_tag = 4;
+  // Number of group members.
+  google.protobuf.Int32Value members = 5;
+  // Optional Open/Closed filter.
+  google.protobuf.BoolValue open = 6;
+}
+
+// Immediately join an open group, or request to join a closed one.
+message JoinGroupRequest {
+  // The group ID to join. The group must already exist.
+  string group_id = 1;
+}
+
+// Leave a group.
+message LeaveGroupRequest {
+  // The group ID to leave.
+  string group_id = 1;
+}
+
+// Add users to a group.
+message AddGroupUsersRequest {
+  // The group to add users to.
+  string group_id = 1;
+  // The users to add.
+  repeated string user_ids = 2;
+}
+
+// Kick a set of users from a group.
+message KickGroupUsersRequest {
+  // The group ID to kick from.
+  string group_id = 1;
+  // The users to kick.
+  repeated string user_ids = 2;
+}
+
+// Promote a set of users in a group to the next role up.
+message PromoteGroupUsersRequest {
+  // The group ID to promote in.
+  string group_id = 1;
+  // The users to promote.
+  repeated string user_ids = 2;
+}
+
+// Demote a set of users in a group to the next role down.
+message DemoteGroupUsersRequest {
+  // The group ID to demote in.
+  string group_id = 1;
+  // The users to demote.
+  repeated string user_ids = 2;
+}
+
+// Ban users from a group.
+message BanGroupUsersRequest {
+  // The group to ban users from.
+  string group_id = 1;
+  // The users to ban.
+  repeated string user_ids = 2;
+}
+
+// A list of users belonging to a group, along with their role.
+message GroupUserList {
+  // A single user-role pair.
+  message GroupUser {
+    // The group role status.
+    enum State {
+      // The user is a superadmin with full control of the group.
+      SUPERADMIN = 0;
+      // The user is an admin with additional privileges.
+      ADMIN = 1;
+      // The user is a regular member.
+      MEMBER = 2;
+      // The user has requested to join the group.
+      JOIN_REQUEST = 3;
+    }
+
+    // User.
+    User user = 1;
+    // Their relationship to the group.
+    google.protobuf.Int32Value state = 2;
+  }
+
+  // User-role pairs for a group.
+  repeated GroupUser group_users = 1;
+  // Cursor for the next page of results, if any.
+  string cursor = 2;
+}
+
+// A list of groups belonging to a user, along with the user's role in each group.
+message UserGroupList {
+  // A single group-role pair.
+  message UserGroup {
+    // The group role status.
+    enum State {
+      // The user is a superadmin with full control of the group.
+      SUPERADMIN = 0;
+      // The user is an admin with additional privileges.
+      ADMIN = 1;
+      // The user is a regular member.
+      MEMBER = 2;
+      // The user has requested to join the group.
+      JOIN_REQUEST = 3;
+    }
+
+    // Group.
+    Group group = 1;
+    // The user's relationship to the group.
+    google.protobuf.Int32Value state = 2;
+  }
+
+  // Group-role pairs for a user.
+  repeated UserGroup user_groups = 1;
+  // Cursor for the next page of results, if any.
+  string cursor = 2;
+}
+
+// List all users that are part of a group.
+message ListGroupUsersRequest {
+  // The group ID to list from.
+  string group_id = 1;
+  // Max number of records to return. Between 1 and 100.
+  google.protobuf.Int32Value limit = 2;
+  // The group user state to list.
+  google.protobuf.Int32Value state = 3;
+  // An optional next page cursor.
+  string cursor = 4;
+}
+
+// List the groups a user is part of, and their relationship to each.
+message ListUserGroupsRequest {
+  // ID of the user.
   string user_id = 1;
-  string product_id = 2;
-  string transaction_id = 3;
-  int32 store = 4;
-  google.protobuf.Timestamp purchase_time = 5;
-  bool seen_before = 6;
-  int32 environment = 7;
-  google.protobuf.Timestamp create_time = 8;
-  google.protobuf.Timestamp update_time = 9;
-  google.protobuf.Timestamp refund_time = 10;
-  string provider_response = 11;
+  // Max number of records to return. Between 1 and 100.
+  google.protobuf.Int32Value limit = 2;
+  // The user group state to list.
+  google.protobuf.Int32Value state = 3;
+  // An optional next page cursor.
+  string cursor = 4;
 }
 
+// ============================================================================
+// Leaderboards
+// ============================================================================
+
+// A leaderboard on the server.
+message Leaderboard {
+  // The ID of the leaderboard.
+  string id = 1;
+  // ASC(0) or DESC(1) sort mode of scores in the leaderboard.
+  uint32 sort_order = 2;
+  // BEST, SET, INCREMENT or DECREMENT operator mode of the leaderboard.
+  Operator operator = 3;
+  // The UNIX time when the leaderboard was previously reset. A computed value.
+  uint32 prev_reset = 4;
+  // The UNIX time when the leaderboard is next playable. A computed value.
+  uint32 next_reset = 5;
+  // Additional information stored as a JSON object.
+  string metadata = 6;
+  // The UNIX time when the leaderboard was created.
+  google.protobuf.Timestamp create_time = 7;
+  // Whether the leaderboard was created authoritatively or not.
+  bool authoritative = 8;
+}
+
+// A list of leaderboards.
+message LeaderboardList {
+  // The list of leaderboards returned.
+  repeated Leaderboard leaderboards = 1;
+  // A pagination cursor (optional).
+  string cursor = 2;
+}
+
+// Represents a complete leaderboard record with all scores and associated metadata.
+message LeaderboardRecord {
+  // The ID of the leaderboard this score belongs to.
+  string leaderboard_id = 1;
+  // The ID of the score owner, usually a user or group.
+  string owner_id = 2;
+  // The username of the score owner, if the owner is a user.
+  google.protobuf.StringValue username = 3;
+  // The score value.
+  int64 score = 4;
+  // An optional subscore value.
+  int64 subscore = 5;
+  // The number of submissions to this score record.
+  int32 num_score = 6;
+  // Metadata.
+  string metadata = 7;
+  // The UNIX time when the leaderboard record was created.
+  google.protobuf.Timestamp create_time = 8;
+  // The UNIX time when the leaderboard record was updated.
+  google.protobuf.Timestamp update_time = 9;
+  // The UNIX time when the leaderboard record expires.
+  google.protobuf.Timestamp expiry_time = 10;
+  // The rank of this record.
+  int64 rank = 11;
+  // The maximum number of score updates allowed by the owner.
+  uint32 max_num_score = 12;
+}
+
+// A set of leaderboard records, may be part of a leaderboard records page or a batch of individual records.
+message LeaderboardRecordList {
+  // A list of leaderboard records.
+  repeated LeaderboardRecord records = 1;
+  // A batched set of leaderboard records belonging to specified owners.
+  repeated LeaderboardRecord owner_records = 2;
+  // The cursor to send when retrieving the next page, if any.
+  string next_cursor = 3;
+  // The cursor to send when retrieving the previous page, if any.
+  string prev_cursor = 4;
+  // The total number of ranks available.
+  int64 rank_count = 5;
+}
+
+// A request to submit a score to a leaderboard.
+message WriteLeaderboardRecordRequest {
+  // Record values to write.
+  message LeaderboardRecordWrite {
+    // The score value to submit.
+    int64 score = 1;
+    // An optional secondary value.
+    int64 subscore = 2;
+    // Optional record metadata.
+    string metadata = 3;
+    // Operator override.
+    Operator operator = 4;
+  }
+
+  // The ID of the leaderboard to write to.
+  string leaderboard_id = 1;
+  // Record input.
+  LeaderboardRecordWrite record = 2;
+}
+
+// List leaderboard records from a given leaderboard.
+message ListLeaderboardRecordsRequest {
+  // The ID of the leaderboard to list for.
+  string leaderboard_id = 1;
+  // One or more owners to retrieve records for.
+  repeated string owner_ids = 2;
+  // Max number of records to return. Between 1 and 100.
+  google.protobuf.Int32Value limit = 3;
+  // A next or previous page cursor.
+  string cursor = 4;
+  // Expiry in seconds (since epoch) to begin fetching records from.
+  google.protobuf.Int64Value expiry = 5;
+}
+
+// List leaderboard records from a given leaderboard around the owner.
+message ListLeaderboardRecordsAroundOwnerRequest {
+  // The ID of the leaderboard to list for.
+  string leaderboard_id = 1;
+  // Max number of records to return. Between 1 and 100.
+  google.protobuf.UInt32Value limit = 2;
+  // The owner to retrieve records around.
+  string owner_id = 3;
+  // Expiry in seconds (since epoch) to begin fetching records from.
+  google.protobuf.Int64Value expiry = 4;
+  // A next or previous page cursor.
+  string cursor = 5;
+}
+
+// Delete a leaderboard record.
+message DeleteLeaderboardRecordRequest {
+  // The leaderboard ID to delete from.
+  string leaderboard_id = 1;
+}
+
+// ============================================================================
+// Tournaments
+// ============================================================================
+
+// A tournament on the server.
+message Tournament {
+  // The ID of the tournament.
+  string id = 1;
+  // The title for the tournament.
+  string title = 2;
+  // The description of the tournament. May be blank.
+  string description = 3;
+  // The category of the tournament. e.g. "vip" could be category 1.
+  uint32 category = 4;
+  // ASC (0) or DESC (1) sort mode of scores in the tournament.
+  uint32 sort_order = 5;
+  // The current number of players in the tournament.
+  uint32 size = 6;
+  // The maximum number of players for the tournament.
+  uint32 max_size = 7;
+  // The maximum score updates allowed per player for the current tournament.
+  uint32 max_num_score = 8;
+  // True if the tournament is active and can enter. A computed value.
+  bool can_enter = 9;
+  // The UNIX time when the tournament stops being active until next reset.
+  uint32 end_active = 10;
+  // The UNIX time when the tournament is next playable.
+  uint32 next_reset = 11;
+  // Additional information stored as a JSON object.
+  string metadata = 12;
+  // The UNIX time when the tournament was created.
+  google.protobuf.Timestamp create_time = 13;
+  // The UNIX time when the tournament will start.
+  google.protobuf.Timestamp start_time = 14;
+  // The UNIX time when the tournament will be stopped.
+  google.protobuf.Timestamp end_time = 15;
+  // Duration of the tournament in seconds.
+  uint32 duration = 16;
+  // The UNIX time when the tournament start being active.
+  uint32 start_active = 17;
+  // The UNIX time when the tournament was last reset.
+  uint32 prev_reset = 18;
+  // Operator.
+  Operator operator = 19;
+  // Whether the leaderboard was created authoritatively or not.
+  bool authoritative = 20;
+  // Whether the user must join the tournament before being able to submit scores.
+  bool join_required = 21;
+}
+
+// A list of tournaments.
+message TournamentList {
+  // The list of tournaments returned.
+  repeated Tournament tournaments = 1;
+  // A pagination cursor (optional).
+  string cursor = 2;
+}
+
+// A set of tournament records which may be part of a tournament records page or a batch of individual records.
+message TournamentRecordList {
+  // A list of tournament records.
+  repeated LeaderboardRecord records = 1;
+  // A batched set of tournament records belonging to specified owners.
+  repeated LeaderboardRecord owner_records = 2;
+  // The cursor to send when retrieving the next page (optional).
+  string next_cursor = 3;
+  // The cursor to send when retrieving the previous page (optional).
+  string prev_cursor = 4;
+  // The total number of ranks available.
+  int64 rank_count = 5;
+}
+
+// A request to submit a score to a tournament.
+message WriteTournamentRecordRequest {
+  // Record values to write.
+  message TournamentRecordWrite {
+    // The score value to submit.
+    int64 score = 1;
+    // An optional secondary value.
+    int64 subscore = 2;
+    // A JSON object of additional properties (optional).
+    string metadata = 3;
+    // Operator override.
+    Operator operator = 4;
+  }
+
+  // The tournament ID to write the record for.
+  string tournament_id = 1;
+  // Record input.
+  TournamentRecordWrite record = 2;
+}
+
+// The request to join a tournament.
+message JoinTournamentRequest {
+  // The ID of the tournament to join. The tournament must already exist.
+  string tournament_id = 1;
+}
+
+// List active/upcoming tournaments based on given filters.
+message ListTournamentsRequest {
+  // The start of the categories to include. Defaults to 0.
+  google.protobuf.UInt32Value category_start = 1;
+  // The end of the categories to include. Defaults to 128.
+  google.protobuf.UInt32Value category_end = 2;
+  // The start time for tournaments. Defaults to epoch.
+  google.protobuf.UInt32Value start_time = 3;
+  // The end time for tournaments. Defaults to +1 year from current Unix time.
+  google.protobuf.UInt32Value end_time = 4;
+  // Max number of records to return. Between 1 and 100.
+  google.protobuf.Int32Value limit = 6;
+  // A next page cursor for listings (optional).
+  string cursor = 8;
+}
+
+// List tournament records from a given tournament.
+message ListTournamentRecordsRequest {
+  // The ID of the tournament to list for.
+  string tournament_id = 1;
+  // One or more owners to retrieve records for.
+  repeated string owner_ids = 2;
+  // Max number of records to return. Between 1 and 100.
+  google.protobuf.Int32Value limit = 3;
+  // A next or previous page cursor.
+  string cursor = 4;
+  // Expiry in seconds (since epoch) to begin fetching records from.
+  google.protobuf.Int64Value expiry = 5;
+}
+
+// List tournament records from a given tournament around the owner.
+message ListTournamentRecordsAroundOwnerRequest {
+  // The ID of the tournament to list for.
+  string tournament_id = 1;
+  // Max number of records to return. Between 1 and 100.
+  google.protobuf.UInt32Value limit = 2;
+  // The owner to retrieve records around.
+  string owner_id = 3;
+  // Expiry in seconds (since epoch) to begin fetching records from.
+  google.protobuf.Int64Value expiry = 4;
+  // A next or previous page cursor.
+  string cursor = 5;
+}
+
+// Delete a tournament record.
+message DeleteTournamentRecordRequest {
+  // The tournament ID to delete from.
+  string tournament_id = 1;
+}
+
+// ============================================================================
+// Chat / Channel Messages
+// ============================================================================
+
+// A message sent on a channel.
+message ChannelMessage {
+  // The channel this message belongs to.
+  string channel_id = 1;
+  // The unique ID of this message.
+  string message_id = 2;
+  // The code representing a message type or category.
+  google.protobuf.Int32Value code = 3;
+  // Message sender, usually a user ID.
+  string sender_id = 4;
+  // The username of the message sender, if any.
+  string username = 5;
+  // The content payload.
+  string content = 6;
+  // The UNIX time when the message was created.
+  google.protobuf.Timestamp create_time = 7;
+  // The UNIX time when the message was last updated.
+  google.protobuf.Timestamp update_time = 8;
+  // True if the message was persisted to the channel's history, false otherwise.
+  google.protobuf.BoolValue persistent = 9;
+  // The name of the chat room, or an empty string if this message was not sent through a chat room.
+  string room_name = 10;
+  // The ID of the group, or an empty string if this message was not sent through a group channel.
+  string group_id = 11;
+  // The ID of the first DM user, or an empty string if this message was not sent through a DM chat.
+  string user_id_one = 12;
+  // The ID of the second DM user, or an empty string if this message was not sent through a DM chat.
+  string user_id_two = 13;
+}
+
+// A list of channel messages, usually a result of a list operation.
+message ChannelMessageList {
+  // A list of messages.
+  repeated ChannelMessage messages = 1;
+  // The cursor to send when retrieving the next page, if any.
+  string next_cursor = 2;
+  // The cursor to send when retrieving the previous page, if any.
+  string prev_cursor = 3;
+  // Cacheable cursor to list newer messages.
+  string cacheable_cursor = 4;
+}
+
+// List a channel's message history.
+message ListChannelMessagesRequest {
+  // The channel ID to list from.
+  string channel_id = 1;
+  // Max number of records to return. Between 1 and 100.
+  google.protobuf.Int32Value limit = 2;
+  // True if listing should be older messages to newer, false if reverse.
+  google.protobuf.BoolValue forward = 3;
+  // A pagination cursor, if any.
+  string cursor = 4;
+}
+
+// ============================================================================
+// Notifications
+// ============================================================================
+
+// A notification in the server.
+message Notification {
+  // ID of the Notification.
+  string id = 1;
+  // Subject of the notification.
+  string subject = 2;
+  // Content of the notification in JSON.
+  string content = 3;
+  // Category code for this notification.
+  int32 code = 4;
+  // ID of the sender, if a user. Otherwise 'null'.
+  string sender_id = 5;
+  // The UNIX time when the notification was created.
+  google.protobuf.Timestamp create_time = 6;
+  // True if this notification was persisted to the database.
+  bool persistent = 7;
+}
+
+// A collection of zero or more notifications.
+message NotificationList {
+  // Collection of notifications.
+  repeated Notification notifications = 1;
+  // Use this cursor to paginate notifications. Cache this to catch up to new notifications.
+  string cacheable_cursor = 2;
+}
+
+// Get a list of unexpired notifications.
+message ListNotificationsRequest {
+  // The number of notifications to get. Between 1 and 100.
+  google.protobuf.Int32Value limit = 1;
+  // A cursor to page through notifications.
+  string cacheable_cursor = 2;
+}
+
+// Delete one or more notifications for the current user.
+message DeleteNotificationsRequest {
+  // The id of notifications.
+  repeated string ids = 1;
+}
+
+// ============================================================================
+// Matches
+// ============================================================================
+
+// Represents a realtime match.
+message Match {
+  // The ID of the match, can be used to join.
+  string match_id = 1;
+  // True if it's an server-managed authoritative match, false otherwise.
+  bool authoritative = 2;
+  // Match label, if any.
+  google.protobuf.StringValue label = 3;
+  // Current number of users in the match.
+  int32 size = 4;
+  // Tick Rate.
+  int32 tick_rate = 5;
+  // Handler name.
+  string handler_name = 6;
+}
+
+// A list of realtime matches.
+message MatchList {
+  // A number of matches corresponding to a list operation.
+  repeated Match matches = 1;
+}
+
+// List realtime matches.
+message ListMatchesRequest {
+  // Limit the number of returned matches.
+  google.protobuf.Int32Value limit = 1;
+  // Authoritative or relayed matches.
+  google.protobuf.BoolValue authoritative = 2;
+  // Label filter.
+  google.protobuf.StringValue label = 3;
+  // Minimum user count.
+  google.protobuf.Int32Value min_size = 4;
+  // Maximum user count.
+  google.protobuf.Int32Value max_size = 5;
+  // Arbitrary label query.
+  google.protobuf.StringValue query = 6;
+}
+
+// ============================================================================
+// Parties
+// ============================================================================
+
+// A request to list parties.
+message ListPartiesRequest {
+  // Limit the number of returned parties.
+  google.protobuf.Int32Value limit = 1;
+  // Optionally filter by open/closed parties.
+  google.protobuf.BoolValue open = 2;
+  // Arbitrary label query.
+  google.protobuf.StringValue query = 3;
+  // Cursor for the next page of results, if any.
+  google.protobuf.StringValue cursor = 4;
+}
+
+// Incoming information about a party.
+message Party {
+  // Unique party identifier.
+  string party_id = 1;
+  // Open flag.
+  bool open = 2;
+  // Hidden flag.
+  bool hidden = 3;
+  // Maximum number of party members.
+  int32 max_size = 4;
+  // The party label, if any.
+  string label = 5;
+}
+
+// A list of parties.
+message PartyList {
+  // A number of parties corresponding to a list operation.
+  repeated Party parties = 1;
+  // A cursor to send when retrieving the next page, if any.
+  string cursor = 2;
+}
+
+// ============================================================================
+// Matchmaker
+// ============================================================================
+
+// Matchmaker ticket completion stats.
+message MatchmakerCompletionStats {
+  google.protobuf.Timestamp create_time = 1;
+  google.protobuf.Timestamp complete_time = 2;
+}
+
+// Matchmaker stats.
+message MatchmakerStats {
+  int32 ticket_count = 1;
+  google.protobuf.Timestamp oldest_ticket_create_time = 2;
+  repeated MatchmakerCompletionStats completions = 3;
+}
+
+// ============================================================================
+// Events
+// ============================================================================
+
+// Represents an event to be passed through the server to registered event handlers.
+message Event {
+  // An event name, type, category, or identifier.
+  string name = 1;
+  // Arbitrary event property values.
+  map<string, string> properties = 2;
+  // The time when the event was triggered.
+  google.protobuf.Timestamp timestamp = 3;
+  // True if the event came directly from a client call, false otherwise.
+  bool external = 4;
+}
+
+// ============================================================================
+// Storage
+// ============================================================================
+
+// Storage objects to get.
+message ReadStorageObjectId {
+  // The collection which stores the object.
+  string collection = 1;
+  // The key of the object within the collection.
+  string key = 2;
+  // The user owner of the object.
+  string user_id = 3;
+}
+
+// Batch get storage objects.
+message ReadStorageObjectsRequest {
+  // Batch of storage objects.
+  repeated ReadStorageObjectId object_ids = 1;
+}
+
+// An object within the storage engine.
+message StorageObject {
+  // The collection which stores the object.
+  string collection = 1;
+  // The key of the object within the collection.
+  string key = 2;
+  // The user owner of the object.
+  string user_id = 3;
+  // The value of the object.
+  string value = 4;
+  // The version hash of the object.
+  string version = 5;
+  // The read access permissions for the object.
+  int32 permission_read = 6;
+  // The write access permissions for the object.
+  int32 permission_write = 7;
+  // The UNIX time when the object was created.
+  google.protobuf.Timestamp create_time = 8;
+  // The UNIX time when the object was last updated.
+  google.protobuf.Timestamp update_time = 9;
+}
+
+// Batch of storage objects.
+message StorageObjects {
+  // The batch of storage objects.
+  repeated StorageObject objects = 1;
+}
+
+// List of storage objects.
+message StorageObjectList {
+  // The list of storage objects.
+  repeated StorageObject objects = 1;
+  // The cursor for the next page of results, if any.
+  string cursor = 2;
+}
+
+// List publicly readable storage objects in a given collection.
+message ListStorageObjectsRequest {
+  // ID of the user.
+  string user_id = 1;
+  // The collection which stores the object.
+  string collection = 2;
+  // The number of storage objects to list. Between 1 and 100.
+  google.protobuf.Int32Value limit = 3;
+  // The cursor to page through results from.
+  string cursor = 4;
+}
+
+// The object to store.
+message WriteStorageObject {
+  // The collection to store the object.
+  string collection = 1;
+  // The key for the object within the collection.
+  string key = 2;
+  // The value of the object.
+  string value = 3;
+  // The version hash of the object to check.
+  string version = 4;
+  // The read access permissions for the object.
+  google.protobuf.Int32Value permission_read = 5;
+  // The write access permissions for the object.
+  google.protobuf.Int32Value permission_write = 6;
+}
+
+// Write objects to the storage engine.
+message WriteStorageObjectsRequest {
+  // The objects to store on the server.
+  repeated WriteStorageObject objects = 1;
+}
+
+// A storage acknowledgement.
+message StorageObjectAck {
+  // The collection which stores the object.
+  string collection = 1;
+  // The key of the object within the collection.
+  string key = 2;
+  // The version hash of the object.
+  string version = 3;
+  // The owner of the object.
+  string user_id = 4;
+  // The UNIX time when the object was created.
+  google.protobuf.Timestamp create_time = 5;
+  // The UNIX time when the object was last updated.
+  google.protobuf.Timestamp update_time = 6;
+}
+
+// Batch of acknowledgements for the storage object write.
+message StorageObjectAcks {
+  // Batch of storage write acknowledgements.
+  repeated StorageObjectAck acks = 1;
+}
+
+// Storage objects to delete.
+message DeleteStorageObjectId {
+  // The collection which stores the object.
+  string collection = 1;
+  // The key of the object within the collection.
+  string key = 2;
+  // The version hash of the object.
+  string version = 3;
+}
+
+// Batch delete storage objects.
+message DeleteStorageObjectsRequest {
+  // Batch of storage objects.
+  repeated DeleteStorageObjectId object_ids = 1;
+}
+
+// ============================================================================
+// RPC
+// ============================================================================
+
+// Execute a function on the server.
+message Rpc {
+  // The identifier of the function.
+  string id = 1;
+  // The payload of the function which must be a JSON object.
+  string payload = 2;
+  // The authentication key used when executed as a non-client HTTP request.
+  string http_key = 3;
+}
+
+// ============================================================================
+// IAP / Purchases / Subscriptions
+// ============================================================================
+
+// Apple IAP Purchases validation request.
+message ValidatePurchaseAppleRequest {
+  // Base64 encoded Apple receipt data payload.
+  string receipt = 1;
+  // Persist the purchase.
+  google.protobuf.BoolValue persist = 2;
+}
+
+// Google IAP Purchase validation request.
+message ValidatePurchaseGoogleRequest {
+  // JSON encoded Google purchase payload.
+  string purchase = 1;
+  // Persist the purchase.
+  google.protobuf.BoolValue persist = 2;
+}
+
+// Huawei IAP Purchase validation request.
+message ValidatePurchaseHuaweiRequest {
+  // JSON encoded Huawei InAppPurchaseData.
+  string purchase = 1;
+  // InAppPurchaseData signature.
+  string signature = 2;
+  // Persist the purchase.
+  google.protobuf.BoolValue persist = 3;
+}
+
+// Facebook Instant IAP Purchase validation request.
+message ValidatePurchaseFacebookInstantRequest {
+  // Base64 encoded Facebook Instant signedRequest receipt data payload.
+  string signed_request = 1;
+  // Persist the purchase.
+  google.protobuf.BoolValue persist = 2;
+}
+
+// Samsung IAP Purchase validation request.
+message ValidatePurchaseSamsungRequest {
+  // The purchase ID returned by the Samsung IAP SDK PurchaseVo.
+  string purchase_id = 1;
+  // Persist the purchase.
+  google.protobuf.BoolValue persist = 2;
+}
+
+// Apple Subscription validation request.
+message ValidateSubscriptionAppleRequest {
+  // Base64 encoded Apple receipt data payload.
+  string receipt = 1;
+  // Persist the subscription.
+  google.protobuf.BoolValue persist = 2;
+}
+
+// Google Subscription validation request.
+message ValidateSubscriptionGoogleRequest {
+  // JSON encoded Google purchase payload.
+  string receipt = 1;
+  // Persist the subscription.
+  google.protobuf.BoolValue persist = 2;
+}
+
+// Validated Purchase stored by the server.
+message ValidatedPurchase {
+  // Purchase User ID.
+  string user_id = 1;
+  // Purchase Product ID.
+  string product_id = 2;
+  // Purchase Transaction ID.
+  string transaction_id = 3;
+  // Store identifier.
+  StoreProvider store = 4;
+  // Timestamp when the purchase was done.
+  google.protobuf.Timestamp purchase_time = 5;
+  // Timestamp when the receipt validation was stored in DB.
+  google.protobuf.Timestamp create_time = 6;
+  // Timestamp when the receipt validation was updated in DB.
+  google.protobuf.Timestamp update_time = 7;
+  // Timestamp when the purchase was refunded.
+  google.protobuf.Timestamp refund_time = 8;
+  // Raw provider validation response.
+  string provider_response = 9;
+  // Whether the purchase was done in production or sandbox environment.
+  StoreEnvironment environment = 10;
+  // Whether the purchase had already been validated before.
+  bool seen_before = 11;
+}
+
+// Validate IAP response.
 message ValidatePurchaseResponse {
+  // Newly seen validated purchases.
   repeated ValidatedPurchase validated_purchases = 1;
 }
 
-message ValidateSubscriptionAppleRequest {
-  string receipt = 1;
-  optional bool persist = 2;
-}
-
-message ValidateSubscriptionGoogleRequest {
-  string product_id = 1;
-  string purchase_token = 2;
-  optional bool persist = 3;
-}
-
+// Validate Subscription response.
 message ValidateSubscriptionResponse {
   ValidatedSubscription validated_subscription = 1;
 }
 
+// Validated Subscription stored by the server.
 message ValidatedSubscription {
+  // Subscription User ID.
   string user_id = 1;
+  // Purchase Product ID.
   string product_id = 2;
+  // Purchase Original transaction ID.
   string original_transaction_id = 3;
-  int32 store = 4;
+  // Store identifier.
+  StoreProvider store = 4;
+  // UNIX Timestamp when the purchase was done.
   google.protobuf.Timestamp purchase_time = 5;
-  google.protobuf.Timestamp expire_time = 6;
-  bool active = 7;
-  bool seen_before = 8;
-  int32 environment = 9;
-  google.protobuf.Timestamp create_time = 10;
-  google.protobuf.Timestamp update_time = 11;
-  google.protobuf.Timestamp refund_time = 12;
-  string provider_response = 13;
+  // UNIX Timestamp when the receipt validation was stored in DB.
+  google.protobuf.Timestamp create_time = 6;
+  // UNIX Timestamp when the receipt validation was updated in DB.
+  google.protobuf.Timestamp update_time = 7;
+  // Whether the purchase was done in production or sandbox environment.
+  StoreEnvironment environment = 8;
+  // Subscription expiration time.
+  google.protobuf.Timestamp expiry_time = 9;
+  // Subscription refund time.
+  google.protobuf.Timestamp refund_time = 10;
+  // Raw provider validation response body.
+  string provider_response = 11;
+  // Raw provider notification body.
+  string provider_notification = 12;
+  // Whether the subscription is currently active or not.
+  bool active = 13;
 }
 
-message ListSubscriptionsRequest {
-  int32 limit = 1;
+// A list of validated purchases.
+message PurchaseList {
+  // Stored validated purchases.
+  repeated ValidatedPurchase validated_purchases = 1;
+  // The cursor to send when retrieving the next page, if any.
   string cursor = 2;
-}
-
-message SubscriptionList {
-  repeated ValidatedSubscription validated_subscriptions = 1;
-  string cursor = 2;
+  // The cursor to send when retrieving the previous page, if any.
   string prev_cursor = 3;
 }
 
+// A list of validated subscriptions.
+message SubscriptionList {
+  // Stored validated subscriptions.
+  repeated ValidatedSubscription validated_subscriptions = 1;
+  // The cursor to send when retrieving the next page, if any.
+  string cursor = 2;
+  // The cursor to send when retrieving the previous page, if any.
+  string prev_cursor = 3;
+}
+
+// List user subscriptions.
+message ListSubscriptionsRequest {
+  // Max number of results per page.
+  google.protobuf.Int32Value limit = 1;
+  // Cursor to retrieve a page of records from.
+  string cursor = 2;
+}
+
+// Fetch a subscription by product id.
 message GetSubscriptionRequest {
+  // Product id of the subscription.
   string product_id = 1;
 }
-
-// --- RPC Service ---
-
-service RpcService {
-  rpc RpcFunc(Rpc) returns (Rpc);
-}
-
-message Rpc {
-  string id = 1;
-  string payload = 2;
-  string http_key = 3;
-}
-
-// --- Users / Events / System (ADR-0021) ---
-
-service UserService {
-  rpc GetUsers(GetUsersRequest) returns (Users);
-}
-
-message GetUsersRequest {
-  repeated string ids = 1;
-  repeated string usernames = 2;
-  repeated string facebook_ids = 3;
-}
-
-message Users {
-  repeated User users = 1;
-}
-
-service EventService {
-  rpc Event(ClientEvent) returns (google.protobuf.Empty);
-}
-
-message ClientEvent {
-  string name = 1;
-  map<string, string> properties = 2;
-  int64 timestamp = 3;
-  bool external = 4;
-}
-
-service SystemService {
-  rpc Healthcheck(google.protobuf.Empty) returns (google.protobuf.Empty);
-}
-
-

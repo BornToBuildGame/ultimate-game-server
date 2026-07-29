@@ -3,15 +3,11 @@ package api
 import (
 	"context"
 
-	"ultimate-game-server/internal/api/apipb"
-
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 // SystemServer implements apipb.SystemServiceServer.
-type SystemServer struct {
-	apipb.UnimplementedSystemServiceServer
-}
+type SystemServer struct{}
 
 // NewSystemServer creates a SystemServer.
 func NewSystemServer() *SystemServer {

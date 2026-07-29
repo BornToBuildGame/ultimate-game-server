@@ -19,7 +19,6 @@ import (
 
 // EventServer implements apipb.EventServiceServer.
 type EventServer struct {
-	apipb.UnimplementedEventServiceServer
 	tokenMgr *auth.TokenManager
 	hooks    *runtime.HookRegistry
 	logger   runtime.Logger
@@ -53,12 +52,16 @@ func (s *EventServer) authenticate(ctx context.Context) (*auth.Claims, error) {
 }
 
 // Event accepts client telemetry and dispatches to runtime event handlers.
-func (s *EventServer) Event(ctx context.Context, req *apipb.ClientEvent) (*emptypb.Empty, error) {
+func (s *EventServer) Event(ctx context.Context, req *apipb.Event) (*emptypb.Empty, error) {
 	claims, err := s.authenticate(ctx)
 	if err != nil {
 		return nil, err
 	}
-	s.dispatch(claims.UserID, claims.Username, req.GetName(), req.GetProperties(), req.GetTimestamp())
+	ts := int64(0)
+	if req.GetTimestamp() != nil {
+		ts = req.GetTimestamp().GetSeconds()
+	}
+	s.dispatch(claims.UserID, claims.Username, req.GetName(), req.GetProperties(), ts)
 	return &emptypb.Empty{}, nil
 }
 

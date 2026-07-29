@@ -7,7 +7,7 @@ import (
 	"errors"
 	"strings"
 
-	"ultimate-game-server/internal/api/storagepb"
+	"ultimate-game-server/internal/api/apipb"
 	"ultimate-game-server/internal/auth"
 	"ultimate-game-server/internal/storage"
 
@@ -21,7 +21,6 @@ import (
 )
 
 type StorageServer struct {
-	storagepb.UnimplementedStorageServiceServer
 	dbPool   *pgxpool.Pool
 	tokenMgr *auth.TokenManager
 }
@@ -68,8 +67,8 @@ func validateJSONObject(value string) error {
 	return nil
 }
 
-func toProtoStorageObject(o *storage.StorageObject) *storagepb.StorageObject {
-	return &storagepb.StorageObject{
+func toProtoStorageObject(o *storage.StorageObject) *apipb.StorageObject {
+	return &apipb.StorageObject{
 		Collection:      o.Collection,
 		Key:             o.Key,
 		UserId:          o.UserID,
@@ -82,7 +81,7 @@ func toProtoStorageObject(o *storage.StorageObject) *storagepb.StorageObject {
 	}
 }
 
-func (s *StorageServer) ReadStorageObjects(ctx context.Context, req *storagepb.ReadStorageObjectsRequest) (*storagepb.StorageObjects, error) {
+func (s *StorageServer) ReadStorageObjects(ctx context.Context, req *apipb.ReadStorageObjectsRequest) (*apipb.StorageObjects, error) {
 	callerStr, err := s.authenticate(ctx)
 	if err != nil {
 		return nil, err
@@ -112,14 +111,14 @@ func (s *StorageServer) ReadStorageObjects(ctx context.Context, req *storagepb.R
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to read storage objects: %v", err)
 	}
-	res := make([]*storagepb.StorageObject, len(objs))
+	res := make([]*apipb.StorageObject, len(objs))
 	for i, o := range objs {
 		res[i] = toProtoStorageObject(o)
 	}
-	return &storagepb.StorageObjects{Objects: res}, nil
+	return &apipb.StorageObjects{Objects: res}, nil
 }
 
-func (s *StorageServer) WriteStorageObjects(ctx context.Context, req *storagepb.WriteStorageObjectsRequest) (*storagepb.StorageObjectAcks, error) {
+func (s *StorageServer) WriteStorageObjects(ctx context.Context, req *apipb.WriteStorageObjectsRequest) (*apipb.StorageObjectAcks, error) {
 	userID, err := s.authenticate(ctx)
 	if err != nil {
 		return nil, err
@@ -132,17 +131,17 @@ func (s *StorageServer) WriteStorageObjects(ctx context.Context, req *storagepb.
 		if err := validateJSONObject(w.GetValue()); err != nil {
 			return nil, status.Error(codes.InvalidArgument, err.Error())
 		}
-		read := int16(w.GetPermissionRead())
-		write := int16(w.GetPermissionWrite())
+		read := int16(w.GetPermissionRead().GetValue())
+		write := int16(w.GetPermissionWrite().GetValue())
+		// If both wrapper fields are nil (unset), apply reference defaults.
+		if w.GetPermissionRead() == nil && w.GetPermissionWrite() == nil {
+			read, write = 1, 1
+		}
 		if read < 0 || read > 2 {
 			return nil, status.Error(codes.InvalidArgument, "permission_read must be 0, 1, or 2")
 		}
 		if write < 0 || write > 1 {
 			return nil, status.Error(codes.InvalidArgument, "permission_write must be 0 or 1")
-		}
-		// Proto int32 defaults to 0; treat both-zero as omitted → defaults 1 (reference wrappers).
-		if w.GetPermissionRead() == 0 && w.GetPermissionWrite() == 0 {
-			read, write = 1, 1
 		}
 		objs = append(objs, &storage.StorageObject{
 			Collection: w.GetCollection(),
@@ -161,9 +160,9 @@ func (s *StorageServer) WriteStorageObjects(ctx context.Context, req *storagepb.
 		}
 		return nil, status.Errorf(codes.Internal, "failed to write storage objects: %v", err)
 	}
-	out := make([]*storagepb.StorageObjectAck, len(acks))
+	out := make([]*apipb.StorageObjectAck, len(acks))
 	for i, a := range acks {
-		out[i] = &storagepb.StorageObjectAck{
+		out[i] = &apipb.StorageObjectAck{
 			Collection: a.Collection,
 			Key:        a.Key,
 			UserId:     a.UserID,
@@ -172,10 +171,10 @@ func (s *StorageServer) WriteStorageObjects(ctx context.Context, req *storagepb.
 			UpdateTime: timestamppb.New(a.UpdateTime),
 		}
 	}
-	return &storagepb.StorageObjectAcks{Acks: out}, nil
+	return &apipb.StorageObjectAcks{Acks: out}, nil
 }
 
-func (s *StorageServer) DeleteStorageObjects(ctx context.Context, req *storagepb.DeleteStorageObjectsRequest) (*emptypb.Empty, error) {
+func (s *StorageServer) DeleteStorageObjects(ctx context.Context, req *apipb.DeleteStorageObjectsRequest) (*emptypb.Empty, error) {
 	userID, err := s.authenticate(ctx)
 	if err != nil {
 		return nil, err
@@ -202,7 +201,7 @@ func (s *StorageServer) DeleteStorageObjects(ctx context.Context, req *storagepb
 	return &emptypb.Empty{}, nil
 }
 
-func (s *StorageServer) ListStorageObjects(ctx context.Context, req *storagepb.ListStorageObjectsRequest) (*storagepb.StorageObjectList, error) {
+func (s *StorageServer) ListStorageObjects(ctx context.Context, req *apipb.ListStorageObjectsRequest) (*apipb.StorageObjectList, error) {
 	callerStr, err := s.authenticate(ctx)
 	if err != nil {
 		return nil, err
@@ -214,7 +213,7 @@ func (s *StorageServer) ListStorageObjects(ctx context.Context, req *storagepb.L
 	if req.GetCollection() == "" {
 		return nil, status.Error(codes.InvalidArgument, "collection required")
 	}
-	limit := int(req.GetLimit())
+	limit := int(req.GetLimit().GetValue())
 	var owner *uuid.UUID
 	if uid := req.GetUserId(); uid != "" {
 		parsed, err := uuid.Parse(uid)
@@ -230,9 +229,9 @@ func (s *StorageServer) ListStorageObjects(ctx context.Context, req *storagepb.L
 		}
 		return nil, status.Errorf(codes.Internal, "failed to list storage objects: %v", err)
 	}
-	res := make([]*storagepb.StorageObject, len(list.Objects))
+	res := make([]*apipb.StorageObject, len(list.Objects))
 	for i, o := range list.Objects {
 		res[i] = toProtoStorageObject(o)
 	}
-	return &storagepb.StorageObjectList{Objects: res, NextCursor: list.Cursor}, nil
+	return &apipb.StorageObjectList{Objects: res, Cursor: list.Cursor}, nil
 }

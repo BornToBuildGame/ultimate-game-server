@@ -20,10 +20,10 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 type LeaderboardServer struct {
-	apipb.UnimplementedLeaderboardServiceServer
 	dbPool   *pgxpool.Pool
 	rdb      *redis.Client
 	tokenMgr *auth.TokenManager
@@ -67,65 +67,22 @@ func parseSortOperator(sortOrderStr, operatorStr string) (int, int) {
 	return sortOrder, operator
 }
 
-func (s *LeaderboardServer) CreateLeaderboard(ctx context.Context, req *apipb.CreateLeaderboardRequest) (*emptypb.Empty, error) {
-	sortOrder, operator := parseSortOperator(req.GetSortOrder(), req.GetOperator())
-	lb := &leaderboard.Leaderboard{
-		ID:            req.GetId(),
-		Authoritative: req.GetAuthoritative(),
-		SortOrder:     sortOrder,
-		Operator:      operator,
-		ResetSchedule: req.GetResetSchedule(),
-		Metadata:      req.GetMetadata(),
-		EnableRanks:   true,
-	}
-	if err := leaderboard.CreateLeaderboard(ctx, s.dbPool, lb); err != nil {
-		return nil, mapLeaderboardErr(err)
-	}
-	return &emptypb.Empty{}, nil
-}
 
-func (s *LeaderboardServer) DeleteLeaderboard(ctx context.Context, req *apipb.DeleteLeaderboardRequest) (*emptypb.Empty, error) {
-	if err := leaderboard.DeleteLeaderboard(ctx, s.dbPool, req.GetId()); err != nil {
-		return nil, mapLeaderboardErr(err)
-	}
-	return &emptypb.Empty{}, nil
-}
-
-func (s *LeaderboardServer) ListLeaderboards(ctx context.Context, req *apipb.ListLeaderboardsRequest) (*apipb.LeaderboardList, error) {
-	list, next, err := leaderboard.ListLeaderboards(ctx, s.dbPool, int(req.GetLimit()), req.GetCursor())
-	if err != nil {
-		return nil, mapLeaderboardErr(err)
-	}
-	out := make([]*apipb.Leaderboard, len(list))
-	now := time.Now().UTC()
-	for i, lb := range list {
-		prev, nextReset := int64(0), int64(0)
-		if sched := leaderboard.MustParseResetSchedule(lb.ResetSchedule); sched != nil {
-			prev = leaderboard.CalculatePrevReset(now, lb.StartTime.Unix(), sched)
-			nextReset = sched.Next(now).Unix()
-		}
-		out[i] = &apipb.Leaderboard{
-			Id:            lb.ID,
-			SortOrder:     strconv.Itoa(lb.SortOrder),
-			Operator:      strconv.Itoa(lb.Operator),
-			ResetSchedule: lb.ResetSchedule,
-			Metadata:      lb.Metadata,
-			Authoritative: lb.Authoritative,
-			CreateTime:    timestamppb.New(lb.CreateTime),
-			PrevReset:     prev,
-			NextReset:     nextReset,
-			EnableRanks:   lb.EnableRanks,
-		}
-	}
-	return &apipb.LeaderboardList{Leaderboards: out, NextCursor: next}, nil
-}
 
 func (s *LeaderboardServer) WriteLeaderboardRecord(ctx context.Context, req *apipb.WriteLeaderboardRecordRequest) (*apipb.LeaderboardRecord, error) {
 	userID, username, err := s.authenticate(ctx)
 	if err != nil {
 		return nil, err
 	}
-	record, err := leaderboard.SubmitScore(ctx, s.dbPool, s.rdb, req.GetLeaderboardId(), userID, username, req.GetScore(), req.GetSubscore(), req.GetMetadata(), true, mapProtoOperator(req.GetOverrideOperator()))
+	rec := req.GetRecord()
+	score, subscore, metadataStr, op := int64(0), int64(0), "", apipb.Operator_NO_OVERRIDE
+	if rec != nil {
+		score = rec.GetScore()
+		subscore = rec.GetSubscore()
+		metadataStr = rec.GetMetadata()
+		op = rec.GetOperator()
+	}
+	record, err := leaderboard.SubmitScore(ctx, s.dbPool, s.rdb, req.GetLeaderboardId(), userID, username, score, subscore, metadataStr, true, mapProtoOperator(op))
 	if err != nil {
 		return nil, mapLeaderboardErr(err)
 	}
@@ -148,7 +105,10 @@ func mapProtoOperator(op apipb.Operator) int {
 }
 
 func (s *LeaderboardServer) ListLeaderboardRecords(ctx context.Context, req *apipb.ListLeaderboardRecordsRequest) (*apipb.LeaderboardRecordList, error) {
-	expiryOverride := req.GetExpiry()
+	expiryOverride := int64(0)
+	if req.GetExpiry() != nil {
+		expiryOverride = req.GetExpiry().GetValue()
+	}
 	expiryTime := time.Time{}
 	if expiryOverride != 0 {
 		expiryTime = leaderboard.ResolveExpiryTime(expiryOverride)
@@ -162,7 +122,8 @@ func (s *LeaderboardServer) ListLeaderboardRecords(ctx context.Context, req *api
 		return &apipb.LeaderboardRecordList{OwnerRecords: toProtoRecords(records)}, nil
 	}
 
-	records, nextCursor, prevCursor, err := leaderboard.GetLeaderboardRecordsPaged(ctx, s.dbPool, req.GetLeaderboardId(), int(req.GetLimit()), req.GetCursor(), expiryTime, expiryOverride)
+	limit := int(req.GetLimit().GetValue())
+	records, nextCursor, prevCursor, err := leaderboard.GetLeaderboardRecordsPaged(ctx, s.dbPool, req.GetLeaderboardId(), limit, req.GetCursor(), expiryTime, expiryOverride)
 	if err != nil {
 		return nil, mapLeaderboardErr(err)
 	}
@@ -174,15 +135,26 @@ func (s *LeaderboardServer) ListLeaderboardRecords(ctx context.Context, req *api
 }
 
 func (s *LeaderboardServer) ListLeaderboardRecordsAroundOwner(ctx context.Context, req *apipb.ListLeaderboardRecordsAroundOwnerRequest) (*apipb.LeaderboardRecordList, error) {
-	expiryTime := time.Time{}
-	if req.GetExpiry() != 0 {
-		expiryTime = leaderboard.ResolveExpiryTime(req.GetExpiry())
+	expiryOverride := int64(0)
+	if req.GetExpiry() != nil {
+		expiryOverride = req.GetExpiry().GetValue()
 	}
-	records, err := leaderboard.GetLeaderboardRecordsAroundPlayer(ctx, s.dbPool, s.rdb, req.GetLeaderboardId(), req.GetOwnerId(), int(req.GetLimit()), expiryTime)
+	expiryTime := time.Time{}
+	if expiryOverride != 0 {
+		expiryTime = leaderboard.ResolveExpiryTime(expiryOverride)
+	}
+
+	limit := 0
+	if req.GetLimit() != nil {
+		limit = int(req.GetLimit().GetValue())
+	}
+	records, err := leaderboard.GetLeaderboardRecordsAroundPlayer(ctx, s.dbPool, s.rdb, req.GetLeaderboardId(), req.GetOwnerId(), limit, expiryTime)
 	if err != nil {
 		return nil, mapLeaderboardErr(err)
 	}
-	return &apipb.LeaderboardRecordList{Records: toProtoRecords(records)}, nil
+	return &apipb.LeaderboardRecordList{
+		Records: toProtoRecords(records),
+	}, nil
 }
 
 func (s *LeaderboardServer) DeleteLeaderboardRecord(ctx context.Context, req *apipb.DeleteLeaderboardRecordRequest) (*emptypb.Empty, error) {
@@ -221,7 +193,7 @@ func toProtoRecord(r *leaderboard.LeaderboardRecord) *apipb.LeaderboardRecord {
 	return &apipb.LeaderboardRecord{
 		LeaderboardId: r.LeaderboardID,
 		OwnerId:       r.OwnerID,
-		Username:      r.Username,
+		Username:      wrapperspb.String(r.Username),
 		Score:         r.Score,
 		Subscore:      r.Subscore,
 		Metadata:      r.Metadata,
@@ -230,7 +202,7 @@ func toProtoRecord(r *leaderboard.LeaderboardRecord) *apipb.LeaderboardRecord {
 		UpdateTime:    timestamppb.New(r.UpdateTime),
 		ExpiryTime:    timestamppb.New(r.ExpiryTime),
 		NumScore:      int32(r.NumScore),
-		MaxNumScore:   int32(r.MaxNumScore),
+		MaxNumScore:   uint32(r.MaxNumScore),
 	}
 }
 

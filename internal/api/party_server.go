@@ -19,7 +19,6 @@ import (
 
 // PartyServer implements apipb.PartyServiceServer.
 type PartyServer struct {
-	apipb.UnimplementedPartyServiceServer
 	registry *party.Registry
 	tokenMgr *auth.TokenManager
 }
@@ -54,24 +53,33 @@ func (s *PartyServer) ListParties(ctx context.Context, req *apipb.ListPartiesReq
 	if s.registry == nil {
 		return &apipb.PartyList{}, nil
 	}
-	limit := int(req.GetLimit())
+	limit := 0
+	if req.GetLimit() != nil {
+		limit = int(req.GetLimit().GetValue())
+	}
 	var open *bool
-	if req.Open != nil {
-		v := req.GetOpen()
+	if req.GetOpen() != nil {
+		v := req.GetOpen().GetValue()
 		open = &v
 	}
-	entries, cursor, err := s.registry.List(limit, open, false, req.GetQuery(), req.GetCursor())
+	query := ""
+	if req.GetQuery() != nil {
+		query = req.GetQuery().GetValue()
+	}
+	cursor := ""
+	if req.GetCursor() != nil {
+		cursor = req.GetCursor().GetValue()
+	}
+	entries, nextCursor, err := s.registry.List(limit, open, false, query, cursor)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "list parties: %v", err)
 	}
-	out := &apipb.PartyList{Cursor: cursor, Parties: make([]*apipb.Party, 0, len(entries))}
+	out := &apipb.PartyList{Cursor: nextCursor, Parties: make([]*apipb.Party, 0, len(entries))}
 	for _, e := range entries {
 		out.Parties = append(out.Parties, &apipb.Party{
-			Id:      e.ID,
+			PartyId: e.ID,
 			Open:    e.Open,
-			Hidden:  e.Hidden,
 			MaxSize: int32(e.MaxSize),
-			Label:   e.Label,
 		})
 	}
 	return out, nil

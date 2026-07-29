@@ -265,6 +265,35 @@ func (m *mockRuntimeModule) CronNext(expression string, timestamp int64) (int64,
 func (m *mockRuntimeModule) CronPrev(expression string, timestamp int64) (int64, error) {
 	return timestamp, nil
 }
+func (m *mockRuntimeModule) HttpRequest(ctx context.Context, urlStr, method string, headers map[string]string, body string, timeoutMs int) (int, map[string]string, string, error) {
+	return 200, map[string]string{"Content-Type": "application/json"}, `{"ok":true}`, nil
+}
+func (m *mockRuntimeModule) SqlExec(ctx context.Context, query string, args []interface{}) (int64, error) {
+	return 1, nil
+}
+func (m *mockRuntimeModule) SqlQuery(ctx context.Context, query string, args []interface{}) ([]map[string]interface{}, error) {
+	return []map[string]interface{}{{"id": "1"}}, nil
+}
+func (m *mockRuntimeModule) LocalCacheGet(key string) (interface{}, bool) {
+	return nil, false
+}
+func (m *mockRuntimeModule) LocalCacheSet(key string, value interface{}, ttlSec int64) {}
+func (m *mockRuntimeModule) CryptoHash(algo, input string) (string, error) {
+	return "hash", nil
+}
+func (m *mockRuntimeModule) CryptoHmacHash(algo, key, input string) (string, error) {
+	return "hmac", nil
+}
+func (m *mockRuntimeModule) BcryptHash(password string) (string, error) {
+	return "hashed", nil
+}
+func (m *mockRuntimeModule) BcryptCompare(hashStr, password string) bool {
+	return true
+}
+func (m *mockRuntimeModule) UuidV4() string {
+	return "00000000-0000-0000-0000-000000000001"
+}
+
 
 func (m *mockRuntimeModule) GetSatori() satori.Satori {
 	return nil

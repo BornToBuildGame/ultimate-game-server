@@ -1,29 +1,19 @@
 package api
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
 	"strconv"
-	"strings"
 
-	"ultimate-game-server/internal/api/apipb"
 	"ultimate-game-server/internal/auth"
 	"ultimate-game-server/internal/economy"
 	"ultimate-game-server/internal/runtime"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/metadata"
-	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/types/known/emptypb"
-	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-// EconomyServer implements apipb.EconomyServiceServer.
 type EconomyServer struct {
-	apipb.UnimplementedEconomyServiceServer
 	dbPool   *pgxpool.Pool
 	tokenMgr *auth.TokenManager
 	hooks    *runtime.HookRegistry
@@ -35,61 +25,7 @@ func NewEconomyServer(pool *pgxpool.Pool, tm *auth.TokenManager, hooks *runtime.
 
 func (s *EconomyServer) SetHooks(hooks *runtime.HookRegistry) { s.hooks = hooks }
 
-func (s *EconomyServer) authenticate(ctx context.Context) (string, error) {
-	md, ok := metadata.FromIncomingContext(ctx)
-	if !ok {
-		return "", status.Error(codes.Unauthenticated, "missing metadata")
-	}
-	authHeaders := md.Get("authorization")
-	if len(authHeaders) == 0 {
-		return "", status.Error(codes.Unauthenticated, "missing token")
-	}
-	tokenStr := strings.TrimPrefix(authHeaders[0], "Bearer ")
-	claims, err := s.tokenMgr.VerifyToken(tokenStr)
-	if err != nil {
-		return "", status.Errorf(codes.Unauthenticated, "invalid token: %v", err)
-	}
-	return claims.UserID, nil
-}
 
-func (s *EconomyServer) GetWallet(ctx context.Context, _ *emptypb.Empty) (*apipb.Wallet, error) {
-	userID, err := s.authenticate(ctx)
-	if err != nil {
-		return nil, err
-	}
-	w, err := economy.GetWallet(ctx, s.dbPool, userID)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "get wallet: %v", err)
-	}
-	b, _ := json.Marshal(w)
-	return &apipb.Wallet{Wallet: string(b)}, nil
-}
-
-func (s *EconomyServer) ListWalletLedger(ctx context.Context, req *apipb.ListWalletLedgerRequest) (*apipb.WalletLedgerList, error) {
-	userID, err := s.authenticate(ctx)
-	if err != nil {
-		return nil, err
-	}
-	list, err := economy.ListWalletLedger(ctx, s.dbPool, userID, int(req.GetLimit()), req.GetCursor())
-	if err != nil {
-		if errors.Is(err, economy.ErrLedgerCursorInvalid) {
-			return nil, status.Error(codes.InvalidArgument, "cursor is invalid")
-		}
-		return nil, status.Errorf(codes.Internal, "list ledger: %v", err)
-	}
-	out := &apipb.WalletLedgerList{NextCursor: list.NextCursor}
-	for _, item := range list.Items {
-		cs, _ := json.Marshal(item.Changeset)
-		meta, _ := json.Marshal(item.Metadata)
-		out.Items = append(out.Items, &apipb.WalletLedgerItem{
-			Id: item.ID, UserId: item.UserID,
-			Changeset: string(cs), Metadata: string(meta),
-			CreateTime: timestamppb.New(item.CreateTime),
-			UpdateTime: timestamppb.New(item.UpdateTime),
-		})
-	}
-	return out, nil
-}
 
 func (s *Server) handleGetWallet(w http.ResponseWriter, r *http.Request) {
 	userID, err := s.authenticateREST(r)

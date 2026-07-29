@@ -17,10 +17,10 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 type GroupServer struct {
-	apipb.UnimplementedGroupServiceServer
 	dbPool   *pgxpool.Pool
 	tokenMgr *auth.TokenManager
 	notifier social.FriendNotifier
@@ -64,13 +64,9 @@ func (s *GroupServer) CreateGroup(ctx context.Context, req *apipb.CreateGroupReq
 	if err != nil {
 		return nil, err
 	}
-	meta := req.GetMetadata()
-	if meta == "" {
-		meta = "{}"
-	}
 	g, err := social.CreateGroupWithParams(ctx, s.dbPool, userID, social.CreateGroupParams{
 		Name: req.GetName(), Description: req.GetDescription(), AvatarURL: req.GetAvatarUrl(),
-		LangTag: req.GetLangTag(), Metadata: meta, Open: req.GetOpen(), MaxCount: int(req.GetMaxCount()),
+		LangTag: req.GetLangTag(), Metadata: "{}", Open: req.GetOpen(), MaxCount: int(req.GetMaxCount()),
 	})
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to create group: %v", err)
@@ -83,11 +79,20 @@ func (s *GroupServer) UpdateGroup(ctx context.Context, req *apipb.UpdateGroupReq
 	if err != nil {
 		return nil, err
 	}
-	meta := req.GetMetadata()
-	if meta == "" {
-		meta = "{}"
+	name := req.GetName().GetValue()
+	desc := req.GetDescription().GetValue()
+	avatar := req.GetAvatarUrl().GetValue()
+	lang := req.GetLangTag().GetValue()
+	var open *bool
+	if req.GetOpen() != nil {
+		v := req.GetOpen().GetValue()
+		open = &v
 	}
-	err = social.UpdateGroup(ctx, s.dbPool, userID, req.GetId(), req.GetName(), req.GetDescription(), req.GetAvatarUrl(), req.GetLangTag(), req.GetOpen(), meta)
+	openVal := false
+	if open != nil {
+		openVal = *open
+	}
+	err = social.UpdateGroup(ctx, s.dbPool, userID, req.GetGroupId(), name, desc, avatar, lang, openVal, "{}")
 	if err != nil {
 		return nil, status.Errorf(codes.PermissionDenied, "failed to update group: %v", err)
 	}
@@ -99,7 +104,7 @@ func (s *GroupServer) DeleteGroup(ctx context.Context, req *apipb.DeleteGroupReq
 	if err != nil {
 		return nil, err
 	}
-	err = social.DeleteGroup(ctx, s.dbPool, userID, req.GetId())
+	err = social.DeleteGroup(ctx, s.dbPool, userID, req.GetGroupId())
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to delete group: %v", err)
 	}
@@ -108,11 +113,13 @@ func (s *GroupServer) DeleteGroup(ctx context.Context, req *apipb.DeleteGroupReq
 
 func (s *GroupServer) ListGroups(ctx context.Context, req *apipb.ListGroupsRequest) (*apipb.GroupList, error) {
 	var open *bool
-	if req.Open != nil {
-		v := req.GetOpen()
+	if req.GetOpen() != nil {
+		v := req.GetOpen().GetValue()
 		open = &v
 	}
-	list, nextCursor, err := social.ListGroups(ctx, s.dbPool, req.GetName(), req.GetLangTag(), open, int(req.GetMembers()), int(req.GetLimit()), req.GetCursor())
+	limit := int(req.GetLimit().GetValue())
+	members := int(req.GetMembers().GetValue())
+	list, nextCursor, err := social.ListGroups(ctx, s.dbPool, req.GetName(), req.GetLangTag(), open, members, limit, req.GetCursor())
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to list groups: %v", err)
 	}
@@ -120,7 +127,7 @@ func (s *GroupServer) ListGroups(ctx context.Context, req *apipb.ListGroupsReque
 	for i, g := range list {
 		protoGroups[i] = toProtoGroup(g)
 	}
-	return &apipb.GroupList{Groups: protoGroups, NextCursor: nextCursor}, nil
+	return &apipb.GroupList{Groups: protoGroups, Cursor: nextCursor}, nil
 }
 
 func (s *GroupServer) JoinGroup(ctx context.Context, req *apipb.JoinGroupRequest) (*emptypb.Empty, error) {
@@ -128,7 +135,7 @@ func (s *GroupServer) JoinGroup(ctx context.Context, req *apipb.JoinGroupRequest
 	if err != nil {
 		return nil, err
 	}
-	err = social.JoinGroup(ctx, s.dbPool, userID, req.GetId(), s.notifier)
+	err = social.JoinGroup(ctx, s.dbPool, userID, req.GetGroupId(), s.notifier)
 	if err != nil {
 		return nil, status.Errorf(codes.FailedPrecondition, "failed to join group: %v", err)
 	}
@@ -140,7 +147,7 @@ func (s *GroupServer) LeaveGroup(ctx context.Context, req *apipb.LeaveGroupReque
 	if err != nil {
 		return nil, err
 	}
-	err = social.LeaveGroup(ctx, s.dbPool, userID, req.GetId())
+	err = social.LeaveGroup(ctx, s.dbPool, userID, req.GetGroupId())
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to leave group: %v", err)
 	}
@@ -211,40 +218,42 @@ func (s *GroupServer) BanGroupUsers(ctx context.Context, req *apipb.BanGroupUser
 }
 
 func (s *GroupServer) ListGroupUsers(ctx context.Context, req *apipb.ListGroupUsersRequest) (*apipb.GroupUserList, error) {
-	list, nextCursor, err := social.ListGroupMembers(ctx, s.dbPool, req.GetGroupId(), int(req.GetLimit()), req.GetCursor())
+	limit := int(req.GetLimit().GetValue())
+	list, nextCursor, err := social.ListGroupMembers(ctx, s.dbPool, req.GetGroupId(), limit, req.GetCursor())
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to list group users: %v", err)
 	}
-	protoMembers := make([]*apipb.GroupUser, len(list))
+	protoMembers := make([]*apipb.GroupUserList_GroupUser, len(list))
 	for i, m := range list {
-		protoMembers[i] = &apipb.GroupUser{
+		protoMembers[i] = &apipb.GroupUserList_GroupUser{
 			User:  &apipb.User{Id: m.UserID, Username: m.Username},
-			State: int32(m.Role),
+			State: wrapperspb.Int32(int32(m.Role)),
 		}
 	}
-	return &apipb.GroupUserList{GroupUsers: protoMembers, NextCursor: nextCursor}, nil
+	return &apipb.GroupUserList{GroupUsers: protoMembers, Cursor: nextCursor}, nil
 }
 
 func (s *GroupServer) ListUserGroups(ctx context.Context, req *apipb.ListUserGroupsRequest) (*apipb.UserGroupList, error) {
 	if _, err := s.authenticate(ctx); err != nil {
 		return nil, err
 	}
-	list, nextCursor, err := social.ListUserGroups(ctx, s.dbPool, req.GetUserId(), int(req.GetLimit()), req.GetCursor())
+	limit := int(req.GetLimit().GetValue())
+	list, nextCursor, err := social.ListUserGroups(ctx, s.dbPool, req.GetUserId(), limit, req.GetCursor())
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to list user groups: %v", err)
 	}
-	protoGroups := make([]*apipb.UserGroup, len(list))
+	protoGroups := make([]*apipb.UserGroupList_UserGroup, len(list))
 	for i, r := range list {
-		protoGroups[i] = &apipb.UserGroup{Group: toProtoGroup(r.Group), State: int32(r.Role)}
+		protoGroups[i] = &apipb.UserGroupList_UserGroup{Group: toProtoGroup(r.Group), State: wrapperspb.Int32(int32(r.Role))}
 	}
-	return &apipb.UserGroupList{UserGroups: protoGroups, NextCursor: nextCursor}, nil
+	return &apipb.UserGroupList{UserGroups: protoGroups, Cursor: nextCursor}, nil
 }
 
 func toProtoGroup(g *social.Group) *apipb.Group {
 	open := g.State == social.GroupStateOpen
 	pg := &apipb.Group{
 		Id: g.ID, CreatorId: g.CreatorID, Name: g.Name, Description: g.Description,
-		AvatarUrl: g.AvatarURL, LangTag: g.LangTag, Open: open,
+		AvatarUrl: g.AvatarURL, LangTag: g.LangTag, Open: wrapperspb.Bool(open),
 		EdgeCount: int32(g.EdgeCount), MaxCount: int32(g.MaxCount), Metadata: g.Metadata,
 	}
 	if !g.CreateTime.IsZero() {

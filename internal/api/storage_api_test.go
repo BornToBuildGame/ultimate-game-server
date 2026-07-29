@@ -10,10 +10,10 @@ import (
 	"testing"
 	"time"
 
+	"ultimate-game-server/internal/api/apipb"
 	"ultimate-game-server/internal/auth"
 	"ultimate-game-server/internal/database"
 	"ultimate-game-server/internal/runtime"
-	"ultimate-game-server/internal/api/storagepb"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -22,6 +22,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 func TestStorageAPI_Integration(t *testing.T) {
@@ -252,20 +253,20 @@ func TestStorageAPI_Integration(t *testing.T) {
 	require.NoError(t, err)
 	defer conn.Close()
 
-	gClient := storagepb.NewStorageServiceClient(conn)
+	gClient := apipb.NewUltimateGameEngineClient(conn)
 
 	// Build authenticated context
 	grpcCtx := metadata.NewOutgoingContext(ctx, metadata.Pairs("authorization", "Bearer "+bearerToken))
 
 	// gRPC Write
-	gWriteResp, err := gClient.WriteStorageObjects(grpcCtx, &storagepb.WriteStorageObjectsRequest{
-		Objects: []*storagepb.WriteStorageObjectsRequest_WriteOp{
+	gWriteResp, err := gClient.WriteStorageObjects(grpcCtx, &apipb.WriteStorageObjectsRequest{
+		Objects: []*apipb.WriteStorageObject{
 			{
 				Collection:      "inventory",
 				Key:             "armor",
 				Value:           `{"type":"plate"}`,
-				PermissionRead:  1,
-				PermissionWrite: 1,
+				PermissionRead:  wrapperspb.Int32(1),
+				PermissionWrite: wrapperspb.Int32(1),
 			},
 		},
 	})
@@ -275,8 +276,8 @@ func TestStorageAPI_Integration(t *testing.T) {
 	gVersion := gWriteResp.Acks[0].Version
 
 	// gRPC Read
-	gReadResp, err := gClient.ReadStorageObjects(grpcCtx, &storagepb.ReadStorageObjectsRequest{
-		ObjectIds: []*storagepb.ReadStorageObjectsRequest_ReadOp{
+	gReadResp, err := gClient.ReadStorageObjects(grpcCtx, &apipb.ReadStorageObjectsRequest{
+		ObjectIds: []*apipb.ReadStorageObjectId{
 			{
 				Collection: "inventory",
 				Key:        "armor",
@@ -289,17 +290,17 @@ func TestStorageAPI_Integration(t *testing.T) {
 	assert.Equal(t, gVersion, gReadResp.Objects[0].Version)
 
 	// gRPC List
-	gListResp, err := gClient.ListStorageObjects(grpcCtx, &storagepb.ListStorageObjectsRequest{
+	gListResp, err := gClient.ListStorageObjects(grpcCtx, &apipb.ListStorageObjectsRequest{
 		Collection: "inventory",
 		UserId:     authResp.UserID,
-		Limit:      10,
+		Limit:      wrapperspb.Int32(10),
 	})
 	require.NoError(t, err)
 	assert.Len(t, gListResp.Objects, 1)
 
 	// gRPC Delete
-	_, err = gClient.DeleteStorageObjects(grpcCtx, &storagepb.DeleteStorageObjectsRequest{
-		ObjectIds: []*storagepb.DeleteStorageObjectsRequest_DeleteOp{
+	_, err = gClient.DeleteStorageObjects(grpcCtx, &apipb.DeleteStorageObjectsRequest{
+		ObjectIds: []*apipb.DeleteStorageObjectId{
 			{
 				Collection: "inventory",
 				Key:        "armor",

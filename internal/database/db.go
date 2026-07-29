@@ -12,6 +12,7 @@ import (
 // Config holds the database configuration options.
 type Config struct {
 	DSN             string        `json:"dsn" yaml:"dsn"`
+	ReadDSN         string        `json:"read_dsn" yaml:"read_dsn"`
 	MaxOpenConns    int32         `json:"max_open_conns" yaml:"max_open_conns"`
 	MaxIdleConns    int32         `json:"max_idle_conns" yaml:"max_idle_conns"`
 	MaxConnLifetime time.Duration `json:"max_conn_lifetime" yaml:"max_conn_lifetime"`
@@ -19,6 +20,21 @@ type Config struct {
 	MaxRetries      int           `json:"max_retries" yaml:"max_retries"`
 	RetryDelay      time.Duration `json:"retry_delay" yaml:"retry_delay"`
 }
+
+// DBPool holds primary write pool and optional read-replica pool.
+type DBPool struct {
+	WritePool *pgxpool.Pool
+	ReadPool  *pgxpool.Pool
+}
+
+// GetReadPool returns ReadPool if configured, otherwise falls back to WritePool.
+func (p *DBPool) GetReadPool() *pgxpool.Pool {
+	if p.ReadPool != nil {
+		return p.ReadPool
+	}
+	return p.WritePool
+}
+
 
 // DefaultConfig returns the default database configuration.
 func DefaultConfig() Config {

@@ -16,11 +16,11 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 // RealtimeServer implements apipb.RealtimeServiceServer.
 type RealtimeServer struct {
-	apipb.UnimplementedRealtimeServiceServer
 	logger      *zap.Logger
 	matchRouter *match.Router
 	rdb         *redis.Client
@@ -54,37 +54,7 @@ func (s *RealtimeServer) authenticate(ctx context.Context) (*auth.Claims, error)
 	return claims, nil
 }
 
-// CreateMatch creates a new match on the server.
-func (s *RealtimeServer) CreateMatch(ctx context.Context, req *apipb.CreateMatchRequest) (*apipb.Match, error) {
-	_, err := s.authenticate(ctx)
-	if err != nil {
-		return nil, err
-	}
 
-	matchID := match.NewAuthoritativeMatchID()
-	module := req.GetModule()
-	if module == "" {
-		return nil, status.Error(codes.InvalidArgument, "missing match module")
-	}
-
-	params := make(map[string]interface{})
-	for k, v := range req.GetParams() {
-		params[k] = v
-	}
-
-	err = s.matchRouter.CreateAndRegisterMatch(ctx, matchID, module, params)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to create match: %v", err)
-	}
-
-	return &apipb.Match{
-		MatchId:       matchID,
-		Authoritative: true,
-		Label:         "",
-		Size:          0,
-		MaxSize:       100,
-	}, nil
-}
 
 // ListMatches queries active matches.
 func (s *RealtimeServer) ListMatches(ctx context.Context, req *apipb.ListMatchesRequest) (*apipb.MatchList, error) {
@@ -110,58 +80,70 @@ func (s *RealtimeServer) ListMatches(ctx context.Context, req *apipb.ListMatches
 			authVal, _ := strconv.ParseBool(meta["authoritative"])
 			sizeVal, _ := strconv.Atoi(meta["size"])
 			maxSizeVal, _ := strconv.Atoi(meta["max_size"])
+			tickRateVal, _ := strconv.Atoi(meta["tick_rate"])
+			_ = maxSizeVal
 
-			if req.GetAuthoritative() && !authVal {
+			reqAuth := req.GetAuthoritative()
+			if reqAuth != nil && reqAuth.GetValue() && !authVal {
 				continue
 			}
-			if req.GetLabel() != "" && !strings.Contains(meta["label"], req.GetLabel()) {
+			reqLabel := req.GetLabel()
+			if reqLabel != nil && reqLabel.GetValue() != "" && !strings.Contains(meta["label"], reqLabel.GetValue()) {
 				continue
 			}
-			if req.GetMinSize() > 0 && int32(sizeVal) < req.GetMinSize() {
+			reqMin := req.GetMinSize()
+			if reqMin != nil && reqMin.GetValue() > 0 && int32(sizeVal) < reqMin.GetValue() {
 				continue
 			}
-			if req.GetMaxSize() > 0 && int32(sizeVal) > req.GetMaxSize() {
+			reqMax := req.GetMaxSize()
+			if reqMax != nil && reqMax.GetValue() > 0 && int32(sizeVal) > reqMax.GetValue() {
 				continue
 			}
 
 			activeMatches = append(activeMatches, &apipb.Match{
 				MatchId:       matchID,
 				Authoritative: authVal,
-				Label:         meta["label"],
+				Label:         wrapperspb.String(meta["label"]),
 				Size:          int32(sizeVal),
-				MaxSize:       int32(maxSizeVal),
+				TickRate:      int32(tickRateVal),
+				HandlerName:   meta["handler_name"],
 			})
 
-			if req.GetLimit() > 0 && int32(len(activeMatches)) >= req.GetLimit() {
+			reqLimit := req.GetLimit()
+			if reqLimit != nil && reqLimit.GetValue() > 0 && int32(len(activeMatches)) >= reqLimit.GetValue() {
 				break
 			}
 		}
 	} else {
 		for _, m := range s.matchRouter.GetLocalMatches() {
-			if req.GetAuthoritative() && !m.Authoritative {
+			reqAuth := req.GetAuthoritative()
+			if reqAuth != nil && reqAuth.GetValue() && !m.Authoritative {
 				continue
 			}
 			labelBytes, _ := json.Marshal(m.Label)
 			labelStr := string(labelBytes)
-			if req.GetLabel() != "" && !strings.Contains(labelStr, req.GetLabel()) {
+			reqLabel := req.GetLabel()
+			if reqLabel != nil && reqLabel.GetValue() != "" && !strings.Contains(labelStr, reqLabel.GetValue()) {
 				continue
 			}
-			if req.GetMinSize() > 0 && int32(m.PlayerCount) < req.GetMinSize() {
+			reqMin := req.GetMinSize()
+			if reqMin != nil && reqMin.GetValue() > 0 && int32(m.PlayerCount) < reqMin.GetValue() {
 				continue
 			}
-			if req.GetMaxSize() > 0 && int32(m.PlayerCount) > req.GetMaxSize() {
+			reqMax := req.GetMaxSize()
+			if reqMax != nil && reqMax.GetValue() > 0 && int32(m.PlayerCount) > reqMax.GetValue() {
 				continue
 			}
 
 			activeMatches = append(activeMatches, &apipb.Match{
 				MatchId:       m.MatchID,
 				Authoritative: m.Authoritative,
-				Label:         labelStr,
+				Label:         wrapperspb.String(labelStr),
 				Size:          int32(m.PlayerCount),
-				MaxSize:       int32(m.MaxSize),
 			})
 
-			if req.GetLimit() > 0 && int32(len(activeMatches)) >= req.GetLimit() {
+			reqLimit := req.GetLimit()
+			if reqLimit != nil && reqLimit.GetValue() > 0 && int32(len(activeMatches)) >= reqLimit.GetValue() {
 				break
 			}
 		}
@@ -172,98 +154,7 @@ func (s *RealtimeServer) ListMatches(ctx context.Context, req *apipb.ListMatches
 	}, nil
 }
 
-// GetMatch returns detail and presence info for a match.
-func (s *RealtimeServer) GetMatch(ctx context.Context, req *apipb.GetMatchRequest) (*apipb.Match, error) {
-	_, err := s.authenticate(ctx)
-	if err != nil {
-		return nil, err
-	}
 
-	matchID := req.GetMatchId()
-	if matchID == "" {
-		return nil, status.Error(codes.InvalidArgument, "missing match ID")
-	}
-
-	if s.rdb != nil {
-		meta, err := s.rdb.HGetAll(ctx, "match:metadata:"+matchID).Result()
-		if err != nil || len(meta) == 0 {
-			return nil, status.Error(codes.NotFound, "match not found")
-		}
-
-		authVal, _ := strconv.ParseBool(meta["authoritative"])
-		sizeVal, _ := strconv.Atoi(meta["size"])
-		maxSizeVal, _ := strconv.Atoi(meta["max_size"])
-
-		var matchPresences []*apipb.MatchPresence
-		if loop, ok := s.matchRouter.GetMatchLoop(matchID); ok {
-			for _, p := range loop.GetPresences() {
-				matchPresences = append(matchPresences, &apipb.MatchPresence{
-					UserId:    p.UserID,
-					Username:  p.Username,
-					SessionId: p.SessionID,
-				})
-			}
-		}
-
-		return &apipb.Match{
-			MatchId:       matchID,
-			Authoritative: authVal,
-			Label:         meta["label"],
-			Size:          int32(sizeVal),
-			MaxSize:       int32(maxSizeVal),
-			Presences:     matchPresences,
-		}, nil
-	} else {
-		m, presences, ok := s.matchRouter.GetLocalMatch(matchID)
-		if !ok {
-			return nil, status.Error(codes.NotFound, "match not found")
-		}
-
-		var matchPresences []*apipb.MatchPresence
-		for _, p := range presences {
-			matchPresences = append(matchPresences, &apipb.MatchPresence{
-				UserId:    p.UserID,
-				Username:  p.Username,
-				SessionId: p.SessionID,
-			})
-		}
-
-		labelBytes, _ := json.Marshal(m.Label)
-		return &apipb.Match{
-			MatchId:       m.MatchID,
-			Authoritative: m.Authoritative,
-			Label:         string(labelBytes),
-			Size:          int32(m.PlayerCount),
-			MaxSize:       int32(m.MaxSize),
-			Presences:     matchPresences,
-		}, nil
-	}
-}
-
-// MatchSignal forwards an admin signal command.
-func (s *RealtimeServer) MatchSignal(ctx context.Context, req *apipb.MatchSignalRequest) (*apipb.MatchSignalResponse, error) {
-	_, err := s.authenticate(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	matchID := req.GetMatchId()
-	if matchID == "" {
-		return nil, status.Error(codes.InvalidArgument, "missing match ID")
-	}
-
-	res, err := s.matchRouter.ForwardSignal(ctx, matchID, req.GetPayload())
-	if err != nil {
-		if strings.Contains(err.Error(), "not found") {
-			return nil, status.Error(codes.NotFound, err.Error())
-		}
-		return nil, status.Errorf(codes.Internal, "signal execution failed: %v", err)
-	}
-
-	return &apipb.MatchSignalResponse{
-		Response: res,
-	}, nil
-}
 
 // REST Server Handler Methods
 

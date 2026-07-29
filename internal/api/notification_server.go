@@ -24,7 +24,6 @@ import (
 
 // NotificationServer implements apipb.NotificationServiceServer.
 type NotificationServer struct {
-	apipb.UnimplementedNotificationServiceServer
 	dbPool   *pgxpool.Pool
 	tokenMgr *auth.TokenManager
 	hooks    *runtime.HookRegistry
@@ -57,11 +56,11 @@ func (s *NotificationServer) authenticate(ctx context.Context) (*auth.Claims, er
 	return claims, nil
 }
 
-func toProtoNotification(n *notification.Notification) *apipb.ApiNotification {
+func toProtoNotification(n *notification.Notification) *apipb.Notification {
 	if n == nil {
 		return nil
 	}
-	return &apipb.ApiNotification{
+	return &apipb.Notification{
 		Id:         n.ID,
 		Subject:    n.Subject,
 		Content:    n.Content,
@@ -91,7 +90,7 @@ func (s *NotificationServer) ListNotifications(ctx context.Context, req *apipb.L
 			}
 		}
 	}
-	limit := int(req.GetLimit())
+	limit := int(req.GetLimit().GetValue())
 	list, err := notification.NotificationList(ctx, s.dbPool, claims.UserID, limit, req.GetCacheableCursor())
 	if err != nil {
 		if errors.Is(err, notification.ErrNotificationCursorInvalid) {
@@ -101,7 +100,7 @@ func (s *NotificationServer) ListNotifications(ctx context.Context, req *apipb.L
 	}
 	out := &apipb.NotificationList{
 		CacheableCursor: list.CacheableCursor,
-		Notifications:   make([]*apipb.ApiNotification, 0, len(list.Notifications)),
+		Notifications:   make([]*apipb.Notification, 0, len(list.Notifications)),
 	}
 	for _, n := range list.Notifications {
 		out.Notifications = append(out.Notifications, toProtoNotification(n))

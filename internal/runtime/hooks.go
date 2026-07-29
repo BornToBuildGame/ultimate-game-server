@@ -180,7 +180,20 @@ type RuntimeModule interface {
 	// Cron utilities (UTC, ADR-0025)
 	CronNext(expression string, timestamp int64) (int64, error)
 	CronPrev(expression string, timestamp int64) (int64, error)
+
+	// Batch 3 utilities
+	HttpRequest(ctx context.Context, url, method string, headers map[string]string, body string, timeoutMs int) (int, map[string]string, string, error)
+	SqlExec(ctx context.Context, query string, args []interface{}) (int64, error)
+	SqlQuery(ctx context.Context, query string, args []interface{}) ([]map[string]interface{}, error)
+	LocalCacheGet(key string) (interface{}, bool)
+	LocalCacheSet(key string, value interface{}, ttlSec int64)
+	CryptoHash(algo, input string) (string, error)
+	CryptoHmacHash(algo, key, input string) (string, error)
+	BcryptHash(password string) (string, error)
+	BcryptCompare(hash, password string) bool
+	UuidV4() string
 }
+
 
 type StorageRead struct {
 	Collection string `json:"collection"`

@@ -24,7 +24,6 @@ import (
 )
 
 type TournamentServer struct {
-	apipb.UnimplementedTournamentServiceServer
 	dbPool   *pgxpool.Pool
 	rdb      *redis.Client
 	tokenMgr *auth.TokenManager
@@ -51,57 +50,31 @@ func (s *TournamentServer) authenticate(ctx context.Context) (string, string, er
 	return claims.UserID, claims.Username, nil
 }
 
-func (s *TournamentServer) CreateTournament(ctx context.Context, req *apipb.CreateTournamentRequest) (*emptypb.Empty, error) {
-	sortOrder, operator := parseSortOperator(req.GetSortOrder(), req.GetOperator())
-	endTime := time.Unix(0, 0).UTC()
-	if req.GetEndTime() != nil {
-		endTime = req.GetEndTime().AsTime()
-	}
-	startTime := time.Now().UTC()
-	if req.GetStartTime() != nil {
-		startTime = req.GetStartTime().AsTime()
-	}
-	lb := &leaderboard.Leaderboard{
-		ID: req.GetId(), Authoritative: req.GetAuthoritative(), SortOrder: sortOrder, Operator: operator,
-		ResetSchedule: req.GetResetSchedule(), Metadata: req.GetMetadata(), Category: int(req.GetCategory()),
-		Description: req.GetDescription(), Duration: int(req.GetDuration()), EndTime: endTime,
-		JoinRequired: req.GetJoinRequired(), MaxSize: int(req.GetMaxSize()), MaxNumScore: int(req.GetMaxNumScore()),
-		Title: req.GetTitle(), StartTime: startTime, EnableRanks: true,
-	}
-	if err := leaderboard.CreateLeaderboard(ctx, s.dbPool, lb); err != nil {
-		return nil, mapLeaderboardErr(err)
-	}
-	return &emptypb.Empty{}, nil
-}
 
-func (s *TournamentServer) DeleteTournament(ctx context.Context, req *apipb.DeleteTournamentRequest) (*emptypb.Empty, error) {
-	if err := leaderboard.DeleteLeaderboard(ctx, s.dbPool, req.GetId()); err != nil {
-		return nil, mapLeaderboardErr(err)
-	}
-	return &emptypb.Empty{}, nil
-}
 
 func (s *TournamentServer) JoinTournament(ctx context.Context, req *apipb.JoinTournamentRequest) (*emptypb.Empty, error) {
 	userID, username, err := s.authenticate(ctx)
 	if err != nil {
 		return nil, err
 	}
-	if err = tournament.JoinTournament(ctx, s.dbPool, req.GetId(), userID, username); err != nil {
+	if err = tournament.JoinTournament(ctx, s.dbPool, req.GetTournamentId(), userID, username); err != nil {
 		return nil, mapTournamentErr(err)
 	}
 	return &emptypb.Empty{}, nil
 }
 
 func (s *TournamentServer) ListTournaments(ctx context.Context, req *apipb.ListTournamentsRequest) (*apipb.TournamentList, error) {
-	startTime := time.Time{}
+	catStart := int(req.GetCategoryStart().GetValue())
+	catEnd := int(req.GetCategoryEnd().GetValue())
+	var startTime, endTime time.Time
 	if req.GetStartTime() != nil {
-		startTime = req.GetStartTime().AsTime()
+		startTime = time.Unix(int64(req.GetStartTime().GetValue()), 0)
 	}
-	endTime := time.Time{}
 	if req.GetEndTime() != nil {
-		endTime = req.GetEndTime().AsTime()
+		endTime = time.Unix(int64(req.GetEndTime().GetValue()), 0)
 	}
-	list, nextCursor, err := tournament.ListTournaments(ctx, s.dbPool, int(req.GetCategoryStart()), int(req.GetCategoryEnd()), startTime, endTime, int(req.GetLimit()), req.GetCursor(), req.GetActive())
+	limit := int(req.GetLimit().GetValue())
+	list, nextCursor, err := tournament.ListTournaments(ctx, s.dbPool, catStart, catEnd, startTime, endTime, limit, req.GetCursor(), true)
 	if err != nil {
 		return nil, mapTournamentErr(err)
 	}
@@ -109,7 +82,7 @@ func (s *TournamentServer) ListTournaments(ctx context.Context, req *apipb.ListT
 	for i, v := range list {
 		protoTournaments[i] = toProtoTournamentView(v)
 	}
-	return &apipb.TournamentList{Tournaments: protoTournaments, NextCursor: nextCursor}, nil
+	return &apipb.TournamentList{Tournaments: protoTournaments, Cursor: nextCursor}, nil
 }
 
 func (s *TournamentServer) WriteTournamentRecord(ctx context.Context, req *apipb.WriteTournamentRecordRequest) (*apipb.LeaderboardRecord, error) {
@@ -117,15 +90,26 @@ func (s *TournamentServer) WriteTournamentRecord(ctx context.Context, req *apipb
 	if err != nil {
 		return nil, err
 	}
-	record, err := leaderboard.SubmitScore(ctx, s.dbPool, s.rdb, req.GetTournamentId(), userID, username, req.GetScore(), req.GetSubscore(), req.GetMetadata(), true, mapProtoOperator(req.GetOverrideOperator()))
+	rec := req.GetRecord()
+	score, subscore, metadataStr, op := int64(0), int64(0), "", apipb.Operator_NO_OVERRIDE
+	if rec != nil {
+		score = rec.GetScore()
+		subscore = rec.GetSubscore()
+		metadataStr = rec.GetMetadata()
+		op = rec.GetOperator()
+	}
+	record, err := leaderboard.SubmitScore(ctx, s.dbPool, s.rdb, req.GetTournamentId(), userID, username, score, subscore, metadataStr, true, mapProtoOperator(op))
 	if err != nil {
 		return nil, mapLeaderboardErr(err)
 	}
 	return toProtoRecord(record), nil
 }
 
-func (s *TournamentServer) ListTournamentRecords(ctx context.Context, req *apipb.ListTournamentRecordsRequest) (*apipb.LeaderboardRecordList, error) {
-	expiryOverride := req.GetExpiry()
+func (s *TournamentServer) ListTournamentRecords(ctx context.Context, req *apipb.ListTournamentRecordsRequest) (*apipb.TournamentRecordList, error) {
+	expiryOverride := int64(0)
+	if req.GetExpiry() != nil {
+		expiryOverride = req.GetExpiry().GetValue()
+	}
 	expiryTime := time.Time{}
 	if expiryOverride != 0 {
 		expiryTime = leaderboard.ResolveExpiryTime(expiryOverride)
@@ -135,25 +119,34 @@ func (s *TournamentServer) ListTournamentRecords(ctx context.Context, req *apipb
 		if err != nil {
 			return nil, mapLeaderboardErr(err)
 		}
-		return &apipb.LeaderboardRecordList{OwnerRecords: toProtoRecords(records)}, nil
+		return &apipb.TournamentRecordList{OwnerRecords: toProtoRecords(records)}, nil
 	}
-	records, nextCursor, prevCursor, err := leaderboard.GetLeaderboardRecordsPaged(ctx, s.dbPool, req.GetTournamentId(), int(req.GetLimit()), req.GetCursor(), expiryTime, expiryOverride)
+	limit := int(req.GetLimit().GetValue())
+	records, nextCursor, prevCursor, err := leaderboard.GetLeaderboardRecordsPaged(ctx, s.dbPool, req.GetTournamentId(), limit, req.GetCursor(), expiryTime, expiryOverride)
 	if err != nil {
 		return nil, mapLeaderboardErr(err)
 	}
-	return &apipb.LeaderboardRecordList{Records: toProtoRecords(records), NextCursor: nextCursor, PrevCursor: prevCursor}, nil
+	return &apipb.TournamentRecordList{Records: toProtoRecords(records), NextCursor: nextCursor, PrevCursor: prevCursor}, nil
 }
 
-func (s *TournamentServer) ListTournamentRecordsAroundOwner(ctx context.Context, req *apipb.ListTournamentRecordsAroundOwnerRequest) (*apipb.LeaderboardRecordList, error) {
-	expiryTime := time.Time{}
-	if req.GetExpiry() != 0 {
-		expiryTime = leaderboard.ResolveExpiryTime(req.GetExpiry())
+func (s *TournamentServer) ListTournamentRecordsAroundOwner(ctx context.Context, req *apipb.ListTournamentRecordsAroundOwnerRequest) (*apipb.TournamentRecordList, error) {
+	expiryOverride := int64(0)
+	if req.GetExpiry() != nil {
+		expiryOverride = req.GetExpiry().GetValue()
 	}
-	records, err := leaderboard.GetLeaderboardRecordsAroundPlayer(ctx, s.dbPool, s.rdb, req.GetTournamentId(), req.GetOwnerId(), int(req.GetLimit()), expiryTime)
+	expiryTime := time.Time{}
+	if expiryOverride != 0 {
+		expiryTime = leaderboard.ResolveExpiryTime(expiryOverride)
+	}
+	limit := 0
+	if req.GetLimit() != nil {
+		limit = int(req.GetLimit().GetValue())
+	}
+	records, err := leaderboard.GetLeaderboardRecordsAroundPlayer(ctx, s.dbPool, s.rdb, req.GetTournamentId(), req.GetOwnerId(), limit, expiryTime)
 	if err != nil {
 		return nil, mapLeaderboardErr(err)
 	}
-	return &apipb.LeaderboardRecordList{Records: toProtoRecords(records)}, nil
+	return &apipb.TournamentRecordList{Records: toProtoRecords(records)}, nil
 }
 
 func (s *TournamentServer) DeleteTournamentRecord(ctx context.Context, req *apipb.DeleteTournamentRecordRequest) (*emptypb.Empty, error) {
@@ -183,13 +176,13 @@ func mapTournamentErr(err error) error {
 func toProtoTournamentView(v *tournament.TournamentView) *apipb.Tournament {
 	lb := v.Leaderboard
 	return &apipb.Tournament{
-		Id: lb.ID, SortOrder: strconv.Itoa(lb.SortOrder), Operator: strconv.Itoa(lb.Operator),
-		ResetSchedule: lb.ResetSchedule, Metadata: lb.Metadata, Authoritative: lb.Authoritative,
-		Category: int32(lb.Category), Description: lb.Description, Duration: int32(lb.Duration),
-		EndTime: timestamppb.New(lb.EndTime), JoinRequired: lb.JoinRequired, MaxSize: int32(lb.MaxSize),
-		MaxNumScore: int32(lb.MaxNumScore), Title: lb.Title, StartTime: timestamppb.New(lb.StartTime),
-		Size: int32(lb.Size), CanEnter: v.CanEnter, StartActive: v.StartActive, EndActive: v.EndActive,
-		PrevReset: v.PrevReset, NextReset: v.NextReset,
+		Id: lb.ID, SortOrder: uint32(lb.SortOrder), Operator: apipb.Operator(lb.Operator),
+		Metadata: lb.Metadata, Authoritative: lb.Authoritative,
+		Category: uint32(lb.Category), Description: lb.Description, Duration: uint32(lb.Duration),
+		EndTime: timestamppb.New(lb.EndTime), MaxSize: uint32(lb.MaxSize),
+		MaxNumScore: uint32(lb.MaxNumScore), Title: lb.Title, StartTime: timestamppb.New(lb.StartTime),
+		Size: uint32(lb.Size), CanEnter: v.CanEnter, StartActive: uint32(v.StartActive),
+		PrevReset: uint32(v.PrevReset), NextReset: uint32(v.NextReset),
 	}
 }
 

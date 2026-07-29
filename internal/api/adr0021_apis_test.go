@@ -43,8 +43,8 @@ func TestEventServerDispatches(t *testing.T) {
 	}
 }
 
-func TestUnblockFriendsRequestShape(t *testing.T) {
-	req := &apipb.UnblockFriendsRequest{Ids: []string{"a"}, Usernames: []string{"b"}}
+func TestDeleteFriendsRequestShape(t *testing.T) {
+	req := &apipb.DeleteFriendsRequest{Ids: []string{"a"}, Usernames: []string{"b"}}
 	if len(req.GetIds()) != 1 || len(req.GetUsernames()) != 1 {
 		t.Fatal(req)
 	}

@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"ultimate-game-server/internal/api/apipb"
-	"ultimate-game-server/internal/api/storagepb"
 	"ultimate-game-server/internal/auth"
 	"ultimate-game-server/internal/chat"
 	"ultimate-game-server/internal/cluster"
@@ -509,12 +508,13 @@ func (s *Server) Start(ctx context.Context) error {
 		opts = append(opts, grpc.ChainUnaryInterceptor(GRPCMetricsUnaryInterceptor()))
 	}
 	s.gRPCServer = grpc.NewServer(opts...)
-	storagepb.RegisterStorageServiceServer(s.gRPCServer, NewStorageServer(s.dbPool, s.tokenMgr))
-	apipb.RegisterLeaderboardServiceServer(s.gRPCServer, NewLeaderboardServer(s.dbPool, s.rdb, s.tokenMgr))
-	apipb.RegisterTournamentServiceServer(s.gRPCServer, NewTournamentServer(s.dbPool, s.rdb, s.tokenMgr))
-	apipb.RegisterFriendsServiceServer(s.gRPCServer, NewFriendsServer(s.dbPool, s.tokenMgr, s.presenceTracker))
-	apipb.RegisterGroupServiceServer(s.gRPCServer, NewGroupServer(s.dbPool, s.tokenMgr))
-	apipb.RegisterMatchmakerServiceServer(s.gRPCServer, NewMatchmakerServer(s.Matchmaker, s.tokenMgr, func(userID string) string {
+	authServer := NewAuthServer(s)
+	storageServer := NewStorageServer(s.dbPool, s.tokenMgr)
+	leaderboardServer := NewLeaderboardServer(s.dbPool, s.rdb, s.tokenMgr)
+	tournamentServer := NewTournamentServer(s.dbPool, s.rdb, s.tokenMgr)
+	friendsServer := NewFriendsServer(s.dbPool, s.tokenMgr, s.presenceTracker)
+	groupServer := NewGroupServer(s.dbPool, s.tokenMgr)
+	matchmakerServer := NewMatchmakerServer(s.Matchmaker, s.tokenMgr, func(userID string) string {
 		if s.SocketRegistry == nil {
 			return ""
 		}
@@ -523,10 +523,11 @@ func (s *Server) Start(ctx context.Context) error {
 			return ""
 		}
 		return ids[0]
-	}))
-	apipb.RegisterRealtimeServiceServer(s.gRPCServer, NewRealtimeServer(s.logger, s.MatchRouter, s.rdb, s.tokenMgr))
-	apipb.RegisterPartyServiceServer(s.gRPCServer, NewPartyServer(s.PartyRegistry, s.tokenMgr))
-	apipb.RegisterChatServiceServer(s.gRPCServer, NewChannelServer(s.dbPool, s.tokenMgr, nil))
+	})
+	realtimeServer := NewRealtimeServer(s.logger, s.MatchRouter, s.rdb, s.tokenMgr)
+	partyServer := NewPartyServer(s.PartyRegistry, s.tokenMgr)
+	channelServer := NewChannelServer(s.dbPool, s.tokenMgr, nil)
+
 	s.notificationServer = NewNotificationServer(s.dbPool, s.tokenMgr, nil)
 	s.economyServer = NewEconomyServer(s.dbPool, s.tokenMgr, nil)
 	s.iapServer = NewIAPServer(s.dbPool, s.tokenMgr, nil, s.iapConfig)
@@ -535,12 +536,10 @@ func (s *Server) Start(ctx context.Context) error {
 		s.economyServer.SetHooks(s.RuntimeManager.Registry())
 		s.iapServer.SetHooks(s.RuntimeManager.Registry())
 	}
-	apipb.RegisterNotificationServiceServer(s.gRPCServer, s.notificationServer)
-	apipb.RegisterEconomyServiceServer(s.gRPCServer, s.economyServer)
-	apipb.RegisterIAPServiceServer(s.gRPCServer, s.iapServer)
+
 	s.rpcServer = NewRpcServer(s.dbPool, s.tokenMgr, s.RuntimeManager, s.rpcCfg)
 	s.rpcServer.SetVMs(s.LuaVM, s.JSVM)
-	apipb.RegisterRpcServiceServer(s.gRPCServer, s.rpcServer)
+
 	if s.RuntimeManager != nil {
 		if grm, ok := s.RuntimeManager.NK().(*runtime.GoRuntimeModule); ok {
 			rm := s.RuntimeManager
@@ -558,15 +557,35 @@ func (s *Server) Start(ctx context.Context) error {
 			})
 		}
 	}
-	apipb.RegisterAuthenticationServiceServer(s.gRPCServer, NewAuthServer(s))
-	apipb.RegisterSystemServiceServer(s.gRPCServer, NewSystemServer())
-	apipb.RegisterUserServiceServer(s.gRPCServer, NewUserServer(s.dbPool, s.tokenMgr))
+
+	userServer := NewUserServer(s.dbPool, s.tokenMgr)
+	systemServer := NewSystemServer()
 	s.eventServer = NewEventServer(s.tokenMgr, nil, nil)
 	if s.RuntimeManager != nil {
 		s.eventServer.SetHooks(s.RuntimeManager.Registry())
 		s.eventServer.logger = s.RuntimeManager.Logger()
 	}
-	apipb.RegisterEventServiceServer(s.gRPCServer, s.eventServer)
+
+	apiServer := NewApiServer(
+		authServer,
+		storageServer,
+		leaderboardServer,
+		tournamentServer,
+		friendsServer,
+		groupServer,
+		matchmakerServer,
+		realtimeServer,
+		partyServer,
+		channelServer,
+		s.notificationServer,
+		s.iapServer,
+		s.rpcServer,
+		userServer,
+		systemServer,
+		s.eventServer,
+	)
+
+	apipb.RegisterUltimateGameEngineServer(s.gRPCServer, apiServer)
 
 	// Start Matchmaker Tick Loop (Ticks every 1 second)
 	s.Matchmaker.Start(ctx, 1000*time.Millisecond)
