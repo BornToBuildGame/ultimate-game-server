@@ -34,7 +34,7 @@ func TestMultiUpdate_AccountStorageWallet(t *testing.T) {
 	t.Cleanup(func() { pool.Close() })
 
 	var pingErr error
-	for i := 0; i < 10; i++ {
+	for i := 0; i < 30; i++ {
 		pingErr = pool.Ping(ctx)
 		if pingErr == nil {
 			break
