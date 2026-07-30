@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"database/sql"
-	"flag"
 	"log"
 	"os"
 	"os/signal"
@@ -13,6 +12,7 @@ import (
 	"time"
 
 	"ultimate-game-server/internal/api"
+	"ultimate-game-server/internal/config"
 	"ultimate-game-server/internal/console"
 	"ultimate-game-server/internal/database"
 	"ultimate-game-server/internal/economy"
@@ -44,21 +44,6 @@ func (l *zapRuntimeLogger) Error(format string, args ...interface{}) {
 }
 
 func main() {
-	defs := database.DefaultConfig()
-	httpAddr := flag.String("http_addr", "0.0.0.0:7350", "HTTP server address")
-	grpcAddr := flag.String("grpc_addr", "0.0.0.0:7349", "gRPC server address")
-	dsn := flag.String("dsn", "", "Database DSN (overrides environment variable)")
-	jwtSecret := flag.String("jwt_secret", "super_secret_signing_key_at_least_32_bytes_long_1234567", "JWT secret key")
-	runtimePath := flag.String("runtime_path", "data/modules", "Go plugins and Lua/JS modules directory")
-	rpcHTTPKey := flag.String("rpc_http_key", "", "RPC server-to-server HTTP key (env UGE_RPC_HTTP_KEY)")
-	dbMigration := flag.Bool("database_migration", true, "Run schema migrations on startup (env DATABASE_MIGRATION)")
-	dbMaxOpen := flag.Int("database_max_open_conns", int(defs.MaxOpenConns), "Max open DB connections (env DATABASE_MAX_OPEN_CONNS)")
-	dbMaxIdle := flag.Int("database_max_idle_conns", int(defs.MaxIdleConns), "Min/idle DB connections (env DATABASE_MAX_IDLE_CONNS)")
-	dbConnLifetime := flag.Duration("database_conn_max_lifetime", defs.MaxConnLifetime, "Max connection lifetime (env DATABASE_CONN_MAX_LIFETIME)")
-	dbConnIdle := flag.Duration("database_conn_max_idle_time", defs.MaxConnIdleTime, "Max connection idle time (env DATABASE_CONN_MAX_IDLE_TIME)")
-	consoleAddr := flag.String("console_addr", "0.0.0.0:7351", "Console admin listen address; empty disables (env CONSOLE_ADDR)")
-	flag.Parse()
-
 	logger, err := zap.NewDevelopment()
 	if err != nil {
 		log.Fatalf("failed to initialize logger: %v", err)
@@ -67,22 +52,23 @@ func main() {
 
 	logger.Info("Starting Ultimate Game Engine server bootstrap...")
 
-	dbDsn := *dsn
-	if dbDsn == "" {
-		dbDsn = os.Getenv("DATABASE_URL")
-		if dbDsn == "" {
-			dbDsn = defs.DSN
-		}
+	cfg, err := config.Parse(os.Args)
+	if err != nil {
+		logger.Fatal("Failed to parse configurations", zap.Error(err))
 	}
 
-	dbCfg := defs
-	dbCfg.DSN = dbDsn
-	dbCfg.MaxOpenConns = int32(envIntOr("DATABASE_MAX_OPEN_CONNS", *dbMaxOpen))
-	dbCfg.MaxIdleConns = int32(envIntOr("DATABASE_MAX_IDLE_CONNS", *dbMaxIdle))
-	dbCfg.MaxConnLifetime = envDurationOr("DATABASE_CONN_MAX_LIFETIME", *dbConnLifetime)
-	dbCfg.MaxConnIdleTime = envDurationOr("DATABASE_CONN_MAX_IDLE_TIME", *dbConnIdle)
+	dbCfg := database.Config{
+		DSN:             cfg.GetDatabase().DSN,
+		ReadDSN:         cfg.GetDatabase().ReadDSN,
+		MaxOpenConns:    int32(cfg.GetDatabase().MaxOpenConns),
+		MaxIdleConns:    int32(cfg.GetDatabase().MaxIdleConns),
+		MaxConnLifetime: cfg.GetDatabase().MaxConnLifetime,
+		MaxConnIdleTime: cfg.GetDatabase().MaxConnIdleTime,
+		MaxRetries:      5,
+		RetryDelay:      1 * time.Second,
+	}
 
-	runMigrations := envBoolOr("DATABASE_MIGRATION", *dbMigration)
+	runMigrations := cfg.GetDatabase().Migration
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	dbPool, err := database.ConnectWithBackoff(ctx, logger, dbCfg)
@@ -105,22 +91,28 @@ func main() {
 		logger.Info("Database migrations skipped (database_migration=false)")
 	}
 
-	rpcKey := *rpcHTTPKey
-	if rpcKey == "" {
-		rpcKey = os.Getenv("UGE_RPC_HTTP_KEY")
-	}
-	rtPath := *runtimePath
-	if v := os.Getenv("UGE_RUNTIME_PATH"); v != "" {
-		rtPath = v
-	}
+	rpcKey := cfg.GetRuntime().HTTPKey
+	rtPath := cfg.GetRuntime().Path
 
-	iapCfg := economy.LoadIAPConfigFromEnv()
+	iapCfg := economy.IAPConfig{
+		AppleSharedPassword:           cfg.GetIAP().Apple.SharedPassword,
+		AppleNotificationsEndpointID:  cfg.GetIAP().Apple.NotificationsEndpointID,
+		GoogleClientEmail:             cfg.GetIAP().Google.ClientEmail,
+		GooglePrivateKey:              cfg.GetIAP().Google.PrivateKey,
+		GooglePackageName:             cfg.GetIAP().Google.PackageName,
+		GoogleNotificationsEndpointID: cfg.GetIAP().Google.NotificationsEndpointID,
+		HuaweiPublicKey:               cfg.GetIAP().Huawei.PublicKey,
+		HuaweiClientID:                cfg.GetIAP().Huawei.ClientID,
+		HuaweiClientSecret:            cfg.GetIAP().Huawei.ClientSecret,
+		FacebookAppSecret:             cfg.GetIAP().FacebookInstant.AppSecret,
+		SamsungPackageName:            cfg.GetIAP().Samsung.PackageName,
+	}
 	economy.DefaultIAPConfig = iapCfg
 
 	serverCfg := api.Config{
-		HTTPAddr:        *httpAddr,
-		GRPCAddr:        *grpcAddr,
-		JWTSecret:       []byte(*jwtSecret),
+		HTTPAddr:        cfg.GetSocket().HTTPAddr,
+		GRPCAddr:        cfg.GetSocket().GRPCAddr,
+		JWTSecret:       []byte(cfg.GetSession().EncryptionKey),
 		JWTExpiry:       24 * time.Hour,
 		RateLimitMax:    100,
 		RateLimitRefill: 10,
@@ -177,13 +169,10 @@ func main() {
 	}
 	cronSched.Start(ctx)
 
-	consoleListen := strings.TrimSpace(*consoleAddr)
-	if v := os.Getenv("CONSOLE_ADDR"); v != "" {
-		consoleListen = strings.TrimSpace(v)
-	}
+	consoleListen := strings.TrimSpace(cfg.GetConsole().Address)
 	var consoleServer *console.Server
 	if consoleListen != "" {
-		cs, err := console.NewServer(&consoleZapLogger{z: logger}, dbPool, []byte(*jwtSecret))
+		cs, err := console.NewServer(&consoleZapLogger{z: logger}, dbPool, []byte(cfg.GetSession().EncryptionKey))
 		if err != nil {
 			logger.Fatal("Failed to initialize console admin", zap.Error(err))
 		}
@@ -220,7 +209,7 @@ func main() {
 	}
 
 	go func() {
-		logger.Info("Booting API server instances...", zap.String("http", *httpAddr), zap.String("grpc", *grpcAddr))
+		logger.Info("Booting API server instances...", zap.String("http", cfg.GetSocket().HTTPAddr), zap.String("grpc", cfg.GetSocket().GRPCAddr))
 		if err := server.Start(ctx); err != nil {
 			logger.Fatal("Server runtime crash", zap.Error(err))
 		}
