@@ -14,9 +14,9 @@ import (
 	"testing"
 	"time"
 
-	"ultimate-game-server/internal/auth"
-	"ultimate-game-server/internal/database"
-	"ultimate-game-server/internal/runtime"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/auth"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/database"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/runtime"
 
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 	"go.uber.org/zap"

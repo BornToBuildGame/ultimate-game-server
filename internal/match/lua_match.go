@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"ultimate-game-server/internal/runtime"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/runtime"
 )
 
 // SetLuaModulePath configures the directory used to resolve Lua match modules by name.

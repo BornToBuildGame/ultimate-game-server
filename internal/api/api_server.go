@@ -3,7 +3,7 @@ package api
 import (
 	"context"
 
-	"ultimate-game-server/internal/api/apipb"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/api/apipb"
 
 	"google.golang.org/protobuf/types/known/emptypb"
 )

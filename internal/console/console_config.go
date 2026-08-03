@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"ultimate-game-server/internal/console/acl"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/console/acl"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )

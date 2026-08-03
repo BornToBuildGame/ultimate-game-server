@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package ultimate.server.console;
 
-option go_package = "ultimate-game-server/internal/console/consolepb";
+option go_package = "github.com/BornToBuildGame/ultimate-game-server/internal/console/consolepb";
 
 import "google/protobuf/empty.proto";
 

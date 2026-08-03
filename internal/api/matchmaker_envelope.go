@@ -1,7 +1,7 @@
 package api
 
 import (
-	"ultimate-game-server/internal/matchmaker"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/matchmaker"
 )
 
 type matchmakerPresenceWire struct {

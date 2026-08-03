@@ -9,10 +9,10 @@ import (
 	"strings"
 	"time"
 
-	"ultimate-game-server/internal/api/apipb"
-	"ultimate-game-server/internal/auth"
-	"ultimate-game-server/internal/chat"
-	"ultimate-game-server/internal/runtime"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/api/apipb"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/auth"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/chat"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/runtime"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"google.golang.org/grpc/codes"

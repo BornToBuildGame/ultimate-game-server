@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"ultimate-game-server/internal/matchmaker"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/matchmaker"
 
 	"github.com/stretchr/testify/require"
 )

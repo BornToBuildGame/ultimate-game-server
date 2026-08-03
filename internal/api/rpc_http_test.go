@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"ultimate-game-server/internal/auth"
-	"ultimate-game-server/internal/runtime"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/auth"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/runtime"
 
 	"go.uber.org/zap"
 )

@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"ultimate-game-server/internal/database"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/database"
 
 	"github.com/google/uuid"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"

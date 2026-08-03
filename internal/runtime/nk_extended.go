@@ -6,8 +6,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"ultimate-game-server/internal/auth"
-	"ultimate-game-server/internal/social"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/auth"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/social"
 
 	"github.com/dop251/goja"
 	"github.com/google/uuid"

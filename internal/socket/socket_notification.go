@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"time"
 
-	"ultimate-game-server/internal/notification"
-	"ultimate-game-server/internal/presence"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/notification"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/presence"
 )
 
 // NotificationsStream returns the stream key for a user's notification inbox.

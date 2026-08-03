@@ -13,9 +13,9 @@ import (
 	"testing"
 	"time"
 
-	"ultimate-game-server/internal/database"
-	"ultimate-game-server/internal/leaderboard"
-	"ultimate-game-server/internal/runtime"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/database"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/leaderboard"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/runtime"
 
 	"github.com/gorilla/websocket"
 	"github.com/jackc/pgx/v5/stdlib"

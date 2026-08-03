@@ -7,9 +7,9 @@ import (
 	"strconv"
 	"strings"
 
-	"ultimate-game-server/internal/api/apipb"
-	"ultimate-game-server/internal/auth"
-	"ultimate-game-server/internal/social"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/api/apipb"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/auth"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/social"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"google.golang.org/grpc/codes"

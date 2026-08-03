@@ -7,9 +7,9 @@ import (
 	"errors"
 	"strings"
 
-	"ultimate-game-server/internal/api/apipb"
-	"ultimate-game-server/internal/auth"
-	"ultimate-game-server/internal/storage"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/api/apipb"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/auth"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/storage"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"

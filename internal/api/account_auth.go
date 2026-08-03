@@ -6,9 +6,9 @@ import (
 	"net/http"
 	"strings"
 
-	"ultimate-game-server/internal/auth"
-	"ultimate-game-server/internal/economy"
-	"ultimate-game-server/internal/leaderboard"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/auth"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/economy"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/leaderboard"
 
 	"github.com/google/uuid"
 	"go.uber.org/zap"

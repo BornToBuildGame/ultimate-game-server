@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"ultimate-game-server/internal/satori"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/satori"
 
 	"github.com/dop251/goja"
 	"github.com/stretchr/testify/assert"

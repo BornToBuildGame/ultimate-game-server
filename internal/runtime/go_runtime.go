@@ -17,7 +17,7 @@ import (
 	"strings"
 	"sync"
 
-	"ultimate-game-server/internal/storage"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/storage"
 )
 
 // RuntimeType identifies the execution runtime for a registered handler.
@@ -60,6 +60,15 @@ func NewGoRuntimeManager(logger Logger, db *sql.DB, nk RuntimeModule) *GoRuntime
 		registry: NewHookRegistry(),
 		loaded:   make([]string, 0),
 	}
+}
+
+// NewInitializer constructs a new Initializer bound to this runtime manager.
+func (m *GoRuntimeManager) NewInitializer() Initializer {
+	init := &goInitializer{registry: m.registry, nk: m.nk}
+	if grm, ok := m.nk.(*GoRuntimeModule); ok {
+		init.storageIndex = grm.storageIndex
+	}
+	return init
 }
 
 // LoadPlugins scans the specified directory for .so files and loads them as Go plugins.

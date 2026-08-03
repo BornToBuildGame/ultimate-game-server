@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"ultimate-game-server/internal/presence"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/presence"
 
 	lua "github.com/yuin/gopher-lua"
 )

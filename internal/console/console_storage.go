@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"net/http"
 
-	"ultimate-game-server/internal/console/acl"
-	"ultimate-game-server/internal/console/consolepb"
-	"ultimate-game-server/internal/storage"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/console/acl"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/console/consolepb"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/storage"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"google.golang.org/grpc/codes"

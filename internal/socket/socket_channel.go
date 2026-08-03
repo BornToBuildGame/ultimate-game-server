@@ -7,10 +7,10 @@ import (
 	"strings"
 	"time"
 
-	"ultimate-game-server/internal/chat"
-	"ultimate-game-server/internal/cluster"
-	"ultimate-game-server/internal/notification"
-	"ultimate-game-server/internal/social"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/chat"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/cluster"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/notification"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/social"
 
 	"github.com/google/uuid"
 )

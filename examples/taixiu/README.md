@@ -100,8 +100,8 @@ package main
 import (
     "context"
     "database/sql"
-    "ultimate-game-server/examples/taixiu"
-    "ultimate-game-server/internal/runtime"
+    "github.com/BornToBuildGame/ultimate-game-server/examples/taixiu"
+    "github.com/BornToBuildGame/ultimate-game-server/internal/runtime"
 )
 
 func InitModule(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.RuntimeModule, initializer runtime.Initializer) error {

@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"ultimate-game-server/internal/runtime"
+	"github.com/BornToBuildGame/ultimate-game-server/pkg/runtime"
 )
 
 // mockLogger implements runtime.Logger for unit tests.

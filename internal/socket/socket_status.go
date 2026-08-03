@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"ultimate-game-server/internal/cluster"
-	"ultimate-game-server/internal/presence"
-	"ultimate-game-server/internal/runtime"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/cluster"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/presence"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/runtime"
 )
 
 const (

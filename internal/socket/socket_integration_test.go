@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"ultimate-game-server/internal/auth"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/auth"
 
 	"github.com/gorilla/websocket"
 	"go.uber.org/zap"

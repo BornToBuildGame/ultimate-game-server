@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"ultimate-game-server/internal/social"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/social"
 
 	"github.com/google/uuid"
 )

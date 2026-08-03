@@ -6,9 +6,9 @@ import (
 	"net/http"
 	"strconv"
 
-	"ultimate-game-server/internal/auth"
-	"ultimate-game-server/internal/economy"
-	"ultimate-game-server/internal/runtime"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/auth"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/economy"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/runtime"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )

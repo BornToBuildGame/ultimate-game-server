@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"ultimate-game-server/internal/api/apipb"
-	"ultimate-game-server/internal/runtime"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/api/apipb"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/runtime"
 
 	"google.golang.org/protobuf/types/known/emptypb"
 )

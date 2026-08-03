@@ -8,11 +8,11 @@ import (
 	"strings"
 	"time"
 
-	"ultimate-game-server/internal/auth"
-	"ultimate-game-server/internal/chat"
-	"ultimate-game-server/internal/console/acl"
-	"ultimate-game-server/internal/notification"
-	"ultimate-game-server/internal/social"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/auth"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/chat"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/console/acl"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/notification"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/social"
 
 	"github.com/google/uuid"
 )

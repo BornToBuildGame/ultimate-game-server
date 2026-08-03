@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"strings"
 
-	"ultimate-game-server/internal/satori"
-	"ultimate-game-server/internal/storage"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/satori"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/storage"
 
 	"github.com/yuin/gopher-lua"
 )

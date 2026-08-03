@@ -9,9 +9,9 @@ import (
 	"sync"
 	"time"
 
-	"ultimate-game-server/internal/cronexpr"
-	"ultimate-game-server/internal/fleet"
-	"ultimate-game-server/internal/satori"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/cronexpr"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/fleet"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/satori"
 )
 
 // Logger provides structured logging for runtime modules.

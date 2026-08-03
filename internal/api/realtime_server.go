@@ -7,9 +7,9 @@ import (
 	"strconv"
 	"strings"
 
-	"ultimate-game-server/internal/api/apipb"
-	"ultimate-game-server/internal/auth"
-	"ultimate-game-server/internal/match"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/api/apipb"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/auth"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/match"
 
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"

@@ -1,4 +1,4 @@
-module ultimate-game-server
+module github.com/BornToBuildGame/ultimate-game-server
 
 go 1.25.5
 
@@ -6,6 +6,7 @@ require (
 	github.com/RoaringBitmap/roaring v1.9.4
 	github.com/alicebob/miniredis/v2 v2.38.0
 	github.com/blevesearch/bleve/v2 v2.6.0
+	github.com/blugelabs/bluge v0.2.2
 	github.com/dop251/goja v0.0.0-20260701091749-b07b74453ea9
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/google/uuid v1.6.0
@@ -15,6 +16,7 @@ require (
 	github.com/redis/go-redis/v9 v9.21.0
 	github.com/soheilhy/cmux v0.1.5
 	github.com/stretchr/testify v1.11.1
+	github.com/testcontainers/testcontainers-go/modules/cockroachdb v0.43.0
 	github.com/testcontainers/testcontainers-go/modules/postgres v0.43.0
 	github.com/testcontainers/testcontainers-go/modules/redis v0.43.0
 	github.com/yuin/gopher-lua v1.1.2
@@ -22,6 +24,7 @@ require (
 	golang.org/x/crypto v0.54.0
 	google.golang.org/grpc v1.82.0
 	google.golang.org/protobuf v1.36.11
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
@@ -50,7 +53,6 @@ require (
 	github.com/blevesearch/zapx/v15 v15.4.3 // indirect
 	github.com/blevesearch/zapx/v16 v16.3.4 // indirect
 	github.com/blevesearch/zapx/v17 v17.1.2 // indirect
-	github.com/blugelabs/bluge v0.2.2 // indirect
 	github.com/blugelabs/bluge_segment_api v0.2.0 // indirect
 	github.com/blugelabs/ice v1.0.0 // indirect
 	github.com/blugelabs/ice/v2 v2.0.1 // indirect
@@ -108,7 +110,6 @@ require (
 	github.com/shirou/gopsutil/v4 v4.26.5 // indirect
 	github.com/sirupsen/logrus v1.9.4 // indirect
 	github.com/testcontainers/testcontainers-go v0.43.0 // indirect
-	github.com/testcontainers/testcontainers-go/modules/cockroachdb v0.43.0 // indirect
 	github.com/tklauser/go-sysconf v0.3.16 // indirect
 	github.com/tklauser/numcpus v0.11.0 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
@@ -125,5 +126,4 @@ require (
 	golang.org/x/sys v0.47.0 // indirect
 	golang.org/x/text v0.40.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260414002931-afd174a4e478 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

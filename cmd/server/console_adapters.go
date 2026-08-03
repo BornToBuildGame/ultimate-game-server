@@ -5,9 +5,9 @@ import (
 	"errors"
 	"fmt"
 
-	"ultimate-game-server/internal/api"
-	"ultimate-game-server/internal/match"
-	"ultimate-game-server/internal/runtime"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/api"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/match"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/runtime"
 
 	"github.com/dop251/goja"
 	"github.com/yuin/gopher-lua"

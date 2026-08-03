@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"ultimate-game-server/internal/economy"
-	"ultimate-game-server/internal/runtime"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/economy"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/runtime"
 )
 
 // IAPNotificationDeps wires store RTDN endpoints on the console mux.

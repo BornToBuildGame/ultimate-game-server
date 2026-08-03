@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"ultimate-game-server/internal/auth"
-	"ultimate-game-server/internal/metrics"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/auth"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/metrics"
 
 	"github.com/google/uuid"
 )

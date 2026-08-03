@@ -3,8 +3,8 @@ package economy
 import (
 	"context"
 
-	"ultimate-game-server/internal/auth"
-	"ultimate-game-server/internal/storage"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/auth"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/storage"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"

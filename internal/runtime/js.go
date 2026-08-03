@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"ultimate-game-server/internal/satori"
-	"ultimate-game-server/internal/storage"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/satori"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/storage"
 
 	"github.com/dop251/goja"
 )

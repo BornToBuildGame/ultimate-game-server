@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"testing"
 
-	"ultimate-game-server/internal/chat"
-	"ultimate-game-server/internal/presence"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/chat"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/presence"
 )
 
 func TestBuildChannelJoinAndSendRoom(t *testing.T) {

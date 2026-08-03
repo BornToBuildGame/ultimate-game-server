@@ -3,7 +3,7 @@ package leaderboard
 import (
 	"time"
 
-	"ultimate-game-server/internal/cronexpr"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/cronexpr"
 )
 
 // ParseResetSchedule parses a 5–7 field cron expression. Empty string returns nil.

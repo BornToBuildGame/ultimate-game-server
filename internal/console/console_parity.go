@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"time"
 
-	"ultimate-game-server/internal/economy"
-	"ultimate-game-server/internal/storage"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/economy"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/storage"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"

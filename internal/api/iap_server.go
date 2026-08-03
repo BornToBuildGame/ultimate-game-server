@@ -8,10 +8,10 @@ import (
 	"strconv"
 	"strings"
 
-	"ultimate-game-server/internal/api/apipb"
-	"ultimate-game-server/internal/auth"
-	"ultimate-game-server/internal/economy"
-	"ultimate-game-server/internal/runtime"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/api/apipb"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/auth"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/economy"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/runtime"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"

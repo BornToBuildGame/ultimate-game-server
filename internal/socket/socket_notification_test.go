@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"ultimate-game-server/internal/notification"
-	"ultimate-game-server/internal/presence"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/notification"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/presence"
 
 	"github.com/google/uuid"
 )

@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"ultimate-game-server/internal/cronexpr"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/cronexpr"
 )
 
 func TestCalculateTournamentDeadlines_NoReset(t *testing.T) {

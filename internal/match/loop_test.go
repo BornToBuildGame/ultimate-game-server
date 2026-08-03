@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"ultimate-game-server/internal/runtime"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/runtime"
 
 	lua "github.com/yuin/gopher-lua"
 	"go.uber.org/zap"

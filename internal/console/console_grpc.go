@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 
-	"ultimate-game-server/internal/console/consolepb"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/console/consolepb"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"

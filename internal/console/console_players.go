@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"time"
 
-	"ultimate-game-server/internal/auth"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/auth"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"

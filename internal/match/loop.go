@@ -12,7 +12,7 @@ import (
 	"sync"
 	"time"
 
-	"ultimate-game-server/internal/runtime"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/runtime"
 
 	"github.com/google/uuid"
 	lua "github.com/yuin/gopher-lua"

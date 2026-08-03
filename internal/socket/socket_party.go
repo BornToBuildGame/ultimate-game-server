@@ -4,9 +4,9 @@ import (
 	"context"
 	"encoding/json"
 
-	"ultimate-game-server/internal/cluster"
-	"ultimate-game-server/internal/party"
-	"ultimate-game-server/internal/presence"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/cluster"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/party"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/presence"
 )
 
 func (gh *GatewayHandler) trackParty(sessionID, partyID string) {

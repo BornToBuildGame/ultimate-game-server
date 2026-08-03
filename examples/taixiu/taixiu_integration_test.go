@@ -15,9 +15,9 @@ import (
 	"testing"
 	"time"
 
-	"ultimate-game-server/internal/api"
-	"ultimate-game-server/internal/database"
-	"ultimate-game-server/internal/runtime"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/api"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/database"
+	"github.com/BornToBuildGame/ultimate-game-server/pkg/runtime"
 
 	"github.com/gorilla/websocket"
 	"github.com/jackc/pgx/v5/stdlib"

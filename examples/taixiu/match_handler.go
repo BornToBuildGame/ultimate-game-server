@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"ultimate-game-server/internal/runtime"
+	"github.com/BornToBuildGame/ultimate-game-server/pkg/runtime"
 )
 
 // matchDispatcher describes the dispatcher interface provided by the server runtime.

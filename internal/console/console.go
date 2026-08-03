@@ -10,10 +10,10 @@ import (
 	"sync"
 	"time"
 
-	"ultimate-game-server/internal/console/acl"
-	"ultimate-game-server/internal/console/consolepb"
-	"ultimate-game-server/internal/runtime"
-	"ultimate-game-server/internal/satori"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/console/acl"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/console/consolepb"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/runtime"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/satori"
 
 	"github.com/blevesearch/bleve/v2"
 	"github.com/golang-jwt/jwt/v5"

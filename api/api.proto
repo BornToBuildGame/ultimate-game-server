@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package ultimate.server.api;
 
-option go_package = "ultimate-game-server/internal/api/apipb";
+option go_package = "github.com/BornToBuildGame/ultimate-game-server/internal/api/apipb";
 
 import "google/protobuf/empty.proto";
 import "google/protobuf/timestamp.proto";

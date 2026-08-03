@@ -12,8 +12,8 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"ultimate-game-server/internal/presence"
-	"ultimate-game-server/internal/social"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/presence"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/social"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"

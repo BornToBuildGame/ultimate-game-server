@@ -3,7 +3,7 @@ package api
 import (
 	"testing"
 
-	"ultimate-game-server/internal/api/apipb"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/api/apipb"
 
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/types/known/wrapperspb"

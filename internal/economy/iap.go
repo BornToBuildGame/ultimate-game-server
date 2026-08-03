@@ -17,7 +17,7 @@ import (
 	"strings"
 	"time"
 
-	"ultimate-game-server/internal/iap"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/iap"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"

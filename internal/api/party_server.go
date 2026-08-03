@@ -7,10 +7,10 @@ import (
 	"strconv"
 	"strings"
 
-	"ultimate-game-server/internal/api/apipb"
-	"ultimate-game-server/internal/auth"
-	"ultimate-game-server/internal/party"
-	"ultimate-game-server/internal/runtime"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/api/apipb"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/auth"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/party"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/runtime"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"

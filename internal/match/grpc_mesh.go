@@ -11,7 +11,7 @@ import (
 	"strings"
 	"sync"
 
-	"ultimate-game-server/internal/runtime"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/runtime"
 
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"

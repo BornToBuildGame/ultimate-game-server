@@ -13,7 +13,7 @@ import (
 	"sync"
 	"time"
 
-	"ultimate-game-server/internal/runtime"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/runtime"
 
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"

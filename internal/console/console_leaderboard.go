@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"time"
 
-	"ultimate-game-server/internal/leaderboard"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/leaderboard"
 
 	"github.com/google/uuid"
 )

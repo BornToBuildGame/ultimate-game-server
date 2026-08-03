@@ -6,10 +6,10 @@ import (
 	"strings"
 	"time"
 
-	"ultimate-game-server/internal/api/apipb"
-	"ultimate-game-server/internal/auth"
-	"ultimate-game-server/internal/economy"
-	"ultimate-game-server/internal/leaderboard"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/api/apipb"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/auth"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/economy"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/leaderboard"
 
 	"github.com/google/uuid"
 	"google.golang.org/grpc/codes"

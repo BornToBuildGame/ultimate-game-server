@@ -9,10 +9,10 @@ import (
 	"strings"
 	"time"
 
-	"ultimate-game-server/internal/api/apipb"
-	"ultimate-game-server/internal/auth"
-	"ultimate-game-server/internal/leaderboard"
-	"ultimate-game-server/internal/tournament"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/api/apipb"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/auth"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/leaderboard"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/tournament"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"

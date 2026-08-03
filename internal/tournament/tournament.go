@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"ultimate-game-server/internal/leaderboard"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/leaderboard"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"

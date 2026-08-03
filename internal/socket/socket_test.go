@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
-	"ultimate-game-server/internal/auth"
-	"ultimate-game-server/internal/party"
-	"ultimate-game-server/internal/presence"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/auth"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/party"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/presence"
 
 	"go.uber.org/zap"
 )

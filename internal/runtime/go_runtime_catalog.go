@@ -1,7 +1,7 @@
 package runtime
 
 import (
-	"ultimate-game-server/internal/fleet"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/fleet"
 )
 
 func (i *goInitializer) RegisterFleetManager(fm fleet.Manager) error {

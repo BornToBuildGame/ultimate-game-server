@@ -9,8 +9,8 @@ import (
 	"strings"
 	"sync"
 
-	"ultimate-game-server/internal/metrics"
-	"ultimate-game-server/internal/runtime"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/metrics"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/runtime"
 
 	"github.com/dop251/goja"
 	"github.com/yuin/gopher-lua"

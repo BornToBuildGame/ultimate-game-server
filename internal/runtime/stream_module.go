@@ -6,8 +6,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"ultimate-game-server/internal/cluster"
-	"ultimate-game-server/internal/presence"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/cluster"
+	"github.com/BornToBuildGame/ultimate-game-server/internal/presence"
 )
 
 // StreamPresenceView is a runtime-facing presence on a typed stream.
