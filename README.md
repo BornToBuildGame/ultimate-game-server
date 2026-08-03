@@ -288,7 +288,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/BornToBuildGame/ultimate-game-server/internal/runtime"
+	"github.com/BornToBuildGame/ultimate-game-server/pkg/runtime"
 )
 
 // InitModule is the standard entrypoint that UGE looks for.
@@ -386,17 +386,3 @@ func (m *LobbyMatch) MatchTerminate(ctx context.Context, logger runtime.Logger, 
 	return state
 }
 ```
-
----
-
-## Standalone Example: High-Low Game
-
-A complete standalone example demonstrating how to integrate and build a UGE-compatible plugin outside of the server repository is located in the [highlow-standalone](file:///Users/lap11252/ultimate-game-engine/highlow-standalone) directory.
-
-This example features:
-- A custom Go module: `github.com/BornToBuildGame/ultimate-game-server/highlow-standalone`
-- Implementation of a High-Low (Hi-Lo) card/number betting game inside an authoritative match loop.
-- A fully functional E2E integration test ([highlow_integration_test.go](file:///Users/lap11252/ultimate-game-engine/highlow-standalone/highlow_integration_test.go)) that spins up PostgreSQL and Redis testcontainers, boots the UGE server, connects via WebSocket, submits guesses, and verifies the match state.
-
-For details, view the example [highlow-standalone](file:///Users/lap11252/ultimate-game-engine/highlow-standalone) directory.
-
