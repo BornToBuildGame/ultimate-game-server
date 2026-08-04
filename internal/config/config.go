@@ -19,6 +19,7 @@ type Config interface {
 	GetRuntime() *RuntimeConfig
 	GetConsole() *ConsoleConfig
 	GetIAP() *IAPConfig
+	GetMultiInstance() *MultiInstanceConfig
 }
 
 type DatabaseConfig struct {
@@ -84,14 +85,20 @@ type IAPConfig struct {
 	Samsung         IAPSamsungConfig  `yaml:"samsung" json:"samsung"`
 }
 
+type MultiInstanceConfig struct {
+	Enabled   bool   `yaml:"enabled" json:"enabled"`
+	RedisAddr string `yaml:"redis_addr" json:"redis_addr"`
+}
+
 type configImpl struct {
-	Name     string          `yaml:"name" json:"name"`
-	Database DatabaseConfig  `yaml:"database" json:"database"`
-	Session  SessionConfig   `yaml:"session" json:"session"`
-	Socket   SocketConfig    `yaml:"socket" json:"socket"`
-	Runtime  RuntimeConfig   `yaml:"runtime" json:"runtime"`
-	Console  ConsoleConfig   `yaml:"console" json:"console"`
-	IAP      IAPConfig       `yaml:"iap" json:"iap"`
+	Name          string              `yaml:"name" json:"name"`
+	Database      DatabaseConfig      `yaml:"database" json:"database"`
+	Session       SessionConfig       `yaml:"session" json:"session"`
+	Socket        SocketConfig        `yaml:"socket" json:"socket"`
+	Runtime       RuntimeConfig       `yaml:"runtime" json:"runtime"`
+	Console       ConsoleConfig       `yaml:"console" json:"console"`
+	IAP           IAPConfig           `yaml:"iap" json:"iap"`
+	MultiInstance MultiInstanceConfig `yaml:"multi_instance" json:"multi_instance"`
 }
 
 func (c *configImpl) GetName() string                { return c.Name }
@@ -101,6 +108,7 @@ func (c *configImpl) GetSocket() *SocketConfig       { return &c.Socket }
 func (c *configImpl) GetRuntime() *RuntimeConfig     { return &c.Runtime }
 func (c *configImpl) GetConsole() *ConsoleConfig     { return &c.Console }
 func (c *configImpl) GetIAP() *IAPConfig             { return &c.IAP }
+func (c *configImpl) GetMultiInstance() *MultiInstanceConfig { return &c.MultiInstance }
 
 // NewConfig returns a configuration initialized with defaults.
 func NewConfig() Config {
@@ -127,6 +135,10 @@ func NewConfig() Config {
 		},
 		Console: ConsoleConfig{
 			Address: "0.0.0.0:7351",
+		},
+		MultiInstance: MultiInstanceConfig{
+			Enabled:   false,
+			RedisAddr: "localhost:6379",
 		},
 	}
 }
@@ -219,6 +231,12 @@ func applyEnvOverrides(c *configImpl) {
 	if val := os.Getenv("UGE_RPC_HTTP_KEY"); val != "" {
 		c.Runtime.HTTPKey = val
 	}
+	if val := firstEnv("MULTI_INSTANCE", "MULTI_INSTANCE_ENABLED"); val != "" {
+		c.MultiInstance.Enabled = parseBool(val, c.MultiInstance.Enabled)
+	}
+	if val := firstEnv("REDIS_ADDR", "REDIS_URL"); val != "" {
+		c.MultiInstance.RedisAddr = val
+	}
 
 	// Apple IAP
 	if val := os.Getenv("APPLE_SHARED_PASSWORD"); val != "" {
@@ -292,18 +310,22 @@ func applyFlagOverrides(c *configImpl, args []string) error {
 		dbConnIdle          = fs.Duration("database_conn_max_idle_time", 0, "")
 		consoleAddr         = fs.String("console_addr", "", "")
 		name                = fs.String("name", "", "")
+		multiInstance       = fs.String("multi_instance", "", "")
+		redisAddr           = fs.String("redis_addr", "", "")
 
 		// Hierarchical bindings
-		dbDsnHdr     = fs.String("database.dsn", "", "")
-		dbReadDsnHdr = fs.String("database.read_dsn", "", "")
-		dbMaxOpenHdr = fs.Int("database.max_open_conns", 0, "")
-		dbMaxIdleHdr = fs.Int("database.max_idle_conns", 0, "")
-		sessKeyHdr   = fs.String("session.encryption_key", "", "")
-		sockHTTPHdr  = fs.String("socket.http_addr", "", "")
-		sockGRPCHdr  = fs.String("socket.grpc_addr", "", "")
-		rtPathHdr    = fs.String("runtime.path", "", "")
-		rtHTTPKeyHdr = fs.String("runtime.http_key", "", "")
-		consAddrHdr  = fs.String("console.address", "", "")
+		dbDsnHdr        = fs.String("database.dsn", "", "")
+		dbReadDsnHdr    = fs.String("database.read_dsn", "", "")
+		dbMaxOpenHdr    = fs.Int("database.max_open_conns", 0, "")
+		dbMaxIdleHdr    = fs.Int("database.max_idle_conns", 0, "")
+		sessKeyHdr      = fs.String("session.encryption_key", "", "")
+		sockHTTPHdr     = fs.String("socket.http_addr", "", "")
+		sockGRPCHdr     = fs.String("socket.grpc_addr", "", "")
+		rtPathHdr       = fs.String("runtime.path", "", "")
+		rtHTTPKeyHdr    = fs.String("runtime.http_key", "", "")
+		consAddrHdr     = fs.String("console.address", "", "")
+		multiInstanceHdr = fs.String("multi_instance.enabled", "", "")
+		redisAddrHdr    = fs.String("multi_instance.redis_addr", "", "")
 
 		// To prevent flag.Parse from logging help / config flags
 		_ = fs.String("config", "", "")
@@ -381,6 +403,19 @@ func applyFlagOverrides(c *configImpl, args []string) error {
 	}
 	if *consAddrHdr != "" {
 		c.Console.Address = *consAddrHdr
+	}
+
+	if *multiInstance != "" {
+		c.MultiInstance.Enabled = parseBool(*multiInstance, c.MultiInstance.Enabled)
+	}
+	if *multiInstanceHdr != "" {
+		c.MultiInstance.Enabled = parseBool(*multiInstanceHdr, c.MultiInstance.Enabled)
+	}
+	if *redisAddr != "" {
+		c.MultiInstance.RedisAddr = *redisAddr
+	}
+	if *redisAddrHdr != "" {
+		c.MultiInstance.RedisAddr = *redisAddrHdr
 	}
 
 	if *dbMaxOpen > 0 {

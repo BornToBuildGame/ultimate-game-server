@@ -1,6 +1,6 @@
 # Ultimate Game Engine — Game Server Framework
 
-Ultimate Game Engine (UGE) is a distributed, high-performance, authoritative multiplayer game server framework built in Go. It is designed to be fully compatible with reference-shaped multiplayer API contracts and runtime interfaces, extending them with built-in multi-node clustering (using shared PostgreSQL and Redis Pub/Sub) out-of-the-box for horizontal scale-out.
+Ultimate Game Engine (UGE) is a distributed, high-performance, authoritative multiplayer game server framework built in Go (`go 1.25`). It is designed to be fully compatible with reference-shaped multiplayer API contracts and runtime interfaces, extending them with configurable **Single-Instance** (in-memory local state) or **Multi-Instance Cluster** modes (shared PostgreSQL and Redis Pub/Sub) for horizontal scale-out.
 
 This repository containing the UGE server engine can be used as an open-source framework by other game projects to run game logic, manage player sessions, validate in-app purchases, and execute custom server-side runtimes.
 
@@ -8,22 +8,52 @@ This repository containing the UGE server engine can be used as an open-source f
 
 ## Key Features
 
-- **Multi-Runtime Extensibility**: Write game logic in Go (native `.so` plugins), Lua (sandboxed VM), or JavaScript (ES6 sandboxed VM).
-- **Authoritative Multiplayer**: Tick-rate based game loops executing inside authoritative match processes, supporting asynchronous join attempts and deferred broadcast flushes.
-- **Real-Time Communications**: Direct WebSocket connection pipelines for low-latency messaging, stream tracking, and RPC dispatching.
+- **Modular Server Architecture**: Plug-and-play modules (`pkg/modules/*`) including Authentication, Storage Engine, Matchmaking, Economy/IAP, Social Systems, and Leaderboards.
+- **Multi-Runtime Extensibility**: Write game logic in native Go (embedded or `.so` plugins), sandboxed Lua (`gopher-lua` VM), or sandboxed JavaScript (`goja` ES6 VM).
+- **Authoritative Multiplayer**: Tick-rate based game loops executing inside authoritative match processes, supporting asynchronous join attempts, custom state transitions, opcode dispatching, and deferred broadcast flushes.
+- **Real-Time & RPC Communications**: Dual HTTP/WebSocket (`0.0.0.0:7350`) and gRPC (`0.0.0.0:7349`) connection pipelines for low-latency client-server messaging, presences, and RPC dispatching.
 - **Built-in Game Services**:
-  - Storage Engine with full query indexing (via Bluge storage indexing).
-  - User Authentication (Device, Custom, Email, JWT session token generation).
-  - Economy and In-App Purchase (IAP) validation.
-  - Social systems (Friends, Chat, Parties, Groups, and Guilds).
-  - Leaderboards, Tournaments, and background Cron Scheduler.
-- **Clustered Architecture**: Scalable, multi-node configuration where Redis Pub/Sub coordinates stream messages and PostgreSQL acts as the persistent datastore.
+  - **Storage Engine**: Full object storage with ACL permissions, optimistic concurrency control (OCC), and Bluge indexing & querying.
+  - **Authentication**: Device, Custom, Email, Google, Apple, Facebook Instant, Huawei, and Samsung login; JWT session token issuance and verification; session registry and revocation.
+  - **Economy & IAP**: Multi-currency wallet operations (`nk.WalletUpdate`) and receipt validation for Apple App Store, Google Play Store, Huawei AppGallery, Facebook Instant Games, and Samsung Galaxy Store.
+  - **Social Systems**: Friends, Chat channels, Parties, Groups, and User Presences.
+  - **Leaderboards & Tournaments**: Ranking tables, score submissions, reset schedules, and rewards.
+  - **Fleet & Satori Integration**: Local stub FleetManager and optional Satori telemetry client integration.
+  - **Cron Scheduler**: Distributed background job runner with optional Redis cluster locking.
+- **Flexible Deployment Modes**:
+  - **Single-Instance Mode (Default)**: Zero Redis dependency, zero pub/sub overhead, pure in-memory local state execution.
+  - **Multi-Instance Cluster Mode**: Redis Pub/Sub coordinates stream messages, match routing, and distributed locks across nodes.
+
+---
+
+## Architecture Overview
+
+```
++-----------------------------------------------------------------------------------+
+|                            Ultimate Game Server Engine                            |
+|                                (pkg/engine.Server)                                |
++-----------------------------------------------------------------------------------+
+|  [HTTP/WS Listener :7350]   [gRPC Listener :7349]    [Admin Console :7351]       |
++-----------------------------------------------------------------------------------+
+|  Built-in Modules:                                                                |
+|  - Auth Module           - Storage Module           - Matchmaker Module           |
+|  - Economy Module        - Social Module            - Leaderboard Module          |
++-----------------------------------------------------------------------------------+
+|  Runtime Scripting & Handlers:                                                    |
+|  - Native Go Handlers    - Lua VM (Gopher-Lua)      - JavaScript VM (Goja ES6)   |
+|  - Dynamic .so Plugins   - Cron Scheduler           - Bluge Storage Indexing      |
++-----------------------------------------------------------------------------------+
+|  Persistence & Cluster Layer:                                                     |
+|  - PostgreSQL / CockroachDB (SQL Storage & Migrations)                             |
+|  - Optional Redis Pub/Sub (Multi-Instance Cluster Scaling)                        |
++-----------------------------------------------------------------------------------+
+```
 
 ---
 
 ## Standalone Project Initialization Guide
 
-To build a custom game server using UGE, you should create a completely separate, standalone Go project (outside UGE's source repository). Follow these steps to initialize your project:
+To build a custom game server using UGE, create a completely separate, standalone Go project.
 
 ### 1. Initialize Your Go Module
 Create a new directory for your game server and run `go mod init`:
@@ -34,14 +64,14 @@ go mod init my-game-server
 ```
 
 ### 2. Add UGE Dependency
-Since UGE is published as a standard Go module on GitHub, you can add it directly to your project using `go get`:
+Add UGE directly to your project using `go get`:
 ```bash
 go get github.com/BornToBuildGame/ultimate-game-server@v1.1.0
 ```
-*(Replace `v1.1.0` with the specific release version or commit hash you want to target.)*
+*(Replace `v1.1.0` with the specific release tag or commit hash target.)*
 
-#### For Local Development
-If you are developing locally alongside the UGE source code directory, you can redirect the dependency to your local folder by adding a `replace` directive to your `go.mod`:
+#### Local Development Setup
+If developing locally alongside the UGE source code directory, add a `replace` directive to your `go.mod`:
 ```go
 module my-game-server
 
@@ -52,13 +82,13 @@ require github.com/BornToBuildGame/ultimate-game-server v0.0.0
 replace github.com/BornToBuildGame/ultimate-game-server => ../ultimate-game-engine/ultimate-game-server
 ```
 
-After configuring your dependency, run `go mod tidy` to download and link all required packages:
+After updating `go.mod`, run `go mod tidy` to download dependencies:
 ```bash
 go mod tidy
 ```
 
-### 3. Create Your Main Game Server File
-Create a `main.go` file inside your project directory using UGE as an embeddable Go library:
+### 3. Create Your Main Server Entrypoint
+Create a `main.go` file inside your project root using UGE as an embeddable engine:
 
 ```go
 package main
@@ -67,16 +97,25 @@ import (
 	"context"
 	"database/sql"
 	"log"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/BornToBuildGame/ultimate-game-server/internal/config"
 	"github.com/BornToBuildGame/ultimate-game-server/pkg/engine"
+	"github.com/BornToBuildGame/ultimate-game-server/pkg/modules/auth"
 	"github.com/BornToBuildGame/ultimate-game-server/pkg/modules/economy"
+	"github.com/BornToBuildGame/ultimate-game-server/pkg/modules/leaderboard"
 	"github.com/BornToBuildGame/ultimate-game-server/pkg/modules/matchmaker"
+	"github.com/BornToBuildGame/ultimate-game-server/pkg/modules/social"
+	"github.com/BornToBuildGame/ultimate-game-server/pkg/modules/storage"
 	"github.com/BornToBuildGame/ultimate-game-server/pkg/runtime"
 )
 
 func main() {
-	cfg, err := config.Parse(nil)
+	// Parse CLI flags, environment variables, or config YAML file
+	cfg, err := config.Parse(os.Args)
 	if err != nil {
 		log.Fatalf("failed to parse config: %v", err)
 	}
@@ -84,43 +123,65 @@ func main() {
 	// 1. Initialize UGE Server Engine
 	srv, err := engine.NewServer(cfg)
 	if err != nil {
-		log.Fatalf("failed to create server: %v", err)
+		log.Fatalf("failed to create server instance: %v", err)
 	}
 
-	// 2. Enable desired modular game features
+	// 2. Register modular features
+	srv.Use(auth.NewModule())
+	srv.Use(storage.NewModule())
 	srv.Use(matchmaker.NewModule())
 	srv.Use(economy.NewModule())
+	srv.Use(social.NewModule())
+	srv.Use(leaderboard.NewModule())
 
-	// 3. Register native Go game logic (No .so dynamic plugin required!)
+	// 3. Register native Go custom game logic
 	srv.RegisterInit(func(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.RuntimeModule, initializer runtime.Initializer) error {
-		logger.Info("Standalone MyGameServer module loaded successfully!")
-		// Register custom RPCs, hooks, and match handlers here
-		return nil
+		logger.Info("Standalone MyGameServer initialized successfully!")
+		
+		// Register custom RPC handler
+		err := initializer.RegisterRpc("ping", func(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.RuntimeModule, payload string) (string, error) {
+			return `{"status":"ok"}`, nil
+		})
+		return err
 	})
 
-	// 4. Start static server
-	if err := srv.Start(context.Background()); err != nil {
-		log.Fatalf("server crash: %v", err)
+	// 4. Launch server in a background goroutine
+	ctx := context.Background()
+	go func() {
+		if err := srv.Start(ctx); err != nil {
+			log.Fatalf("server crash: %v", err)
+		}
+	}()
+
+	// 5. Handle graceful shutdown
+	shutdownChan := make(chan os.Signal, 1)
+	signal.Notify(shutdownChan, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
+	<-shutdownChan
+
+	teardownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err := srv.Stop(teardownCtx); err != nil {
+		log.Printf("error during server shutdown: %v", err)
 	}
 }
 ```
 
-### 4. Build and Run Your Server
-Compile and launch your game server binary as a standard Go executable (works on Linux, macOS, and Windows):
+### 4. Build and Run Your Game Server
+Compile and launch your custom binary:
 ```bash
 go build -o my_game_server main.go
-./my_game_server
+./my_game_server --config config.yaml
 ```
 
 ---
 
-## Go Native Plugin Architecture (`.so` Loading)
+## Custom Module Development
 
-UGE supports loading custom Go modules compiled as shared object (`.so`) files. The server dynamically scans the configured modules directory during startup, loads alphabetical plugins, and invokes their entrypoints.
+UGE supports both embedded Go code registration and dynamically loaded `.so` shared object plugins.
 
-### The InitModule Entrypoint
-
-Every Go runtime plugin must export a single public function with this exact signature:
+### 1. InitModule Entrypoint
+Custom runtime modules export an `InitModule` entrypoint signature:
 
 ```go
 package main
@@ -128,261 +189,219 @@ package main
 import (
 	"context"
 	"database/sql"
-	
+
 	"github.com/BornToBuildGame/ultimate-game-server/pkg/runtime"
 )
 
-// InitModule is the entrypoint invoked by Ultimate Game Engine when loading the plugin.
+// InitModule is invoked by Ultimate Game Engine when initializing the module.
 func InitModule(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.RuntimeModule, initializer runtime.Initializer) error {
-	// Register custom RPCs, hooks, and authoritative matches here
+	logger.Info("Initializing custom game logic...")
+
+	// Register RPCs, Intercept Hooks, and Authoritative Matches
 	return nil
 }
 ```
 
-### Module Component Registration
+### 2. Component Registration Examples
 
-Inside `InitModule`, developers use the `initializer` parameter to wire their custom logic:
+#### Custom RPC Handlers
+```go
+initializer.RegisterRpc("claim_daily_reward", func(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.RuntimeModule, payload string) (string, error) {
+	userID, _ := ctx.Value(runtime.RUNTIME_CTX_USER_ID).(string)
+	logger.Info("Processing reward claim for user %s", userID)
+	return `{"success": true, "reward": 500}`, nil
+})
+```
 
-- **Register Custom RPCs**:
-  ```go
-  initializer.RegisterRpc("my_custom_rpc", func(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.RuntimeModule, payload string) (string, error) {
-      logger.Info("RPC triggered with payload: %s", payload)
-      return `{"success": true}`, nil
-  })
-  ```
-- **Register Authoritative Matches**:
-  ```go
-  initializer.RegisterMatch("my_game_mode", func(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.RuntimeModule) (runtime.Match, error) {
-      return myGame.NewMatch(), nil
-  })
-  ```
-- **Register Interceptor Hooks**: Hook intercepts client requests before or after they are processed by the internal handlers:
-  ```go
-  // Before hook
-  initializer.RegisterBeforeAuthenticateEmail(func(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.RuntimeModule, in *runtime.AuthenticateEmailRequest) (*runtime.AuthenticateEmailRequest, error) {
-      // Validate or modify authentication input
-      return in, nil
-  })
+#### Before & After Interceptor Hooks
+```go
+// Intercept Email Authentication request before execution
+initializer.RegisterBeforeAuthenticateEmail(func(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.RuntimeModule, in *runtime.AuthenticateEmailRequest) (*runtime.AuthenticateEmailRequest, error) {
+	if in.Email == "" {
+		return nil, runtime.ErrBadRequest("email cannot be empty")
+	}
+	return in, nil
+})
 
-  // After hook
-  initializer.RegisterAfterWriteStorageObjects(func(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.RuntimeModule, out *runtime.StorageObjectAcks, in *runtime.WriteStorageObjectsRequest) error {
-      // React asynchronously to storage writes
-      return nil
-  })
-  ```
+// React asynchronously after storage objects are written
+initializer.RegisterAfterWriteStorageObjects(func(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.RuntimeModule, out *runtime.StorageObjectAcks, in *runtime.WriteStorageObjectsRequest) error {
+	logger.Info("Successfully wrote %d storage objects", len(out.Acks))
+	return nil
+})
+```
+
+### 3. Dynamic `.so` Plugin Compilation
+To compile plugins for runtime loading via `runtime.path`:
+```bash
+go build --buildmode=plugin -o data/modules/my_plugin.so main.go
+```
+
+> **Note**: Because Go's standard `plugin` package enforces binary safety, the compiled `.so` plugin and target UGE server binary must be built with the exact same Go toolchain version, OS/architecture targets (`GOOS`, `GOARCH`), and matching dependency module versions.
 
 ---
 
-## How to Build and Run Plugins
+## Lua & JavaScript VM Runtime Support
 
-### 1. Compile the Shared Object
+In addition to Go native modules, UGE automatically loads Lua (`*.lua`) and JavaScript (`*.js`) script modules placed in the directory configured by `runtime.path` (default `data/modules`).
 
-To compile your custom module for UGE, run the Go compiler specifying the `--buildmode=plugin` flag:
+### Lua Runtime Scripting
+Lua scripts run inside a sandboxed `gopher-lua` VM state. They have access to the global `nk` object for engine services:
 
-```bash
-go build --buildmode=plugin -o modules/my_game_plugin.so path/to/plugin/main.go
+```lua
+-- data/modules/test_rpc.lua
+local nk = require("nk")
+
+local function echo_rpc(context, payload)
+    nk.logger_info("Lua RPC invoked with payload: " .. tostring(payload))
+    return nk.json_encode({ status = "success", received = payload })
+end
+
+nk.register_rpc(echo_rpc, "lua_echo")
 ```
 
-### 2. Strict Compilation Requirements
+### JavaScript Runtime Scripting
+JavaScript scripts execute inside a sandboxed ES6 `goja` JS runtime context:
 
-Because Go's standard `plugin` package enforces strict safety checks, the compiled `.so` plugin and the running UGE server binary must be compiled with:
-1. The exact same Go compiler version (e.g. `go 1.25.5`).
-2. The exact same compiler flags and environment targets (`GOOS`, `GOARCH`).
-3. The exact same dependency graph (version matches for common packages like `google.golang.org/protobuf`, `go.uber.org/zap`, etc.).
+```js
+// data/modules/test_rpc.js
+function handleRpc(ctx, logger, nk, payload) {
+    logger.info("JS RPC executed!");
+    return JSON.stringify({ message: "Hello from JavaScript VM!" });
+}
 
-#### Recommended Workflows:
-- **Local Development**: Compile both the UGE server and the plugin in the same workspace or toolchain environment.
-- **Production Build (Docker)**: Use a multi-stage Dockerfile that builds the plugin inside the same Go compiler image as the target UGE server.
+nk.registerRpc("js_echo", handleRpc);
+```
+
+---
+
+## Sample Game Module (Tài-Xỉu / Sic Bo)
+
+UGE includes a complete, production-ready sample authoritative game module under [`examples/taixiu`](file:///Users/lap11252/ultimate-game-engine/ultimate-game-server/examples/taixiu).
+
+### Features Demonstrated
+- **Authoritative Match Loop**: Tick-rate game loop (`MatchLoop`) managing a 4-phase state machine (`BETTING` -> `ROLLING` -> `RESULT` -> `INTERMISSION`).
+- **Economy Integration**: Real-time bet validation and payout credits using `nk.WalletUpdate`.
+- **WebSocket Messaging**: Dual-way binary/JSON opcode messages (`OpCodeBet`, `OpCodeStateUpdate`, `OpCodeBetAck`, `OpCodeRoundResult`).
+- **Automated Testing**: Comprehensive unit and integration test suite (`taixiu_test.go` and `taixiu_integration_test.go`).
+
+Run the sample tests with:
+```bash
+go test -v ./examples/taixiu/...
+```
 
 ---
 
 ## Configuration Reference
 
-UGE runtime and system parameters can be configured using a YAML configuration file, environment variables, or CLI flags.
+UGE options can be provided via **YAML configuration file**, **Environment Variables**, or **CLI Flags** (supporting flat names and hierarchical names).
 
-### Module Path Configuration
+### Primary Configuration Options
 
-Instruct UGE where to look for your compiled Go plugins and Lua/JS scripts:
+| Option / Setting | YAML Key | Environment Variable | CLI Flag | Default Value |
+|------------------|----------|----------------------|----------|---------------|
+| Config File Path | — | `CONFIG` | `--config` | `""` |
+| HTTP Socket Address | `socket.http_addr` | `HTTP_ADDR` | `--http_addr` or `--socket.http_addr` | `0.0.0.0:7350` |
+| gRPC Socket Address | `socket.grpc_addr` | `GRPC_ADDR` | `--grpc_addr` or `--socket.grpc_addr` | `0.0.0.0:7349` |
+| Console Admin Address | `console.address` | `CONSOLE_ADDR` | `--console_addr` or `--console.address` | `0.0.0.0:7351` |
+| Database DSN | `database.dsn` | `DATABASE_URL` | `--dsn` or `--database.dsn` | `postgres://game_admin:game_password@localhost:5432/ultimate_game_db?sslmode=disable` |
+| Database Read DSN | `database.read_dsn` | `DATABASE_READ_URL` | `--read_dsn` or `--database.read_dsn` | `""` |
+| Run Auto Migrations | `database.migration` | `DATABASE_MIGRATION` | `--database_migration` | `true` |
+| Database Max Open Conns | `database.max_open_conns` | `DATABASE_MAX_OPEN_CONNS` | `--database_max_open_conns` | `20` |
+| Database Max Idle Conns | `database.max_idle_conns` | `DATABASE_MAX_IDLE_CONNS` | `--database_max_idle_conns` | `5` |
+| Session Signing Key | `session.encryption_key` | `JWT_SECRET` | `--jwt_secret` or `--session.encryption_key` | `super_secret_signing_key_at_least_32_bytes_long_1234567` |
+| Modules Runtime Path | `runtime.path` | `UGE_RUNTIME_PATH` | `--runtime_path` or `--runtime.path` | `data/modules` |
+| RPC HTTP Auth Key | `runtime.http_key` | `UGE_RPC_HTTP_KEY` | `--rpc_http_key` or `--runtime.http_key` | `""` |
+| Enable Multi-Instance Mode | `multi_instance.enabled` | `MULTI_INSTANCE` | `--multi_instance` or `--multi_instance.enabled` | `false` |
+| Redis Server Address | `multi_instance.redis_addr` | `REDIS_ADDR` or `REDIS_URL` | `--redis_addr` or `--multi_instance.redis_addr` | `localhost:6379` |
 
-| Configuration Method | Option Value |
-|----------------------|--------------|
-| **YAML Config File** | `runtime.path: "data/modules"` |
-| **CLI Flag**         | `--runtime_path "data/modules"` or `--runtime.path "data/modules"` |
-| **Environment Var**  | `UGE_RUNTIME_PATH="data/modules"` |
+### Sample YAML Configuration (`config.yaml`)
 
-### Running the Server
+```yaml
+name: ultimate-game-server
 
-Start the UGE server binary directly, pointing it to your config file:
+database:
+  dsn: "postgres://game_admin:game_password@localhost:5432/ultimate_game_db?sslmode=disable"
+  migration: true
+  max_open_conns: 25
+  max_idle_conns: 10
 
-```bash
-./ultimate-game-server --config config.yaml
-```
+socket:
+  http_addr: "0.0.0.0:7350"
+  grpc_addr: "0.0.0.0:7349"
 
-If database migrations should automatically run on startup:
+console:
+  address: "0.0.0.0:7351"
 
-```bash
-./ultimate-game-server --config config.yaml --database_migration true
+session:
+  encryption_key: "my_custom_secure_jwt_secret_key_change_me_in_prod"
+
+runtime:
+  path: "data/modules"
+
+multi_instance:
+  enabled: false
+  redis_addr: "localhost:6379"
 ```
 
 ---
 
-## Docker Compose Quickstart
+## Docker & Local Infrastructure
 
-The easiest way to orchestrate the UGE server cluster locally along with PostgreSQL and Redis is using Docker Compose.
+Use Docker Compose to quickly spin up PostgreSQL 16 and Redis 7 dependencies for local development.
 
-Create a `docker-compose.yml` in your project root:
-
+### `docker-compose.yml`
 ```yaml
 version: '3.8'
 
 services:
   postgres:
-    image: postgres:15-alpine
+    image: postgres:16-alpine
+    container_name: ultimate-game-postgres
+    ports:
+      - "5432:5432"
     environment:
       POSTGRES_DB: ultimate_game_db
       POSTGRES_USER: game_admin
       POSTGRES_PASSWORD: game_password
-    ports:
-      - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
 
   redis:
     image: redis:7-alpine
+    container_name: ultimate-game-redis
     ports:
       - "6379:6379"
-
-  uge:
-    image: ultimate-game-server:latest # Replace with your custom built server image
-    depends_on:
-      - postgres
-      - redis
-    ports:
-      - "7350:7350" # HTTP client port
-      - "7349:7349" # gRPC client port
-      - "7351:7351" # Admin console port
-    environment:
-      - DATABASE_URL=postgres://game_admin:game_password@postgres:5432/ultimate_game_db?sslmode=disable
-      - UGE_RUNTIME_PATH=/opt/uge/modules
-      - REDIS_URL=redis://redis:6379
-      - DATABASE_MIGRATION=true
     volumes:
-      - ./modules:/opt/uge/modules # Mount directory containing .so plugins
+      - redisdata:/data
 
 volumes:
   pgdata:
+  redisdata:
+```
+
+Launch infrastructure services:
+```bash
+docker-compose up -d
 ```
 
 ---
 
-## Detailed Custom Module Boilerplate
+## Building and Testing
 
-Below is a complete, boilerplate example of a custom module registering a before-hook, a custom RPC handler, and an authoritative multiplayer match handler.
+### 1. Run Unit Tests
+Run all test packages in the repository:
+```bash
+go test ./pkg/... ./internal/... ./examples/taixiu/...
+```
 
-```go
-package main
+### 2. Build the Server Binary
+Build the primary server entrypoint executable:
+```bash
+go build -o ultimate-game-server ./cmd/server
+```
 
-import (
-	"context"
-	"database/sql"
-	"errors"
-	"fmt"
-
-	"github.com/BornToBuildGame/ultimate-game-server/pkg/runtime"
-)
-
-// InitModule is the standard entrypoint that UGE looks for.
-func InitModule(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.RuntimeModule, initializer runtime.Initializer) error {
-	logger.Info("Initializing MyCustomGame module...")
-
-	// 1. Register a custom RPC handler
-	if err := initializer.RegisterRpc("ping_server", PingHandler); err != nil {
-		return fmt.Errorf("failed to register RPC: %w", err)
-	}
-
-	// 2. Register a before-hook interceptor for Email Authenticate
-	if err := initializer.RegisterBeforeAuthenticateEmail(BeforeAuthEmail); err != nil {
-		return fmt.Errorf("failed to register before-hook: %w", err)
-	}
-
-	// 3. Register an authoritative multiplayer match handler
-	if err := initializer.RegisterMatch("lobby_match", LobbyMatchFactory); err != nil {
-		return fmt.Errorf("failed to register match handler: %w", err)
-	}
-
-	logger.Info("MyCustomGame module successfully registered!")
-	return nil
-}
-
-// -----------------------------------------------------------------------------
-// 1. RPC Handler
-// -----------------------------------------------------------------------------
-func PingHandler(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.RuntimeModule, payload string) (string, error) {
-	logger.Debug("Ping RPC called with payload size: %d", len(payload))
-	return `{"message": "pong"}`, nil
-}
-
-// -----------------------------------------------------------------------------
-// 2. Interceptor Hook
-// -----------------------------------------------------------------------------
-func BeforeAuthEmail(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.RuntimeModule, in *runtime.AuthenticateEmailRequest) (*runtime.AuthenticateEmailRequest, error) {
-	// Block signups with invalid domain extensions
-	if in.Email == "" {
-		return nil, errors.New("email is required")
-	}
-	logger.Info("Authenticating user via email: %s", in.Email)
-	return in, nil
-}
-
-// -----------------------------------------------------------------------------
-// 3. Authoritative Match Handler
-// -----------------------------------------------------------------------------
-
-// MatchDispatcher defines the methods available on the dispatcher object passed to match handlers.
-// The dispatcher parameter is passed as interface{} to remain decoupled, and should be type-asserted.
-type MatchDispatcher interface {
-	BroadcastMessage(opCode int64, data []byte, presences []runtime.Presence, sender runtime.Presence, reliable bool) error
-	BroadcastMessageDeferred(opCode int64, data []byte, presences []runtime.Presence, sender runtime.Presence, reliable bool) error
-	MatchKick(presences []runtime.Presence) error
-	MatchLabelUpdate(label string) error
-}
-
-type LobbyMatch struct{}
-
-func LobbyMatchFactory(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.RuntimeModule) (runtime.Match, error) {
-	return &LobbyMatch{}, nil
-}
-
-func (m *LobbyMatch) MatchInit(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.RuntimeModule, params map[string]interface{}) (interface{}, int, string) {
-	state := make(map[string]interface{})
-	tickRate := 10 // 10 ticks per second
-	label := "LobbyRoom"
-	return state, tickRate, label
-}
-
-func (m *LobbyMatch) MatchJoinAttempt(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.RuntimeModule, dispatcher interface{}, tick int64, state interface{}, presence runtime.Presence, metadata map[string]string) (interface{}, bool, string) {
-	acceptJoin := true
-	return state, acceptJoin, ""
-}
-
-func (m *LobbyMatch) MatchJoin(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.RuntimeModule, dispatcher interface{}, tick int64, state interface{}, presences []runtime.Presence) interface{} {
-	return state
-}
-
-func (m *LobbyMatch) MatchLeave(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.RuntimeModule, dispatcher interface{}, tick int64, state interface{}, presences []runtime.Presence) interface{} {
-	return state
-}
-
-func (m *LobbyMatch) MatchLoop(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.RuntimeModule, dispatcher interface{}, tick int64, state interface{}, messages []runtime.MatchData) interface{} {
-	// Periodic logic executed on each tick
-	return state
-}
-
-func (m *LobbyMatch) MatchSignal(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.RuntimeModule, dispatcher interface{}, tick int64, state interface{}, data string) (interface{}, string) {
-	return state, "signal_received"
-}
-
-func (m *LobbyMatch) MatchTerminate(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.RuntimeModule, dispatcher interface{}, tick int64, state interface{}, graceSeconds int) interface{} {
-	return state
-}
+### 3. Run the Server
+Launch the server binary with automatic database migration enabled:
+```bash
+./ultimate-game-server --config config.yaml --database_migration true
 ```

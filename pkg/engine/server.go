@@ -107,6 +107,14 @@ func NewServer(cfg config.Config) (*Server, error) {
 	}
 	economy.DefaultIAPConfig = iapCfg
 
+	multiInstCfg := api.MultiInstanceConfig{}
+	if cfg.GetMultiInstance() != nil {
+		multiInstCfg = api.MultiInstanceConfig{
+			Enabled:   cfg.GetMultiInstance().Enabled,
+			RedisAddr: cfg.GetMultiInstance().RedisAddr,
+		}
+	}
+
 	serverCfg := api.Config{
 		HTTPAddr:        cfg.GetSocket().HTTPAddr,
 		GRPCAddr:        cfg.GetSocket().GRPCAddr,
@@ -117,6 +125,7 @@ func NewServer(cfg config.Config) (*Server, error) {
 		RPCHTTPKey:      cfg.GetRuntime().HTTPKey,
 		RuntimePath:     cfg.GetRuntime().Path,
 		IAP:             iapCfg,
+		MultiInstance:   multiInstCfg,
 	}
 
 	apiSrv, err := api.NewServer(logger, serverCfg, dbPool)

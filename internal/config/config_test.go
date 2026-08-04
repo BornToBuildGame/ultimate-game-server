@@ -135,3 +135,42 @@ func TestParseFlagsOverrides(t *testing.T) {
 		t.Errorf("expected encryption key from flag")
 	}
 }
+
+func TestMultiInstanceConfig(t *testing.T) {
+	// Test Default: Enabled = false
+	cDefault := NewConfig()
+	if cDefault.GetMultiInstance().Enabled != false {
+		t.Errorf("expected default MultiInstance.Enabled to be false, got %v", cDefault.GetMultiInstance().Enabled)
+	}
+
+	// Test Env Overrides
+	t.Setenv("MULTI_INSTANCE", "true")
+	t.Setenv("REDIS_ADDR", "10.0.0.5:6379")
+	cEnv, err := Parse([]string{})
+	if err != nil {
+		t.Fatalf("Parse error: %v", err)
+	}
+	if !cEnv.GetMultiInstance().Enabled {
+		t.Errorf("expected MultiInstance.Enabled true from env")
+	}
+	if cEnv.GetMultiInstance().RedisAddr != "10.0.0.5:6379" {
+		t.Errorf("expected RedisAddr '10.0.0.5:6379' from env, got %q", cEnv.GetMultiInstance().RedisAddr)
+	}
+
+	// Test Flag Overrides
+	args := []string{
+		"--multi_instance=true",
+		"--redis_addr=127.0.0.1:6380",
+	}
+	cFlag, err := Parse(args)
+	if err != nil {
+		t.Fatalf("Parse error: %v", err)
+	}
+	if !cFlag.GetMultiInstance().Enabled {
+		t.Errorf("expected MultiInstance.Enabled true from flag")
+	}
+	if cFlag.GetMultiInstance().RedisAddr != "127.0.0.1:6380" {
+		t.Errorf("expected RedisAddr '127.0.0.1:6380' from flag, got %q", cFlag.GetMultiInstance().RedisAddr)
+	}
+}
+

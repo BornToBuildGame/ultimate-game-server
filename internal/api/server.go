@@ -57,8 +57,14 @@ type Config struct {
 	RPCMaxPayload   int           `json:"rpc_max_payload_size_bytes" yaml:"rpc_max_payload_size_bytes"`
 	RuntimePath     string        `json:"runtime_path" yaml:"runtime_path"`
 	PresenceMaxSubscriptions int  `json:"presence_max_subscriptions_per_user" yaml:"presence_max_subscriptions_per_user"`
-	PresenceMaxStatusBytes   int  `json:"presence_max_status_bytes" yaml:"presence_max_status_bytes"`
-	IAP             economy.IAPConfig `json:"iap" yaml:"iap"`
+	PresenceMaxStatusBytes   int               `json:"presence_max_status_bytes" yaml:"presence_max_status_bytes"`
+	IAP                      economy.IAPConfig `json:"iap" yaml:"iap"`
+	MultiInstance            MultiInstanceConfig `json:"multi_instance" yaml:"multi_instance"`
+}
+
+type MultiInstanceConfig struct {
+	Enabled   bool   `json:"enabled" yaml:"enabled"`
+	RedisAddr string `json:"redis_addr" yaml:"redis_addr"`
 }
 
 // Server handles HTTP and gRPC network interfaces.
@@ -280,23 +286,30 @@ func NewServer(logger *zap.Logger, cfg Config, dbPool *pgxpool.Pool) (*Server, e
 	chat.DefaultRouter = sockGateway
 	notification.DefaultDeliverer = sockGateway
 
-	// Initialize Redis connection for Matchmaker
+	// Initialize Redis connection if multi-instance mode is enabled
 	var rdb *redis.Client
-	redisAddr := os.Getenv("REDIS_ADDR")
-	if redisAddr == "" {
-		redisAddr = "localhost:6379"
-	}
-	rdb = redis.NewClient(&redis.Options{
-		Addr: redisAddr,
-	})
-	pingCtx, pingCancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
-	if err := rdb.Ping(pingCtx).Err(); err != nil {
-		logger.Warn("Redis is not available, falling back to local in-memory matchmaking", zap.Error(err))
-		rdb = nil
+	if cfg.MultiInstance.Enabled {
+		redisAddr := cfg.MultiInstance.RedisAddr
+		if redisAddr == "" {
+			redisAddr = os.Getenv("REDIS_ADDR")
+		}
+		if redisAddr == "" {
+			redisAddr = "localhost:6379"
+		}
+		rdb = redis.NewClient(&redis.Options{
+			Addr: redisAddr,
+		})
+		pingCtx, pingCancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
+		if err := rdb.Ping(pingCtx).Err(); err != nil {
+			logger.Warn("Multi-instance mode enabled, but Redis ping failed; falling back to local mode", zap.Error(err))
+			rdb = nil
+		} else {
+			logger.Info("Connected to Redis successfully, running in multi-instance cluster mode", zap.String("addr", redisAddr))
+		}
+		pingCancel()
 	} else {
-		logger.Info("Connected to Redis successfully, enabling distributed matchmaking", zap.String("addr", redisAddr))
+		logger.Info("Running in single-instance mode (Redis pub/sub and cluster mesh disabled)")
 	}
-	pingCancel()
 
 	var rateLimiter RateLimiter = NewIPRateLimiter(cfg.RateLimitMax, cfg.RateLimitRefill)
 	if rdb != nil {
