@@ -14,6 +14,9 @@ import (
 	"github.com/BornToBuildGame/ultimate-game-server/internal/satori"
 )
 
+// FleetManager is the public fleet registration surface (alias of internal/fleet.Manager).
+type FleetManager = fleet.Manager
+
 // Logger provides structured logging for runtime modules.
 type Logger interface {
 	Debug(format string, args ...interface{})
@@ -193,7 +196,6 @@ type RuntimeModule interface {
 	BcryptCompare(hash, password string) bool
 	UuidV4() string
 }
-
 
 type StorageRead struct {
 	Collection string `json:"collection"`
@@ -923,7 +925,7 @@ type Initializer interface {
 
 	RegisterStorageIndex(name, collection, key string, fields, sortableFields []string, maxEntries int, indexOnly bool) error
 	RegisterStorageIndexFilter(indexName string, fn func(ctx context.Context, logger Logger, db *sql.DB, nk RuntimeModule, write *StorageWrite) bool) error
-	RegisterFleetManager(fm fleet.Manager) error
+	RegisterFleetManager(fm FleetManager) error
 
 	RegisterPurchaseNotificationApple(fn PurchaseNotificationAppleHandler) error
 	RegisterPurchaseNotificationGoogle(fn PurchaseNotificationGoogleHandler) error

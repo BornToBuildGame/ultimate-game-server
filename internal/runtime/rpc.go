@@ -49,6 +49,11 @@ func NewError(msg string, code int) *Error {
 	return &Error{Message: msg, Code: c}
 }
 
+// ErrBadRequest returns a typed InvalidArgument (3) runtime error.
+func ErrBadRequest(msg string) error {
+	return NewError(msg, int(codes.InvalidArgument))
+}
+
 // CodeFromError extracts a gRPC code from err (default Internal).
 func CodeFromError(err error) codes.Code {
 	if err == nil {

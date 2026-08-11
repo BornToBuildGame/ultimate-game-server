@@ -8,7 +8,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/BornToBuildGame/ultimate-game-server/internal/config"
+	"github.com/BornToBuildGame/ultimate-game-server/pkg/config"
 	"github.com/BornToBuildGame/ultimate-game-server/pkg/engine"
 	"github.com/BornToBuildGame/ultimate-game-server/pkg/modules/auth"
 	"github.com/BornToBuildGame/ultimate-game-server/pkg/modules/economy"

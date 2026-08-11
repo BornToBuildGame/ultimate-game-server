@@ -102,7 +102,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/BornToBuildGame/ultimate-game-server/internal/config"
+	"github.com/BornToBuildGame/ultimate-game-server/pkg/config"
 	"github.com/BornToBuildGame/ultimate-game-server/pkg/engine"
 	"github.com/BornToBuildGame/ultimate-game-server/pkg/modules/auth"
 	"github.com/BornToBuildGame/ultimate-game-server/pkg/modules/economy"
@@ -134,15 +134,24 @@ func main() {
 	srv.Use(social.NewModule())
 	srv.Use(leaderboard.NewModule())
 
-	// 3. Register native Go custom game logic
+	// 3. Register native Go custom game logic (typed hooks use pkg/runtime DTOs)
 	srv.RegisterInit(func(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.RuntimeModule, initializer runtime.Initializer) error {
 		logger.Info("Standalone MyGameServer initialized successfully!")
-		
-		// Register custom RPC handler
-		err := initializer.RegisterRpc("ping", func(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.RuntimeModule, payload string) (string, error) {
+
+		if err := initializer.RegisterAfterAuthenticateDevice(func(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.RuntimeModule, out *runtime.Session, in *runtime.AuthenticateDeviceRequest) error {
+			userID, _ := ctx.Value(runtime.CtxUserID).(string)
+			logger.Info("device auth ok user=%s device=%s", userID, in.ID)
+			return nil
+		}); err != nil {
+			return err
+		}
+
+		// Untyped AfterRt remains available when you only need JSON/interface{} payloads
+		_ = initializer.RegisterAfterRt
+
+		return initializer.RegisterRpc("ping", func(ctx context.Context, logger runtime.Logger, db *sql.DB, nk runtime.RuntimeModule, payload string) (string, error) {
 			return `{"status":"ok"}`, nil
 		})
-		return err
 	})
 
 	// 4. Launch server in a background goroutine

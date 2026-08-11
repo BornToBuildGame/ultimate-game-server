@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/BornToBuildGame/ultimate-game-server/internal/api"
-	"github.com/BornToBuildGame/ultimate-game-server/internal/config"
 	"github.com/BornToBuildGame/ultimate-game-server/internal/console"
 	"github.com/BornToBuildGame/ultimate-game-server/internal/database"
 	"github.com/BornToBuildGame/ultimate-game-server/internal/economy"
@@ -17,6 +16,7 @@ import (
 	"github.com/BornToBuildGame/ultimate-game-server/internal/match"
 	"github.com/BornToBuildGame/ultimate-game-server/internal/satori"
 	"github.com/BornToBuildGame/ultimate-game-server/internal/storage"
+	"github.com/BornToBuildGame/ultimate-game-server/pkg/config"
 	pkgruntime "github.com/BornToBuildGame/ultimate-game-server/pkg/runtime"
 
 	"github.com/dop251/goja"
@@ -47,16 +47,16 @@ type Server struct {
 	Config         config.Config
 	DBPool         *pgxpool.Pool
 	SQLDB          *sql.DB
-	APIServer      *api.Server
 	RuntimeManager *pkgruntime.GoRuntimeManager
 	RuntimeModule  pkgruntime.RuntimeModule
-	ConsoleServer  *console.Server
 	CronScheduler  *pkgruntime.CronScheduler
 	LuaVM          *lua.LState
 	JSVM           *goja.Runtime
 
-	modules   []Module
-	initFuncs []pkgruntime.InitModuleFunc
+	apiServer     *api.Server
+	consoleServer *console.Server
+	modules       []Module
+	initFuncs     []pkgruntime.InitModuleFunc
 }
 
 // NewServer initializes a new Ultimate Game Engine server instance from configuration.
@@ -166,7 +166,7 @@ func NewServer(cfg config.Config) (*Server, error) {
 		Config:         cfg,
 		DBPool:         dbPool,
 		SQLDB:          sqlDB,
-		APIServer:      apiSrv,
+		apiServer:      apiSrv,
 		RuntimeManager: rm,
 		RuntimeModule:  nk,
 		CronScheduler:  cronSched,
@@ -225,7 +225,7 @@ func (s *Server) Start(ctx context.Context) error {
 		_ = pkgruntime.LoadLuaModules(ctx, rtPath, luaVM, rtLogger)
 		_ = pkgruntime.LoadJSModules(ctx, rtPath, jsVM, rtLogger)
 	}
-	s.APIServer.SetVMs(luaVM, jsVM)
+	s.apiServer.SetVMs(luaVM, jsVM)
 	s.LuaVM = luaVM
 	s.JSVM = jsVM
 
@@ -239,10 +239,10 @@ func (s *Server) Start(ctx context.Context) error {
 		if err != nil {
 			return fmt.Errorf("console init failed: %w", err)
 		}
-		cs.SetSessionRevoker(s.APIServer.SessionRegistry())
-		matchAdapt := &matchConsoleAdapter{router: s.APIServer.MatchRouter}
+		cs.SetSessionRevoker(s.apiServer.SessionRegistry())
+		matchAdapt := &matchConsoleAdapter{router: s.apiServer.MatchRouter}
 		cs.SetMatchDeps(matchAdapt, matchAdapt)
-		cs.SetStatusProvider(&statusConsoleAdapter{server: s.APIServer, match: matchAdapt})
+		cs.SetStatusProvider(&statusConsoleAdapter{server: s.apiServer, match: matchAdapt})
 		cs.SetRPCDispatcher(&rpcConsoleAdapter{
 			rm: s.RuntimeManager, luaVM: luaVM, jsVM: jsVM,
 		})
@@ -250,12 +250,12 @@ func (s *Server) Start(ctx context.Context) error {
 		if err := cs.Start(consoleListen); err != nil {
 			return fmt.Errorf("failed to start console admin: %w", err)
 		}
-		s.ConsoleServer = cs
+		s.consoleServer = cs
 	}
 
 	// 7. Start API Server
 	s.Logger.Info("Starting UGE API server...", zap.String("http", s.Config.GetSocket().HTTPAddr), zap.String("grpc", s.Config.GetSocket().GRPCAddr))
-	return s.APIServer.Start(ctx)
+	return s.apiServer.Start(ctx)
 }
 
 // Stop gracefully shuts down all server listeners and components.
@@ -263,8 +263,8 @@ func (s *Server) Stop(ctx context.Context) error {
 	rtLogger := &zapRuntimeLogger{z: s.Logger}
 	s.RuntimeManager.Registry().InvokeShutdown(ctx, rtLogger, s.SQLDB, s.RuntimeModule)
 
-	if s.ConsoleServer != nil {
-		s.ConsoleServer.Close()
+	if s.consoleServer != nil {
+		s.consoleServer.Close()
 	}
 	if s.CronScheduler != nil {
 		s.CronScheduler.Stop()
@@ -272,8 +272,8 @@ func (s *Server) Stop(ctx context.Context) error {
 	if s.LuaVM != nil {
 		s.LuaVM.Close()
 	}
-	if s.APIServer != nil {
-		_ = s.APIServer.Stop(ctx)
+	if s.apiServer != nil {
+		_ = s.apiServer.Stop(ctx)
 	}
 	if s.DBPool != nil {
 		s.DBPool.Close()

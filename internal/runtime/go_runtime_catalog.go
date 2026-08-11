@@ -4,7 +4,7 @@ import (
 	"github.com/BornToBuildGame/ultimate-game-server/internal/fleet"
 )
 
-func (i *goInitializer) RegisterFleetManager(fm fleet.Manager) error {
+func (i *goInitializer) RegisterFleetManager(fm FleetManager) error {
 	if fm == nil || i.nk == nil {
 		return nil
 	}

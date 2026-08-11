@@ -7,8 +7,8 @@ import (
 
 	internalruntime "github.com/BornToBuildGame/ultimate-game-server/internal/runtime"
 	"github.com/dop251/goja"
-	"github.com/redis/go-redis/v9"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/redis/go-redis/v9"
 	"github.com/yuin/gopher-lua"
 )
 
@@ -64,7 +64,7 @@ type HookRegistry = internalruntime.HookRegistry
 type CronScheduler = internalruntime.CronScheduler
 
 // NewGoRuntimeModule constructs a new GoRuntimeModule instance backed by a DB pool.
-func NewGoRuntimeModule(dbPool *pgxpool.Pool, logger Logger) *internalruntime.GoRuntimeModule {
+func NewGoRuntimeModule(dbPool *pgxpool.Pool, logger Logger) *GoRuntimeModule {
 	return internalruntime.NewGoRuntimeModule(dbPool, logger)
 }
 
@@ -79,7 +79,7 @@ func NewCronScheduler(registry *HookRegistry, logger Logger, db *sql.DB, nk Runt
 }
 
 // NewCronClusterLock creates a cluster lock backed by Redis.
-func NewCronClusterLock(client *redis.Client, nodeID string) *internalruntime.CronClusterLock {
+func NewCronClusterLock(client *redis.Client, nodeID string) *CronClusterLock {
 	return internalruntime.NewCronClusterLock(client, nodeID)
 }
 
