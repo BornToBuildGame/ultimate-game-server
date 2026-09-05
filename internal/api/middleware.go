@@ -1,8 +1,11 @@
 package api
 
 import (
+	"bufio"
 	"context"
+	"fmt"
 	"math"
+	"net"
 	"net/http"
 	"strconv"
 	"strings"
@@ -142,9 +145,30 @@ func (r *statusRecorder) WriteHeader(code int) {
 	r.ResponseWriter.WriteHeader(code)
 }
 
+// Hijack preserves WebSocket upgrades through MetricsMiddleware.
+func (r *statusRecorder) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	hj, ok := r.ResponseWriter.(http.Hijacker)
+	if !ok {
+		return nil, nil, fmt.Errorf("response does not implement http.Hijacker")
+	}
+	return hj.Hijack()
+}
+
+// Flush preserves streaming responses through MetricsMiddleware.
+func (r *statusRecorder) Flush() {
+	if f, ok := r.ResponseWriter.(http.Flusher); ok {
+		f.Flush()
+	}
+}
+
 // MetricsMiddleware records HTTP request counts for Prometheus.
 func MetricsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// WebSocket upgrades must keep the raw ResponseWriter (http.Hijacker).
+		if r.URL.Path == "/ws" {
+			next.ServeHTTP(w, r)
+			return
+		}
 		rec := &statusRecorder{ResponseWriter: w, status: http.StatusOK}
 		next.ServeHTTP(rec, r)
 		code := strconv.Itoa(rec.status)
