@@ -128,6 +128,25 @@ func TestCORSAllowlist(t *testing.T) {
 	}
 }
 
+func TestCORSAllowMethodsIncludesPatch(t *testing.T) {
+	h := CORSMiddleware(nil)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Fatal("OPTIONS preflight must not reach the handler")
+	}))
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodOptions, "/v1/profile/avatar", nil)
+	req.Header.Set("Origin", "http://localhost:7456")
+	req.Header.Set("Access-Control-Request-Method", http.MethodPatch)
+	req.Header.Set("Access-Control-Request-Headers", "authorization,content-type")
+	h.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status=%d", rr.Code)
+	}
+	methods := rr.Header().Get("Access-Control-Allow-Methods")
+	if !strings.Contains(methods, "PATCH") {
+		t.Fatalf("Access-Control-Allow-Methods=%q", methods)
+	}
+}
+
 func TestEnvelopeParseHelpers(t *testing.T) {
 	_ = time.Now()
 	if got := splitCSV(" a, b , ,c "); strings.Join(got, ",") != "a,b,c" {
